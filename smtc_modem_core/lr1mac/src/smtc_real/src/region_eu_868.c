@@ -32,6 +32,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
 #include <string.h>  // memcpy
 #include "lr1mac_utilities.h"
 #include "smtc_modem_hal.h"
@@ -40,18 +44,45 @@
 #include "region_eu_868.h"
 #include "smtc_modem_hal_dbg_trace.h"
 
-#define real_ctx lr1_mac->real.real_ctx
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE MACROS-----------------------------------------------------------
+ */
+#define real_ctx lr1_mac->real->real_ctx
 
-#define tx_frequency_channel lr1_mac->real.region.eu868.tx_frequency_channel
-#define rx1_frequency_channel lr1_mac->real.region.eu868.rx1_frequency_channel
-#define dr_bitfield_tx_channel lr1_mac->real.region.eu868.dr_bitfield_tx_channel
-#define channel_index_enabled lr1_mac->real.region.eu868.channel_index_enabled
-#define dr_distribution_init lr1_mac->real.region.eu868.dr_distribution_init
-#define dr_distribution lr1_mac->real.region.eu868.dr_distribution
-#define unwrapped_channel_mask lr1_mac->real.region.eu868.unwrapped_channel_mask
+#define tx_frequency_channel lr1_mac->real->region.eu868.tx_frequency_channel
+#define rx1_frequency_channel lr1_mac->real->region.eu868.rx1_frequency_channel
+#define dr_bitfield_tx_channel lr1_mac->real->region.eu868.dr_bitfield_tx_channel
+#define channel_index_enabled lr1_mac->real->region.eu868.channel_index_enabled
+#define dr_distribution_init lr1_mac->real->region.eu868.dr_distribution_init
+#define dr_distribution lr1_mac->real->region.eu868.dr_distribution
+#define unwrapped_channel_mask lr1_mac->real->region.eu868.unwrapped_channel_mask
 
-// Private region_eu_868 utilities declaration
-//
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE CONSTANTS -------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE TYPES -----------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE VARIABLES -------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
+ */
+
 void region_eu_868_config( lr1_stack_mac_t* lr1_mac )
 {
     const_number_of_tx_channel         = NUMBER_OF_CHANNEL_EU_868;
@@ -60,10 +91,11 @@ void region_eu_868_config( lr1_stack_mac_t* lr1_mac )
     const_number_of_channel_bank       = BANK_MAX_EU868;
     const_join_accept_delay1           = JOIN_ACCEPT_DELAY1_EU_868;
     const_received_delay1              = RECEIVE_DELAY1_EU_868;
-    const_tx_power_dbm                 = TX_POWER_EIRP_EU_868;
+    const_tx_power_dbm                 = TX_POWER_EIRP_EU_868 - 2;  // EIRP to ERP
     const_max_tx_power_idx             = MAX_TX_POWER_IDX_EU_868;
     const_adr_ack_limit                = ADR_ACK_LIMIT_EU_868;
     const_adr_ack_delay                = ADR_ACK_DELAY_EU_868;
+    const_datarate_backoff             = &datarate_backoff_eu_868[0];
     const_ack_timeout                  = ACK_TIMEOUT_EU_868;
     const_freq_min                     = FREQMIN_EU_868;
     const_freq_max                     = FREQMAX_EU_868;
@@ -73,14 +105,14 @@ void region_eu_868_config( lr1_stack_mac_t* lr1_mac )
     const_sync_word_private            = SYNC_WORD_PRIVATE_EU_868;
     const_sync_word_public             = SYNC_WORD_PUBLIC_EU_868;
     const_sync_word_gfsk               = ( uint8_t* ) SYNC_WORD_GFSK_EU_868;
-    const_min_tx_dr                    = MIN_DR_EU_868;
-    const_max_tx_dr                    = MAX_DR_EU_868;
+    const_sync_word_lr_fhss            = ( uint8_t* ) SYNC_WORD_LR_FHSS_EU_868;
+    const_min_tx_dr                    = MIN_TX_DR_EU_868;
+    const_max_tx_dr                    = MAX_TX_DR_EU_868;
     const_min_tx_dr_limit              = MIN_TX_DR_LIMIT_EU_868;
-    const_max_tx_default_dr            = MAX_TX_DEFAULT_DR_EU_868;
     const_number_of_tx_dr              = NUMBER_OF_TX_DR_EU_868;
-    const_min_rx_dr                    = MIN_DR_EU_868;
-    const_max_rx_dr                    = MAX_DR_EU_868;
-    const_max_rx1_dr_offset            = MAX_RX1_DR_OFSSET_EU_868;
+    const_min_rx_dr                    = MIN_RX_DR_EU_868;
+    const_max_rx_dr                    = MAX_RX_DR_EU_868;
+    const_number_rx1_dr_offset         = NUMBER_RX1_DR_OFFSET_EU_868;
     const_dr_bitfield                  = DR_BITFIELD_SUPPORTED_EU_868;
     const_default_tx_dr_bit_field      = DEFAULT_TX_DR_BIT_FIELD_EU_868;
     const_tx_param_setup_req_supported = TX_PARAM_SETUP_REQ_SUPPORTED_EU_868;
@@ -225,6 +257,7 @@ status_channel_t region_eu_868_build_channel_mask( lr1_stack_mac_t* lr1_mac, uin
     status_channel_t status = OKCHANNEL;
     switch( channel_mask_cntl )
     {
+    // Channels 0 to 15
     case 0:
         memcpy1( unwrapped_channel_mask + ( channel_mask_cntl * 2 ), ( uint8_t* ) &channel_mask, 2 );
 
@@ -244,6 +277,9 @@ status_channel_t region_eu_868_build_channel_mask( lr1_stack_mac_t* lr1_mac, uin
         }
         SMTC_MODEM_HAL_TRACE_PRINTF( ", ChMask = 0x%x\n", channel_mask );
         break;
+
+    // All channels ON
+    // The device SHOULD enable all currently defined channels independently of the ChMask field value.
     case 6:
         memset1( unwrapped_channel_mask, 0x00, BANK_MAX_EU868 );
         for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
@@ -270,25 +306,28 @@ status_channel_t region_eu_868_build_channel_mask( lr1_stack_mac_t* lr1_mac, uin
 
 modulation_type_t region_eu_868_get_modulation_type_from_datarate( uint8_t datarate )
 {
-    modulation_type_t modulation = LORA;
-    if( datarate <= 6 )
+    if( datarate <= DR6 )
     {
-        modulation = LORA;
+        return LORA;
     }
-    else if( datarate == 7 )
+    else if( datarate == DR7 )
     {
-        modulation = FSK;
+        return FSK;
+    }
+    else if( ( datarate >= DR8 ) && ( datarate <= DR11 ) )
+    {
+        return LR_FHSS;
     }
     else
     {
         smtc_modem_hal_lr1mac_panic( );
     }
-    return modulation;
+    return LORA;  // never reach
 }
 
 void region_eu_868_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    if( in_dr <= 6 )
+    if( in_dr <= DR6 )
     {
         *out_sf = datarates_to_sf_eu_868[in_dr];
         *out_bw = datarates_to_bandwidths_eu_868[in_dr];
@@ -301,7 +340,7 @@ void region_eu_868_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_band
 
 void region_eu_868_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate )
 {
-    if( in_dr == 7 )
+    if( in_dr == DR7 )
     {
         *out_bitrate = 50;  // Kbit
     }
@@ -311,18 +350,12 @@ void region_eu_868_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate )
     }
 }
 
-void region_eu_868_rx_dr_to_sf_bw( uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw, modulation_type_t* modulation_type )
+void region_eu_868_lr_fhss_dr_to_cr_bw( uint8_t in_dr, lr_fhss_v1_cr_t* out_cr, lr_fhss_v1_bw_t* out_bw )
 {
-    *modulation_type = LORA;
-    if( dr <= 6 )
+    if( ( in_dr >= DR8 ) && ( in_dr <= DR11 ) )
     {
-        *sf = datarates_to_sf_eu_868[dr];
-        *bw = datarates_to_bandwidths_eu_868[dr];
-    }
-    else if( dr == 7 )
-    {
-        *modulation_type = FSK;
-        *sf              = datarates_to_sf_eu_868[dr];
+        *out_cr = datarates_to_lr_fhss_cr_eu_868[in_dr];
+        *out_bw = datarates_to_lr_fhss_bw_eu_868[in_dr];
     }
     else
     {
@@ -330,26 +363,9 @@ void region_eu_868_rx_dr_to_sf_bw( uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* 
     }
 }
 
-uint8_t region_eu_868_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw )
-{
-    if( bw == BW_RFU )
-    {
-        smtc_modem_hal_lr1mac_panic( "Invalid Bandwith %u RFU\n", bw );
-    }
-    for( uint8_t i = MIN_DR_EU_868; i <= MAX_DR_EU_868; i++ )
-    {
-        if( ( sf <= 12 ) && ( sf >= 7 ) )
-        {
-            if( ( datarates_to_sf_eu_868[i] == sf ) && ( datarates_to_bandwidths_eu_868[i] == bw ) )
-            {
-                return i;
-            }
-        }
-        else if( sf == 50 )
-        {
-            return 7;  // Datarate 7
-        }
-    }
-    smtc_modem_hal_lr1mac_panic( "Invalid Datarate\n" );
-    return 0;  // never reach => avoid warning
-}
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
+ */
+
+/* --- EOF ------------------------------------------------------------------ */

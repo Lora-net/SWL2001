@@ -115,10 +115,10 @@ uint32_t smtc_modem_services_get_dm_upload_sctr( void );
 void smtc_modem_services_set_dm_upload_sctr( uint32_t ctr );
 
 /*!
- * @brief Abstraction function for lr1110 function that get the GNSS context status
+ * @brief Abstraction function for lr11xx function that get the GNSS context status
  *
  * This function returns the GNSS context status as a raw buffer. It is possible to use
- * lr1110_gnss_parse_context_status_buffer to obtain the details of the context status.
+ * lr11xx_gnss_parse_context_status_buffer to obtain the details of the context status.
  *
  * @param [in] radio_ctx Chip implementation context
  * @param [out] buff Pointer to a buffer to be filled with context status information. Must be at least
@@ -127,11 +127,11 @@ void smtc_modem_services_set_dm_upload_sctr( uint32_t ctr );
  * @returns Operation status
  *
  */
-radio_return_code_t smtc_modem_services_lr1110_gnss_get_context_status( const void* radio_ctx, uint8_t buff[9] );
+radio_return_code_t smtc_modem_services_lr11xx_gnss_get_context_status( const void* radio_ctx, uint8_t buff[9] );
 
 /*!
- * @brief Abstraction function for lr1110 function lr1110_gnss_push_dmc_msg
- * Host receives an update from the network or assembles itself the update message and send it to the LR1110.
+ * @brief Abstraction function for lr11xx function lr11xx_gnss_push_dmc_msg
+ * Host receives an update from the network or assembles itself the update message and send it to the LR11XX.
  *
  * @param [in] radio_ctx Chip implementation context
  * @param [in] buff buffer containing the update the network
@@ -139,7 +139,7 @@ radio_return_code_t smtc_modem_services_lr1110_gnss_get_context_status( const vo
  *
  * @returns Operation status
  */
-radio_return_code_t smtc_modem_services_lr1110_gnss_push_dmc_msg( const void* radio_ctx, uint8_t* buff,
+radio_return_code_t smtc_modem_services_lr11xx_gnss_push_dmc_msg( const void* radio_ctx, uint8_t* buff,
                                                                   uint16_t buff_len );
 
 #ifdef __cplusplus

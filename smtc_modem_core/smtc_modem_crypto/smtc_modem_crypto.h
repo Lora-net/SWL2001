@@ -185,9 +185,9 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_process_join_accept( const uin
  * @param [in] dev_nonce Device nonce
  * @return smtc_modem_crypto_return_code_t
  */
-smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( uint8_t  join_nonce[LORAWAN_JOIN_NONCE_SIZE],
-                                                                uint8_t  net_id[LORAWAN_NET_ID_SIZE],
-                                                                uint16_t dev_nonce );
+smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( const uint8_t join_nonce[LORAWAN_JOIN_NONCE_SIZE],
+                                                                const uint8_t net_id[LORAWAN_NET_ID_SIZE],
+                                                                uint16_t      dev_nonce );
 
 /**
  * @brief Verifies mic
@@ -201,7 +201,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( uint8_t  join_no
  * @param [in] expected_mic Expected mic
  * @return smtc_modem_crypto_return_code_t
  */
-smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( uint8_t* buffer, uint16_t size,
+smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( const uint8_t* buffer, uint16_t size,
                                                               smtc_se_key_identifier_t key_id, uint32_t devaddr,
                                                               uint8_t dir, uint32_t fcnt, uint32_t expected_mic );
 
@@ -238,6 +238,17 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_set_key( smtc_se_key_identifie
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_multicast_session_keys( smtc_modem_crypto_addr_id_t addr_id,
                                                                                  uint32_t                    mc_addr );
+
+/**
+ * @brief Get the class B ping slot rand number that will be used to compute PingPeriod Offset
+ *
+ * @param [in] beacon_epoch_time The beacon epoch time
+ * @param [in] dev_addr          Device Address
+ * @param [out] rand             The output 16 bytes rand generated
+ * @return smtc_modem_crypto_return_code_t
+ */
+smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t beacon_epoch_time, uint32_t dev_addr,
+                                                                    uint8_t rand[16] );
 
 #ifdef __cplusplus
 }

@@ -39,6 +39,11 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -46,57 +51,81 @@ extern "C" {
 #include "lr1mac_defs.h"
 #include "lr1_stack_mac_layer.h"
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
+
+/**
+ * @brief Congigure the region with default value and pointers
+ *
+ * @param lr1_mac
+ */
 void region_eu_868_config( lr1_stack_mac_t* lr1_mac );
 
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
+ * @brief Initialize the regional boot parameter
+ * @remark must be called before each join request
+ *
+ * @param lr1_mac
  */
 void region_eu_868_init( lr1_stack_mac_t* lr1_mac );
+
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
+ * @brief Get the next channel for the future uplink
+ *
+ * @param lr1_mac
+ * @return status_lorawan_t
  */
 status_lorawan_t region_eu_868_get_next_channel( lr1_stack_mac_t* lr1_mac );
+
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
+ * @brief Get the next channel for the future join request
+ *
+ * @param lr1_mac
+ * @return status_lorawan_t
  */
 status_lorawan_t region_eu_868_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
+ * @brief Set the datarate for Rx1 and Rx2
+ *
+ * @param lr1_mac
+ * @param type
  */
 void region_eu_868_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
+ * @brief Set the channel mask received by the LinkADRReq
+ *
+ * @param lr1_mac
  */
 void region_eu_868_set_channel_mask( lr1_stack_mac_t* lr1_mac );
+
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
+ * @brief Decrypt and build the Channel Mask from multiple atomic LinkADRReq
+ *
+ * @param lr1_mac
+ * @param ChMaskCntl
+ * @param ChMask
+ * @return status_channel_t
  */
 status_channel_t region_eu_868_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_eu_868_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate
@@ -125,24 +154,18 @@ void region_eu_868_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_band
 void region_eu_868_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate );
 
 /**
- * \brief   Convert DR to SF and BW
- * \remark
- * \param  [IN]  uint8_t datarate
- */
-void region_eu_868_rx_dr_to_sf_bw( uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw,
-                                   modulation_type_t* modulation_type );
-
-/**
- * @brief Convert SF and BW to DR
+ * @brief Convert LoRaWAN Datarate to LR-FHSS CR and BW
  *
- * @param sf
- * @param bw
- * @return uint8_t
+ * @param [in]  in_dr
+ * @param [out] out_cr
+ * @param [out] out_bw
  */
-uint8_t region_eu_868_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw );
+void region_eu_868_lr_fhss_dr_to_cr_bw( uint8_t in_dr, lr_fhss_v1_cr_t* out_cr, lr_fhss_v1_bw_t* out_bw );
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_EU_868_H
+
+/* --- EOF ------------------------------------------------------------------ */

@@ -53,8 +53,20 @@
 
 /*
  * -----------------------------------------------------------------------------
+ * --- PRIVATE MACRO -----------------------------------------------------------
+ */
+
+/**
+ * @brief Math Abs macro
+ */
+#define ABS( N ) ( ( N < 0 ) ? ( -N ) : ( N ) )
+
+/*
+ * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
+
+#define CLOCK_SYNC_ALC_UPDATED_DELAY_S 3
 
 /*
  * -----------------------------------------------------------------------------
@@ -114,6 +126,11 @@ uint8_t clock_sync_get_alcsync_port( clock_sync_ctx_t* ctx )
     return ctx->alcsync_port;
 }
 
+clock_sync_service_t clock_sync_get_current_service( clock_sync_ctx_t* ctx )
+{
+    return ctx->sync_service_type;
+}
+
 clock_sync_ret_t clock_sync_set_alcsync_port( clock_sync_ctx_t* ctx, uint8_t port )
 {
     if( port == 0 || port >= 224 )
@@ -131,8 +148,7 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s )
     if( ctx->sync_service_type == CLOCK_SYNC_MAC )
     {
         ctx->timestamp_last_correction_s = rx_timestamp_s;
-        increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, 1 );
-        ctx->sync_status = CLOCK_SYNC_NETWORK_SYNC_DONE;
+        ctx->sync_status                 = CLOCK_SYNC_NETWORK_SYNC_DONE;
     }
 
 #if defined( CLOCK_SYNC_GPS_EPOCH_CONVERT )
@@ -153,7 +169,7 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s )
         {
             // synchronisation lost
             // Send event
-            increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, 0 );
+            increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, SMTC_MODEM_EVENT_TIME_NOT_VALID );
 
             clock_sync_set_sync_lost( ctx );
 
@@ -163,6 +179,15 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s )
         }
         else
         {
+            if( ctx->sync_service_type == CLOCK_SYNC_ALC )
+            {
+                // in case ALCSYNC is the selected service check if no downlink happened
+                if( ctx->alc_ctx->is_sync_dl_received == false )
+                {
+                    increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, SMTC_MODEM_EVENT_TIME_VALID_BUT_NOT_SYNC );
+                }
+            }
+
             if( clock_sync_get_interval_second( ctx ) > 0 )
             {
                 interval_s = clock_sync_get_interval_second( ctx );
@@ -181,17 +206,29 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s )
         }
         else
         {
+            // Since we are not yet synchronized we keep the period to max 36h
             interval_s = MIN( CLOCK_SYNC_PERIOD_RETRY, clock_sync_get_interval_second( ctx ) );
         }
     }
 
-    interval_s = MIN( interval_s, alc_sync_get_time_left_connection_lost( ctx->alc_ctx ) );
+    interval_s = MIN( interval_s, clock_sync_get_time_left_connection_lost( ctx ) );
 
-    modem_supervisor_add_task_clock_sync_time_req( interval_s + smtc_modem_hal_get_signed_random_nb_in_range( 0, 30 ) );
+    if( ctx->enabled == true )
+    {
+        int32_t tmp_rand = 0;
+        do
+        {
+            tmp_rand = smtc_modem_hal_get_signed_random_nb_in_range( -30, 30 );
+        } while( ( tmp_rand < 0 ) && ( ABS( tmp_rand ) > interval_s ) );
+
+        modem_supervisor_add_task_clock_sync_time_req( interval_s + tmp_rand );
+    }
 }
 
-void clock_sync_get_gps_time_second( clock_sync_ctx_t* ctx, uint32_t* gps_time_in_s, uint32_t* fractional_second )
+bool clock_sync_get_gps_time_second( clock_sync_ctx_t* ctx, uint32_t* gps_time_in_s, uint32_t* fractional_second )
 {
+    bool ret = false;
+
     if( ctx->sync_status == CLOCK_SYNC_MANUAL_SYNC )
     {
         *gps_time_in_s = ctx->seconds_since_epoch +
@@ -204,18 +241,21 @@ void clock_sync_get_gps_time_second( clock_sync_ctx_t* ctx, uint32_t* gps_time_i
     {
         if( ctx->sync_service_type == CLOCK_SYNC_MAC )
         {
-            lorawan_api_convert_rtc_to_gps_epoch_time( smtc_modem_hal_get_time_in_ms( ), &ctx->seconds_since_epoch,
-                                                       &ctx->fractional_second );
+            ret                = lorawan_api_convert_rtc_to_gps_epoch_time( smtc_modem_hal_get_time_in_ms( ),
+                                                             &ctx->seconds_since_epoch, &ctx->fractional_second );
             *gps_time_in_s     = ctx->seconds_since_epoch;  // Todo manage wrapping
             *fractional_second = ctx->fractional_second;
         }
         else
         {
+            ret            = clock_sync_is_time_valid( ctx );
             *gps_time_in_s = alc_sync_get_gps_time_second( ctx->alc_ctx );
             // No fractional second feature is available in alcsync service
             *fractional_second = 0;
         }
     }
+
+    return ret;
 }
 
 void clock_sync_set_gps_time( clock_sync_ctx_t* ctx, uint32_t gps_time_s )
@@ -296,6 +336,8 @@ uint32_t clock_sync_get_interval_second( clock_sync_ctx_t* ctx )
 
 clock_sync_ret_t clock_sync_set_interval_second( clock_sync_ctx_t* ctx, uint32_t interval_s )
 {
+    // The interval is set in MAC_SYNC and ALC_SYNC to allow to switch of service without reconfigure all parameters
+
     clock_sync_ret_t ret = CLOCK_SYNC_OK;
     // if( ctx->sync_service_type == CLOCK_SYNC_MAC )
     // {
@@ -321,7 +363,7 @@ clock_sync_ret_t clock_sync_set_interval_second( clock_sync_ctx_t* ctx, uint32_t
 clock_sync_ret_t clock_sync_set_invalid_time_delay_s( clock_sync_ctx_t* ctx, uint32_t delay_s )
 {
     clock_sync_ret_t ret = CLOCK_SYNC_OK;
-    if( delay_s > 4233600 )  // 49 days (49×24×60×60)
+    if( delay_s > ALC_SYNC_DEFAULT_S_SINCE_LAST_CORRECTION )
     {
         ret = CLOCK_SYNC_ERR;
     }
@@ -332,6 +374,8 @@ clock_sync_ret_t clock_sync_set_invalid_time_delay_s( clock_sync_ctx_t* ctx, uin
 
     if( ret == CLOCK_SYNC_OK )
     {
+        // The delay_s is set in MAC_SYNC and ALC_SYNC to allow to switch of service without reconfigure all parameters
+
         // if( ctx->sync_service_type == CLOCK_SYNC_MAC )
         // {
         if( lorawan_api_set_device_time_invalid_delay_s( delay_s ) != OKLORAWAN )
@@ -365,20 +409,29 @@ uint32_t clock_sync_get_invalid_time_delay_s( clock_sync_ctx_t* ctx )
     return delay_s;
 }
 
-uint32_t clock_sync_get_nb_time_req( clock_sync_ctx_t* ctx )
-{
-    return ctx->nb_time_req;
-}
-
 void clock_sync_reset_nb_time_req( clock_sync_ctx_t* ctx )
 {
     ctx->nb_time_req = 0;
 }
 
+uint32_t clock_sync_get_time_left_connection_lost( clock_sync_ctx_t* ctx )
+{
+    uint32_t ret = 0;
+    if( ctx->sync_service_type == CLOCK_SYNC_MAC )
+    {
+        ret = lorawan_api_get_time_left_connection_lost( );
+    }
+    else
+    {
+        ret = alc_sync_get_time_left_connection_lost( ctx->alc_ctx );
+    }
+    return ret;
+}
+
 clock_sync_ret_t clock_sync_request( clock_sync_ctx_t* ctx )
 {
     clock_sync_ret_t ret         = CLOCK_SYNC_ERR;
-    lr1mac_states_t  send_status = LWPSTATE_IDLE;
+    status_lorawan_t send_status = ERRORLORAWAN;
 
     if( ctx->sync_service_type == CLOCK_SYNC_MAC )
     {
@@ -386,10 +439,12 @@ clock_sync_ret_t clock_sync_request( clock_sync_ctx_t* ctx )
     }
     else
     {
-        uint8_t  max_payload = lorawan_api_next_max_payload_length_get( );
-        uint8_t  tx_buffer_out[ALC_SYNC_TX_PAYLOAD_SIZE_MAX + 1];  // +1 is the e_inf_alcsync ID
-        uint8_t  tx_buffer_length_out = 0;
-        uint32_t target_send_time     = smtc_modem_hal_get_time_in_s( ) + smtc_modem_hal_get_random_nb_in_range( 1, 3 );
+        uint8_t max_payload = lorawan_api_next_max_payload_length_get( );
+        uint8_t tx_buffer_out[ALC_SYNC_TX_PAYLOAD_SIZE_MAX + 1];  // +1 is the DM_INFO_ALCSYNC ID
+        uint8_t tx_buffer_length_out = 0;
+
+        // The randomness value is used because the frame must be sent at time
+        uint32_t target_send_time = smtc_modem_hal_get_time_in_s( ) + smtc_modem_hal_get_random_nb_in_range( 1, 3 );
         uint8_t  app_time_ans_required = false;
         uint8_t  tx_buff_offset        = 0;
         // AnsRequired bit set to one in both cases: synchronisation lost or the last 30 days
@@ -404,7 +459,7 @@ clock_sync_ret_t clock_sync_request( clock_sync_ctx_t* ctx )
         // check first if alc_sync runs on dm port and if yes add dm code
         if( get_modem_dm_port( ) == clock_sync_get_alcsync_port( ctx ) )
         {
-            tx_buffer_out[tx_buff_offset] = e_inf_alcsync;
+            tx_buffer_out[tx_buff_offset] = DM_INFO_ALCSYNC;
             tx_buff_offset++;
         }
         // use target send time with both local compensation and previous alcsync compensation to create payload
@@ -420,10 +475,13 @@ clock_sync_ret_t clock_sync_request( clock_sync_ctx_t* ctx )
             send_status =
                 lorawan_api_payload_send_at_time( clock_sync_get_alcsync_port( ctx ), true, tx_buffer_out,
                                                   tx_buffer_length_out, UNCONF_DATA_UP, target_send_time * 1000 );
+
+            // reset alcsync reception bool
+            ctx->alc_ctx->is_sync_dl_received = false;
         }
     }
 
-    if( send_status == LWPSTATE_SEND )
+    if( send_status == OKLORAWAN )
     {
         ret = CLOCK_SYNC_OK;
         ctx->nb_time_req++;

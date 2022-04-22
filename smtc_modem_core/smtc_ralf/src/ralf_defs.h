@@ -94,6 +94,13 @@ typedef struct ralf_params_flrc_s
     int8_t                output_pwr_in_dbm;
 } ralf_params_flrc_t;
 
+typedef struct ralf_params_lr_fhss_s
+{
+    ral_lr_fhss_params_t ral_lr_fhss_params;
+    int8_t               output_pwr_in_dbm;
+    uint16_t             hop_sequence_id;
+} ralf_params_lr_fhss_t;
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------

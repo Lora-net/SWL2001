@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 // clang-format off
 #define NUMBER_OF_CHANNEL_AS_923            (16)
@@ -61,9 +71,12 @@ extern "C" {
 #define FREQMAX_GRP2_AS_923                 (923000000)     // Hz
 #define FREQMIN_GRP3_AS_923                 (915000000)     // Hz
 #define FREQMAX_GRP3_AS_923                 (921000000)     // Hz
+#define FREQMIN_GRP4_AS_923                 (917000000)     // Hz
+#define FREQMAX_GRP4_AS_923                 (920000000)     // Hz
 #define FREQOFFSET_GRP1_AS_923              (int32_t)(0x00000000)    //      0 * 100 Hz, Group AS923-1
 #define FREQOFFSET_GRP2_AS_923              (int32_t)(0xFFFFB9B0)    // -18000 * 100 Hz, Group AS923-2
 #define FREQOFFSET_GRP3_AS_923              (int32_t)(0xFFFEFE30)    // -66000 * 100 Hz, Group AS923-3
+#define FREQOFFSET_GRP4_AS_923              (int32_t)(0xFFFF1988)    // -59000 * 100 Hz, Group AS923-3
 #define RX2_FREQ_AS_923                     (923200000)     // Hz
 #define FREQUENCY_FACTOR_AS_923             (100)           // MHz/100 when coded over 24 bits
 #define RX2DR_INIT_AS_923                   (2)
@@ -72,8 +85,8 @@ extern "C" {
 #define MIN_DR_AS_923                       (0)
 #define MAX_DR_AS_923                       (7)
 #define MIN_TX_DR_LIMIT_AS_923              (2)
-#define MAX_DEFAULT_DR_AS_923               (5)
-#define DR_BITFIELD_SUPPORTED_AS_923        (uint16_t)(0x00FF) // DR7..DR0 Datarate bitfield supported by the region
+#define DR_BITFIELD_SUPPORTED_AS_923        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
+                                                        ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define DEFAULT_TX_DR_BIT_FIELD_AS_923      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define NUMBER_OF_TX_DR_AS_923              (8)
 #define TX_PARAM_SETUP_REQ_SUPPORTED_AS_923 (true)
@@ -92,7 +105,37 @@ extern "C" {
 
 // clang-format on
 
-static const char SYNC_WORD_GFSK_AS_923[] = { 0xC1, 0x94, 0xC1 };
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/**
+ * Bank contains 8 channels
+ */
+typedef enum as_923_channels_bank_e
+{
+    BANK_0_AS923 = 0,  // 0 to 7 channels
+    BANK_1_AS923 = 1,  // 8 to 15 channels
+    BANK_MAX_AS923
+} as_923_channels_bank_t;
+
+typedef struct region_as923_context_s
+{
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_AS_923];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_AS_923];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_AS_923];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_AS_923];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_AS_923];
+    uint8_t  channel_index_enabled[BANK_MAX_AS923];   // Enable by Network
+    uint8_t  unwrapped_channel_mask[BANK_MAX_AS923];  // Temp conf send by Network
+} region_as923_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+static const uint8_t SYNC_WORD_GFSK_AS_923[] = { 0xC1, 0x94, 0xC1 };
 
 /**
  * Default frequencies at boot
@@ -127,17 +170,44 @@ static const uint8_t datarate_offsets_dwell_time_1_as_923[8][8] = {
     { 7, 6, 5, 4, 3, 2, 7, 7 },  // DR 7
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_AS_923 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_as_923[2][8] = { {
+                                                           // [0][dr_backoff] dwell time Off
+                                                           0,  // DR0 -> DR0
+                                                           0,  // DR1 -> DR0
+                                                           1,  // DR2 -> DR1
+                                                           2,  // DR3 -> DR2
+                                                           3,  // DR4 -> DR3
+                                                           4,  // DR5 -> DR4
+                                                           5,  // DR6 -> DR5
+                                                           6   // DR7 -> DR6
+                                                       },
+                                                       {
+                                                           // [1][dr_backoff] dwell time On
+                                                           2,  // NA
+                                                           2,  // NA
+                                                           2,  // DR2 -> DR2
+                                                           2,  // DR3 -> DR2
+                                                           3,  // DR4 -> DR3
+                                                           4,  // DR5 -> DR4
+                                                           5,  // DR6 -> DR5
+                                                           6   // DR7 -> DR6
+                                                       } };
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_AS_923 =
     sizeof( datarate_offsets_dwell_time_1_as_923[0] ) / sizeof( datarate_offsets_dwell_time_1_as_923[0][0] );
 /**
  * Data rates table definition
  */
-static const uint8_t datarates_to_sf_as_923[] = { 12, 11, 10, 9, 8, 7, 7, 50 };
+static const uint8_t datarates_to_sf_as_923[] = { 12, 11, 10, 9, 8, 7, 7 };
 
 /**
  * Bandwidths table definition in KHz
  */
-static const uint32_t datarates_to_bandwidths_as_923[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250, BW125 };
+static const uint32_t datarates_to_bandwidths_as_923[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250 };
 
 /**
  * Payload max size table definition in bytes
@@ -203,29 +273,15 @@ static const uint8_t JOIN_DR_DISTRIBUTION_AS_923[] = { 0, 0, 4, 5, 5, 6, 0, 0 };
  */
 static const uint8_t DEFAULT_DR_DISTRIBUTION_AS_923[] = { 0, 0, 1, 0, 0, 0, 0, 0 };
 
-/**
- * Bank contains 8 channels
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
-typedef enum as_923_channels_bank_e
-{
-    BANK_0_AS923 = 0,  // 0 to 7 channels
-    BANK_1_AS923 = 1,  // 8 to 15 channels
-    BANK_MAX_AS923
-} as_923_channels_bank_t;
-
-typedef struct region_as923_context_s
-{
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_AS_923];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_AS_923];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_AS_923];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_AS_923];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_AS_923];
-    uint8_t  channel_index_enabled[BANK_MAX_AS923];   // Enable by Network
-    uint8_t  unwrapped_channel_mask[BANK_MAX_AS923];  // Temp conf send by Network
-} region_as923_context_t;
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_AS_923_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

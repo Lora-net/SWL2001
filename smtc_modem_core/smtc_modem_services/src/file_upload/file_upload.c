@@ -84,8 +84,10 @@
 // Length of filedone frame
 #define FILE_UPLOAD_FILEDONE_FRAME_LENGTH ( 1 )
 
-// buffer size + header - Can be modified to enlarge file upload max accepted size
-#define BUFSZ ( ( 2 * 1024 ) + FILE_UPLOAD_HEADER_SIZE )
+// File upload maximum size - Can be modified to enlarge file upload max accepted size
+#ifndef FILE_UPLOAD_MAX_SIZE
+#define FILE_UPLOAD_MAX_SIZE ( 8 * 1024 )
+#endif
 
 // number of words per chunk
 #define CHUNK_NW ( 2 )
@@ -128,17 +130,16 @@ file_upload_return_code_t file_upload_init( file_upload_t* file_upload, uint32_t
                                             uint16_t average_delay, uint8_t port, uint8_t encryption,
                                             uint8_t session_counter )
 {
-    uint16_t sz_tmp = file_len + FILE_UPLOAD_HEADER_SIZE;
-    if( BUFSZ < sz_tmp )
+    if( file_len > FILE_UPLOAD_MAX_SIZE )
     {
         LOG_ERROR(
-            "FileUpload is too large (%d < %d ) - Modify BUFSZ define to enlarge file upload buffer in case you have "
-            "enough ram \n",
-            BUFSZ - 12, sz_tmp );
+            "FileUpload is too large (%d > %d ) - Modify FILE_UPLOAD_MAX_SIZE  to enlarge file upload buffer in case "
+            "you have enough ram \n",
+            file_len, FILE_UPLOAD_MAX_SIZE );
         return FILE_UPLOAD_ERROR;
     }
-
-    uint32_t cct = ( sz_tmp + ( ( 4 * CHUNK_NW ) - 1 ) ) / ( 4 * CHUNK_NW );
+    uint16_t sz_tmp = file_len + FILE_UPLOAD_HEADER_SIZE;
+    uint32_t cct    = ( sz_tmp + ( ( 4 * CHUNK_NW ) - 1 ) ) / ( 4 * CHUNK_NW );
 
     file_upload->sid             = session_id & 0x3;
     file_upload->session_counter = session_counter;
@@ -199,10 +200,11 @@ file_upload_return_code_t file_upload_prepare_upload( file_upload_t* file_upload
 
 int32_t file_upload_get_fragment( file_upload_t* file_upload, uint8_t* buf, int32_t len, uint32_t fcnt )
 {
-    if( ( len -= 3 ) < ( CHUNK_NW * 4 ) )
+    if( ( len - 3 ) < ( CHUNK_NW * 4 ) )
     {
         return 0;
     }
+    len = len - 3;
     // discriminator (16bit little endian): 2bit session id, 4bit session
     // counter, 10bit chunk count-1
     uint32_t d = ( ( file_upload->sid & 0x03 ) << 14 ) | ( ( file_upload->session_counter & 0x0F ) << 10 ) |
@@ -222,19 +224,21 @@ int32_t file_upload_get_fragment( file_upload_t* file_upload, uint8_t* buf, int3
         n += ( CHUNK_NW * 4 );
         len -= ( CHUNK_NW * 4 );
     }
-    file_upload->cntx += ( n - 3 ) / ( CHUNK_NW * 4 );  // update number of chunks sent
-    if( file_upload->fntx < 255 )
+    if( n > 0 )
     {
-        file_upload->fntx += 1;  // update number of frames sent
+        file_upload->cntx += ( n - 3 ) / ( CHUNK_NW * 4 );  // update number of chunks sent
+        if( file_upload->fntx < 255 )
+        {
+            file_upload->fntx += 1;  // update number of frames sent
+        }
     }
-    if( ( file_upload->fntx < 3 ) || ( file_upload->cntx < ( 2 * file_upload->cct ) ) )
-    {
-        return n;
-    }
-    else
-    {
-        return 0;
-    }
+    return n;
+}
+
+bool file_upload_is_data_remaining( file_upload_t* file_upload )
+{
+    // limit number of chunks sent to twice the chunk count but send minimum three frames
+    return ( ( file_upload->fntx < 3 ) || ( file_upload->cntx < ( 2 * file_upload->cct ) ) );
 }
 
 file_upload_return_code_t file_upload_process_file_done_frame( file_upload_t* file_upload, const uint8_t* payload,

@@ -62,14 +62,15 @@ extern "C" {
         .stop_timer_on_preamble = ral_sx128x_stop_timer_on_preamble,                                                  \
         .set_rx_duty_cycle = ral_sx128x_set_rx_duty_cycle, .set_lora_cad = ral_sx128x_set_lora_cad,                   \
         .set_tx_cw = ral_sx128x_set_tx_cw, .set_tx_infinite_preamble = ral_sx128x_set_tx_infinite_preamble,           \
-        .set_tx_cfg = ral_sx128x_set_tx_cfg, .set_pkt_payload = ral_sx128x_set_pkt_payload,                           \
-        .get_pkt_payload = ral_sx128x_get_pkt_payload, .get_irq_status = ral_sx128x_get_irq_status,                   \
-        .clear_irq_status         = ral_sx128x_clear_irq_status,                                                      \
+        .cal_img = ral_sx128x_cal_img, .set_tx_cfg = ral_sx128x_set_tx_cfg,                                           \
+        .set_pkt_payload = ral_sx128x_set_pkt_payload, .get_pkt_payload = ral_sx128x_get_pkt_payload,                 \
+        .get_irq_status = ral_sx128x_get_irq_status, .clear_irq_status = ral_sx128x_clear_irq_status,                 \
         .get_and_clear_irq_status = ral_sx128x_get_and_clear_irq_status,                                              \
         .set_dio_irq_params = ral_sx128x_set_dio_irq_params, .set_rf_freq = ral_sx128x_set_rf_freq,                   \
-        .set_pkt_type = ral_sx128x_set_pkt_type, .set_gfsk_mod_params = ral_sx128x_set_gfsk_mod_params,               \
-        .set_gfsk_pkt_params = ral_sx128x_set_gfsk_pkt_params, .set_lora_mod_params = ral_sx128x_set_lora_mod_params, \
-        .set_lora_pkt_params = ral_sx128x_set_lora_pkt_params, .set_lora_cad_params = ral_sx128x_set_lora_cad_params, \
+        .set_pkt_type = ral_sx128x_set_pkt_type, .get_pkt_type = ral_sx128x_get_pkt_type,                             \
+        .set_gfsk_mod_params = ral_sx128x_set_gfsk_mod_params, .set_gfsk_pkt_params = ral_sx128x_set_gfsk_pkt_params, \
+        .set_lora_mod_params = ral_sx128x_set_lora_mod_params, .set_lora_pkt_params = ral_sx128x_set_lora_pkt_params, \
+        .set_lora_cad_params      = ral_sx128x_set_lora_cad_params,                                                   \
         .set_lora_symb_nb_timeout = ral_sx128x_set_lora_symb_nb_timeout,                                              \
         .set_flrc_mod_params = ral_sx128x_set_flrc_mod_params, .set_flrc_pkt_params = ral_sx128x_set_flrc_pkt_params, \
         .get_gfsk_rx_pkt_status = ral_sx128x_get_gfsk_rx_pkt_status,                                                  \
@@ -80,12 +81,17 @@ extern "C" {
         .get_flrc_time_on_air_in_ms = ral_sx128x_get_flrc_time_on_air_in_ms,                                          \
         .set_gfsk_sync_word = ral_sx128x_set_gfsk_sync_word, .set_lora_sync_word = ral_sx128x_set_lora_sync_word,     \
         .set_flrc_sync_word = ral_sx128x_set_flrc_sync_word, .set_gfsk_crc_params = ral_sx128x_set_gfsk_crc_params,   \
-        .set_flrc_crc_params           = ral_sx128x_set_flrc_crc_params,                                              \
-        .set_gfsk_whitening_seed       = ral_sx128x_set_gfsk_whitening_seed,                                          \
-        .get_lora_rx_pkt_cr_crc        = ral_sx128x_get_lora_rx_pkt_cr_crc,                                           \
-        .get_tx_consumption_in_ua      = ral_sx128x_get_tx_consumption_in_ua,                                         \
-        .get_gfsk_rx_consumption_in_ua = ral_sx128x_get_gfsk_rx_consumption_in_ua,                                    \
-        .get_lora_rx_consumption_in_ua = ral_sx128x_get_lora_rx_consumption_in_ua,                                    \
+        .set_flrc_crc_params     = ral_sx128x_set_flrc_crc_params,                                                    \
+        .set_gfsk_whitening_seed = ral_sx128x_set_gfsk_whitening_seed, .lr_fhss_init = ral_sx128x_lr_fhss_init,       \
+        .lr_fhss_build_frame = ral_sx128x_lr_fhss_build_frame, .lr_fhss_handle_hop = ral_sx128x_lr_fhss_handle_hop,   \
+        .lr_fhss_handle_tx_done         = ral_sx128x_lr_fhss_handle_tx_done,                                          \
+        .lr_fhss_get_time_on_air_in_ms  = ral_sx128x_lr_fhss_get_time_on_air_in_ms,                                   \
+        .lr_fhss_get_hop_sequence_count = ral_sx128x_lr_fhss_get_hop_sequence_count,                                  \
+        .get_lora_rx_pkt_cr_crc         = ral_sx128x_get_lora_rx_pkt_cr_crc,                                          \
+        .get_tx_consumption_in_ua       = ral_sx128x_get_tx_consumption_in_ua,                                        \
+        .get_gfsk_rx_consumption_in_ua  = ral_sx128x_get_gfsk_rx_consumption_in_ua,                                   \
+        .get_lora_rx_consumption_in_ua  = ral_sx128x_get_lora_rx_consumption_in_ua,                                   \
+        .get_random_numbers             = ral_sx128x_get_random_numbers,                                              \
     }
 
 #define RAL_SX128X_INSTANTIATE( ctx )                         \
@@ -190,6 +196,11 @@ ral_status_t ral_sx128x_set_tx_cw( const void* context );
 ral_status_t ral_sx128x_set_tx_infinite_preamble( const void* context );
 
 /**
+ * @see ral_cal_img
+ */
+ral_status_t ral_sx128x_cal_img( const void* context, const uint16_t freq1_in_mhz, const uint16_t freq2_in_mhz );
+
+/**
  * @see ral_set_tx_cfg
  */
 ral_status_t ral_sx128x_set_tx_cfg( const void* context, const int8_t output_pwr_in_dbm, const uint32_t rf_freq_in_hz );
@@ -234,6 +245,11 @@ ral_status_t ral_sx128x_set_rf_freq( const void* context, const uint32_t freq_in
  * @see ral_set_pkt_type
  */
 ral_status_t ral_sx128x_set_pkt_type( const void* context, const ral_pkt_type_t pkt_type );
+
+/**
+ * @see ral_get_pkt_type
+ */
+ral_status_t ral_sx128x_get_pkt_type( const void* context, ral_pkt_type_t* pkt_type );
 
 /**
  * @see ral_set_gfsk_mod_params
@@ -346,6 +362,42 @@ ral_status_t ral_sx128x_set_flrc_crc_params( const void* context, const uint32_t
 ral_status_t ral_sx128x_set_gfsk_whitening_seed( const void* context, const uint16_t seed );
 
 /**
+ * @see ral_lr_fhss_init
+ */
+ral_status_t ral_sx128x_lr_fhss_init( const void* context, const ral_lr_fhss_params_t* lr_fhss_params );
+
+/**
+ * @see ral_lr_fhss_build_frame
+ */
+ral_status_t ral_sx128x_lr_fhss_build_frame( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                             ral_lr_fhss_memory_state_t state, uint16_t hop_sequence_id,
+                                             const uint8_t* payload, uint16_t payload_length );
+
+/**
+ * @see ral_lr_fhss_handle_hop
+ */
+ral_status_t ral_sx128x_lr_fhss_handle_hop( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                            ral_lr_fhss_memory_state_t state );
+
+/**
+ * @see ral_lr_fhss_handle_tx_done
+ */
+ral_status_t ral_sx128x_lr_fhss_handle_tx_done( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                ral_lr_fhss_memory_state_t state );
+
+/**
+ * @see ral_lr_fhss_get_time_on_air_in_ms
+ */
+ral_status_t ral_sx128x_lr_fhss_get_time_on_air_in_ms( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                       uint16_t payload_length, uint32_t* time_on_air );
+
+/**
+ * @see ral_lr_fhss_get_hop_sequence_count
+ */
+ral_status_t ral_sx128x_lr_fhss_get_hop_sequence_count( const void*                 context,
+                                                        const ral_lr_fhss_params_t* lr_fhss_params );
+
+/**
  * @see ral_get_lora_rx_pkt_cr_crc
  */
 ral_status_t ral_sx128x_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present );
@@ -368,6 +420,11 @@ ral_status_t ral_sx128x_get_gfsk_rx_consumption_in_ua( const void* context, cons
  */
 ral_status_t ral_sx128x_get_lora_rx_consumption_in_ua( const void* context, const ral_lora_bw_t bw,
                                                        const bool rx_boosted, uint32_t* pwr_consumption_in_ua );
+/**
+ * @see ral_get_random_numbers
+ */
+ral_status_t ral_sx128x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n );
+
 #ifdef __cplusplus
 }
 #endif

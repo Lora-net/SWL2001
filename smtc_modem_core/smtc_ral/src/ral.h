@@ -292,6 +292,20 @@ static inline ral_status_t ral_set_tx_infinite_preamble( const ral_t* radio )
 }
 
 /**
+ * @brief Launch a band image rejection calibration valid for all frequencies inside an interval, in MHz
+ *
+ * @param [in] radio         Pointer to radio data structure
+ * @param [in] freq1_in_mhz  Image calibration interval lower bound, in MHz
+ * @param [in] freq2_in_mhz  Image calibration interval upper bound, in MHz
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_cal_img( const ral_t* radio, const uint16_t freq1_in_mhz, const uint16_t freq2_in_mhz )
+{
+    return radio->driver.cal_img( radio->context, freq1_in_mhz, freq2_in_mhz );
+}
+
+/**
  * @brief Configure the transmission-related parameters
  *
  * @details
@@ -414,6 +428,19 @@ static inline ral_status_t ral_set_rf_freq( const ral_t* radio, const uint32_t f
 static inline ral_status_t ral_set_pkt_type( const ral_t* radio, const ral_pkt_type_t pkt_type )
 {
     return radio->driver.set_pkt_type( radio->context, pkt_type );
+}
+
+/**
+ * @brief Get the current packet type
+ *
+ * @param [in] radio     Pointer to radio data structure
+ * @param [out] pkt_type Pointer to a variable holding the packet type
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_get_pkt_type( const ral_t* radio, ral_pkt_type_t* pkt_type )
+{
+    return radio->driver.get_pkt_type( radio->context, pkt_type );
 }
 
 /**
@@ -719,6 +746,100 @@ static inline ral_status_t ral_set_gfsk_whitening_seed( const ral_t* radio, cons
 }
 
 /**
+ * @brief Initialise LR FHSS
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] lr_fhss_params  Pointer to lr fhss parameters data structure
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_lr_fhss_init( const ral_t* radio, const ral_lr_fhss_params_t* lr_fhss_params )
+{
+    return radio->driver.lr_fhss_init( radio->context, lr_fhss_params );
+}
+
+/**
+ * @brief Build frame for LR FHSS operation
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] lr_fhss_params  Pointer to lr fhss parameters data structure
+ * @param [in,out] memory_state_holder  Pointer to memory allocated to hold lr fhss state
+ * @param [in] hop_sequence_id  The hop sequence id to use
+ * @param [in] payload  Pointer to the payload to send
+ * @param [in] payload_length  Length of payload in bytes
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_lr_fhss_build_frame( const ral_t* radio, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                    ral_lr_fhss_memory_state_t memory_state_holder,
+                                                    uint16_t hop_sequence_id, const uint8_t* payload,
+                                                    uint16_t payload_length )
+{
+    return radio->driver.lr_fhss_build_frame( radio->context, lr_fhss_params, memory_state_holder, hop_sequence_id,
+                                              payload, payload_length );
+}
+
+/**
+ * @brief Handle HOP for LR FHSS operation
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] memory_state_holder  Pointer to memory allocated to hold lr fhss state
+ * @param [in] lr_fhss_params  Pointer to lr fhss parameters data structure
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_lr_fhss_handle_hop( const ral_t* radio, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                   ral_lr_fhss_memory_state_t memory_state_holder )
+{
+    return radio->driver.lr_fhss_handle_hop( radio->context, lr_fhss_params, memory_state_holder );
+}
+
+/**
+ * @brief Handle TX DONE for LR FHSS operation
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] memory_state_holder  Pointer to memory allocated to hold lr fhss state
+ * @param [in] lr_fhss_params  Pointer to lr fhss parameters data structure
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_lr_fhss_handle_tx_done( const ral_t* radio, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                       ral_lr_fhss_memory_state_t memory_state_holder )
+{
+    return radio->driver.lr_fhss_handle_tx_done( radio->context, lr_fhss_params, memory_state_holder );
+}
+
+/**
+ * @brief Get the time on air in ms for LR-FHSS transmission
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] lr_fhss_params LR-FHSS parameter structure
+ * @param [in] payload_length Length of application-layer payload
+ *
+ * @returns Time-on-air value in ms for LR-FHSS transmission
+ */
+static inline ral_status_t ral_lr_fhss_get_time_on_air_in_ms( const ral_t*                radio,
+                                                              const ral_lr_fhss_params_t* lr_fhss_params,
+                                                              uint16_t payload_length, uint32_t* time_on_air )
+{
+    return radio->driver.lr_fhss_get_time_on_air_in_ms( radio->context, lr_fhss_params, payload_length, time_on_air );
+}
+
+/**
+ * @brief Return the number of hop sequences available using the given parameters
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] lr_fhss_params  Pointer to lr fhss parameters data structure
+ *
+ * @return Returns the number of valid hop sequences (512 or 384)
+ */
+static inline unsigned int ral_lr_fhss_get_hop_sequence_count( const ral_t*                radio,
+                                                               const ral_lr_fhss_params_t* lr_fhss_params )
+{
+    return radio->driver.lr_fhss_get_hop_sequence_count( radio->context, lr_fhss_params );
+}
+
+/**
  * @brief Get the coding rate and CRC configuration of the last received LoRa packet
  *
  * @param [in] radio            Pointer to radio data structure
@@ -782,6 +903,32 @@ static inline ral_status_t ral_get_lora_rx_consumption_in_ua( const ral_t* radio
                                                               const bool rx_boosted, uint32_t* pwr_consumption_in_ua )
 {
     return radio->driver.get_lora_rx_consumption_in_ua( radio->context, bw, rx_boosted, pwr_consumption_in_ua );
+}
+
+/**
+ * @brief Generate one or more 32-bit random numbers.
+ *
+ * @remark A valid packet type must have been configured with @ref ral_set_pkt_type
+ *         before using this command.
+ *
+ * @param [in] radio    Pointer to radio data structure
+ * @param [out] numbers Array where numbers will be stored
+ * @param [in]  n       Number of desired random numbers
+ *
+ * @returns Operation status
+ *
+ * It is assumed that the transceiver is in standby mode when this API function is called.
+ * Note that for certain transceivers this code can result in interrupt generation. It is the responsibility of
+ * the caller to disable radio interrupts before calling this function,
+ * and to re-enable them afterwards if necessary, or be certain that any interrupts
+ * generated during this process will not cause undesired side-effects in the calling application.
+ *
+ * Please note that the random numbers produced by the generator do not necessarily have a uniform or
+ * Gaussian distribution. If uniformity is needed, perform appropriate software post-processing.
+ */
+static inline ral_status_t ral_get_random_numbers( const ral_t* radio, uint32_t* numbers, unsigned int n )
+{
+    return radio->driver.get_random_numbers( radio->context, numbers, n );
 }
 
 #ifdef __cplusplus

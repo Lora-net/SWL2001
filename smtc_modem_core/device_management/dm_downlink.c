@@ -55,15 +55,35 @@
 #include "gnss_ctrl_api.h"
 #endif  // LR1110_MODEM_E && _MODEM_E_GNSS_ENABLE
 
-#if defined( LR1110_TRANSCEIVER )
-#include "smtc_basic_modem_lr1110_api_extension.h"
+#if defined( LR11XX_TRANSCEIVER )
+#include "smtc_basic_modem_lr11xx_api_extension.h"
 #if defined( ENABLE_MODEM_GNSS_FEATURE )
 #include "almanac_update.h"
-#include "lr1110_gnss.h"
+#include "lr11xx_gnss.h"
 #endif  // ENABLE_MODEM_GNSS_FEATURE
-#endif  // LR1110_TRANSCEIVER
+#endif  // LR11XX_TRANSCEIVER
 
 extern smtc_modem_services_t smtc_modem_services_ctx;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE MACRO -----------------------------------------------------------
+ */
+
+/*!
+ * \brief Returns the minimum value between a and b
+ *
+ * \param [IN] a 1st value
+ * \param [IN] b 2nd value
+ * \retval minValue Minimum value
+ */
+#define MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
+
+/**
+ * @brief Math Abs macro
+ */
+#define ABS( N ) ( ( N < 0 ) ? ( -N ) : ( N ) )
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
@@ -88,6 +108,16 @@ static const char* dm_cmd_str[DM_CMD_MAX] = {
 };
 #endif
 
+static const uint8_t dm_cmd_len[DM_CMD_MAX][2] = {  // CMD              = {min,       max}
+    [DM_RESET] = { 3, 3 },         [DM_FUOTA] = { 1, 255 },
+    [DM_FILE_DONE] = { 1, 1 },     [DM_GET_INFO] = { 1, 255 },
+    [DM_SET_CONF] = { 2, 255 },    [DM_REJOIN] = { 2, 2 },
+    [DM_MUTE] = { 1, 1 },          [DM_SET_DM_INFO] = { 1, DM_INFO_MAX },
+    [DM_STREAM] = { 1, 255 },      [DM_ALC_SYNC] = { 1, 255 },
+    [DM_ALM_UPDATE] = { 1, 255 },  [DM_ALM_DBG] = { 1, 255 },
+    [DM_SOLV_UPDATE] = { 1, 255 }, [DM_ALM_FUPDATE] = { 1, 255 }
+};
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
@@ -98,27 +128,27 @@ static const char* dm_cmd_str[DM_CMD_MAX] = {
  *
  * \param [in]  cmd                         Current dm code that must be checked
  * \param [in]  length                      Length of the tested requested code
- * \param [out] e_dm_cmd_length_valid       Return valid length or not
+ * \param [out] dm_cmd_length_valid_t       Return valid length or not
  */
-static e_dm_cmd_length_valid dm_check_cmd_size( e_dm_cmd_t cmd, uint8_t length );
+static dm_cmd_length_valid_t dm_check_cmd_size( dm_opcode_t cmd, uint8_t length );
 
 /*!
  * \brief   DM Reset
  *
  * \param [in]  reset_code                  Type of requested reset
  * \param [in]  reset_session               reset Session is compare to the current number of modem reset
- * \param [out] e_dm_error_t                Return valid or not
+ * \param [out] dm_rc_t                     Return valid or not
  */
-static e_dm_error_t dm_reset( e_dm_reset_code_t reset_code, uint16_t reset_session );
+static dm_rc_t dm_reset( dm_reset_code_t reset_code, uint16_t reset_session );
 
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-e_dm_error_t dm_downlink( uint8_t* data, uint8_t length )
+dm_rc_t dm_downlink( uint8_t* data, uint8_t length )
 {
-    s_dm_cmd_input_t dm_input;
+    dm_cmd_msg_t dm_input;
     if( length <= DM_DOWNLINK_HEADER_LENGTH )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "DM Downlink must contain at least 4 bytes\n" );
@@ -127,12 +157,12 @@ e_dm_error_t dm_downlink( uint8_t* data, uint8_t length )
 
     dm_input.up_count     = data[0];
     dm_input.up_delay     = data[1];
-    dm_input.request_code = ( e_dm_cmd_t ) data[2];
+    dm_input.request_code = ( dm_opcode_t ) data[2];
     dm_input.buffer       = &data[3];
     dm_input.buffer_len   = length - DM_DOWNLINK_HEADER_LENGTH;
 
     // parse dm downlink
-    e_dm_error_t dm_parse_status = dm_parse_cmd( &dm_input );
+    dm_rc_t dm_parse_status = dm_parse_cmd( &dm_input );
 
     // save upcount and updelay
     set_dm_retrieve_pending_dl( dm_input.up_count, dm_input.up_delay );
@@ -146,9 +176,9 @@ e_dm_error_t dm_downlink( uint8_t* data, uint8_t length )
     return dm_parse_status;
 }
 
-e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
+dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
 {
-    e_dm_error_t ret = DM_OK;
+    dm_rc_t ret = DM_OK;
     if( dm_check_cmd_size( cmd_input->request_code, cmd_input->buffer_len ) != DM_CMD_LENGTH_VALID )
     {
         return DM_ERROR;
@@ -161,7 +191,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
     {
     case DM_RESET:
 
-        if( dm_reset( ( e_dm_reset_code_t ) cmd_input->buffer[0],
+        if( dm_reset( ( dm_reset_code_t ) cmd_input->buffer[0],
                       cmd_input->buffer[1] | ( cmd_input->buffer[2] << 8 ) ) != DM_OK )
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "NOT RESET !!!\n" );
@@ -198,7 +228,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
         }
         break;
     case DM_GET_INFO:
-        if( set_dm_info( cmd_input->buffer, cmd_input->buffer_len, DM_INFO_NOW ) != SET_OK )
+        if( set_dm_info( cmd_input->buffer, cmd_input->buffer_len, DM_INFO_NOW ) != DM_OK )
         {
             ret = DM_ERROR;
             break;
@@ -206,7 +236,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
         modem_supervisor_add_task_dm_status_now( );
         break;
     case DM_SET_CONF:
-        if( dm_set_conf( ( e_dm_info_t ) cmd_input->buffer[0], cmd_input->buffer + 1, cmd_input->buffer_len - 1 ) !=
+        if( dm_set_conf( ( dm_info_field_t ) cmd_input->buffer[0], cmd_input->buffer + 1, cmd_input->buffer_len - 1 ) !=
             DM_OK )
         {
             ret = DM_ERROR;
@@ -218,9 +248,9 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
         uint16_t dev_nonce = ( cmd_input->buffer[1] << 8 ) | cmd_input->buffer[0];
         if( lorawan_api_devnonce_get( ) != dev_nonce )
         {
-            uint8_t       dm_fields_payload[1] = { e_inf_session };
-            e_set_error_t return_code          = set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
-            if( return_code == SET_OK )
+            uint8_t dm_fields_payload[1] = { DM_INFO_SESSION };
+            dm_rc_t return_code          = set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
+            if( return_code == DM_OK )
             {
                 modem_supervisor_add_task_dm_status_now( );
             }
@@ -242,7 +272,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
         increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_MUTE, 0 );
         break;
     case DM_SET_DM_INFO:
-        if( set_dm_info( cmd_input->buffer, cmd_input->buffer_len, DM_INFO_PERIODIC ) != SET_OK )
+        if( set_dm_info( cmd_input->buffer, cmd_input->buffer_len, DM_INFO_PERIODIC ) != DM_OK )
         {
             ret = DM_ERROR;
             break;
@@ -257,23 +287,32 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
         }
         break;
     case DM_ALC_SYNC: {
-        bool    b_sync_before = clock_sync_is_done( &( smtc_modem_services_ctx.clock_sync_ctx ) );
         uint8_t alc_sync_status =
             alc_sync_parser( &( smtc_modem_services_ctx.alc_sync_ctx ), cmd_input->buffer, cmd_input->buffer_len );
 
         if( ( ( alc_sync_status >> ALC_SYNC_APP_TIME_ANS ) & 0x1 ) == 1 )
         {
-            if( ( b_sync_before == false ) && clock_sync_is_done( &( smtc_modem_services_ctx.clock_sync_ctx ) ) )
-            {
-                increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, 1 );
-            }
+            // an alcsync dl with time was received => update flag
+            smtc_modem_services_ctx.alc_sync_ctx.is_sync_dl_received = true;
+
+            increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, SMTC_MODEM_EVENT_TIME_VALID );
 
             // Remove all alc sync task.
             modem_supervisor_remove_task_clock_sync( );
 
-            modem_supervisor_add_task_clock_sync_time_req(
-                clock_sync_get_interval_second( &( smtc_modem_services_ctx.clock_sync_ctx ) ) +
-                smtc_modem_hal_get_signed_random_nb_in_range( -30, 30 ) );
+            if( clock_sync_is_enabled( &( smtc_modem_services_ctx.clock_sync_ctx ) ) == true )
+            {
+                int32_t  tmp_rand = 0;
+                uint32_t tmp_delay =
+                    MIN( clock_sync_get_interval_second( &( smtc_modem_services_ctx.clock_sync_ctx ) ),
+                         clock_sync_get_time_left_connection_lost( &( smtc_modem_services_ctx.clock_sync_ctx ) ) );
+                do
+                {
+                    tmp_rand = smtc_modem_hal_get_signed_random_nb_in_range( -30, 30 );
+                } while( ( tmp_rand < 0 ) && ( ABS( tmp_rand ) > tmp_delay ) );
+
+                modem_supervisor_add_task_clock_sync_time_req( tmp_delay + tmp_rand );
+            }
         }
 
         if( alc_sync_status & ( ~( 1 << ALC_SYNC_APP_TIME_ANS ) ) )
@@ -281,9 +320,20 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
             if( ( ( alc_sync_status >> ALC_SYNC_DEVICE_APP_TIME_PERIODICITY_REQ ) & 0x1 ) == 1 )
             {
                 // If periodic time request is configured, add task to handle it
-                modem_supervisor_add_task_clock_sync_time_req(
-                    clock_sync_get_interval_second( &( smtc_modem_services_ctx.clock_sync_ctx ) ) +
-                    smtc_modem_hal_get_signed_random_nb_in_range( -30, 30 ) );
+
+                if( clock_sync_is_enabled( &( smtc_modem_services_ctx.clock_sync_ctx ) ) == true )
+                {
+                    int32_t  tmp_rand = 0;
+                    uint32_t tmp_delay =
+                        MIN( clock_sync_get_interval_second( &( smtc_modem_services_ctx.clock_sync_ctx ) ),
+                             clock_sync_get_time_left_connection_lost( &( smtc_modem_services_ctx.clock_sync_ctx ) ) );
+                    do
+                    {
+                        tmp_rand = smtc_modem_hal_get_signed_random_nb_in_range( -30, 30 );
+                    } while( ( tmp_rand < 0 ) && ( ABS( tmp_rand ) > tmp_delay ) );
+
+                    modem_supervisor_add_task_clock_sync_time_req( tmp_delay + tmp_rand );
+                }
             }
             // When a request requiring an answer is requested, add task to handle it
             modem_supervisor_add_task_alc_sync_ans( 1 );
@@ -293,7 +343,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
     case DM_ALM_UPDATE: {
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
         if( Gnss_push_almanac_update( cmd_input->buffer, cmd_input->buffer_len, 0 ) != GNSS_CMD_OK )
-#elif defined( LR1110_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
+#elif defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
         // format received buffer to fit das raw input (with 2 more bytes upcount updelay and the DM_ALM_UPDATE
         // opcode)
         uint8_t                      buff[cmd_input->buffer_len + 3];
@@ -329,7 +379,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
     case DM_ALM_FUPDATE: {
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
         if( Gnss_push_almanac_update( cmd_input->buffer, cmd_input->buffer_len, 1 ) != GNSS_CMD_OK )
-#elif defined( LR1110_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
+#elif defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
         // format received buffer to fit das raw input (with 2 more bytes upcount updelay and the DM_ALM_UPDATE
         // opcode)
         uint8_t                      buff[cmd_input->buffer_len + 3];
@@ -339,7 +389,23 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
         memcpy( &buff[3], cmd_input->buffer, cmd_input->buffer_len );
         rc = almanac_update_process_downlink_payload( modem_context_get_modem_radio_ctx( ), buff,
                                                       cmd_input->buffer_len + 3 );
-        if( rc != ALMANAC_OK )
+        if( rc == ALMANAC_OK )
+        {
+            event_almanac_update_status_t event_almanac_update_status = ALMANAC_EVENT_ALL_UPDATES_RECEIVED;
+            // check upcount value to manage the event status
+            if( cmd_input->up_count > 0 )
+            {
+                // DAS asked for a new uplink containing the almanac crc
+                event_almanac_update_status = ALMANAC_EVENT_DAS_NEED_NEW_CRC;
+
+                // reset up_count and up_delay value to only let user uplink needed dm.
+                cmd_input->up_count = 0;
+                cmd_input->up_delay = 0;
+            }
+            // update event almanac update
+            increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_ALMANAC_UPDATE, event_almanac_update_status );
+        }
+        else
 #endif
         {
             ret = DM_ERROR;
@@ -365,8 +431,8 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
             // Prepare the task to send answers
             modem_supervisor_add_task_alm_dbg_ans( 1 );
         }
-#elif defined( LR1110_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
-        // Not supported on Basic Modem with Lr1110 tranceiver
+#elif defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
+        // Not supported on Basic Modem with LR11XX tranceiver
         ret                = DM_ERROR;
 #endif
         ret = DM_ERROR;
@@ -375,13 +441,13 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
     case DM_SOLV_UPDATE: {
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
         if( Gnss_push_msg_from_solver( cmd_input->buffer, cmd_input->buffer_len ) != GNSS_CMD_OK )
-#elif defined( LR1110_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
-        lr1110_status_t rc = LR1110_STATUS_ERROR;
+#elif defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
+        lr11xx_status_t rc = LR11XX_STATUS_ERROR;
         modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
-        rc = lr1110_gnss_push_solver_msg( modem_context_get_modem_radio_ctx( ), cmd_input->buffer,
+        rc = lr11xx_gnss_push_solver_msg( modem_context_get_modem_radio_ctx( ), cmd_input->buffer,
                                           cmd_input->buffer_len );
         modem_context_resume_radio_access( );
-        if( rc != LR1110_STATUS_OK )
+        if( rc != LR11XX_STATUS_OK )
 #endif
         {
             ret = DM_ERROR;
@@ -401,7 +467,7 @@ e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input )
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-static e_dm_cmd_length_valid dm_check_cmd_size( e_dm_cmd_t cmd, uint8_t length )
+static dm_cmd_length_valid_t dm_check_cmd_size( dm_opcode_t cmd, uint8_t length )
 {
     if( cmd >= DM_CMD_MAX )
     {
@@ -423,9 +489,9 @@ static e_dm_cmd_length_valid dm_check_cmd_size( e_dm_cmd_t cmd, uint8_t length )
     return DM_CMD_LENGTH_VALID;
 }
 
-static e_dm_error_t dm_reset( e_dm_reset_code_t reset_code, uint16_t reset_session )
+static dm_rc_t dm_reset( dm_reset_code_t reset_code, uint16_t reset_session )
 {
-    e_dm_error_t ret = DM_OK;
+    dm_rc_t ret = DM_OK;
 
     if( reset_session == lorawan_api_nb_reset_get( ) )
     {
@@ -445,9 +511,9 @@ static e_dm_error_t dm_reset( e_dm_reset_code_t reset_code, uint16_t reset_sessi
     }
     else
     {
-        uint8_t       dm_fields_payload[1] = { e_inf_rstcount };
-        e_set_error_t return_code          = set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
-        if( return_code == SET_OK )
+        uint8_t dm_fields_payload[1] = { DM_INFO_RSTCOUNT };
+        dm_rc_t return_code          = set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
+        if( return_code == DM_OK )
         {
             modem_supervisor_add_task_dm_status_now( );
         }

@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 #if defined( HYBRID_CN470_MONO_CHANNEL )
 extern uint32_t freq_tx_cn470_mono_channel_mhz;
@@ -54,10 +64,11 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define JOIN_ACCEPT_DELAY1_CN_470           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_CN_470           (6)             // define in seconds
 #define RECEIVE_DELAY1_CN_470               (1)             // define in seconds
-#if defined( LR1110 )
-#define TX_POWER_EIRP_CN_470                (19)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
+#if defined( LR11XX )
+#define TX_POWER_EIRP_CN_470                (19)            // define in dbm
 #else
-#define TX_POWER_EIRP_CN_470                (14)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
+// This value must be the MIN of MAX supported by the region and the radio, region is 19dBm EIRP but radio is 14dBm ERP (+2 to EIRP)
+#define TX_POWER_EIRP_CN_470                (16)            // define in dbm
 #endif
 #define MAX_TX_POWER_IDX_CN_470             (7)            // index ex LinkADRReq
 #define ADR_ACK_LIMIT_CN_470                (64)
@@ -70,10 +81,10 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define SYNC_WORD_PUBLIC_CN_470             (0x34)
 #define MIN_TX_DR_CN_470                    (0)
 #define MAX_TX_DR_CN_470                    (7)
-#define MAX_TX_DEFAULT_DR_CN_470            (5)
 #define NUMBER_OF_TX_DR_CN_470              (8)
-#define DR_BITFIELD_SUPPORTED_CN_470        (uint16_t)(0x00FF) // DR7..DR0 Datarate bitfield supported by the region
-#define DEFAULT_TX_DR_BIT_FIELD_CN_470      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#define DR_BITFIELD_SUPPORTED_CN_470        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
+                                                        ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#define DEFAULT_TX_DR_BIT_FIELD_CN_470      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) )
 #if defined( HYBRID_CN470_MONO_CHANNEL )
     #define MIN_TX_DR_LIMIT_CN_470              (0)
     #define MIN_RX_DR_CN_470                    (0)
@@ -98,12 +109,8 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 
 #define CF_LIST_SUPPORTED_CN_470            (CF_LIST_FREQ)
 
-// // Class B
-// #define BEACON_DR_CN_470_RP_1_0                    (2)
-// #define BEACON_FREQ_START_CN_470_RP_1_0            (508300000)     // Hz
-// #define BEACON_STEP_CN_470_RP_1_0                  (20000000)      // Hz
-// #define PING_SLOT_FREQ_START_CN_470_RP_1_0         (923300000)     // Hz
-// #define PING_SLOT_STEP_CN_470_RP_1_0               (20000000)      // Hz
+// Class B
+#define BEACON_DR_CN_470                    (2)
 
 #if defined( HYBRID_CN470_MONO_CHANNEL )
 #define NUMBER_OF_TX_CHANNEL_20MHZ_CN_470   (64)
@@ -157,7 +164,56 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #endif
 // clang-format on
 
-static const char SYNC_WORD_GFSK_CN_470[] = { 0xC1, 0x94, 0xC1 };
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/**
+ * Bank contains 8 channels
+ */
+typedef enum cn_470_channels_bank_e
+{
+    BANK_0_125_CN470 = 0,  //  0 -  7
+    BANK_1_125_CN470 = 1,  //  8 - 15
+    BANK_2_125_CN470 = 2,  // 16 - 23
+    BANK_3_125_CN470 = 3,  // 24 - 31
+    BANK_4_125_CN470 = 4,  // 32 - 39
+    BANK_5_125_CN470 = 5,  // 40 - 47
+    BANK_6_125_CN470 = 6,  // 48 - 55
+    BANK_7_125_CN470 = 7,  // 56 - 63
+    BANK_MAX_CN470
+} cn_470_channels_bank_t;
+
+/**
+ * Channel plan enum type
+ */
+typedef enum channel_plan_type_e
+{
+    CN_470_20MHZ_A = 0,
+    CN_470_20MHZ_B,
+    CN_470_26MHZ_A,
+    CN_470_26MHZ_B
+} channel_plan_type_cn470_t;
+
+typedef struct region_cn470_context_s
+{
+    uint16_t                  dr_bitfield_tx_channel[NUMBER_OF_TX_CHANNEL_CN_470];
+    uint8_t                   dr_distribution_init[NUMBER_OF_TX_DR_CN_470];
+    uint8_t                   dr_distribution[NUMBER_OF_TX_DR_CN_470];
+    uint8_t                   channel_index_enabled[BANK_MAX_CN470];  // Contain the index of the activated channel only
+    uint8_t                   unwrapped_channel_mask[BANK_MAX_CN470];
+    uint8_t                   activated_by_join_channel;  // Channel used to join
+    channel_plan_type_cn470_t activated_channel_plan;
+
+} region_cn470_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_GFSK_CN_470[] = { 0xC1, 0x94, 0xC1 };
 
 /**
  * Up/Down link data rates offset definition
@@ -173,18 +229,33 @@ static const uint8_t datarate_offsets_cn_470[8][6] = {
     { 7, 6, 5, 4, 3, 2 },  // DR 7
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_CN_470 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_cn_470[] = {
+    1,  // DR0 -> DR1 // DR 0  !! WARNING RFU FOR CN470 !!
+    1,  // DR1 -> DR1
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4,  // DR5 -> DR4
+    5,  // DR6 -> DR5
+    6   // DR7 -> DR6
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_CN_470 =
     sizeof( datarate_offsets_cn_470[0] ) / sizeof( datarate_offsets_cn_470[0][0] );
 
 /**
  * Data rates table definition
  */
-static const uint8_t datarates_to_sf_cn_470[] = { 12, 11, 10, 9, 8, 7, 7, 50 };
+static const uint8_t datarates_to_sf_cn_470[] = { 12, 11, 10, 9, 8, 7, 7 };
 
 /**
  * Bandwidths table definition in KHz
  */
-static const uint32_t datarates_to_bandwidths_cn_470[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW500, BW125 };
+static const uint32_t datarates_to_bandwidths_cn_470[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW500 };
 
 /**
  * Payload max size table definition in bytes
@@ -249,33 +320,6 @@ static const uint8_t JOIN_DR_DISTRIBUTION_CN_470[] = { 0, 3, 3, 4, 4, 6, 0, 0 };
 static const uint8_t DEFAULT_DR_DISTRIBUTION_CN_470[] = { 0, 1, 0, 0, 0, 0, 0, 0 };
 
 /**
- * Bank contains 8 channels
- */
-typedef enum cn_470_channels_bank_e
-{
-    BANK_0_125_CN470 = 0,  //  0 -  7
-    BANK_1_125_CN470 = 1,  //  8 - 15
-    BANK_2_125_CN470 = 2,  // 16 - 23
-    BANK_3_125_CN470 = 3,  // 24 - 31
-    BANK_4_125_CN470 = 4,  // 32 - 39
-    BANK_5_125_CN470 = 5,  // 40 - 47
-    BANK_6_125_CN470 = 6,  // 48 - 55
-    BANK_7_125_CN470 = 7,  // 56 - 63
-    BANK_MAX_CN470
-} cn_470_channels_bank_t;
-
-/**
- * Channel plan enum type
- */
-typedef enum channel_plan_type_e
-{
-    CN_470_20MHZ_A = 0,
-    CN_470_20MHZ_B,
-    CN_470_26MHZ_A,
-    CN_470_26MHZ_B
-} channel_plan_type_cn470_t;
-
-/**
  * Common Join channels, frequencies in Hz
  */
 
@@ -329,20 +373,15 @@ static const uint32_t common_join_channel_cn_470[][3] = {
 };
 #endif
 
-typedef struct region_cn470_context_s
-{
-    uint16_t                  dr_bitfield_tx_channel[NUMBER_OF_TX_CHANNEL_CN_470];
-    uint8_t                   dr_distribution_init[NUMBER_OF_TX_DR_CN_470];
-    uint8_t                   dr_distribution[NUMBER_OF_TX_DR_CN_470];
-    uint8_t                   channel_index_enabled[BANK_MAX_CN470];  // Contain the index of the activated channel only
-    uint8_t                   unwrapped_channel_mask[BANK_MAX_CN470];
-    uint8_t                   activated_by_join_channel;  // Channel used to join
-    channel_plan_type_cn470_t activated_channel_plan;
-
-} region_cn470_context_t;
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_CN470_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

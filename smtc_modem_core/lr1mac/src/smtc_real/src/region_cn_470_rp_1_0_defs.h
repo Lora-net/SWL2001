@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 #if defined( HYBRID_CN470_MONO_CHANNEL )
 extern uint32_t freq_tx_cn470_mono_channel_mhz;
@@ -54,10 +64,11 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define JOIN_ACCEPT_DELAY1_CN_470_RP_1_0           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_CN_470_RP_1_0           (6)             // define in seconds
 #define RECEIVE_DELAY1_CN_470_RP_1_0               (1)             // define in seconds
-#if defined( LR1110 )
-#define TX_POWER_EIRP_CN_470_RP_1_0                (19)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
+#if defined( LR11XX )
+#define TX_POWER_EIRP_CN_470_RP_1_0                (19)            // define in dbm
 #else
-#define TX_POWER_EIRP_CN_470_RP_1_0                (14)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
+// This value must be the MIN of MAX supported by the region and the radio, region is 19dBm EIRP but radio is 14dBm ERP (+2 to EIRP)
+#define TX_POWER_EIRP_CN_470_RP_1_0                (16)            // define in dbm
 #endif
 #define MAX_TX_POWER_IDX_CN_470_RP_1_0             (7)            // index ex LinkADRReq
 #define ADR_ACK_LIMIT_CN_470_RP_1_0                (64)
@@ -71,7 +82,6 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define SYNC_WORD_PUBLIC_CN_470_RP_1_0             (0x34)
 #define MIN_TX_DR_CN_470_RP_1_0                    (0)
 #define MAX_TX_DR_CN_470_RP_1_0                    (5)
-#define MAX_TX_DEFAULT_DR_CN_470_RP_1_0            (5)
 #define NUMBER_OF_TX_DR_CN_470_RP_1_0              (6)
 #define DR_BITFIELD_SUPPORTED_CN_470_RP_1_0        (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define DEFAULT_TX_DR_BIT_FIELD_CN_470_RP_1_0      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
@@ -100,13 +110,18 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 
 // Class B
 #define BEACON_DR_CN_470_RP_1_0                    (2)
-#define BEACON_FREQ_START_CN_470_RP_1_0            (508300000)     // Hz
-#define BEACON_STEP_CN_470_RP_1_0                  (20000000)      // Hz
-#define PING_SLOT_FREQ_START_CN_470_RP_1_0         (923300000)     // Hz
-#define PING_SLOT_STEP_CN_470_RP_1_0               (20000000)      // Hz
+#define BEACON_FREQ_START_CN_470_RP_1_0            (508300000) // Hz
+#define BEACON_STEP_CN_470_RP_1_0                  (200000)    // Hz
+#define PING_SLOT_FREQ_START_CN_470_RP_1_0         (923300000) // Hz
+#define PING_SLOT_STEP_CN_470_RP_1_0               (200000)    // Hz
 // clang-format on
 
-static const char SYNC_WORD_GFSK_CN_470_RP_1_0[] = { 0xC1, 0x94, 0xC1 };
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_GFSK_CN_470_RP_1_0[] = { 0xC1, 0x94, 0xC1 };
 
 /**
  * Up/Down link data rates offset definition
@@ -120,7 +135,20 @@ static const uint8_t datarate_offsets_cn_470_rp_1_0[8][6] = {
     { 5, 4, 3, 2, 1, 0 },  // DR 5
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_CN_470_RP_1_0 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_cn_470_rp_1_0[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4   // DR5 -> DR4
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_CN_470_RP_1_0 =
     sizeof( datarate_offsets_cn_470_rp_1_0[0] ) / sizeof( datarate_offsets_cn_470_rp_1_0[0][0] );
 
 /**
@@ -196,6 +224,11 @@ static const uint8_t JOIN_DR_DISTRIBUTION_CN_470_RP_1_0[] = { 1, 2, 3, 4, 4, 6 }
  */
 static const uint8_t DEFAULT_DR_DISTRIBUTION_CN_470_RP_1_0[] = { 1, 0, 0, 0, 0, 0 };
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
 /**
  * Bank contains 8 channels
  */
@@ -227,8 +260,15 @@ typedef struct region_cn470_rp_1_0_context_s
     cn_470_rp_1_0_channels_bank_t snapshot_bank_tx_mask;
 } region_cn470_rp_1_0_context_t;
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_CN470_RP_1_0_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

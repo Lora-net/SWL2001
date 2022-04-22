@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 // clang-format off
 #define NUMBER_OF_CHANNEL_WW2G4            (16)
@@ -60,14 +70,14 @@ extern "C" {
 #define RX2_FREQ_WW2G4                     (2423000000)    // Hz
 #define FREQUENCY_FACTOR_WW2G4             (200)           // MHz/200 when coded over 24 bits
 #define RX2DR_INIT_WW2G4                   (0)
-#define SYNC_WORD_PRIVATE_WW2G4            (0x21)
+#define SYNC_WORD_PRIVATE_WW2G4            (0x12)
 #define SYNC_WORD_PUBLIC_WW2G4             (0x21)
 #define MIN_DR_WW2G4                       (0)
 #define MAX_DR_WW2G4                       (7)
 #define MIN_TX_DR_LIMIT_WW2G4              (0)
-#define MAX_DEFAULT_DR_WW2G4               (5)
 #define NUMBER_OF_TX_DR_WW2G4              (8)
-#define DR_BITFIELD_SUPPORTED_WW2G4        (uint16_t)(0x00FF) // DR7..DR0 Datarate bitfield supported by the region
+#define DR_BITFIELD_SUPPORTED_WW2G4        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
+                                                       ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define DEFAULT_TX_DR_BIT_FIELD_WW2G4      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define TX_PARAM_SETUP_REQ_SUPPORTED_WW2G4 (true)          // This mac command is required for ww2g4
 #define NEW_CHANNEL_REQ_SUPPORTED_WW2G4    (true)
@@ -81,6 +91,37 @@ extern "C" {
 #define PING_SLOT_FREQ_WW2G4               (2424000000)     // Hz
 
 // clang-format on
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/**
+ * Bank contains 8 channels
+ */
+typedef enum ww2g4_channels_bank_e
+{
+    BANK_0_WW2G4 = 0,  // 0 to 7 channels
+    BANK_1_WW2G4 = 1,  // 8 to 15 channels
+    BANK_MAX_WW2G4
+} ww2g4_channels_bank_t;
+
+typedef struct region_ww2g4_context_s
+{
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_WW2G4];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_WW2G4];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_WW2G4];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_WW2G4];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_WW2G4];
+    uint8_t  channel_index_enabled[BANK_MAX_WW2G4];  // Contain the index of the activated channel only
+    uint8_t  unwrapped_channel_mask[BANK_MAX_WW2G4];
+} region_ww2g4_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
 
 /**
  * Default frequencies at boot
@@ -105,7 +146,22 @@ static const uint8_t datarate_offsets_ww2g4[8][6] = {
     { 7, 6, 5, 4, 3, 2 },  // DR 7
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_WW2G4 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_ww2g4[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4,  // DR5 -> DR4
+    5,  // DR6 -> DR5
+    6   // DR7 -> DR6
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_WW2G4 =
     sizeof( datarate_offsets_ww2g4[0] ) / sizeof( datarate_offsets_ww2g4[0][0] );
 
 /**
@@ -180,29 +236,15 @@ static const uint8_t JOIN_DR_DISTRIBUTION_WW2G4[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
  */
 static const uint8_t DEFAULT_DR_DISTRIBUTION_WW2G4[] = { 1, 0, 0, 0, 0, 0, 0, 0 };
 
-/**
- * Bank contains 8 channels
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
-typedef enum ww2g4_channels_bank_e
-{
-    BANK_0_WW2G4 = 0,  // 0 to 7 channels
-    BANK_1_WW2G4 = 1,  // 8 to 15 channels
-    BANK_MAX_WW2G4
-} ww2g4_channels_bank_t;
-
-typedef struct region_ww2g4_context_s
-{
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_WW2G4];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_WW2G4];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_WW2G4];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_WW2G4];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_WW2G4];
-    uint8_t  channel_index_enabled[BANK_MAX_WW2G4];  // Contain the index of the activated channel only
-    uint8_t  unwrapped_channel_mask[BANK_MAX_WW2G4];
-} region_ww2g4_context_t;
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_WW2G4_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

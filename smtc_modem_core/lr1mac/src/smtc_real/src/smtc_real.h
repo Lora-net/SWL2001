@@ -52,6 +52,14 @@ extern "C" {
  */
 
 /**
+ * @brief Check if a region is supported by the stack
+ *
+ * @param region_type
+ * @return smtc_real_status_t
+ */
+smtc_real_status_t smtc_real_is_supported_region( smtc_real_region_types_t region_type );
+
+/**
  * \brief
  * \remark
  * \param [IN]  none
@@ -265,7 +273,7 @@ status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency );
+status_lorawan_t smtc_real_is_nwk_received_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency );
 
 /**
  * \brief
@@ -483,6 +491,14 @@ uint8_t* smtc_real_get_gfsk_sync_word( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
+uint8_t* smtc_real_get_lr_fhss_sync_word( lr1_stack_mac_t* lr1_mac );
+
+/**
+ * \brief
+ * \remark
+ * \param [IN]  none
+ * \param [OUT] return
+ */
 uint8_t smtc_real_get_max_payload_size( lr1_stack_mac_t* lr1_mac, uint8_t dr, uint8_t dwell_time_enabled );
 
 /**
@@ -539,7 +555,7 @@ uint32_t smtc_real_decode_freq_from_buf( lr1_stack_mac_t* lr1_mac, uint8_t freq_
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_rx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency );
+status_lorawan_t smtc_real_is_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency );
 
 /**
  * \brief
@@ -623,24 +639,33 @@ void smtc_real_lora_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_
 void smtc_real_fsk_dr_to_bitrate( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_t* out_bitrate );
 
 /**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- *
- */
-void smtc_real_rx_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw,
-                               modulation_type_t* modulation_type );
-
-/**
- * @brief
+ * @brief Convert LoRaWAN Datarate to LR-FHSS CR and BW
  *
  * @param lr1_mac
- * @param sf
- * @param bw
- * @return uint8_t
+ * @param in_dr
+ * @param out_cr
+ * @param out_bw
  */
-uint8_t smtc_real_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw );
+void smtc_real_lr_fhss_dr_to_cr_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, lr_fhss_v1_cr_t* out_cr,
+                                    lr_fhss_v1_bw_t* out_bw );
+
+/**
+ * @brief Get LR-FHSS header count from LR-FHSS CR
+ *
+ * @param lr1_mac
+ * @param in_cr
+ * @return lr_fhss_hc_t
+ */
+lr_fhss_hc_t smtc_real_lr_fhss_get_header_count( lr_fhss_v1_cr_t in_cr );
+
+/**
+ * @brief Get LR-FHSS grid
+ *
+ * @param  lr1_mac
+ * @return lr_fhss_v1_grid_t
+ *
+ */
+lr_fhss_v1_grid_t smtc_real_lr_fhss_get_grid( lr1_stack_mac_t* lr1_mac );
 
 /*!
  * \brief
@@ -670,7 +695,34 @@ uint8_t smtc_real_get_current_enabled_frequency_list( lr1_stack_mac_t* lr1_mac, 
  * @param lr1_mac
  * @return lr1mac_version_t
  */
-lr1mac_version_t smtc_real_get_regional_parameters_version( lr1_stack_mac_t* lr1_mac );
+lr1mac_version_t smtc_real_get_regional_parameters_version( void );
+
+/**
+ * @brief
+ *
+ * @param
+ * @return
+ */
+uint32_t smtc_real_get_symbol_duration_us( lr1_stack_mac_t* lr1_mac, uint8_t datarate );
+
+/**
+ * @brief
+ *
+ * @param
+ * @return
+ */
+void smtc_real_get_rx_window_parameters( lr1_stack_mac_t* lr1_mac, uint8_t datarate, uint32_t rx_delay_ms,
+                                         uint16_t* rx_window_symb, uint32_t* rx_timeout_symb_in_ms,
+                                         uint32_t* rx_timeout_preamble_locked_in_ms, uint8_t rx_done_incertitude );
+/**
+ * @brief
+ *
+ * @param
+ * @return
+ */
+
+void smtc_real_get_rx_start_time_offset_ms( lr1_stack_mac_t* lr1_mac, uint8_t datarate, int8_t board_delay_ms,
+                                            uint16_t rx_window_symb, int32_t* rx_offset_ms );
 
 #ifdef __cplusplus
 }

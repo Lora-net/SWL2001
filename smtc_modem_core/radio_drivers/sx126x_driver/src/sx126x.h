@@ -99,6 +99,13 @@ extern "C" {
  */
 #define SX126X_MAX_NB_REG_IN_RETENTION 4
 
+/*!
+ * @brief Frequency step in MHz used to compute the image calibration parameter
+ *
+ * @see sx126x_cal_img_in_mhz
+ */
+#define SX126X_IMAGE_CALIBRATION_STEP_IN_MHZ 4
+
 #define SX126X_CHIP_MODES_POS ( 4U )
 #define SX126X_CHIP_MODES_MASK ( 0x07UL << SX126X_CHIP_MODES_POS )
 
@@ -205,9 +212,11 @@ enum sx126x_irq_masks_e
     SX126X_IRQ_CAD_DONE          = ( 1 << 7 ),
     SX126X_IRQ_CAD_DETECTED      = ( 1 << 8 ),
     SX126X_IRQ_TIMEOUT           = ( 1 << 9 ),
+    SX126X_IRQ_LR_FHSS_HOP       = ( 1 << 14 ),
     SX126X_IRQ_ALL               = SX126X_IRQ_TX_DONE | SX126X_IRQ_RX_DONE | SX126X_IRQ_PREAMBLE_DETECTED |
                      SX126X_IRQ_SYNC_WORD_VALID | SX126X_IRQ_HEADER_VALID | SX126X_IRQ_HEADER_ERROR |
-                     SX126X_IRQ_CRC_ERROR | SX126X_IRQ_CAD_DONE | SX126X_IRQ_CAD_DETECTED | SX126X_IRQ_TIMEOUT,
+                     SX126X_IRQ_CRC_ERROR | SX126X_IRQ_CAD_DONE | SX126X_IRQ_CAD_DETECTED | SX126X_IRQ_TIMEOUT |
+                     SX126X_IRQ_LR_FHSS_HOP,
 };
 
 typedef uint16_t sx126x_irq_mask_t;
@@ -250,8 +259,9 @@ typedef enum sx126x_tcxo_ctrl_voltages_e
  */
 typedef enum sx126x_pkt_types_e
 {
-    SX126X_PKT_TYPE_GFSK = 0x00,
-    SX126X_PKT_TYPE_LORA = 0x01,
+    SX126X_PKT_TYPE_GFSK    = 0x00,
+    SX126X_PKT_TYPE_LORA    = 0x01,
+    SX126X_PKT_TYPE_LR_FHSS = 0x03,
 } sx126x_pkt_type_t;
 
 /**
@@ -853,14 +863,30 @@ sx126x_status_t sx126x_set_reg_mode( const void* context, const sx126x_reg_mod_t
 sx126x_status_t sx126x_cal( const void* context, const sx126x_cal_mask_t param );
 
 /**
- * @brief Perform device operating frequency band image rejection calibration
+ * @brief Launch an image calibration valid for all frequencies inside an interval, in steps
  *
  * @param [in] context Chip implementation context
- * @param [in] freq_in_hz Frequency in Hz used for the image calibration
+ * @param [in] freq1 Image calibration interval lower bound, in steps
+ * @param [in] freq2 Image calibration interval upper bound, in steps
+ *
+ * @remark freq1 must be less than or equal to freq2
  *
  * @returns Operation status
  */
-sx126x_status_t sx126x_cal_img( const void* context, const uint32_t freq_in_hz );
+sx126x_status_t sx126x_cal_img( const void* context, const uint8_t freq1, const uint8_t freq2 );
+
+/**
+ * @brief Launch an image calibration valid for all frequencies inside an interval, in MHz
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] freq1_in_mhz Image calibration interval lower bound, in MHz
+ * @param [in] freq2_in_mhz Image calibration interval upper bound, in MHz
+ *
+ * @remark freq1_in_mhz must be less than or equal to freq2_in_mhz
+ *
+ * @returns Operation status
+ */
+sx126x_status_t sx126x_cal_img_in_mhz( const void* context, const uint16_t freq1_in_mhz, const uint16_t freq2_in_mhz );
 
 /**
  * @brief Configure the PA (Power Amplifier)

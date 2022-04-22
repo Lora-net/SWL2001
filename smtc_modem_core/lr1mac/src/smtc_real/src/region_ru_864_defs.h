@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 // clang-format off
 #define NUMBER_OF_CHANNEL_RU_864            (16)
@@ -65,9 +75,9 @@ extern "C" {
 #define MIN_DR_RU_864                       (0)
 #define MAX_DR_RU_864                       (7)
 #define MIN_TX_DR_LIMIT_RU_864              (0)
-#define MAX_TX_DEFAULT_DR_RU_864            (5)
 #define NUMBER_OF_TX_DR_RU_864              (8)
-#define DR_BITFIELD_SUPPORTED_RU_864        (uint16_t)(0x00FF) // DR7..DR0 Datarate bitfield supported by the region
+#define DR_BITFIELD_SUPPORTED_RU_864        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
+                                                        ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define DEFAULT_TX_DR_BIT_FIELD_RU_864      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define TX_PARAM_SETUP_REQ_SUPPORTED_RU_864 (false)         // This mac command is NOT required for RU864
 #define NEW_CHANNEL_REQ_SUPPORTED_RU_864    (true)
@@ -82,10 +92,51 @@ extern "C" {
 #define BEACON_DR_RU_864                    (3)
 #define BEACON_FREQ_RU_864                  (869100000)     // Hz
 #define PING_SLOT_FREQ_RU_864               (868900000)     // Hz
-
 // clang-format on
 
-static const char SYNC_WORD_GFSK_RU_864[] = { 0xC1, 0x94, 0xC1 };
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/**
+ * Bank contains 8 channels
+ */
+typedef enum ru_864_channels_bank_e
+{
+    BANK_0_RU864 = 0,  // 0 to 7 channels
+    BANK_1_RU864 = 1,  // 8 to 15 channels
+    BANK_MAX_RU864
+} ru_864_channels_bank_t;
+
+/**
+ * Bands enumeration
+ */
+typedef enum region_ru_864_band_e
+{
+    BAND_RU864_0 = 0,
+    BAND_RU864_1,
+    BAND_RU864_2,
+    BAND_RU864_MAX
+} region_ru_864_band_t;
+
+typedef struct region_ru864_context_s
+{
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_RU_864];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_RU_864];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_RU_864];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_RU_864];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_RU_864];
+    uint8_t  channel_index_enabled[BANK_MAX_RU864];   // Enable by Network
+    uint8_t  unwrapped_channel_mask[BANK_MAX_RU864];  // Temp conf send by Network
+} region_ru864_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_GFSK_RU_864[] = { 0xC1, 0x94, 0xC1 };
 
 /**
  * Default frequencies at boot
@@ -106,18 +157,33 @@ static const uint8_t datarate_offsets_ru_864[8][6] = {
     { 7, 6, 5, 4, 3, 2 },  // DR 7
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_RU_864 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_ru_864[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4,  // DR5 -> DR4
+    5,  // DR6 -> DR5
+    6   // DR7 -> DR6
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_RU_864 =
     sizeof( datarate_offsets_ru_864[0] ) / sizeof( datarate_offsets_ru_864[0][0] );
 
 /**
  * Data rates table definition
  */
-static const uint8_t datarates_to_sf_ru_864[] = { 12, 11, 10, 9, 8, 7, 7, 50 };
+static const uint8_t datarates_to_sf_ru_864[] = { 12, 11, 10, 9, 8, 7, 7 };
 
 /**
  * Bandwidths table definition in KHz
  */
-static const uint32_t datarates_to_bandwidths_ru_864[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250, BW125 };
+static const uint32_t datarates_to_bandwidths_ru_864[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250 };
 
 /**
  * Payload max size table definition in bytes
@@ -182,27 +248,6 @@ static const uint8_t JOIN_DR_DISTRIBUTION_RU_864[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
 static const uint8_t DEFAULT_DR_DISTRIBUTION_RU_864[] = { 1, 0, 0, 0, 0, 0, 0, 0 };
 
 /**
- * Bank contains 8 channels
- */
-typedef enum ru_864_channels_bank_e
-{
-    BANK_0_RU864 = 0,  // 0 to 7 channels
-    BANK_1_RU864 = 1,  // 8 to 15 channels
-    BANK_MAX_RU864
-} ru_864_channels_bank_t;
-
-/**
- * Bands enumeration
- */
-typedef enum region_ru_864_band_e
-{
-    BAND_RU864_0 = 0,
-    BAND_RU864_1,
-    BAND_RU864_2,
-    BAND_RU864_MAX
-} region_ru_864_band_t;
-
-/**
  * Duty Cycle table definition by bands
  */
 static const uint16_t duty_cycle_by_band_ru_864[BAND_RU864_MAX] = {
@@ -218,19 +263,15 @@ static const uint32_t frequency_range_by_band_ru_864[BAND_RU864_MAX][2] = {
     [BAND_RU864_2] = { 868700000, 869200001 },
 };
 
-typedef struct region_ru864_context_s
-{
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_RU_864];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_RU_864];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_RU_864];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_RU_864];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_RU_864];
-    uint8_t  channel_index_enabled[BANK_MAX_RU864];   // Enable by Network
-    uint8_t  unwrapped_channel_mask[BANK_MAX_RU864];  // Temp conf send by Network
-} region_ru864_context_t;
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_RU_864_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

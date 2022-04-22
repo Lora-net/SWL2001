@@ -46,6 +46,8 @@ extern "C" {
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
 
+#include "radio_planner_hook_id_defs.h"
+
 // Include radio abstraction layer
 #include "ralf.h"
 
@@ -64,7 +66,11 @@ extern "C" {
 /*
  * Maximum number of objects that can be attached to the scheduler
  */
-#define RP_NB_HOOKS                                 8
+#define RP_NB_HOOKS                                 RP_HOOK_ID_MAX
+
+#define RP_NB_USER_HOOK                             3
+
+
 
 /*!
  *
@@ -81,13 +87,11 @@ extern "C" {
  * for 8 ms : 5MS FOR WAKE UP (2MS) + CONFIG TIMER (3MS FIX !) + 3 ms interrupt
  * routine
  */
+#ifndef RP_MARGIN_DELAY
 #define RP_MARGIN_DELAY                             8
+#endif
 
 
-/*!
- *
- */
-#define RP_MARGIN_DELAY_NEG                         -500  // for 500 ms
 
 /*!
  *
@@ -116,8 +120,9 @@ typedef struct rp_radio_params_s
     {
         union
         {
-            ralf_params_gfsk_t gfsk;
-            ralf_params_lora_t lora;
+            ralf_params_gfsk_t    gfsk;
+            ralf_params_lora_t    lora;
+            ralf_params_lr_fhss_t lr_fhss;
         };
     } tx;
     struct
@@ -135,6 +140,7 @@ typedef struct rp_radio_params_s
         };
     } rx;
     int16_t lbt_threshold;
+    uint8_t lr_fhss_state[RAL_LR_FHSS_STATE_MAXSIZE];
 } rp_radio_params_t;
 
 /*!
@@ -146,6 +152,7 @@ typedef enum rp_task_types_e
     RP_TASK_TYPE_RX_FSK,
     RP_TASK_TYPE_TX_LORA,
     RP_TASK_TYPE_TX_FSK,
+    RP_TASK_TYPE_TX_LR_FHSS,
     RP_TASK_TYPE_CAD,
     RP_TASK_TYPE_GNSS_SNIFF,
     RP_TASK_TYPE_WIFI_SNIFF,
@@ -185,6 +192,7 @@ typedef enum rp_status_e
     RP_STATUS_GNSS_SCAN_DONE,
     RP_STATUS_TASK_ABORTED,
     RP_STATUS_TASK_INIT,
+    RP_STATUS_LR_FHSS_HOP,
 } rp_status_t;
 
 typedef enum rp_next_state_status_e
@@ -202,9 +210,11 @@ typedef struct rp_task_s
     rp_task_types_t type;
     void ( *launch_task_callbacks )( void* );
     uint8_t          priority;
+    bool             schedule_task_low_priority;
     rp_task_states_t state;
     // absolute Ms
     uint32_t start_time_ms;
+    uint32_t start_time_100us;
     // Have to keep the initial start time to be able to switch asap task to
     // schedule task after long period
     uint32_t start_time_init_ms;
@@ -219,16 +229,13 @@ typedef enum rp_hook_status_e
     RP_HOOK_STATUS_OK,
     RP_HOOK_STATUS_ID_ERROR,
     RP_TASK_STATUS_ALREADY_RUNNING,
+    RP_TASK_STATUS_SCHEDULE_TASK_IN_PAST,
 } rp_hook_status_t;
 
 /*!
  *
  */
-typedef enum rp_timer_states_e
-{
-    RP_TIMER_STATE_IDLE,
-    RP_TIMER_STATE_BUSY
-} rp_timer_states_t;
+
 
 #ifdef __cplusplus
 }

@@ -55,9 +55,9 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
-#define LORA_BASICS_MODEM_FW_VERSION_MAJOR 2
+#define LORA_BASICS_MODEM_FW_VERSION_MAJOR 3
 #define LORA_BASICS_MODEM_FW_VERSION_MINOR 1
-#define LORA_BASICS_MODEM_FW_VERSION_PATCH 0
+#define LORA_BASICS_MODEM_FW_VERSION_PATCH 7
 
 /*
  * -----------------------------------------------------------------------------

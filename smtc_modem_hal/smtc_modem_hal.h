@@ -78,6 +78,17 @@ extern "C" {
     } while( 0 );
 
 /**
+ * @brief  The smtc_modem_hal_assert macro is used for function's parameters check.
+ * @param  expr If expr is false, it calls smtc_modem_hal_assert_fail function
+ *         which reports the name of the source function and the source
+ *         line number of the call that failed.
+ *         If expr is true, it returns no value.
+ * @retval None
+ */
+#define smtc_modem_hal_assert( expr ) \
+    ( ( expr ) ? ( void ) 0U : smtc_modem_hal_assert_fail( ( uint8_t* ) __func__, __LINE__ ) )
+
+/**
  * @brief Document that a parameter is unused
  */
 #ifndef UNUSED
@@ -169,12 +180,30 @@ int32_t smtc_modem_hal_get_time_compensation_in_s( void );
 /**
  * @brief Returns the current time in milliseconds
  *
- * @remark Used to timestamp radio events (i.e: end of TX), will also be used
- * for ClassB
  *
- * @return uint32_t Current time in milliseconds wraps every 49 days
+ * @return uint32_t Current time in milliseconds (wraps every 49 days)
  */
 uint32_t smtc_modem_hal_get_time_in_ms( void );
+
+/**
+ * @brief Returns the current time in 0.1 milliseconds
+ *
+ * @remark Used for class B ping slot openings.
+ * Must be the same timer as the one used for \ref smtc_modem_hal_get_radio_irq_timestamp_in_100us.
+ *
+ * @return uint32_t Current time in 100µs (wraps every 4,9 days)
+ */
+uint32_t smtc_modem_hal_get_time_in_100us( void );
+
+/**
+ * @brief Returns the time, in 0.1 milliseconds, of the last radio interrupt request
+ *
+ *  @remark Used to obtain the timestamp of radio events (i.e.: end of TX).
+ *  Must be the same timer as the one used for \ref smtc_modem_hal_get_time_in_100us.
+ *
+ * @return uint32_t
+ */
+uint32_t smtc_modem_hal_get_radio_irq_timestamp_in_100us( void );
 
 /* ------------ Timer management ------------*/
 
@@ -268,6 +297,17 @@ void smtc_modem_hal_set_crashlog_status( bool available );
  */
 bool smtc_modem_hal_get_crashlog_status( void );
 
+/* ------------ assert management ------------*/
+
+/**
+ * @brief smtc_modem_hal_assert_fail return the source function and the source line number where the assert error has
+ * occurred
+ *
+ * @param func
+ * @param line
+ */
+void smtc_modem_hal_assert_fail( uint8_t* func, uint32_t line );
+
 /* ------------ Random management ------------*/
 /**
  * @brief Returns a 32bits random number
@@ -307,12 +347,10 @@ int32_t smtc_modem_hal_get_signed_random_nb_in_range( const int32_t val_1, const
  */
 void smtc_modem_hal_irq_config_radio_irq( void ( *callback )( void* context ), void* context );
 
-/**
- * @brief Indicates if there is a radio pending irq
- *
- * @return bool Pending status (true/false)
+/*
+ * @brief Clear any MCU-layer pending radio IRQ flags
  */
-bool smtc_modem_hal_irq_is_radio_irq_pending( void );
+void smtc_modem_hal_radio_irq_clear_pending( void );
 
 /**
  * @brief Start radio tcxo

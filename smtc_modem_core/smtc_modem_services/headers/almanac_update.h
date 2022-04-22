@@ -81,29 +81,29 @@ typedef enum almanac_update_return_code_e
  */
 /**
  * @brief This function create the payload that can be sent to DAS for Almanac update service
- * @remark This function make a direct access to lr1110 radio
+ * @remark This function make a direct access to lr11xx radio
  *
- * @param [in] lr1110_context lr1110 implementation context
+ * @param [in] lr11xx_context lr11xx implementation context
  * @param [out] payload the created 8 bytes payload
  * @attention Please provide at least a 8 bytes buffer (ALM_UPDATE_UPLINK_PAYLOAD_LENGTH)
  *
  * @return Almanac service operation status
  */
 
-almanac_update_return_code_t almanac_update_create_uplink_payload( const void* lr1110_context, uint8_t payload[8] );
+almanac_update_return_code_t almanac_update_create_uplink_payload( const void* lr11xx_context, uint8_t payload[8] );
 
 /**
  * @brief This function parse and process the payload that has been sent by DAS for Almanac update service
- * @remark This function make a direct access to lr1110 radio
+ * @remark This function make a direct access to lr11xx radio
 
- * @param [in] lr1110_context lr1110 implementation context
+ * @param [in] lr11xx_context lr11xx implementation context
  * @param [in] payload payload received from DAS
  * @param [in] payload_len length of the received payload
  *
  * @return Almanac service operation status
  */
 
-almanac_update_return_code_t almanac_update_process_downlink_payload( const void* lr1110_context, uint8_t* payload,
+almanac_update_return_code_t almanac_update_process_downlink_payload( const void* lr11xx_context, uint8_t* payload,
                                                                       uint8_t payload_len );
 
 #ifdef __cplusplus

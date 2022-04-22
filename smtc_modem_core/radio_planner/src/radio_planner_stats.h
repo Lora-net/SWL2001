@@ -50,6 +50,8 @@ extern "C" {
 #include "smtc_modem_hal_dbg_trace.h"
 #endif  // RP_STAT_PRINT_ENBALE
 
+#include <string.h>  // for memset
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC MACROS -----------------------------------------------------------
@@ -100,27 +102,7 @@ typedef struct rp_stats_s
  */
 static inline void rp_stats_init( rp_stats_t* rp_stats )
 {
-    for( int32_t i = 0; i < RP_NB_HOOKS; i++ )
-    {
-        rp_stats->tx_last_toa_ms[i]       = 0;
-        rp_stats->tx_consumption_ms[i]    = 0;
-        rp_stats->rx_consumption_ms[i]    = 0;
-        rp_stats->none_consumption_ms[i]  = 0;
-        rp_stats->tx_consumption_ma[i]    = 0;
-        rp_stats->rx_consumption_ma[i]    = 0;
-        rp_stats->none_consumption_ma[i]  = 0;
-        rp_stats->task_hook_aborted_nb[i] = 0;
-    }
-    rp_stats->tx_total_consumption_ms   = 0;
-    rp_stats->rx_total_consumption_ms   = 0;
-    rp_stats->none_total_consumption_ms = 0;
-    rp_stats->tx_total_consumption_ma   = 0;
-    rp_stats->rx_total_consumption_ma   = 0;
-    rp_stats->none_total_consumption_ma = 0;
-    rp_stats->tx_timestamp              = 0;
-    rp_stats->rx_timestamp              = 0;
-    rp_stats->none_timestamp            = 0;
-    rp_stats->rp_error                  = 0;
+    memset( rp_stats, 0, sizeof( rp_stats_t ) );
 }
 
 /*!

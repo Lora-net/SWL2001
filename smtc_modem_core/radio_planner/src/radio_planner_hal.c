@@ -100,14 +100,19 @@ void rp_hal_timer_start( void* rp, uint32_t alarm_in_ms, void ( *callback )( voi
     smtc_modem_hal_start_timer( alarm_in_ms, callback, rp );
 }
 
-uint32_t rp_hal_timestamp_get( void )
+uint32_t rp_hal_get_time_in_ms( void )
 {
     return smtc_modem_hal_get_time_in_ms( );
 }
 
-uint8_t rp_hal_irq_get_pending( void )
+uint32_t rp_hal_get_radio_irq_timestamp_in_100us( void )
 {
-    return smtc_modem_hal_irq_is_radio_irq_pending( ) ? 1 : 0;
+    return smtc_modem_hal_get_radio_irq_timestamp_in_100us( );
+}
+
+void rp_hal_irq_clear_pending( void )
+{
+    smtc_modem_hal_radio_irq_clear_pending( );
 }
 
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )

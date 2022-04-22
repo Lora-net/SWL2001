@@ -55,7 +55,7 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-#define SERVICE_LR1110_GNSS_CONTEXT_STATUS_LENGTH 9
+#define SERVICE_LR11XX_GNSS_CONTEXT_STATUS_LENGTH 9
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -76,26 +76,26 @@
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-almanac_update_return_code_t almanac_update_create_uplink_payload( const void* lr1110_context, uint8_t payload[8] )
+almanac_update_return_code_t almanac_update_create_uplink_payload( const void* lr11xx_context, uint8_t payload[8] )
 {
-    uint8_t local_buff[SERVICE_LR1110_GNSS_CONTEXT_STATUS_LENGTH];
-    // ask lr1110 to get gnss context status
-    if( smtc_modem_services_lr1110_gnss_get_context_status( lr1110_context, local_buff ) != MODEM_SERVICES_RADIO_OK )
+    uint8_t local_buff[SERVICE_LR11XX_GNSS_CONTEXT_STATUS_LENGTH];
+    // ask lr11xx to get gnss context status
+    if( smtc_modem_services_lr11xx_gnss_get_context_status( lr11xx_context, local_buff ) != MODEM_SERVICES_RADIO_OK )
     {
         return ALMANAC_ERROR;
     }
 
-    // Do not take hte first byte from the lr1110 response
-    memcpy( payload, &local_buff[1], SERVICE_LR1110_GNSS_CONTEXT_STATUS_LENGTH - 1 );
+    // Do not take hte first byte from the lr11xx response
+    memcpy( payload, &local_buff[1], SERVICE_LR11XX_GNSS_CONTEXT_STATUS_LENGTH - 1 );
 
     return ALMANAC_OK;
 }
 
-almanac_update_return_code_t almanac_update_process_downlink_payload( const void* lr1110_context, uint8_t* payload,
+almanac_update_return_code_t almanac_update_process_downlink_payload( const void* lr11xx_context, uint8_t* payload,
                                                                       uint8_t payload_len )
 {
-    // take buffer received from DAS and push it to lr1110 removing the first 2 bytes (upcount, updelay)
-    if( smtc_modem_services_lr1110_gnss_push_dmc_msg( lr1110_context, &payload[2], payload_len - 2 ) !=
+    // take buffer received from DAS and push it to lr11xx removing the first 2 bytes (upcount, updelay)
+    if( smtc_modem_services_lr11xx_gnss_push_dmc_msg( lr11xx_context, &payload[2], payload_len - 2 ) !=
         MODEM_SERVICES_RADIO_OK )
     {
         return ALMANAC_ERROR;

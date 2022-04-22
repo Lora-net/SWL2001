@@ -51,7 +51,7 @@ extern "C" {
  *-----------------------------------------------------------------------------------
  * --- PUBLIC MACROS ----------------------------------------------------------------
  */
-
+#define SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( ... )  //@todo push it to the modem layer
 /*!
  * \brief Returns the minimum value between a and b
  *
@@ -69,6 +69,16 @@ extern "C" {
  * \retval maxValue Maximum value
  */
 #define MAX( a, b ) ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
+
+/**
+ * @brief Math Abs macro
+ */
+#define ABS( N ) ( ( N < 0 ) ? ( -N ) : ( N ) )
+/**
+ * @brief Math signed macro
+ */
+
+#define SIGN( N ) ( ( N < 0 ) ? ( -1 ) : ( 1 ) )
 
 uint8_t SMTC_GET_BIT8( const uint8_t* array, uint8_t index );
 void    SMTC_SET_BIT8( uint8_t* array, uint8_t index );
@@ -162,7 +172,17 @@ int lr1mac_rx_fhdr_extract( uint8_t* rx_payload, uint8_t rx_payload_size, uint8_
  * \brief Extract MHDR
  *
  */
-int lr1mac_fcnt_dwn_accept( uint16_t fcnt_dwn_tmp, uint32_t* fcnt_lorawan );
+status_lorawan_t lr1mac_fcnt_dwn_accept( uint16_t fcnt_dwn_tmp, uint32_t* fcnt_lorawan );
+
+/**
+ * @brief if the mac command answer is bigger than the allowed payload size, the payload is cut
+ *
+ * @param nwk_ans
+ * @param nwk_ans_size_in
+ * @param max_allowed_size
+ * @return uint8_t
+ */
+uint8_t lr1_stack_mac_cmd_ans_cut( uint8_t* nwk_ans, uint8_t nwk_ans_size_in, uint8_t max_allowed_size );
 
 #ifdef __cplusplus
 }

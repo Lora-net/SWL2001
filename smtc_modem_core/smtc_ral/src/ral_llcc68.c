@@ -297,6 +297,11 @@ ral_status_t ral_llcc68_set_tx_infinite_preamble( const void* context )
     return ( ral_status_t ) llcc68_set_tx_infinite_preamble( context );
 }
 
+ral_status_t ral_llcc68_cal_img( const void* context, const uint16_t freq1_in_mhz, const uint16_t freq2_in_mhz )
+{
+    return ( ral_status_t ) llcc68_cal_img_in_mhz( context, freq1_in_mhz, freq2_in_mhz );
+}
+
 ral_status_t ral_llcc68_set_tx_cfg( const void* context, const int8_t output_pwr_in_dbm, const uint32_t rf_freq_in_hz )
 {
     ral_status_t                               status = RAL_STATUS_ERROR;
@@ -307,6 +312,15 @@ ral_status_t ral_llcc68_set_tx_cfg( const void* context, const int8_t output_pwr
     };
 
     ral_llcc68_bsp_get_tx_cfg( context, &tx_cfg_input_params, &tx_cfg_output_params );
+
+    if( tx_cfg_output_params.pa_cfg.device_sel == 0x00 )
+    {
+        status = ( ral_status_t ) llcc68_cfg_tx_clamp( context );
+        if( status != RAL_STATUS_OK )
+        {
+            return status;
+        }
+    }
 
     status = ( ral_status_t ) llcc68_set_pa_cfg( context, &tx_cfg_output_params.pa_cfg );
     if( status != RAL_STATUS_OK )
@@ -457,6 +471,36 @@ ral_status_t ral_llcc68_set_pkt_type( const void* context, const ral_pkt_type_t 
     }
 
     return ( ral_status_t ) llcc68_set_pkt_type( context, radio_pkt_type );
+}
+
+ral_status_t ral_llcc68_get_pkt_type( const void* context, ral_pkt_type_t* pkt_type )
+{
+    ral_status_t      status = RAL_STATUS_ERROR;
+    llcc68_pkt_type_t radio_pkt_type;
+
+    status = ( ral_status_t ) llcc68_get_pkt_type( context, &radio_pkt_type );
+    if( status == RAL_STATUS_OK )
+    {
+        switch( radio_pkt_type )
+        {
+        case LLCC68_PKT_TYPE_GFSK:
+        {
+            *pkt_type = RAL_PKT_TYPE_GFSK;
+            break;
+        }
+        case LLCC68_PKT_TYPE_LORA:
+        {
+            *pkt_type = RAL_PKT_TYPE_LORA;
+            break;
+        }
+        default:
+        {
+            return RAL_STATUS_UNKNOWN_VALUE;
+        }
+        }
+    }
+
+    return status;
 }
 
 ral_status_t ral_llcc68_set_gfsk_mod_params( const void* context, const ral_gfsk_mod_params_t* params )
@@ -670,6 +714,62 @@ ral_status_t ral_llcc68_set_gfsk_whitening_seed( const void* context, const uint
     return ( ral_status_t ) llcc68_set_gfsk_whitening_seed( context, seed );
 }
 
+ral_status_t ral_llcc68_lr_fhss_init( const void* context, const ral_lr_fhss_params_t* lr_fhss_params )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) lr_fhss_params;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_llcc68_lr_fhss_build_frame( const void* context, ral_lr_fhss_memory_state_t state,
+                                             const ral_lr_fhss_params_t* lr_fhss_params, uint16_t hop_sequence_id,
+                                             const uint8_t* payload, uint16_t payload_length )
+{
+    ( void ) context;          // Unused parameter
+    ( void ) state;            // Unused parameter
+    ( void ) lr_fhss_params;   // Unused parameter
+    ( void ) hop_sequence_id;  // Unused parameter
+    ( void ) payload;          // Unused parameter
+    ( void ) payload_length;   // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_llcc68_lr_fhss_handle_hop( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                            ral_lr_fhss_memory_state_t state )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) state;           // Unused parameter
+    ( void ) lr_fhss_params;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_llcc68_lr_fhss_handle_tx_done( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                ral_lr_fhss_memory_state_t state )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) state;           // Unused parameter
+    ( void ) lr_fhss_params;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_llcc68_lr_fhss_get_time_on_air_in_ms( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                       uint16_t payload_length, uint32_t* time_on_air )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) lr_fhss_params;  // Unused parameter
+    ( void ) payload_length;  // Unused parameter
+    ( void ) time_on_air;     // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_llcc68_lr_fhss_get_hop_sequence_count( const void*                 context,
+                                                        const ral_lr_fhss_params_t* lr_fhss_params )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) lr_fhss_params;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
 ral_status_t ral_llcc68_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
@@ -692,6 +792,11 @@ ral_status_t ral_llcc68_get_lora_rx_consumption_in_ua( const void* context, cons
                                                        const bool rx_boosted, uint32_t* pwr_consumption_in_ua )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_llcc68_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
+{
+    return ( ral_status_t ) llcc68_get_random_numbers( context, numbers, n );
 }
 
 /*

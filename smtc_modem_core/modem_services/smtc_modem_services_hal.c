@@ -46,9 +46,9 @@
 #include "smtc_modem_hal.h"
 #include "modem_context.h"
 
-#if defined( LR1110_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
-#include "lr1110_gnss.h"
-#endif  // LR1110_TRANSCEIVER && ENABLE_MODEM_GNSS_FEATURE
+#if defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
+#include "lr11xx_gnss.h"
+#endif  // LR11XX_TRANSCEIVER && ENABLE_MODEM_GNSS_FEATURE
 
 /*
  * -----------------------------------------------------------------------------
@@ -100,39 +100,39 @@ uint32_t smtc_modem_services_get_time_s( void )
     return smtc_modem_hal_get_compensated_time_in_s( );
 }
 
-#if defined( LR1110_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
-radio_return_code_t smtc_modem_services_lr1110_gnss_get_context_status( const void* radio_ctx, uint8_t buff[9] )
+#if defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
+radio_return_code_t smtc_modem_services_lr11xx_gnss_get_context_status( const void* radio_ctx, uint8_t buff[9] )
 {
     // Secure radio access
     modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
     // read gnss context status
-    lr1110_status_t status = lr1110_gnss_get_context_status( radio_ctx, buff );
+    lr11xx_status_t status = lr11xx_gnss_get_context_status( radio_ctx, buff );
     // Release radio access
     modem_context_resume_radio_access( );
-    if( status != LR1110_STATUS_OK )
+    if( status != LR11XX_STATUS_OK )
     {
         return MODEM_SERVICES_RADIO_ERROR;
     }
     return MODEM_SERVICES_RADIO_OK;
 }
 
-radio_return_code_t smtc_modem_services_lr1110_gnss_push_dmc_msg( const void* radio_ctx, uint8_t* buff,
+radio_return_code_t smtc_modem_services_lr11xx_gnss_push_dmc_msg( const void* radio_ctx, uint8_t* buff,
                                                                   uint16_t buff_len )
 {
     // Secure radio access
     modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
     // push gnss dmc message
-    lr1110_status_t status = lr1110_gnss_push_dmc_msg( radio_ctx, buff, buff_len );
+    lr11xx_status_t status = lr11xx_gnss_push_dmc_msg( radio_ctx, buff, buff_len );
     // Release radio access
     modem_context_resume_radio_access( );
 
-    if( status != LR1110_STATUS_OK )
+    if( status != LR11XX_STATUS_OK )
     {
         return MODEM_SERVICES_RADIO_ERROR;
     }
     return MODEM_SERVICES_RADIO_OK;
 }
-#endif  // LR1110_TRANSCEIVER && ENABLE_MODEM_GNSS_FEATURE
+#endif  // LR11XX_TRANSCEIVER && ENABLE_MODEM_GNSS_FEATURE
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------

@@ -42,7 +42,7 @@
 #include "smtc_modem_crypto.h"
 #include "smtc_modem_hal_dbg_trace.h"
 
-#include <string.h>  //for memset and memcpy
+#include <string.h>  //for memcpy
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -155,8 +155,9 @@ static smtc_modem_crypto_return_code_t prepare_b0( uint16_t msg_len, uint8_t dir
  * @param [in] dev_nonce Device nonce
  * @return smtc_modem_crypto_return_code_t
  */
-static smtc_modem_crypto_return_code_t derive_session_key_1_0_x( smtc_se_key_identifier_t key_id, uint8_t* join_nonce,
-                                                                 uint8_t* net_id, uint16_t dev_nonce );
+static smtc_modem_crypto_return_code_t derive_session_key_1_0_x( smtc_se_key_identifier_t key_id,
+                                                                 const uint8_t* join_nonce, const uint8_t* net_id,
+                                                                 uint16_t dev_nonce );
 
 /**
  * @brief Derives the Multicast Root Key (McRootKey) from the AppKey.
@@ -276,9 +277,9 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_process_join_accept( const uin
     return SMTC_MODEM_CRYPTO_RC_SUCCESS;
 }
 
-smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( uint8_t  join_nonce[LORAWAN_JOIN_NONCE_SIZE],
-                                                                uint8_t  net_id[LORAWAN_NET_ID_SIZE],
-                                                                uint16_t dev_nonce )
+smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( const uint8_t join_nonce[LORAWAN_JOIN_NONCE_SIZE],
+                                                                const uint8_t net_id[LORAWAN_NET_ID_SIZE],
+                                                                uint16_t      dev_nonce )
 {
     smtc_modem_crypto_return_code_t rc = SMTC_MODEM_CRYPTO_RC_ERROR;
 
@@ -297,7 +298,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( uint8_t  join_no
     return SMTC_MODEM_CRYPTO_RC_SUCCESS;
 }
 
-smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( uint8_t* buffer, uint16_t size,
+smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( const uint8_t* buffer, uint16_t size,
                                                               smtc_se_key_identifier_t key_id, uint32_t devaddr,
                                                               uint8_t dir, uint32_t fcnt, uint32_t expected_mic )
 {
@@ -310,8 +311,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( uint8_t* buffer, u
         return SMTC_MODEM_CRYPTO_RC_ERROR_BUF_SIZE;
     }
 
-    uint8_t mic_buff[CRYPTO_BUFFER_SIZE];
-    memset( mic_buff, 0, CRYPTO_BUFFER_SIZE );
+    uint8_t mic_buff[CRYPTO_BUFFER_SIZE] = { 0 };
 
     // Initialize the first Block
     prepare_b0( size, dir, devaddr, fcnt, mic_buff );
@@ -425,6 +425,36 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_multicast_session_keys(
     return SMTC_MODEM_CRYPTO_RC_SUCCESS;
 }
 
+smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t beacon_epoch_time, uint32_t dev_addr,
+                                                                    uint8_t rand[16] )
+{
+    uint8_t a_block[16] = { 0 };
+
+    // First fill RAND_ZERO_KEY with 0 (use a_block as it is initially filled with 0)
+    if( smtc_secure_element_set_key( SMTC_SE_SLOT_RAND_ZERO_KEY, a_block ) != SMTC_SE_RC_SUCCESS )
+    {
+        return SMTC_MODEM_CRYPTO_RC_ERROR_SECURE_ELEMENT;
+    }
+
+    // a block filling
+    a_block[0] = ( beacon_epoch_time ) &0xFF;
+    a_block[1] = ( beacon_epoch_time >> 8 ) & 0xFF;
+    a_block[2] = ( beacon_epoch_time >> 16 ) & 0xFF;
+    a_block[3] = ( beacon_epoch_time >> 24 ) & 0xFF;
+    a_block[4] = ( dev_addr ) &0xFF;
+    a_block[5] = ( dev_addr >> 8 ) & 0xFF;
+    a_block[6] = ( dev_addr >> 16 ) & 0xFF;
+    a_block[7] = ( dev_addr >> 24 ) & 0xFF;
+
+    // Then compute an aes on the a_block with the RAND_ZERO_KEY
+    if( smtc_secure_element_aes_encrypt( a_block, 16, SMTC_SE_SLOT_RAND_ZERO_KEY, rand ) != SMTC_SE_RC_SUCCESS )
+    {
+        return SMTC_MODEM_CRYPTO_RC_ERROR_SECURE_ELEMENT;
+    }
+
+    return SMTC_MODEM_CRYPTO_RC_SUCCESS;
+}
+
 /*
  *-----------------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITIONS ------------------------------------------------
@@ -488,39 +518,40 @@ static smtc_modem_crypto_return_code_t prepare_b0( uint16_t msg_len, uint8_t dir
     return SMTC_MODEM_CRYPTO_RC_SUCCESS;
 }
 
-static smtc_modem_crypto_return_code_t derive_session_key_1_0_x( smtc_se_key_identifier_t key_id, uint8_t* join_nonce,
-                                                                 uint8_t* net_id, uint16_t dev_nonce )
+static smtc_modem_crypto_return_code_t derive_session_key_1_0_x( smtc_se_key_identifier_t key_id,
+                                                                 const uint8_t* join_nonce, const uint8_t* net_id,
+                                                                 uint16_t dev_nonce )
 {
-    uint8_t compBase[16] = { 0 };
+    uint8_t comp_base[16] = { 0 };
 
     switch( key_id )
     {
     case SMTC_SE_F_NWK_S_INT_KEY:
     case SMTC_SE_S_NWK_S_INT_KEY:
     case SMTC_SE_NWK_S_ENC_KEY:
-        compBase[0] = 0x01;
+        comp_base[0] = 0x01;
         break;
     case SMTC_SE_APP_S_KEY:
-        compBase[0] = 0x02;
+        comp_base[0] = 0x02;
         break;
     default:
         return SMTC_MODEM_CRYPTO_RC_ERROR_INVALID_KEY_ID;
     }
 
     // join_nonce
-    compBase[1] = join_nonce[0];
-    compBase[2] = join_nonce[1];
-    compBase[3] = join_nonce[2];
+    comp_base[1] = join_nonce[0];
+    comp_base[2] = join_nonce[1];
+    comp_base[3] = join_nonce[2];
 
     // net_id
-    compBase[4] = net_id[0];
-    compBase[5] = net_id[1];
-    compBase[6] = net_id[2];
+    comp_base[4] = net_id[0];
+    comp_base[5] = net_id[1];
+    comp_base[6] = net_id[2];
 
-    compBase[7] = ( uint8_t )( ( dev_nonce >> 0 ) & 0xFF );
-    compBase[8] = ( uint8_t )( ( dev_nonce >> 8 ) & 0xFF );
+    comp_base[7] = ( uint8_t )( ( dev_nonce >> 0 ) & 0xFF );
+    comp_base[8] = ( uint8_t )( ( dev_nonce >> 8 ) & 0xFF );
 
-    if( smtc_secure_element_derive_and_store_key( compBase, SMTC_SE_NWK_KEY, key_id ) != SMTC_SE_RC_SUCCESS )
+    if( smtc_secure_element_derive_and_store_key( comp_base, SMTC_SE_NWK_KEY, key_id ) != SMTC_SE_RC_SUCCESS )
     {
         return SMTC_MODEM_CRYPTO_RC_ERROR_SECURE_ELEMENT;
     }

@@ -20,16 +20,6 @@ PERF_TEST=no
 # Crypto management
 CRYPTO ?= SOFT
 
-# For LR1110 tranceiver
-# - CHINA_DEMO -> Use Regional Parameters 1.0
-# - HYBRID_CHINA -> RP 1.0, single channel
-CHINA_DEMO ?= no
-HYBRID_CHINA ?= no
-
-ifeq ($(HYBRID_CHINA),yes)
-CHINA_DEMO = yes
-endif
-
 # Compile with coverage analysis support
 COVERAGE ?= no
 
@@ -47,22 +37,26 @@ RADIO ?= nc
 
 # Trace prints
 MODEM_TRACE ?= yes
+MODEM_DEEP_TRACE ?= no
 
 # GNSS
 USE_GNSS ?= yes
 
+# TB bypass
+BYPASS_JOIN_DUTY_CYCLE?= no
 
+# Middleware advanced access
+MIDDLEWARE?= no
 
-ifeq ($(MODEM_APP),EXAMPLE_LR1110_DEMO)
-override USE_GNSS = yes
+ifeq ($(MODEM_APP),HW_MODEM)
+override BYPASS_JOIN_DUTY_CYCLE = yes
 endif
-
 
 #-----------------------------------------------------------------------------
 # default action: print help
 #-----------------------------------------------------------------------------
 help:
-	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	sx1261	sx1262")
+	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	sx1261	sx1262")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------------------- Clean -------------------------------------")
 	$(call echo_help, " * make clean_<TARGET>             : clean basic_modem for a given target")
@@ -84,15 +78,17 @@ help:
 	$(call echo_help, " *                                  - KR_920")
 	$(call echo_help, " *                                  - RU_864")
 	$(call echo_help, " *                                  - US_915")
+	$(call echo_help, " *                                  - WW_2G4 (to be used only for lr1120 and sx128x targets)")
+	$(call echo_help, " * RP_VERSION=xxx                  : choose wich regional paramerter version should be compiled (default: RP2_101) ")
+	$(call echo_help, " *                                  - RP2_101")
+	$(call echo_help, " *                                  - RP2_103 (LR-FHSS support)")
 	$(call echo_help, " * CRYPTO=xxx                      : choose which crypto should be compiled (default: SOFT)")
 	$(call echo_help, " *                                  - SOFT")
-	$(call echo_help, " *                                  - LR1110 (only for lr1110 target)")
-	$(call echo_help, " *                                  - LR1110_WITH_CREDENTIALS (only for lr1110 target)")
+	$(call echo_help, " *                                  - LR11XX (only for lr1110 and lr1120 targets)")
+	$(call echo_help, " *                                  - LR11XX_WITH_CREDENTIALS (only for lr1110 and lr1120 targets)")
 	$(call echo_help, " * MODEM_TRACE=yes/no              : choose to enable or disable modem trace print (default: trace is ON)")
-	$(call echo_help, " * HYBRID_CHINA=yes                : only for lr1110 target: build hybrid china with monochannel region")
-	$(call echo_help, " * CHINA_DEMO=yes                  : only for lr1110 target: build with full China RP_1_0 region")
-	$(call echo_help, " * USE_GNSS=yes/no                 : only for lr1110 target: choose to enable or disable use of gnss (default: gnss is ON)")
-	$(call echo_help, " * BYPASS=yes                      : build target using lorawan bypass")
+	$(call echo_help, " * USE_GNSS=yes/no                 : only for lr1110 and lr1120 targets: choose to enable or disable use of gnss (default: gnss is ON)")
+	$(call echo_help, " * MIDDLEWARE=yes                  : build target for middleware advanced access")
 	$(call echo_help_b, "-------------------- Optional makefile parameters --------------------------")
 	$(call echo_help, " * MULTITHREAD=no                  : Disable multithreaded build")
 	$(call echo_help, " * COVERAGE=xxx                    : build target with coverage instrumentation for specific subsystems:")
@@ -107,7 +103,11 @@ help:
 # Makefile include selection
 #-----------------------------------------------------------------------------
 ifeq ($(RADIO),lr1110)
--include makefiles/lr1110.mk
+-include makefiles/lr11xx.mk
+endif
+
+ifeq ($(RADIO),lr1120)
+-include makefiles/lr11xx.mk
 endif
 
 ifeq ($(RADIO),sx1261)
@@ -129,7 +129,7 @@ endif
 .PHONY: FORCE
 FORCE:
 
-all: basic_modem_sx128x basic_modem_lr1110 basic_modem_sx1261 basic_modem_sx1262
+all: basic_modem_sx128x basic_modem_lr1110 basic_modem_lr1120 basic_modem_sx1261 basic_modem_sx1262
 
 #-----------------------------------------------------------------------------
 # Clean
@@ -142,6 +142,9 @@ clean_sx128x:
 
 clean_lr1110:
 	$(MAKE) clean_target RADIO=lr1110
+
+clean_lr1120:
+	$(MAKE) clean_target RADIO=lr1120
 
 clean_sx1261:
 	$(MAKE) clean_target RADIO=sx1261
@@ -157,6 +160,9 @@ basic_modem_sx128x:
 
 basic_modem_lr1110:
 	$(MAKE) basic_modem RADIO=lr1110 $(MTHREAD_FLAG)
+
+basic_modem_lr1120:
+	$(MAKE) basic_modem RADIO=lr1120 $(MTHREAD_FLAG)
 
 basic_modem_sx1261:
 	$(MAKE) basic_modem RADIO=sx1261 $(MTHREAD_FLAG)

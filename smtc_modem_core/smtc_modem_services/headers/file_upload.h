@@ -44,7 +44,8 @@ extern "C" {
  * --- DEPENDENCIES ------------------------------------------------------------
  */
 
-#include <stdint.h>  // C99 types
+#include <stdint.h>   // C99 types
+#include <stdbool.h>  // bool type
 
 #include "file_upload_defs.h"
 /*
@@ -147,6 +148,15 @@ uint32_t file_upload_get_average_delay_in_s( file_upload_t* file_upload );
  * @return int32_t Return the number of pending byte(s)
  */
 int32_t file_upload_get_fragment( file_upload_t* file_upload, uint8_t* buf, int32_t len, uint32_t fcnt );
+
+/**
+ * @brief Check if there are remaining file data that need to be sent
+ *
+ * @param [in] file_upload Pointer to File Upload context
+ * @return true
+ * @return false
+ */
+bool file_upload_is_data_remaining( file_upload_t* file_upload );
 
 /*!
  * \brief   return file_upload_attach_payload_buffer

@@ -81,15 +81,15 @@ typedef struct radio_planner_s
     uint8_t           rankings[RP_NB_HOOKS];
     void*             hooks[RP_NB_HOOKS];
     rp_status_t       status[RP_NB_HOOKS];
+    ral_irq_t         raw_radio_irq[RP_NB_HOOKS];
     uint32_t          irq_timestamp_ms[RP_NB_HOOKS];
+    uint32_t          irq_timestamp_100us[RP_NB_HOOKS];
     rp_stats_t        stats;
     uint8_t           hook_to_execute;
     uint32_t          hook_to_execute_time_ms;
-    rp_timer_states_t timer_state;
     uint8_t           radio_task_id;
     uint8_t           timer_task_id;
     uint8_t           semaphore_radio;
-    uint8_t           semaphore_abort_radio;
     uint32_t          timer_value;
     uint8_t           timer_hook_id;
     void ( *hook_callbacks[RP_NB_HOOKS] )( void* );
@@ -156,7 +156,10 @@ rp_stats_t rp_get_stats( const radio_planner_t* rp );
  *
  */
 void rp_get_status( const radio_planner_t* rp, const uint8_t id, uint32_t* irq_timestamp_ms, rp_status_t* status );
-
+/*!
+ *
+ */
+void rp_get_and_clear_raw_radio_irq( radio_planner_t* rp, const uint8_t id, ral_irq_t* raw_radio_irq );
 #ifdef __cplusplus
 }
 #endif

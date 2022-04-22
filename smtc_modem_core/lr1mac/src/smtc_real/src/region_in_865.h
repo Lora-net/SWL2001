@@ -39,12 +39,37 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "smtc_real_defs.h"
 #include "lr1mac_defs.h"
 #include "lr1_stack_mac_layer.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
 
 void region_in_865_config( lr1_stack_mac_t* lr1_mac );
 
@@ -130,25 +155,10 @@ void region_in_865_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_band
  */
 void region_in_865_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate );
 
-/**
- * \brief   Convert DR to SF and BW
- * \remark
- * \param  [IN]  uint8_t datarate
- */
-void region_in_865_rx_dr_to_sf_bw( uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw,
-                                   modulation_type_t* modulation_type );
-
-/**
- * @brief Convert SF and BW to DR
- *
- * @param sf
- * @param bw
- * @return uint8_t
- */
-uint8_t region_in_865_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw );
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_IN_865_H
+
+/* --- EOF ------------------------------------------------------------------ */

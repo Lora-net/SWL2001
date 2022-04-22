@@ -160,9 +160,9 @@ smtc_modem_return_code_t smtc_modem_test_nop( void );
  * @param [in] payload_length  Length of the payload
  * @param [in] frequency_hz    Frequency in Hz
  * @param [in] tx_power_dbm    Power in dbm
- * @param [in] sf              spreading factor following smtc_modem_test_sf_t definition
- * @param [in] bw              spreading factor following smtc_modem_test_bw_t definition
- * @param [in] cr              spreading factor following smtc_modem_test_cr_t definition
+ * @param [in] sf              Spreading factor following smtc_modem_test_sf_t definition
+ * @param [in] bw              Bandwith following smtc_modem_test_bw_t definition
+ * @param [in] cr              Coding rate following smtc_modem_test_cr_t definition
  * @param [in] preamble_size   Size of the preamble
  * @param [in] continuous_tx   false: single transmission / true: continuous transmission
  *
@@ -188,9 +188,9 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
  * @remark Continuously receive packets.
  *
  * @param [in] frequency_hz  Frequency in Hz
- * @param [in] sf            spreading factor following smtc_modem_test_sf_t definition
- * @param [in] bw            spreading factor following smtc_modem_test_bw_t definition
- * @param [in] cr            spreading factor following smtc_modem_test_cr_t definition
+ * @param [in] sf            Spreading factor following smtc_modem_test_sf_t definition
+ * @param [in] bw            Bandwith following smtc_modem_test_bw_t definition
+ * @param [in] cr            Coding rate following smtc_modem_test_cr_t definition
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  */

@@ -1,1 +1,0 @@
-The module describes the modem hal functions that are mandatory for basic modem use

@@ -85,12 +85,15 @@ typedef enum
     CLOCK_SYNC_TIME_REQ_TASK,  //!< task managed by the modem to launch Application Layer Clock Synchronisation
     ALC_SYNC_ANS_TASK,         //!< task managed by the modem to launch Application Layer Clock Synchronisation answer
     FRAG_TASK,                 //!< task managed by the modem to launch Fragmented Data Block uplink
-    USER_TASK,             //!< task manage by the modem to launch a user callback (use also for wifi and gnss tasks)
-    DM_ALM_DBG_ANS,        //!< task managed by the modem to launch almanac debug answer
-    CRASH_LOG_TASK,        //!< task managed by the modem to launch crash log
-    LINK_CHECK_REQ_TASK,   //!< task managed by the modem to launch a Network Link Check Request
-    DEVICE_TIME_REQ_TASK,  //!< task managed by the modem to launch a Network Device Time Request synchronisation
-    NUMBER_OF_TASKS        //!< number of tasks
+    USER_TASK,                //!< task manage by the modem to launch a user callback (use also for wifi and gnss tasks)
+    DM_ALM_DBG_ANS,           //!< task managed by the modem to launch almanac debug answer
+    CRASH_LOG_TASK,           //!< task managed by the modem to launch crash log
+    LINK_CHECK_REQ_TASK,      //!< task managed by the modem to launch a Network Link Check Request
+    DEVICE_TIME_REQ_TASK,     //!< task managed by the modem to launch a Network Device Time Request synchronisation
+    PING_SLOT_INFO_REQ_TASK,  //!< task managed by the modem to launch a Network Ping Slot Info Request for class B
+    SEND_TASK_EXTENDED_1,       //!< task managed by the application dedicated for middleware gnss/wifi 
+    SEND_TASK_EXTENDED_2,       //!< task managed by the application dedicated for middleware gnss/wifi 
+    NUMBER_OF_TASKS           //!< number of tasks
 } task_id_t;
 
 /*!

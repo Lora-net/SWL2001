@@ -121,6 +121,17 @@ void lorawan_certification_cw_set_as_stopped( lorawan_certification_t* lorawan_c
     lorawan_certification->cw_running = false;
 }
 
+bool lorawan_certification_get_beacon_rx_status_ind_ctrl( lorawan_certification_t* lorawan_certification )
+{
+    return lorawan_certification->beacon_rx_status_ind_ctrl;
+}
+
+lorawan_certification_class_t lorawan_certification_get_requested_class(
+    lorawan_certification_t* lorawan_certification )
+{
+    return lorawan_certification->class_requested;
+}
+
 lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certification_t* lorawan_certification,
                                                                  uint8_t* rx_buffer, uint8_t rx_buffer_length,
                                                                  uint8_t* tx_buffer, uint8_t* tx_buffer_length,
@@ -195,18 +206,17 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
         {
             if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_CLASS_A )
             {
-                lorawan_api_class_c_enabled( false );
+                lorawan_certification->class_requested = LORAWAN_CERTIFICATION_CLASS_A;
             }
             else if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_CLASS_B )
             {
-                // Not supported yet
-                lorawan_api_class_c_enabled( false );
+                lorawan_certification->class_requested = LORAWAN_CERTIFICATION_CLASS_B;
             }
             else if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_CLASS_C )
             {
-                lorawan_api_class_c_enabled( true );
+                lorawan_certification->class_requested = LORAWAN_CERTIFICATION_CLASS_C;
             }
-            return LORAWAN_CERTIFICATION_RET_NOTHING;
+            return LORAWAN_CERTIFICATION_RET_SWITCH_CLASS;
         }
         else
         {
@@ -261,6 +271,7 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
         if( rx_buffer_length == LORAWAN_CERTIFICATION_TX_PERIODICITY_CHANGE_REQ_SIZE )
         {
             lorawan_certification->ul_periodicity = ( uint8_t ) lorawan_certification_periodicity_table[rx_buffer[1]];
+            smtc_modem_alarm_start_timer( lorawan_certification->ul_periodicity );
             return LORAWAN_CERTIFICATION_RET_NOTHING;
         }
         else
@@ -348,7 +359,7 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
 
         if( rx_buffer_length == LORAWAN_CERTIFICATION_LINK_CHECK_REQ_SIZE )
         {
-            lorawan_api_send_stack_cid_req( LINK_CHECK_REQ );
+            modem_supervisor_add_task_link_check_req( 0 );
             return LORAWAN_CERTIFICATION_RET_LINK_CHECK;
         }
         else
@@ -361,7 +372,7 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
     case LORAWAN_CERTIFICATION_DEVICE_TIME_REQ:
         if( rx_buffer_length == LORAWAN_CERTIFICATION_DEVICE_TIME_REQ_SIZE )
         {
-            lorawan_api_send_stack_cid_req( DEVICE_TIME_REQ );
+            modem_supervisor_add_task_device_time_req( 0 );
             return LORAWAN_CERTIFICATION_RET_DEVICE_TIME;
         }
         else
@@ -374,9 +385,8 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
     case LORAWAN_CERTIFICATION_PING_SLOT_INFO_REQ:
         if( rx_buffer_length == LORAWAN_CERTIFICATION_PING_SLOT_INFO_REQ_SIZE )
         {
-            // TODO classB
-            // lorawan_api_set_ping_slot_periodicity( rx_buffer[1] );
-            // lorawan_api_send_stack_cid_req( PING_SLOT_INFO_REQ );
+            lorawan_api_set_ping_slot_periodicity( rx_buffer[1] );
+            modem_supervisor_add_task_ping_slot_info_req( 0 );
             return LORAWAN_CERTIFICATION_RET_PING_SLOT;
         }
         else
@@ -385,6 +395,43 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
             return LORAWAN_CERTIFICATION_RET_NOTHING;
         }
 
+        break;
+    case LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL:
+        if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL_SIZE )
+        {
+            lorawan_certification->beacon_rx_status_ind_ctrl = rx_buffer[1];
+        }
+        else
+        {
+            LOG_ERROR( "bad size\n" );
+            return LORAWAN_CERTIFICATION_RET_NOTHING;
+        }
+        break;
+    case LORAWAN_CERTIFICATION_BEACON_CNT_REQ:
+        if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_CNT_REQ_SIZE )
+        {
+            tx_buffer[( *tx_buffer_length )++] = LORAWAN_CERTIFICATION_BEACON_CNT_ANS;
+            tx_buffer[( *tx_buffer_length )++] = ( lorawan_certification->rx_beacon_cnt & 0xFF );
+            tx_buffer[( *tx_buffer_length )++] = ( lorawan_certification->rx_beacon_cnt >> 8 ) & 0xFF;
+
+            *tx_fport = 224;
+        }
+        else
+        {
+            LOG_ERROR( "bad size\n" );
+            return LORAWAN_CERTIFICATION_RET_NOTHING;
+        }
+        break;
+    case LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ:
+        if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ_SIZE )
+        {
+            lorawan_certification->rx_beacon_cnt = 0;
+        }
+        else
+        {
+            LOG_ERROR( "bad size\n" );
+            return LORAWAN_CERTIFICATION_RET_NOTHING;
+        }
         break;
     case LORAWAN_CERTIFICATION_TX_CW_REQ:
         if( rx_buffer_length == LORAWAN_CERTIFICATION_TX_CW_REQ_SIZE )
@@ -477,6 +524,48 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
     return LORAWAN_CERTIFICATION_RET_NOTHING;
 }
 
+void lorawan_certification_build_beacon_rx_status_ind( lorawan_certification_t* lorawan_certification,
+                                                       uint8_t* beacon_buffer, uint8_t beacon_buffer_length,
+                                                       uint8_t* tx_buffer, uint8_t* tx_buffer_length, int8_t rssi,
+                                                       int8_t snr, uint8_t beacon_dr, uint32_t beacon_freq )
+{
+    smtc_beacon_metadata_t beacon_metadata;
+    lorawan_api_beacon_get_metadata( &beacon_metadata );
+
+    if( beacon_metadata.last_beacon_lost_consecutively == 0 )
+    {
+        lorawan_certification->rx_beacon_cnt++;
+    }
+
+    uint8_t            beacon_sf;
+    lr1mac_bandwidth_t beacon_bw;
+    lorawan_api_lora_dr_to_sf_bw( beacon_dr, &beacon_sf, &beacon_bw );
+
+    uint32_t epoch_time   = smtc_decode_beacon_epoch_time( beacon_buffer, beacon_sf );
+    uint8_t  beacon_param = smtc_decode_beacon_param( beacon_buffer, beacon_sf );
+
+    beacon_freq = beacon_freq / lorawan_api_get_frequency_factor( );
+
+    tx_buffer[( *tx_buffer_length )++] = LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND;
+    tx_buffer[( *tx_buffer_length )++] = 1;                                                     // Todo state ?
+    tx_buffer[( *tx_buffer_length )++] = lorawan_certification->rx_beacon_cnt & 0xFF;           // RxCnt
+    tx_buffer[( *tx_buffer_length )++] = ( lorawan_certification->rx_beacon_cnt >> 8 ) & 0xFF;  // RxCnt
+    tx_buffer[( *tx_buffer_length )++] = beacon_freq & 0xFF;                                    // Beacon freq
+    tx_buffer[( *tx_buffer_length )++] = ( beacon_freq >> 8 ) & 0xFF;                           // Beacon freq
+    tx_buffer[( *tx_buffer_length )++] = ( beacon_freq >> 16 ) & 0xFF;                          // Beacon freq
+    tx_buffer[( *tx_buffer_length )++] = beacon_dr;                                             // Beacon DR
+    tx_buffer[( *tx_buffer_length )++] = rssi & 0xFF;                                           // Beacon RSSI
+    tx_buffer[( *tx_buffer_length )++] = ( rssi >> 8 ) & 0xFF;                                  // Beacon RSSI
+    tx_buffer[( *tx_buffer_length )++] = snr;                                                   // Beacon SNR
+    tx_buffer[( *tx_buffer_length )++] = beacon_param;                                          // Param
+    tx_buffer[( *tx_buffer_length )++] = epoch_time & 0xFF;                                     // Time
+    tx_buffer[( *tx_buffer_length )++] = ( epoch_time >> 8 ) & 0xFF;                            // Time
+    tx_buffer[( *tx_buffer_length )++] = ( epoch_time >> 16 ) & 0xFF;                           // Time
+    tx_buffer[( *tx_buffer_length )++] = ( epoch_time >> 14 ) & 0xFF;                           // Time
+
+    smtc_decode_beacon_gw_specific( beacon_buffer, beacon_sf, &tx_buffer[*tx_buffer_length] );  // GwSpecific 7 bytes
+    *tx_buffer_length += 7;
+}
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------

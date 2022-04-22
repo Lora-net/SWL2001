@@ -61,11 +61,17 @@ extern "C" {
 #define CLOCK_SYNC_DEFAULT_REQUEST_PERIOD_S               ( 129600UL )    // 36 hours
 #define CLOCK_SYNC_DEFAULT_S_SINCE_LAST_CORRECTION        ( 5184000UL )    // 3600s*24h*60d
 
+#if defined(ENABLE_FAST_CLOCK_SYNC)
+#define CLOCK_SYNC_NB_REQ_PERIOD1                         ( 20 )
+#define CLOCK_SYNC_PERIOD1_RETRY                          ( 1 )
+#else
 #define CLOCK_SYNC_NB_REQ_PERIOD1                         ( 3 )
 #define CLOCK_SYNC_PERIOD1_RETRY                          ( 128 )
+#endif
 #define CLOCK_SYNC_NB_REQ_PERIOD2                         ( 6 )
 #define CLOCK_SYNC_PERIOD2_RETRY                          ( 14400 )   // 4 hours
 #define CLOCK_SYNC_PERIOD_RETRY                           ( 129600 )  // 36 hours
+
 
 #if defined( CLOCK_SYNC_GPS_EPOCH_CONVERT )
 #define CLOCK_SYNC_LEAP_SECOND                            ( -18 )
@@ -165,6 +171,14 @@ bool clock_sync_is_enabled( clock_sync_ctx_t* ctx );
 uint8_t clock_sync_get_alcsync_port( clock_sync_ctx_t* ctx );
 
 /**
+ * @brief Get the current configured service
+ *
+ * @param ctx
+ * @return clock_sync_service_t
+ */
+clock_sync_service_t clock_sync_get_current_service( clock_sync_ctx_t* ctx );
+
+/**
  * @brief Set Alcsync port
  *
  * @remark Port 202: ALC clock sync is used
@@ -189,13 +203,15 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s );
  */
 
 /**
- * @brief Getthe gps time and fractional second
+ * @brief Get the gps time and fractional second
  *
  * @param [in] ctx                Clock synchronization context
  * @param [out] gps_time_in_s     The gps time in second
  * @param [out] fractional_second The fractional second
+ * @return true                   Time is valid
+ * @return false                  Time is not valid
  */
-void clock_sync_get_gps_time_second( clock_sync_ctx_t* ctx, uint32_t* gps_time_in_s, uint32_t* fractional_second );
+bool clock_sync_get_gps_time_second( clock_sync_ctx_t* ctx, uint32_t* gps_time_in_s, uint32_t* fractional_second );
 
 /**
  * @brief
@@ -268,16 +284,16 @@ uint32_t clock_sync_get_invalid_time_delay_s( clock_sync_ctx_t* ctx );
  * @brief
  *
  * @param ctx
- * @return uint32_t
- */
-uint32_t clock_sync_get_nb_time_req( clock_sync_ctx_t* ctx );
-
-/**
- * @brief
- *
- * @param ctx
  */
 void clock_sync_reset_nb_time_req( clock_sync_ctx_t* ctx );
+
+/**
+ * @brief Get the time left before concider time is no more valid
+ *
+ * @param ctx
+ * @return uint32_t
+ */
+uint32_t clock_sync_get_time_left_connection_lost( clock_sync_ctx_t* ctx );
 
 /**
  * @brief

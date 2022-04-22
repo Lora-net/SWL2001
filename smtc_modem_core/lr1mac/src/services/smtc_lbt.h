@@ -88,14 +88,43 @@ void smtc_lbt_init( smtc_lbt_t* lbt_obj, radio_planner_t* rp, uint8_t lbt_id_rp,
                     void ( *abort_callback )( void* abort_context ), void* abort_context );
 
 /**
- * @brief smtc_lbt_configure this function allow to configure the lbt object call once during the region configuration
+ * @brief Set the LBT parameters
  *
- * @param lbt_obj pointer to lbt_obj itself
- * @param listen_duration_ms duration of the listen task
- * @param threshold threshold in dbm to decide if the channel is free or busy
- * @param bw_hz bandwith in hertz to listen a channel
+ * @param [in] lbt_obj pointer to lbt_obj itself
+ * @param [in] listen_duration_ms duration of the listen task
+ * @param [in] threshold_dbm threshold in dbm to decide if the channel is free or busy
+ * @param [in] bw_hz bandwith in hertz to listen a channel
  */
-void smtc_lbt_configure( smtc_lbt_t* lbt_obj, uint32_t listen_duration_ms, int16_t threshold, uint32_t bw_hz );
+void smtc_lbt_set_parameters( smtc_lbt_t* lbt_obj, uint32_t listen_duration_ms, int16_t threshold_dbm, uint32_t bw_hz );
+
+/**
+ * @brief Get the configured lbt parameters
+ *
+ * @param [in]  lbt_obj pointer to lbt_obj itself
+ * @param [out] listen_duration_ms duration of the listen task
+ * @param [out] threshold_dbm threshold in dbm
+ * @param [out] bw_hz  bandwith in hertz
+ */
+void smtc_lbt_get_parameters( smtc_lbt_t* lbt_obj, uint32_t* listen_duration_ms, int16_t* threshold_dbm,
+                              uint32_t* bw_hz );
+
+/**
+ * @brief Enable/Disable LBT service
+ *
+ * @param [in] lbt_obj pointer to lbt_obj itself
+ * @param [in] enable true to enable lbt service, false to disable it
+ */
+void smtc_lbt_set_state( smtc_lbt_t* lbt_obj, bool enable );
+
+/**
+ * @brief Return the current enabled state of the lbt service
+ *
+ * @param [in] lbt_obj pointer to lbt_obj itself
+ * @return true if service is currently enabled
+ * @return false if service is currently disabled
+ */
+bool smtc_lbt_get_state( smtc_lbt_t* lbt_obj );
+
 /**
  * @brief smtc_lbt_listen_channel this function is called each time who want to listen the channel
  *
@@ -108,31 +137,6 @@ void smtc_lbt_configure( smtc_lbt_t* lbt_obj, uint32_t listen_duration_ms, int16
 void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_time, uint32_t target_time_ms,
                               uint32_t tx_duration_ms );
 
-/**
- * @brief disable lbt service
- *
- * @param lbt_obj pointer to lbt_obj itself
- */
-void smtc_lbt_disable( smtc_lbt_t* lbt_obj );
-
-/**
- * @brief return true if the service lbt is enabled
- *
- * @param lbt_obj
- * @return true lbt enabled
- * @return false lbt disabled
- */
-bool smtc_lbt_is_enable( smtc_lbt_t* lbt_obj );
-
-/**
- * @brief get lbt parameters
- *
- * @param lbt_obj pointer to lbt_obj itself
- * @param listen_duration_ms return parameter listen_duration_ms
- * @param threshold return parameter threshold
- * @param enable return parameter enable
- */
-void smtc_lbt_get_param( smtc_lbt_t* lbt_obj, uint32_t* listen_duration_ms, int16_t* threshold, bool* enable );
 /**
  * @brief smtc_lbt_rp_callback this function is call by the radio planer when lbt task is finished
  *

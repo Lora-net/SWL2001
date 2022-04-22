@@ -55,18 +55,24 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
-
-// clang-format off
-#define RP_HOOK_ID_USER_SUSPEND         ( 0 )
-#define RP_HOOK_ID_SUSPEND              ( 1 )
-#define RP_HOOK_ID_LR1MAC_STACK         ( 2 )
-#define RP_HOOK_ID_LBT                  ( 3 )
-#define RP_HOOK_ID_RTC_COMPENSATION     ( 4 )
-#define RP_HOOK_ID_CLASS_B_BEACON       ( 5 )
-#define RP_HOOK_ID_CLASS_B_PING_SLOT    ( 6 )
-#define RP_HOOK_ID_CLASS_C              ( 7 )
-// clang-format on
-
+#ifndef RP_HOOK_ID_REDEFINE
+enum RP_HOOK_ID_DEF
+{
+    RP_HOOK_ID_USER_SUSPEND      = 0,
+    RP_HOOK_ID_USER_SUSPEND_0    = 1,
+    RP_HOOK_ID_SUSPEND           = 2,
+    RP_HOOK_ID_LR1MAC_STACK      = 3,
+    RP_HOOK_ID_LBT               = 4,
+    RP_HOOK_ID_RTC_COMPENSATION  = 5,
+    RP_HOOK_ID_CLASS_B_BEACON    = 6,
+    RP_HOOK_ID_CLASS_B_D2D       = 7,
+    RP_HOOK_ID_CLASS_B_PING_SLOT = 8,
+    RP_HOOK_ID_USER_SUSPEND_1    = 9,
+    RP_HOOK_ID_USER_SUSPEND_2    = 10,
+    RP_HOOK_ID_CLASS_C           = 11,
+    RP_HOOK_ID_MAX
+};
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------

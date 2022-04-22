@@ -68,18 +68,18 @@ extern "C" {
 /*!
  * \brief   Handle DM Downlink
  *
- * \param [in]  data *                      Payload received
- * \param [in]  length                      Payload length
- * \retval      e_dm_error_t                Return ok or not in case of failure
+ * \param [in]  data *                 Payload received
+ * \param [in]  length                 Payload length
+ * \retval      dm_rc_t                Return ok or not in case of failure
  */
-e_dm_error_t dm_downlink( uint8_t* data, uint8_t length );
+dm_rc_t dm_downlink( uint8_t* data, uint8_t length );
 
 /*!
  * \brief   Handle DM command received
  *
- * \param [in]  cmd_input *                 Command received
- * \retval      e_dm_error_t                Return ok or not in case of failure
+ * \param [in]  cmd_input *            Command received
+ * \retval      dm_rc_t                Return ok or not in case of failure
  */
-e_dm_error_t dm_parse_cmd( s_dm_cmd_input_t* cmd_input );
+dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input );
 
 #endif  //__DM_DOWNLINK_H

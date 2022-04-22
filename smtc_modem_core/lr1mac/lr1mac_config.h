@@ -63,14 +63,11 @@ extern "C" {
 
 #endif
 
-
-
 // Crystal error of the MCU to fine adjust the rx window for lorawan ( ex: set 30 for a crystal error = 0.3%)
-// Default: value for LR1110
+// Default: value for LR11XX
 #ifndef BSP_CRYSTAL_ERROR
-#define BSP_CRYSTAL_ERROR 1
+#define BSP_CRYSTAL_ERROR 10  // Good value for STM32L4
 #endif
-
 
 // The Lorawan context is stored in memory with a period equal to FLASH_UPDATE_PERIOD packets transmitted
 #define BSP_USER_NUMBER_OF_RETRANSMISSION 1

@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 // clang-format off
 #define NUMBER_OF_CHANNEL_KR_920            (16)
@@ -65,8 +75,7 @@ extern "C" {
 #define MIN_DR_KR_920                       (0)
 #define MAX_DR_KR_920                       (5)
 #define MIN_TX_DR_LIMIT_KR_920              (0)
-#define MAX_DEFAULT_DR_KR_920               (5)
-#define DR_BITFIELD_SUPPORTED_KR_920        (uint16_t)(0x003F) // DR5..DR0 Datarate bitfield supported by the region
+#define DR_BITFIELD_SUPPORTED_KR_920        (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define DEFAULT_TX_DR_BIT_FIELD_KR_920      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define NUMBER_OF_TX_DR_KR_920              (6)
 #define TX_PARAM_SETUP_REQ_SUPPORTED_KR_920 (false)
@@ -84,7 +93,38 @@ extern "C" {
 #define PING_SLOT_FREQ_KR_920               (923100000)     // Hz
 // clang-format on
 
-static const char SYNC_WORD_GFSK_KR_920[] = { 0xC1, 0x94, 0xC1 };
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/**
+ * Bank contains 8 channels
+ */
+typedef enum kr_920_channels_bank_e
+{
+    BANK_0_KR920 = 0,  // 0 to 7 channels
+    BANK_1_KR920 = 1,  // 8 to 15 channels
+    BANK_MAX_KR920
+} kr_920_channels_bank_t;
+
+typedef struct region_kr920_context_s
+{
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_KR_920];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_KR_920];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_KR_920];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_KR_920];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_KR_920];
+    uint8_t  channel_index_enabled[BANK_MAX_KR920];   // Enable by Network
+    uint8_t  unwrapped_channel_mask[BANK_MAX_KR920];  // Temp conf send by Network
+} region_kr920_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_GFSK_KR_920[] = { 0xC1, 0x94, 0xC1 };
 
 /**
  * Default frequencies at boot
@@ -103,7 +143,20 @@ static const uint8_t datarate_offsets_kr_920[6][6] = {
     { 5, 4, 3, 2, 1, 0 },  // DR 5
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_KR_920 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_kr_920[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4   // DR5 -> DR4
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_KR_920 =
     sizeof( datarate_offsets_kr_920[0] ) / sizeof( datarate_offsets_kr_920[0][0] );
 /**
  * Data rates table definition
@@ -169,29 +222,15 @@ static const uint8_t JOIN_DR_DISTRIBUTION_KR_920[] = { 1, 2, 3, 4, 4, 6 };
  */
 static const uint8_t DEFAULT_DR_DISTRIBUTION_KR_920[] = { 1, 0, 0, 0, 0, 0 };
 
-/**
- * Bank contains 8 channels
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
-typedef enum kr_920_channels_bank_e
-{
-    BANK_0_KR920 = 0,  // 0 to 7 channels
-    BANK_1_KR920 = 1,  // 8 to 15 channels
-    BANK_MAX_KR920
-} kr_920_channels_bank_t;
-
-typedef struct region_kr920_context_s
-{
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_KR_920];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_KR_920];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_KR_920];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_KR_920];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_KR_920];
-    uint8_t  channel_index_enabled[BANK_MAX_KR920];   // Enable by Network
-    uint8_t  unwrapped_channel_mask[BANK_MAX_KR920];  // Temp conf send by Network
-} region_kr920_context_t;
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_KR_920_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

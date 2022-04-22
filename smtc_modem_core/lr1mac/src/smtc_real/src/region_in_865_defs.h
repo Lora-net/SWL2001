@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 // clang-format off
 #define NUMBER_OF_CHANNEL_IN_865            (16)
@@ -50,10 +60,12 @@ extern "C" {
 #define JOIN_ACCEPT_DELAY1_IN_865           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_IN_865           (6)             // define in seconds
 #define RECEIVE_DELAY1_IN_865               (1)             // define in seconds
-#if defined( LR1110 )
-#define TX_POWER_EIRP_IN_865                (22)            // define in dbm
+#if defined( LR11XX )
+// This value must be the MIN of MAX supported by the region and the radio, region is 30dBm but radio is 22dBm ERP (+2 to EIRP) 
+#define TX_POWER_EIRP_IN_865                (24)            // define in dbm
 #else
-#define TX_POWER_EIRP_IN_865                (14)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
+// This value must be the MIN of MAX supported by the region and the radio, region is 30dBm but radio is 14dBm ERP (+2 to EIRP)
+#define TX_POWER_EIRP_IN_865                (16)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
 #endif
 #define MAX_TX_POWER_IDX_IN_865             (10)             // index ex LinkADRReq
 #define ADR_ACK_LIMIT_IN_865                (64)
@@ -69,9 +81,8 @@ extern "C" {
 #define MIN_DR_IN_865                       (0)
 #define MAX_DR_IN_865                       (7)
 #define MIN_TX_DR_LIMIT_IN_865              (0)
-#define MAX_DEFAULT_DR_IN_865               (5)
 #define NUMBER_OF_TX_DR_IN_865              (8)
-#define DR_BITFIELD_SUPPORTED_IN_865        (uint16_t)(0x00BF) // DR7-D5..DR0 Datarate bitfield supported by the region
+#define DR_BITFIELD_SUPPORTED_IN_865        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define DEFAULT_TX_DR_BIT_FIELD_IN_865      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define TX_PARAM_SETUP_REQ_SUPPORTED_IN_865 (false)         // This mac command is NOT required for IN865
 #define NEW_CHANNEL_REQ_SUPPORTED_IN_865    (true)
@@ -86,7 +97,38 @@ extern "C" {
 
 // clang-format on
 
-static const char SYNC_WORD_GFSK_IN_865[] = { 0xC1, 0x94, 0xC1 };
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/**
+ * Bank contains 8 channels
+ */
+typedef enum in_865_channels_bank_e
+{
+    BANK_0_IN865 = 0,  // 0 to 7 channels
+    BANK_1_IN865 = 1,  // 8 to 15 channels
+    BANK_MAX_IN865
+} in_865_channels_bank_t;
+
+typedef struct region_in865_context_s
+{
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_IN_865];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_IN_865];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_IN_865];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_IN_865];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_IN_865];
+    uint8_t  channel_index_enabled[BANK_MAX_IN865];   // Enable by Network
+    uint8_t  unwrapped_channel_mask[BANK_MAX_IN865];  // Temp conf send by Network
+} region_in865_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_GFSK_IN_865[] = { 0xC1, 0x94, 0xC1 };
 
 /**
  * Default frequencies at boot
@@ -107,18 +149,33 @@ static const uint8_t datarate_offsets_in_865[8][8] = {
     { 7, 5, 5, 4, 3, 2, 7, 7 },  // DR 7
 };
 
-static const uint8_t MAX_RX1_DR_OFSSET_IN_865 =
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_in_865[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4,  // DR5 -> DR4
+    5,  // DR 6  !! WARNING RFU FOR IN865 !!
+    5   // DR7 -> DR5
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_IN_865 =
     sizeof( datarate_offsets_in_865[0] ) / sizeof( datarate_offsets_in_865[0][0] );
 
 /**
  * Data rates table definition
  */
-static const uint8_t datarates_to_sf_in_865[] = { 12, 11, 10, 9, 8, 7, 0, 50 };
+static const uint8_t datarates_to_sf_in_865[] = { 12, 11, 10, 9, 8, 7, 0 };
 
 /**
  * Bandwidths table definition in KHz
  */
-static const uint32_t datarates_to_bandwidths_in_865[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250, BW125 };
+static const uint32_t datarates_to_bandwidths_in_865[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250 };
 
 /**
  * Payload max size table definition in bytes
@@ -182,29 +239,15 @@ static const uint8_t JOIN_DR_DISTRIBUTION_IN_865[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
  */
 static const uint8_t DEFAULT_DR_DISTRIBUTION_IN_865[] = { 1, 0, 0, 0, 0, 0, 0, 0 };
 
-/**
- * Bank contains 8 channels
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
-typedef enum in_865_channels_bank_e
-{
-    BANK_0_IN865 = 0,  // 0 to 7 channels
-    BANK_1_IN865 = 1,  // 8 to 15 channels
-    BANK_MAX_IN865
-} in_865_channels_bank_t;
-
-typedef struct region_in865_context_s
-{
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_IN_865];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_IN_865];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_IN_865];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_IN_865];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_IN_865];
-    uint8_t  channel_index_enabled[BANK_MAX_IN865];   // Enable by Network
-    uint8_t  unwrapped_channel_mask[BANK_MAX_IN865];  // Temp conf send by Network
-} region_in865_context_t;
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_IN_865_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

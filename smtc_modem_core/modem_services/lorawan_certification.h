@@ -88,6 +88,12 @@ extern "C" {
 #define LORAWAN_CERTIFICATION_DUT_VERSION_REQ_SIZE 1
 #define LORAWAN_CERTIFICATION_DUT_VERSION_ANS_SIZE 13
 
+#define LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL_SIZE 2
+#define LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_SIZE 22
+#define LORAWAN_CERTIFICATION_BEACON_CNT_REQ_SIZE 2
+#define LORAWAN_CERTIFICATION_BEACON_CNT_ANS_SIZE 6
+#define LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ_SIZE 1
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
@@ -95,13 +101,14 @@ extern "C" {
 
 typedef enum lorawan_certification_parser_ret_e
 {
-    LORAWAN_CERTIFICATION_RET_NOTHING     = 0,
-    LORAWAN_CERTIFICATION_RET_APP_UL      = 1,
-    LORAWAN_CERTIFICATION_RET_CERTIF_UL   = 2,
-    LORAWAN_CERTIFICATION_RET_LINK_CHECK  = 3,
-    LORAWAN_CERTIFICATION_RET_DEVICE_TIME = 4,
-    LORAWAN_CERTIFICATION_RET_PING_SLOT   = 5,
-    LORAWAN_CERTIFICATION_RET_TX_CW       = 6,
+    LORAWAN_CERTIFICATION_RET_NOTHING      = 0,
+    LORAWAN_CERTIFICATION_RET_APP_UL       = 1,
+    LORAWAN_CERTIFICATION_RET_CERTIF_UL    = 2,
+    LORAWAN_CERTIFICATION_RET_LINK_CHECK   = 3,
+    LORAWAN_CERTIFICATION_RET_DEVICE_TIME  = 4,
+    LORAWAN_CERTIFICATION_RET_PING_SLOT    = 5,
+    LORAWAN_CERTIFICATION_RET_TX_CW        = 6,
+    LORAWAN_CERTIFICATION_RET_SWITCH_CLASS = 7,
 } lorawan_certification_parser_ret_t;
 
 /**
@@ -111,10 +118,12 @@ typedef enum lorawan_certification_parser_ret_e
  */
 typedef enum lorawan_certification_cid_dut_e
 {
-    LORAWAN_CERTIFICATION_PACKAGE_VERSION_ANS = 0x00,
-    LORAWAN_CERTIFICATION_ECHO_PLAY_ANS       = 0x08,
-    LORAWAN_CERTIFICATION_RX_APP_CNT_ANS      = 0x09,
-    LORAWAN_CERTIFICATION_DUT_VERSION_ANS     = 0x7F,
+    LORAWAN_CERTIFICATION_PACKAGE_VERSION_ANS  = 0x00,
+    LORAWAN_CERTIFICATION_ECHO_PLAY_ANS        = 0x08,
+    LORAWAN_CERTIFICATION_RX_APP_CNT_ANS       = 0x09,
+    LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND = 0x41,
+    LORAWAN_CERTIFICATION_BEACON_CNT_ANS       = 0x42,
+    LORAWAN_CERTIFICATION_DUT_VERSION_ANS      = 0x7F,
 } lorawan_certification_cid_dut_t;
 
 /**
@@ -138,6 +147,9 @@ typedef enum lorawan_certification_cid_tcl_e
     LORAWAN_CERTIFICATION_LINK_CHECK_REQ               = 0x20,
     LORAWAN_CERTIFICATION_DEVICE_TIME_REQ              = 0x21,
     LORAWAN_CERTIFICATION_PING_SLOT_INFO_REQ           = 0x22,
+    LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL    = 0x40,
+    LORAWAN_CERTIFICATION_BEACON_CNT_REQ               = 0x42,
+    LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ           = 0x43,
     LORAWAN_CERTIFICATION_TX_CW_REQ                    = 0x7D,
     LORAWAN_CERTIFICATION_DUT_FPORT_224_DISABLE_REQ    = 0x7E,
     LORAWAN_CERTIFICATION_DUT_VERSION_REQ              = 0x7F,
@@ -226,14 +238,17 @@ typedef enum lorawan_certification_frame_type_e
  */
 typedef struct lorawan_certification_s
 {
-    bool     enabled;         //!> LoRaWAN Certification is enable or not
-    uint16_t rx_app_cnt;      //!> Count each uplink frame
-    uint8_t  ul_periodicity;  //!> Uplink periodicity
-    bool     frame_type;
-    bool     cw_running;
-    uint16_t cw_timeout_s;
-    uint32_t cw_frequency;
-    int8_t   cw_tx_power;
+    bool                          enabled;         //!> LoRaWAN Certification is enable or not
+    uint16_t                      rx_app_cnt;      //!> Count each uplink frame
+    uint8_t                       ul_periodicity;  //!> Uplink periodicity
+    bool                          frame_type;
+    bool                          cw_running;
+    uint16_t                      cw_timeout_s;
+    uint32_t                      cw_frequency;
+    int8_t                        cw_tx_power;
+    bool                          beacon_rx_status_ind_ctrl;
+    uint16_t                      rx_beacon_cnt;  //!> Count each new valid beacon frame
+    lorawan_certification_class_t class_requested;
 
 } lorawan_certification_t;
 
@@ -304,10 +319,28 @@ bool lorawan_certification_is_cw_running( lorawan_certification_t* lorawan_certi
 
 /**
  * @brief Set CW as stopped
- * 
- * @param lorawan_certification 
+ *
+ * @param lorawan_certification
  */
 void lorawan_certification_cw_set_as_stopped( lorawan_certification_t* lorawan_certification );
+
+/**
+ * @brief Get the status of beacon rx status indication control
+ *
+ * @param lorawan_certification
+ * @return true
+ * @return false
+ */
+bool lorawan_certification_get_beacon_rx_status_ind_ctrl( lorawan_certification_t* lorawan_certification );
+
+/**
+ * @brief Return the class requested by the Testing tool
+ *
+ * @param lorawan_certification
+ * @return lorawan_certification_class_t
+ */
+lorawan_certification_class_t lorawan_certification_get_requested_class(
+    lorawan_certification_t* lorawan_certification );
 
 /**
  * @brief
@@ -324,7 +357,23 @@ lorawan_certification_parser_ret_t lorawan_certification_parser( lorawan_certifi
                                                                  uint8_t* rx_buffer, uint8_t rx_buffer_length,
                                                                  uint8_t* tx_buffer, uint8_t* tx_buffer_length,
                                                                  uint8_t* tx_fport );
-
+/**
+ * @brief Build Class B Beacon Status Indication frame
+ *
+ * @param lorawan_certification
+ * @param beacon_buffer
+ * @param beacon_buffer_length
+ * @param tx_buffer
+ * @param tx_buffer_length
+ * @param rssi
+ * @param snr
+ * @param beacon_dr
+ * @param beacon_freq
+ */
+void lorawan_certification_build_beacon_rx_status_ind( lorawan_certification_t* lorawan_certification,
+                                                       uint8_t* beacon_buffer, uint8_t beacon_buffer_length,
+                                                       uint8_t* tx_buffer, uint8_t* tx_buffer_length, int8_t rssi,
+                                                       int8_t snr, uint8_t beacon_dr, uint32_t beacon_freq );
 #ifdef __cplusplus
 }
 #endif

@@ -46,6 +46,7 @@ extern "C" {
 #include <stdio.h>
 #include <string.h>
 #include "ral_defs.h"
+#include "smtc_secure_element.h"
 
 /*
  *-----------------------------------------------------------------------------------
@@ -110,7 +111,7 @@ extern "C" {
 #define NWK_MAC_PAYLOAD_MAX_SIZE 242
 #endif
 
-#define DEVICE_MAC_PAYLOAD_MAX_SIZE                                                                                   \
+#define DEVICE_MAC_PAYLOAD_MAX_SIZE                                                                                \
     ( LINK_CHECK_REQ_SIZE + ( LINK_ADR_ANS_SIZE * 8 ) + DUTY_CYCLE_ANS_SIZE + RXPARRAM_SETUP_ANS_SIZE +            \
       DEV_STATUS_ANS_SIZE + ( NEW_CHANNEL_ANS_SIZE * 16 ) + RXTIMING_SETUP_ANS_SIZE + TXPARAM_SETUP_ANS_SIZE +     \
       ( DL_CHANNEL_ANS_SIZE * 16 ) + DEVICE_TIME_REQ_SIZE + PING_SLOT_INFO_REQ_SIZE + PING_SLOT_CHANNEL_ANS_SIZE + \
@@ -120,8 +121,8 @@ extern "C" {
 #define DEVICE_MAC_PAYLOAD_MAX_SIZE 242
 #endif
 
-// if there were no rx packet before the last NO_RX_PACKET_CNT tx packets the lr1mac goes in panic
-#define NO_RX_PACKET_CNT                (2400)
+// if there were no rx packet before the last LR1MAC_NO_RX_PACKET_RESET_THRESHOLD tx packets the lr1mac goes in panic
+#define LR1MAC_NO_RX_PACKET_RESET_THRESHOLD                (2400)
 
 // Frame direction definition for up/down link communications
 #define UP_LINK     0
@@ -189,6 +190,14 @@ typedef enum lr1mac_layer_param_e
     REJOIN_REQUEST,
     PROPRIETARY,
 } lr1mac_layer_param_t;
+
+typedef enum lr1mac_layer_dl_fctrl_bits_e
+{
+    DL_FPENDING_BIT = 4,
+    DL_ACK_BIT      = 5,
+    DL_RFU          = 6,
+    DL_ADR_BIT      = 7,
+} lr1mac_layer_dl_fctrl_bits_t;
 
 enum
 {
@@ -292,11 +301,11 @@ typedef enum valid_channel_e
 // User Config for Adr Mode select
 typedef enum dr_strategy_e
 {
-    STATIC_ADR_MODE,
-    MOBILE_LONGRANGE_DR_DISTRIBUTION,
-    MOBILE_LOWPER_DR_DISTRIBUTION,
-    USER_DR_DISTRIBUTION,
-    JOIN_DR_DISTRIBUTION,
+    STATIC_ADR_MODE,                   // for static Devices with ADR managed by the Network
+    MOBILE_LONGRANGE_DR_DISTRIBUTION,  // for Mobile Devices with strong Long range requirement
+    MOBILE_LOWPER_DR_DISTRIBUTION,     // for Mobile Devices with strong Low power requirement
+    USER_DR_DISTRIBUTION,              // User distribution
+    JOIN_DR_DISTRIBUTION,              // Dedicated for Join requests
     UNKNOWN_DR,
 } dr_strategy_t;
 
@@ -326,6 +335,16 @@ typedef enum rx_win_type_e
     RX1 = 0,
     RX2,
 } rx_win_type_t;
+
+/**
+ * @brief LR-FHSS header count
+ */
+typedef enum lr_fhss_hc_e
+{
+    LR_FHSS_HC_2 = 0x02,
+    LR_FHSS_HC_3 = 0x03,
+} lr_fhss_hc_t;
+
 /*************************/
 /*    SHARE WITH USER    */
 /*************************/
@@ -354,7 +373,8 @@ typedef enum lora_frame_type_e
 typedef enum modulation_type_e
 {
     LORA,
-    FSK
+    FSK,
+    LR_FHSS,
 } modulation_type_t;
 
 typedef enum crc_mode_e
@@ -386,7 +406,7 @@ typedef enum rx_session_type_e
     RX_SESSION_MULTICAST_G1,
     RX_SESSION_MULTICAST_G2,
     RX_SESSION_MULTICAST_G3,
-    RX_SESSION_NONE,
+    RX_SESSION_COUNT,
 } rx_session_type_t;
 
 typedef enum user_mac_req_status_e
@@ -397,20 +417,13 @@ typedef enum user_mac_req_status_e
     USER_MAC_REQ_ACKED         = 3,
 } user_mac_req_status_t;
 
-typedef enum class_c_enable_e
+typedef enum smtc_multicast_fpending_bit_prioritization_e
 {
-    CLASS_CG0_ENABLE,
-    CLASS_CG0_DISABLE,
-    CLASS_CG1_ENABLE,
-    CLASS_CG1_DISABLE,
-} class_c_enable_t;
-/*************************/
-/*    API CRYPTO         */
-/*************************/
-enum
-{
-    UNICASTKEY,
-};
+    UNICAST_WO_FPENDING   = 0,
+    MULTICAST_WO_FPENDING = 1,
+    UNICAST_FPENDING      = 2,
+    MULTICAST_FPENDING    = 3,
+} smtc_multicast_fpending_bit_prioritization_t;
 
 /********************************************************************************/
 /*                         LORA Metadata                                        */
@@ -430,6 +443,7 @@ typedef enum receive_win_s
     RECEIVE_ON_RXB_MC_GRP1,
     RECEIVE_ON_RXB_MC_GRP2,
     RECEIVE_ON_RXB_MC_GRP3,
+    RECEIVE_ON_RXBEACON,
     // deprecated RECEIVE_NACK       = 0x40,
     // deprecated RECEIVE_ACK_ON_RX1 = 0x81,
     // deprecated RECEIVE_ACK_ON_RX2 = 0x82,
@@ -442,7 +456,36 @@ typedef struct lr1mac_down_metadata_s
     int16_t       rx_rssi;
     uint8_t       rx_fport;
     receive_win_t rx_window;
+    bool          rx_fpending_bit;
+    uint32_t      rx_frequency_hz;
+    uint8_t       rx_datarate;
 } lr1mac_down_metadata_t;
+
+typedef struct smtc_ping_slot_parameters_e
+{
+    uint16_t ping_period;  // Period of the end-device receiver wake-up expressed in number of slots:
+    uint8_t  ping_number;  // Number of ping slot in a beacon window
+    uint32_t ping_offset_time;
+    uint32_t ping_offset_time_100us;
+} smtc_ping_slot_parameters_t;
+
+typedef struct lr1mac_rx_session_param_s
+{
+    bool                     enabled;
+    uint32_t                 dev_addr;
+    uint32_t                 fcnt_dwn;
+    smtc_se_key_identifier_t nwk_skey;
+    smtc_se_key_identifier_t app_skey;
+    uint32_t                 rx_frequency;
+    uint8_t                  rx_data_rate;
+    uint16_t                 rx_window_symb;
+
+    // For class B
+    uint8_t                                      ping_slot_periodicity;  // Value set by the user [0 to 7]
+    smtc_ping_slot_parameters_t                  ping_slot_parameters;
+    smtc_multicast_fpending_bit_prioritization_t fpending_bit;
+    bool                                         waiting_beacon_to_start;
+} lr1mac_rx_session_param_t;
 
 /********************************************************************************/
 /*                    Mac Context and counter Context                           */

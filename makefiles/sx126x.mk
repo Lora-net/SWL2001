@@ -10,7 +10,9 @@ endif
 
 
 RADIO_DRIVER_C_SOURCES +=  \
-	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x.c
+	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x.c\
+	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x_lr_fhss.c\
+	smtc_modem_core/radio_drivers/sx126x_driver/src/lr_fhss_mac.c
 
 SMTC_RAL_C_SOURCES += \
 	smtc_modem_core/smtc_ral/src/ral_sx126x.c
@@ -22,6 +24,7 @@ SMTC_MODEM_CRYPTO_C_SOURCES += \
 	smtc_modem_core/smtc_modem_crypto/soft_secure_element/aes.c\
 	smtc_modem_core/smtc_modem_crypto/soft_secure_element/cmac.c\
 	smtc_modem_core/smtc_modem_crypto/soft_secure_element/soft_se.c
+
 #-----------------------------------------------------------------------------
 # Includes
 #-----------------------------------------------------------------------------

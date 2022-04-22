@@ -60,7 +60,7 @@ extern "C" {
 #define DEFAULT_DM_REPORTING_INTERVAL 0x81  // 1h
 #define DEFAULT_DM_REPORTING_FIELDS 0x7B    // status, charge, temp, signal, uptime, rxtime
 #define DEFAULT_DM_MUTE_DAY 0
-#define DEFAULT_ADR_MOBILE_MODE_TIMEOUT 255
+#define DEFAULT_ADR_MOBILE_MODE_TIMEOUT 0  // desactivated by default
 
 #define UPLOAD_SID 0
 
@@ -69,7 +69,7 @@ extern "C" {
 
 #define POWER_CONFIG_LUT_SIZE 6
 
-#define MODEM_NUMBER_OF_EVENTS 19  // number of possible events in modem
+#define MODEM_NUMBER_OF_EVENTS 0x19  // number of possible events in modem
 
 typedef enum charge_counter_value_e
 {
@@ -82,6 +82,13 @@ typedef enum charge_counter_value_e
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
 
+typedef struct modem_context_class_b_d2d_s
+{
+    bool    tx_done;
+    uint8_t nb_trans_not_send;
+    uint8_t mc_grp_id;
+} modem_context_class_b_d2d_t;
+
 typedef struct power_config_e
 {
     int8_t  expected_power;
@@ -91,6 +98,7 @@ typedef struct power_config_e
     uint8_t pa_ramp_time;
 } modem_power_config_t;
 
+typedef void ( *func_callback )( void );
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
@@ -180,10 +188,10 @@ uint8_t get_asynchronous_msgnumber( void );
  *          and the lower six bits the value 0-63.
  *          A value of zero disables the periodic status reporting
  *
- * \param   [in]  interval                      - Set DM interval
- * \retval e_set_error_t                        - Return e_set_error_t
+ * \param   [in]  interval                - Set DM interval
+ * \retval dm_rc_t                        - Return dm_rc_t
  */
-e_set_error_t set_modem_dm_interval( uint8_t interval );
+dm_rc_t set_modem_dm_interval( uint8_t interval );
 
 /*!
  * \brief get modem dm interval
@@ -209,10 +217,10 @@ uint32_t get_modem_dm_interval_second( void );
  * \brief   Set the modem LoRaWAN Class
  * \remark  This command set the LoRaWAN device class.
  *
- * \param   [in]    LoRaWAN_class       - smtc_modem_class_t
- * \retval   e_set_error_t
+ * \param   [in]    lorawan_class       - LoRaWAN class
+ * \retval   void
  */
-e_set_error_t set_modem_class( smtc_modem_class_t LoRaWAN_class );
+void set_modem_class( smtc_modem_class_t lorawan_class );
 
 /*!
  * \brief   Get the modem LoRaWAN Class
@@ -227,9 +235,9 @@ smtc_modem_class_t get_modem_class( void );
  * \remark  This command sets the device management port.
  *
  * \param   [in]    port                        - DM port
- * \retval   e_set_error_t
+ * \retval   dm_rc_t
  */
-e_set_error_t set_modem_dm_port( uint8_t port );
+dm_rc_t set_modem_dm_port( uint8_t port );
 
 /*!
  * \brief   Get DM port
@@ -254,10 +262,10 @@ uint8_t get_modem_frag_port( void );
  * \param  [in]     user_dr                     - dr_strategy_t
  * \param  [in]     adr_custom_data             - ADR custom profile data
  * \param  [in]     adr_custom_length           - ADR custom profile data length
- * \retval [out]    e_set_error_t
+ * \retval [out]    dm_rc_t
  */
-e_set_error_t set_modem_adr_profile( smtc_modem_adr_profile_t adr_profile, const uint8_t* adr_custom_data,
-                                     uint8_t adr_custom_length );
+dm_rc_t set_modem_adr_profile( smtc_modem_adr_profile_t adr_profile, const uint8_t* adr_custom_data,
+                               uint8_t adr_custom_length );
 
 /*!
  * \brief   Get ADR profile
@@ -270,9 +278,9 @@ smtc_modem_adr_profile_t get_modem_adr_profile( void );
 /*!
  * \brief   merge the join status of the stack and the "join on going" state of the modem
  * \remark
- * \retval   eModemJoinState_t           - return join state
+ * \retval   modem_join_state_t           - return join state
  */
-eModemJoinState_t get_join_state( void );
+modem_join_state_t get_join_state( void );
 
 /*!
  * \brief   Set application-specific status in DM
@@ -384,9 +392,9 @@ uint8_t get_modem_status( void );
  * \remark  This command sets the regulatory region
  *
  * \param   [in]    region                      - region
- * \retval   return                      - e_set_error_t
+ * \retval   return                      - dm_rc_t
  */
-e_set_error_t set_modem_region( uint8_t region );
+dm_rc_t set_modem_region( uint8_t region );
 
 /*!
  * \brief   Get the region
@@ -505,9 +513,9 @@ void set_modem_downlink_frame( uint8_t* data, uint8_t data_length, lr1mac_down_m
  * \brief   Get the Downlink frame in modem context
  * \remark  This function must be called after set_modem_downlink_frame()
  *
- * \param   [in]    modem_dwn*                  - s_modem_dwn_t
+ * \param   [in]    modem_dwn*                  - modem_downlink_msg_t
  */
-void get_modem_downlink_frame( s_modem_dwn_t* modem_dwn );
+void get_modem_downlink_frame( modem_downlink_msg_t* modem_dwn );
 
 /*!
  * \brief   Set DM retrieve pending downlink frame
@@ -522,9 +530,9 @@ void set_dm_retrieve_pending_dl( uint8_t up_count, uint8_t up_delay );
  * \brief   Get DM retrieve pending downlink frame
  * \remark  This function get requested downlink opportunities configuration
  *
- * \param   [in]    pending_dl                  - s_dm_retrieve_pending_dl_t
+ * \param   [in]    pending_dl                  - dm_dl_opportunities_config_t
  */
-void get_dm_retrieve_pending_dl( s_dm_retrieve_pending_dl_t* pending_dl );
+void get_dm_retrieve_pending_dl( dm_dl_opportunities_config_t* pending_dl );
 
 /*!
  * \brief   Decrement DM retrieve pending downlink frame
@@ -538,25 +546,25 @@ void decrement_dm_retrieve_pending_dl( void );
  *
  * \param   [in]  cmd                           - Current dm info code that must be checked
  * \param   [in]  length                        - Length of the tested requested dm info code
- * \retval e_dm_cmd_length_valid         - Return valid length or not
+ * \retval dm_cmd_length_valid_t         - Return valid length or not
  */
-e_dm_cmd_length_valid dm_check_dminfo_size( e_dm_info_t cmd, uint8_t length );
+dm_cmd_length_valid_t dm_check_dminfo_size( dm_info_field_t cmd, uint8_t length );
 
 /*!
  * \brief   DM SetConf
- * \param   [in]  tag                           - e_dm_info_t that will be handle
+ * \param   [in]  tag                           - dm_info_field_t that will be handle
  * \param   [in]  data *                        - Current dm info code that must be checked
  * \param   [in]  length                        - Length of the tested requested dm info code+data
- * \retval e_dm_error_t                         - Return valid or not
+ * \retval dm_rc_t                         - Return valid or not
  */
-e_dm_error_t dm_set_conf( e_dm_info_t tag, uint8_t* data, uint8_t length );
+dm_rc_t dm_set_conf( dm_info_field_t tag, uint8_t* data, uint8_t length );
 
 /*!
  * \brief   Check the modem mute state
  *
- * \retval e_modem_mute_t                - Return Modem Muted state
+ * \retval modem_mute_status_t                - Return Modem Muted state
  */
-e_modem_mute_t get_modem_muted( void );
+modem_mute_status_t get_modem_muted( void );
 
 /*!
  * \brief   Get the number of muted days when the modem will send a status message anyway
@@ -585,12 +593,12 @@ void dm_set_number_of_days_mute( uint8_t days );
  * \param   [in]  dm *                          - Returned array that contains fields included in the periodic
  *                                                DM status messages.
  * \param   [in]  flag
- *                                              - e_dm_info_rate_t : If DM_INFO_NOW: set bitfield given by the user
+ *                                              - dm_info_rate_t : If DM_INFO_NOW: set bitfield given by the user
  *                                                                  with GetInfo command,
  *                                                               Else: set bitfield for saved context with SetDmInfo
  * \retval len                           - Return the len of the dm payload
  */
-uint8_t get_dm_info_tag_list( uint8_t* dm, e_dm_info_rate_t flag );
+uint8_t get_dm_info_tag_list( uint8_t* dm, dm_info_rate_t flag );
 
 /*!
  * \brief   This command sets the default info fields to be included in the periodic DM status messages.
@@ -599,12 +607,12 @@ uint8_t get_dm_info_tag_list( uint8_t* dm, e_dm_info_rate_t flag );
  *
  * \param   [in]  requested_info_list         - Array of bytes with requested DM code in each bytes
  * \param   [in]  len                         - Number of byte that composed requested_info_list
- * \param   [in]  flag                        - e_dm_info_rate_t: If DM_INFO_NOW: set bitfield given by the user with
+ * \param   [in]  flag                        - dm_info_rate_t: If DM_INFO_NOW: set bitfield given by the user with
  *                                                                  GetInfo command,
  *                                                              Else: set bitfield for saved context with SetDmInfo
- * \retval e_set_error_t               - Return SET_ERROR in case of failure, else false SET_OK
+ * \retval dm_rc_t               - Return DM_ERROR in case of failure, else false DM_OK
  */
-e_set_error_t set_dm_info( const uint8_t* requested_info_list, uint8_t len, e_dm_info_rate_t flag );
+dm_rc_t set_dm_info( const uint8_t* requested_info_list, uint8_t len, dm_info_rate_t flag );
 
 /*!
  * \brief   DM status messages
@@ -613,29 +621,13 @@ e_set_error_t set_dm_info( const uint8_t* requested_info_list, uint8_t len, e_dm
  *                                              information fields.
  * \param   [out] dm_uplink_message_len *     - Returned array length
  * \param   [in]  max_size                    - max payload size that must be returned
- * \param   [in]  flag                        - e_dm_info_rate_t: If DM_INFO_NOW: set bitfield given by the user with
+ * \param   [in]  flag                        - dm_info_rate_t: If DM_INFO_NOW: set bitfield given by the user with
  *                                                                  GetInfo command,
  *                                                              Else: set bitfield for saved context with SetDmInfo
  * \retval bool                               - Return true if there are pending message(s) else false
  */
 bool dm_status_payload( uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_len, uint8_t max_size,
-                        e_dm_info_rate_t flag );
-
-/*!
- * \brief   DM ALC Sync uplink payload
- *
- * \param   [in]  alc_sync_time             - Indicate the time when the payload will be really send
- * \param   [in]  app_time_ans_required     - True/False Set AnsRequired in AppTimeReq if AppTimeReq is present in
- *                                            uplink
- * \param   [in]  force_resync_status       - If true the NbTransmission set by ForceDeviceResyncReq must be
- * \param   [in]  max_payload_length        - final max length of the constructed payload
- * \param   [out] dm_uplink_message *       - Returned array that contains one or more concatenated ALC Sync data
- * \param   [out] dm_uplink_message_len *   - Returned array length
- * checked \retval void
- */
-void dm_alc_sync_uplink_payload( alc_sync_ctx_t* alc_ctx, uint32_t alc_sync_time, uint8_t app_time_ans_required,
-                                 uint8_t force_resync_status, uint8_t max_payload_length, uint8_t* dm_uplink_message,
-                                 uint8_t* dm_uplink_message_len );
+                        dm_info_rate_t flag );
 
 #if defined( LR1110_MODEM_E )
 /*!
@@ -759,19 +751,25 @@ void modem_supervisor_add_task_link_check_req( uint32_t delay_in_s );
 void modem_supervisor_add_task_device_time_req( uint32_t delay_in_s );
 
 /*!
+ * \brief    add a ping slot info req task in scheduler
+ * \remark
+ */
+void modem_supervisor_add_task_ping_slot_info_req( uint32_t delay_in_s );
+
+/*!
  * \brief    Set modem Suspend
  * \remark
  * \param   [in]  suspend               - True: Suspend modem, False: un-suspend modem
- * \retval e_set_error_t                   - Return SET_ERROR in case of failure, else false SET_OK
+ * \retval dm_rc_t                   - Return DM_ERROR in case of failure, else false DM_OK
  */
-e_set_error_t set_modem_suspend( bool suspend );
+dm_rc_t set_modem_suspend( bool suspend );
 
 /*!
  * \brief    Get modem Suspend status
  * \remark
- * \retval e_modem_suspend_t               - Return suspend type
+ * \retval modem_suspend_status_t               - Return suspend type
  */
-e_modem_suspend_t get_modem_suspend( void );
+modem_suspend_status_t get_modem_suspend( void );
 
 /*!
  * \brief    Get uptime since last reset in seconds
@@ -811,9 +809,9 @@ void modem_context_factory_reset( void );
 /*!
  * \brief    get the stream state
  * \param   [in]  void
- * \retval  [out] e_modem_stream_state_t
+ * \retval  [out] modem_stream_status_t
  */
-e_modem_stream_state_t modem_get_stream_state( void );
+modem_stream_status_t modem_get_stream_state( void );
 
 /*!
  * \brief    get the stream port
@@ -831,10 +829,10 @@ bool modem_get_stream_encryption( void );
 
 /*!
  * \brief    set the stream state
- * \param   [in]  e_modem_stream_state_t
+ * \param   [in]  modem_stream_status_t
  * \param   [out] void
  */
-void modem_set_stream_state( e_modem_stream_state_t stream_state );
+void modem_set_stream_state( modem_stream_status_t stream_state );
 
 /*!
  * \brief    set the stream port
@@ -959,18 +957,6 @@ void modem_set_adr_mobile_timeout_config( uint16_t nb_tx );
  * \retval  uint16_t
  */
 uint16_t modem_get_adr_mobile_timeout_config( void );
-
-/*!
- * \brief   Get the current uplink count in mobile adr
- * \retval  uint16_t
- */
-uint16_t modem_get_current_adr_mobile_count( void );
-
-/*!
- * \brief   Reset the current uplink count in mobile adr
- * \retval  none
- */
-void modem_reset_current_adr_mobile_count( void );
 
 /*!
  * \brief   return true when you receive a link adr request from the network
@@ -1118,7 +1104,7 @@ bool modem_context_get_network_type( void );
  */
 void modem_context_set_network_type( bool network_type );
 
-#if defined( LR1110_TRANSCEIVER )
+#if defined( LR11XX_TRANSCEIVER )
 /**
  * @brief get modem radio context
  *
@@ -1132,8 +1118,38 @@ const void* modem_context_get_modem_radio_ctx( void );
  * @param radio_ctx the radio context
  */
 void modem_context_set_modem_radio_ctx( const void* radio_ctx );
-#endif  // LR1110_TRANSCEIVER
 
+#endif  // LR11XX_TRANSCEIVER
+
+/**
+ * @brief Set D2D metadata in modem context
+ *
+ * @param mc_grp_id
+ * @param tx_done
+ * @param nb_trans
+ */
+void modem_context_set_class_b_d2d_last_metadata( uint8_t mc_grp_id, bool tx_done, uint8_t nb_trans );
+
+/**
+ * @brief Get D2D metadata in modem context
+ *
+ * @param [out] class_b_d2d
+ */
+void modem_context_get_class_b_d2d_last_metadata( modem_context_class_b_d2d_t* class_b_d2d );
+
+/**
+ * @brief Set  callback provided by the middleware layer
+ *
+ * @param [int ] callback provided by the middleware layer , lbm have to call it once the extended tx is finished
+ * @param [int ] extended_uplink_id, the id of the extended tx queue
+ */
+void modem_set_extended_callback( func_callback, uint8_t extended_uplink_id );
+/**
+ * @brief Get  callback provided by the middleware layer
+ **@param [int ] extended_uplink_id, the id of the extended tx queue
+ * @param [out ] callback provided by the middleware layer , lbm have to call it once the extended tx is finished
+ */
+func_callback modem_get_extended_callback( uint8_t extended_uplink_id );
 #ifdef __cplusplus
 }
 #endif

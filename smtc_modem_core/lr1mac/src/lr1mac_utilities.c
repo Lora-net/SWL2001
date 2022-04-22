@@ -229,11 +229,11 @@ int lr1mac_rx_fhdr_extract( uint8_t* rx_payload, uint8_t rx_payload_size, uint8_
 
     *fcnt_dwn_tmp    = rx_payload[6] + ( rx_payload[7] << 8 );
     *rx_fopts_length = *rx_fctrl & 0x0F;
-    memcpy1( &rx_fopts[0], &rx_payload[8], *rx_fopts_length );
+    memcpy1( &rx_fopts[0], &rx_payload[FHDROFFSET], *rx_fopts_length );
     // case empty payload without fport :
-    if( rx_payload_size > 8 + MICSIZE + *rx_fopts_length )
+    if( rx_payload_size > FHDROFFSET + MICSIZE + *rx_fopts_length )
     {
-        *rx_fport         = rx_payload[8 + *rx_fopts_length];
+        *rx_fport         = rx_payload[FHDROFFSET + *rx_fopts_length];
         *rx_payload_empty = 0;
     }
     else
@@ -251,11 +251,11 @@ int lr1mac_rx_fhdr_extract( uint8_t* rx_payload, uint8_t rx_payload_size, uint8_
     return ( status );
 }
 
-int lr1mac_fcnt_dwn_accept( uint16_t fcnt_dwn_tmp, uint32_t* fcnt_lorawan )
+status_lorawan_t lr1mac_fcnt_dwn_accept( uint16_t fcnt_dwn_tmp, uint32_t* fcnt_lorawan )
 {
-    int      status       = OKLORAWAN;
     uint16_t fcnt_dwn_lsb = ( *fcnt_lorawan & 0x0000FFFF );
     uint32_t fcnt_dwn_msb = ( *fcnt_lorawan & 0xFFFF0000 );
+
     if( ( fcnt_dwn_tmp > fcnt_dwn_lsb ) || ( *fcnt_lorawan == 0xFFFFFFFF ) )
     {
         if( *fcnt_lorawan == 0xFFFFFFFF )  // manage the case of the first downlink with fcnt down = 0
@@ -267,13 +267,40 @@ int lr1mac_fcnt_dwn_accept( uint16_t fcnt_dwn_tmp, uint32_t* fcnt_lorawan )
             *fcnt_lorawan = fcnt_dwn_msb + fcnt_dwn_tmp;
         }
     }
+    // Assume a roll-over of the 16 bits network counter
+    else if( fcnt_dwn_tmp < fcnt_dwn_lsb )
+    {
+        *fcnt_lorawan = ( fcnt_dwn_msb + 0x10000 ) + fcnt_dwn_tmp;
+    }
     else
     {
-        status = ERRORLORAWAN;
         SMTC_MODEM_HAL_TRACE_WARNING(
             " FcntDwn is not acceptable fcntDwnReceive = %u "
             "fcntLoraStack = %d\n",
             fcnt_dwn_tmp, ( *fcnt_lorawan ) );
+        return ERRORLORAWAN;
     }
-    return ( status );
+    return OKLORAWAN;
+}
+
+uint8_t lr1_stack_mac_cmd_ans_cut( uint8_t* nwk_ans, uint8_t nwk_ans_size_in, uint8_t max_allowed_size )
+{
+    uint8_t* p_tmp = nwk_ans;
+    uint8_t* p     = nwk_ans;
+
+    while( p_tmp - nwk_ans < MIN( nwk_ans_size_in, max_allowed_size ) )
+    {
+        p_tmp += lr1mac_cmd_mac_ans_size[nwk_ans[p_tmp - nwk_ans]];
+
+        if( ( p_tmp - nwk_ans ) <= max_allowed_size )
+        {
+            p = p_tmp;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return p - nwk_ans;  // New payload size
 }

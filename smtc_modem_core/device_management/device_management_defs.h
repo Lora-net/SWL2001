@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DEVICE_MANAGEMENT_DEFS_H__
-#define __DEVICE_MANAGEMENT_DEFS_H__
+#ifndef DEVICE_MANAGEMENT_DEFS_H__
+#define DEVICE_MANAGEMENT_DEFS_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,11 +60,12 @@ extern "C" {
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
 
-/*!
- * \typedef e_dm_cmd_t
- * \brief   The following downlink requests from the cloud are defined
+/**
+ * @brief Definition of the DAS downlink request opcodes
+ *
+ * @enum dm_opcode_t
  */
-typedef enum dm_cmd
+typedef enum dm_opcode_e
 {
     DM_RESET       = 0x00,  //!< reset modem or application MCU
     DM_FUOTA       = 0x01,  //!< FUOTA firmware update chunk
@@ -81,62 +82,66 @@ typedef enum dm_cmd
     DM_SOLV_UPDATE = 0x0C,  //!< assistance position, xtal update
     DM_ALM_FUPDATE = 0x0D,  //!< Force almanac update, short, long, full updates
     DM_CMD_MAX              //!< number of elements
-} e_dm_cmd_t;
+} dm_opcode_t;
 
-/*!
- * \typedef s_dm_cmd_input_t
- * \brief   Downlink Message Format.
- *          The cloud service might return one or more request messages which have to be delivered over
- *          the network back to the modem on the device management port.
- *          All downlink messages have the following format.
+/**
+ * @brief Downlink Message Format.
+ *        The cloud service might return one or more request messages which have to be delivered over
+ *        the network back to the modem on the device management port.
+ *        All downlink messages have the following format.
  *
- * \remark  Next to the request code and data each message contains an upcount field which indicates the
+ * @remark  Next to the request code and data each message contains an upcount field which indicates the
  *          number of uplinks to generate.
  *          These uplinks can be used to create additional downlink opportunities and should be generated
  *          at the rate specified by the updelay field.
  *          The reception of a new request message resets the uplink generation.
+ *
+ * @struct dm_cmd_msg_t
  */
-typedef struct s_dm_cmd_input
+typedef struct dm_cmd_msg_s
 {
-    uint8_t    up_count;      //!< uplink count
-    uint8_t    up_delay;      //!< uplink delay [s]
-    e_dm_cmd_t request_code;  //!< request code
-    uint8_t*   buffer;        //!< request data
-    uint8_t    buffer_len;    //!< request data length in byte(s)
-} s_dm_cmd_input_t;
+    uint8_t     up_count;      //!< uplink count
+    uint8_t     up_delay;      //!< uplink delay [s]
+    dm_opcode_t request_code;  //!< request code
+    uint8_t*    buffer;        //!< request data
+    uint8_t     buffer_len;    //!< request data length in byte(s)
+} dm_cmd_msg_t;
 
-/*!
- * \typedef e_dm_reset_code_t
- * \brief   Defined the type of reset that can be requested by downlink
+/**
+ * @brief Defined the type of reset that can be requested by downlink
+ *
+ * @enum dm_reset_code_t
  */
-typedef enum DM_RESET_CODE
+typedef enum dm_reset_code_e
 {
     DM_RESET_MODEM   = 0x01,  //!< Reset the modem
     DM_RESET_APP_MCU = 0x02,  //!< Reset the MCU
     DM_RESET_BOTH    = 0x03,  //!< Reset modem and app MCU
     DM_RESET_MAX              //!< number of elements
-} e_dm_reset_code_t;
+} dm_reset_code_t;
 
-/*!
- * \typedef e_set_error_t
- * \brief   create a typedef error for set function with illegal input value
+/**
+ * @brief Definition of return codes for dm functions
+ *
+ * @enum dm_rc_t
  */
-typedef enum set_error_e
+typedef enum dm_rc_e
 {
-    SET_ERROR,  //!< Invalid parameter(s)
-    SET_OK,     //!< Valid parameter(s)
-} e_set_error_t;
+    DM_ERROR,  //!< Error during dm function
+    DM_OK,     //!< dm function executed without error
+} dm_rc_t;
 
-/*!
- * \typedef eModemJoinState_t
- * \brief   Current modem join state
+/**
+ * @brief Current modem join state
+ *
+ * @enum modem_join_state_t
  */
-typedef enum ModemJoinState
+typedef enum modem_join_state_e
 {
     MODEM_NOT_JOINED,    //!< The modem joined a network
     MODEM_JOIN_ONGOING,  //!< The modem is ongoing to join a network
     MODEM_JOINED         //!< The modem is not joined to a network
-} eModemJoinState_t;
+} modem_join_state_t;
 
 /**
  * @brief The parameter of the TxDone event indicates the status of the requested Tx
@@ -161,61 +166,56 @@ typedef enum event_almanac_update_status_e
     ALMANAC_EVENT_DAS_NEED_NEW_CRC     = 1,  //!< Almanac update was not fully received, DAS need to dl more packets
 } event_almanac_update_status_t;
 
-/*!
- * \typedef e_dm_error_t
- * \brief   create a typedef error for set function with illegal input value
+/**
+ * @brief Type of DM, immediate or periodic reporting
+ *
+ * @enum dm_info_rate_t
  */
-typedef enum dm_error
-{
-    DM_ERROR = 0,  //!< DM downlink with invalid parameter(s)
-    DM_OK          //!< DM downlink with valid parameter(s)
-} e_dm_error_t;
-
-/*!
- * \typedef e_dm_info_rate_t
- * \brief   Type of DM, immediate or periodic reporting
- */
-typedef enum e_dm_info_rate
+typedef enum dm_info_rate_e
 {
     DM_INFO_PERIODIC = 0,  //!< Related to the Device Management periodic reporting
     DM_INFO_NOW            //!< Related to the Device Management immediately reporting
-} e_dm_info_rate_t;
+} dm_info_rate_t;
 
-/*!
- * \typedef e_dm_cmd_length_valid
- * \brief   Status of DM downlink
+/**
+ * @brief Status of DM downlink length
+ *
+ * @enum dm_cmd_length_valid_t
  */
-typedef enum DM_CMD_LENGTH
+typedef enum dm_cmd_length_valid_e
 {
     DM_CMD_LENGTH_VALID,      //!< The length of the command is valid
     DM_CMD_LENGTH_NOT_VALID,  //!< The length of the command is not valid
     DM_CMD_NOT_VALID,         //!< The command is not valid
-} e_dm_cmd_length_valid;
+} dm_cmd_length_valid_t;
 
-/*!
- * \typedef e_modem_mute_t
- * \brief   Modem mute state
+/**
+ * @brief Modem mute status
+ *
+ * @enum modem_mute_status_t
  */
-typedef enum e_modem_mute
+typedef enum modem_mute_status_e
 {
     MODEM_NOT_MUTE = 0x00,      //!< The modem is not muted
     MODEM_TEMPORARY_MUTE,       //!< The modem is muted for a defined time
     MODEM_INFINITE_MUTE = 0xFF  //!< The modem is infinitely muted
-} e_modem_mute_t;
+} modem_mute_status_t;
 
-/*!
- * \typedef e_modem_suspend_t
- * \brief   Modem suspend state
+/**
+ * @brief Modem suspend status
+ *
+ * @enum modem_suspend_status_t
  */
-typedef enum e_modem_suspend
+typedef enum modem_suspend_status_e
 {
     MODEM_NOT_SUSPEND = 0x00,  //!< The modem is not suspend
     MODEM_SUSPEND              //!< The modem is suspend
-} e_modem_suspend_t;
+} modem_suspend_status_t;
 
-/*!
- * \typedef modem_upload_state_t
- * \brief   Modem file upload state
+/**
+ * @brief Modem file upload state
+ *
+ * @enum modem_upload_state_t
  */
 typedef enum modem_upload_state_e
 {
@@ -225,33 +225,22 @@ typedef enum modem_upload_state_e
     MODEM_UPLOAD_FINISHED          //!< The upload process is finished
 } modem_upload_state_t;
 
-/*!
- * \typedef e_modem_stream_state_t
- * \brief   Modem stream state
+/**
+ * @brief Modem stream state
+ *
+ * @enum modem_stream_status_t
  */
-typedef enum e_modem_stream_state
+typedef enum modem_stream_status_e
 {
     MODEM_STREAM_NOT_INIT = 0,
     MODEM_STREAM_INIT,
     MODEM_STREAM_DATA_PENDING,
-} e_modem_stream_state_t;
+} modem_stream_status_t;
 
-/*!
- * \typedef e_modem_dwn_data_t
- * \brief   not used
- */
-typedef enum e_modem_dwn_data
-{
-    MODEM_DWN_DATA_ACK       = 0x80,  //!< Data acked
-    MODEM_DWN_DATA_NACK      = 0x40,  //!< Data not acked
-    MODEM_DWN_DATA_RX_1      = 0x01,  //!< Data received through Rx1
-    MODEM_DWN_DATA_RX_2      = 0x02,  //!< Data received through Rx2
-    MODEM_DWN_DATA_PING_SLOT = 0x04,  //!< Data received through ping slot (class B)
-} e_modem_dwn_data_t;
-
-/*!
- * \typedef rf_output_e
- * \brief  RF Output
+/**
+ * @brief RF Output definition
+ *
+ * @enum rf_output_t
  */
 typedef enum rf_output_e
 {
@@ -261,134 +250,119 @@ typedef enum rf_output_e
     MODEM_RFO_MAX,
 } rf_output_t;
 
-/*!
- * \typedef e_modem_status_t
- * \brief   Modem Status
+/**
+ * @brief Modem Status offset
+ *
+ * @enum modem_status_offset_t
  */
-typedef enum e_modem_status
+typedef enum modem_status_offset_e
 {
-    modem_status_brownout  = 0,  //!< reset after brownout
-    modem_status_crash     = 1,  //!< reset after panic
-    modem_status_mute      = 2,  //!< device is muted
-    modem_status_joined    = 3,  //!< device has joined network
-    modem_status_suspend   = 4,  //!< radio operations suspended (low power)
-    modem_status_upload    = 5,  //!< file upload in progress
-    modem_status_joining   = 6,  //!< device is trying to join the network
-    modem_status_streaming = 7   //!< streaming in progress
-} e_modem_status_t;
+    MODEM_STATUS_OFFSET_BROWNOUT  = 0,  //!< reset after brownout
+    MODEM_STATUS_OFFSET_CRASH     = 1,  //!< reset after panic
+    MODEM_STATUS_OFFSET_MUTE      = 2,  //!< device is muted
+    MODEM_STATUS_OFFSET_JOINED    = 3,  //!< device has joined network
+    MODEM_STATUS_OFFSET_SUSPEND   = 4,  //!< radio operations suspended (low power)
+    MODEM_STATUS_OFFSET_UPLOAD    = 5,  //!< file upload in progress
+    MODEM_STATUS_OFFSET_JOINING   = 6,  //!< device is trying to join the network
+    MODEM_STATUS_OFFSET_STREAMING = 7   //!< streaming in progress
+} modem_status_offset_t;
 
-/*!
- * \typedef e_dm_info_t
- * \brief   Periodic Status Reporting field
+/**
+ * @brief Periodic Status Reporting field opcode
+ *
+ * @enum dm_info_field_t
  */
-typedef enum e_dm_info
+typedef enum dm_info_field_e
 {
-    e_inf_status    = 0x00,  //!< modem status
-    e_inf_charge    = 0x01,  //!< charge counter [mAh]
-    e_inf_voltage   = 0x02,  //!< supply voltage [1/50 V]
-    e_inf_temp      = 0x03,  //!< junction temperature [deg Celsius]
-    e_inf_signal    = 0x04,  //!< strength of last downlink (RSSI [dBm]+64, SNR [0.25 dB])
-    e_inf_uptime    = 0x05,  //!< duration since last reset [h]
-    e_inf_rxtime    = 0x06,  //!< duration since last downlink [h]
-    e_inf_firmware  = 0x07,  //!< firmware CRC and fuota progress (completed/total chunks)
-    e_inf_adrmode   = 0x08,  //!< ADR profile (0-3)
-    e_inf_joineui   = 0x09,  //!< JoinEUI
-    e_inf_interval  = 0x0A,  //!< reporting interval [values 0-63, units s/m/h/d]
-    e_inf_region    = 0x0B,  //!< regulatory region
-    e_inf_rfu_0     = 0x0C,  //!< not defined
-    e_inf_crashlog  = 0x0D,  //!< crash log data
-    e_inf_upload    = 0x0E,  //!< application file fragments
-    e_inf_rstcount  = 0x0F,  //!< modem reset count
-    e_inf_deveui    = 0x10,  //!< DevEUI
-    e_inf_rfu_1     = 0x11,  //!< not defined, old owner number
-    e_inf_session   = 0x12,  //!< session id / join nonce
-    e_inf_chipeui   = 0x13,  //!< ChipEUI
-    e_inf_stream    = 0x14,  //!< data stream fragments
-    e_inf_streampar = 0x15,  //!< data stream parameters
-    e_inf_appstatus = 0x16,  //!< application-specific status
-    e_inf_alcsync   = 0x17,  //!< application layer clock sync data
-    e_inf_almstatus = 0x18,  //!< almanac status
-    e_inf_dbgrsp    = 0x19,  //!< almanac dbg response
-    e_inf_gnssloc   = 0x1A,  //!< GNSS scan NAV message
-    e_inf_wifiloc   = 0x1B,  //!< Wifi scan results message
-    e_inf_max                //!< number of elements
-} e_dm_info_t;
+    DM_INFO_STATUS    = 0x00,  //!< modem status
+    DM_INFO_CHARGE    = 0x01,  //!< charge counter [mAh]
+    DM_INFO_VOLTAGE   = 0x02,  //!< supply voltage [1/50 V]
+    DM_INFO_TEMP      = 0x03,  //!< junction temperature [deg Celsius]
+    DM_INFO_SIGNAL    = 0x04,  //!< strength of last downlink (RSSI [dBm]+64, SNR [0.25 dB])
+    DM_INFO_UPTIME    = 0x05,  //!< duration since last reset [h]
+    DM_INFO_RXTIME    = 0x06,  //!< duration since last downlink [h]
+    DM_INFO_FIRMWARE  = 0x07,  //!< firmware CRC and fuota progress (completed/total chunks)
+    DM_INFO_ADRMODE   = 0x08,  //!< ADR profile (0-3)
+    DM_INFO_JOINEUI   = 0x09,  //!< JoinEUI
+    DM_INFO_INTERVAL  = 0x0A,  //!< reporting interval [values 0-63, units s/m/h/d]
+    DM_INFO_REGION    = 0x0B,  //!< regulatory region
+    DM_INFO_RFU_0     = 0x0C,  //!< not defined
+    DM_INFO_CRASHLOG  = 0x0D,  //!< crash log data
+    DM_INFO_UPLOAD    = 0x0E,  //!< application file fragments
+    DM_INFO_RSTCOUNT  = 0x0F,  //!< modem reset count
+    DM_INFO_DEVEUI    = 0x10,  //!< DevEUI
+    DM_INFO_RFU_1     = 0x11,  //!< not defined, old owner number
+    DM_INFO_SESSION   = 0x12,  //!< session id / join nonce
+    DM_INFO_CHIPEUI   = 0x13,  //!< ChipEUI
+    DM_INFO_STREAM    = 0x14,  //!< data stream fragments
+    DM_INFO_STREAMPAR = 0x15,  //!< data stream parameters
+    DM_INFO_APPSTATUS = 0x16,  //!< application-specific status
+    DM_INFO_ALCSYNC   = 0x17,  //!< application layer clock sync data
+    DM_INFO_ALMSTATUS = 0x18,  //!< almanac status
+    DM_INFO_DBGRSP    = 0x19,  //!< almanac dbg response
+    DM_INFO_GNSSLOC   = 0x1A,  //!< GNSS scan NAV message
+    DM_INFO_WIFILOC   = 0x1B,  //!< Wifi scan results message
+    DM_INFO_MAX                //!< number of elements
+} dm_info_field_t;
 
-// field sizes
-static const uint8_t dm_info_field_sz[e_inf_max] = {
-    [e_inf_status] = 1,    [e_inf_charge] = 2,    [e_inf_voltage] = 1,  [e_inf_temp] = 1,    [e_inf_signal] = 2,
-    [e_inf_uptime] = 2,    [e_inf_rxtime] = 2,    [e_inf_firmware] = 8, [e_inf_adrmode] = 1, [e_inf_joineui] = 8,
-    [e_inf_interval] = 1,  [e_inf_region] = 1,    [e_inf_rfu_0] = 4,
-    [e_inf_crashlog] = 0,  // (variable-length, send as last field or in separate frame)
-    [e_inf_upload]   = 0,  // (variable-length, not sent periodically)
-    [e_inf_rstcount] = 2,  [e_inf_deveui] = 8,    [e_inf_rfu_1] = 2,    [e_inf_session] = 2, [e_inf_chipeui] = 8,
-    [e_inf_stream]    = 0,  // (variable-length, not sent periodically)
-    [e_inf_streampar] = 2, [e_inf_appstatus] = 8,
-    [e_inf_alcsync]   = 0,  // (variable-length, not sent periodically)
-    [e_inf_almstatus] = 7
-};
-
-/*!
- * \typedef e_dm_interval_unit_t
- * \brief   DM interval unit
+/**
+ * @brief DM interval unit definitions
+ *
+ * @enum dm_interval_unit_t
  */
-typedef enum e_dm_interval_unit
+typedef enum dm_interval_unit_e
 {
     DM_INTERVAL_UNIT_SEC  = 0,  //!< Interval in second(s)
     DM_INTERVAL_UNIT_DAY  = 1,  //!< Interval in day(s)
     DM_INTERVAL_UNIT_HOUR = 2,  //!< Interval in hour(s)
     DM_INTERVAL_UNIT_MIN  = 3   //!< Interval in minute(s)
-} e_dm_interval_unit_t;
+} dm_interval_unit_t;
 
-/*!
- * \typedef s_modem_stream_t
- * \brief   Uplink Stream structure
+/**
+ * @brief Modem stream structure
+ *
+ * @struct modem_stream_t
  */
-typedef struct s_modem_stream
+typedef struct modem_stream_s
 {
-    uint8_t                port;
-    e_modem_stream_state_t state;
-    bool                   encryption;
-} s_modem_stream_t;
+    uint8_t               port;
+    modem_stream_status_t state;
+    bool                  encryption;
+} modem_stream_t;
 
-/*!
- * \typedef s_modem_dwn_t
- * \brief   Downlink packet structure
+/**
+ * @brief Downlink message structure
+ *
+ * @struct modem_downlink_msg_t
  */
-typedef struct s_modem_dwn
+typedef struct modem_downlink_msg_s
 {
-    uint8_t  port;       //!< LoRaWAN FPort
-    uint8_t  data[242];  //!< data received
-    uint8_t  length;     //!< data length in byte(s)
-    int16_t  rssi;       //!< RSSI is a signed value in dBm + 64
-    int16_t  snr;        //!< SNR is a signed value in 0.25 dB steps
-    uint32_t timestamp;  //!< timestamp of the received message
-} s_modem_dwn_t;
+    uint8_t  port;          //!< LoRaWAN FPort
+    uint8_t  data[242];     //!< data received
+    uint8_t  length;        //!< data length in byte(s)
+    int16_t  rssi;          //!< RSSI is a signed value in dBm + 64
+    int16_t  snr;           //!< SNR is a signed value in 0.25 dB steps
+    uint32_t timestamp;     //!< timestamp of the received message
+    bool     fpending_bit;  //!< status of the frame pending bit
+    uint32_t frequency_hz;  //!< Frequency of the received message
+    uint8_t  datarate;      //!< Datarate of the received message
+} modem_downlink_msg_t;
 
-/*!
- * \typedef s_dm_retrieve_pending_dl_t
- * \brief
+/**
+ * @brief Downlink opportunities configuration
+ *
+ * @struct dm_dl_opportunities_config_t
  */
-typedef struct s_dm_retrieve_pending_dl
+typedef struct dm_dl_opportunities_config_s
 {
     uint8_t up_count;  //!< uplink count
     uint8_t up_delay;  //!< uplink delay [s]
-} s_dm_retrieve_pending_dl_t;
+} dm_dl_opportunities_config_t;
 
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
-
-static const uint8_t dm_cmd_len[DM_CMD_MAX][2] = {  // CMD              = {min,       max}
-    [DM_RESET] = { 3, 3 },         [DM_FUOTA] = { 1, 255 },
-    [DM_FILE_DONE] = { 1, 1 },     [DM_GET_INFO] = { 1, 255 },
-    [DM_SET_CONF] = { 2, 255 },    [DM_REJOIN] = { 2, 2 },
-    [DM_MUTE] = { 1, 1 },          [DM_SET_DM_INFO] = { 1, e_inf_max },
-    [DM_STREAM] = { 1, 255 },      [DM_ALC_SYNC] = { 1, 255 },
-    [DM_ALM_UPDATE] = { 1, 255 },  [DM_ALM_DBG] = { 1, 255 },
-    [DM_SOLV_UPDATE] = { 1, 255 }, [DM_ALM_FUPDATE] = { 1, 255 }
-};
 
 /*
  * -----------------------------------------------------------------------------
@@ -399,6 +373,6 @@ static const uint8_t dm_cmd_len[DM_CMD_MAX][2] = {  // CMD              = {min, 
 }
 #endif
 
-#endif  // __DEVICE_MANAGEMENT_DEFS_H__
+#endif  // DEVICE_MANAGEMENT_DEFS_H__
 
 /* --- EOF ------------------------------------------------------------------ */

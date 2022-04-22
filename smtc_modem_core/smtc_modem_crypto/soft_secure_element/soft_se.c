@@ -421,9 +421,8 @@ smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buff
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
                                                             uint32_t* cmac )
 {
-    if( key_id >= SMTC_SE_MULTICAST_KEYS )
+    if( key_id >= SMTC_SE_SLOT_RAND_ZERO_KEY )
     {
-        // Never accept multicast key identifier for cmac computation
         return SMTC_SE_RC_ERROR_INVALID_KEY_ID;
     }
 
@@ -470,21 +469,21 @@ smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, ui
         return SMTC_SE_RC_ERROR_BUF_SIZE;
     }
 
-    aes_context aes_context;
-    memset( aes_context.ksch, '\0', 240 );
+    aes_context aes_ctx;
+    memset( &aes_ctx, 0, sizeof( aes_context ) );
 
     soft_se_key_t*        key_item;
     smtc_se_return_code_t rc = get_key_by_id( key_id, &key_item );
 
     if( rc == SMTC_SE_RC_SUCCESS )
     {
-        aes_set_key( key_item->key_value, 16, &aes_context );
+        aes_set_key( key_item->key_value, 16, &aes_ctx );
 
         uint8_t block = 0;
 
         while( size != 0 )
         {
-            aes_encrypt( &buffer[block], &enc_buffer[block], &aes_context );
+            aes_encrypt( &buffer[block], &enc_buffer[block], &aes_ctx );
             block = block + 16;
             size  = size - 16;
         }

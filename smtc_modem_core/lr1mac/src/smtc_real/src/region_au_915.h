@@ -39,6 +39,11 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -46,6 +51,25 @@ extern "C" {
 #include "lr1mac_defs.h"
 #include "lr1_stack_mac_layer.h"
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
 /**
  * \brief
  * \remark
@@ -143,6 +167,15 @@ modulation_type_t region_au_915_get_modulation_type_from_datarate( uint8_t datar
 void region_au_915_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw );
 
 /**
+ * @brief Convert LoRaWAN Datarate to LR-FHSS CR and BW
+ *
+ * @param [in]  in_dr
+ * @param [out] out_cr
+ * @param [out] out_bw
+ */
+void region_au_915_lr_fhss_dr_to_cr_bw( uint8_t in_dr, lr_fhss_v1_cr_t* out_cr, lr_fhss_v1_bw_t* out_bw );
+
+/**
  * \brief
  * \remark
  * \param [IN]  none
@@ -158,24 +191,7 @@ uint32_t region_au_915_get_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8
 uint32_t region_au_915_get_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8_t index );
 
 /**
- * \brief   Convert DR to SF and BW
- * \remark
- * \param  [IN]  uint8_t datarate
- */
-void region_au_915_rx_dr_to_sf_bw( uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw,
-                                   modulation_type_t* modulation_type );
-
-/**
- * @brief Convert SF and BW to DR
- *
- * @param sf
- * @param bw
- * @return uint8_t
- */
-uint8_t region_au_915_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw );
-
-/**
- * @brief Get the beacon frequency corresponding to a gps_time and Dev Address
+ * @brief Get the beacon frequency corresponding to a gps_time
  *
  * @param lr1_mac
  * @param gps_time_s
@@ -199,3 +215,5 @@ uint32_t region_au_915_get_rx_ping_slot_frequency_channel( lr1_stack_mac_t* lr1_
 #endif
 
 #endif  // REGION_AU915_H
+
+/* --- EOF ------------------------------------------------------------------ */

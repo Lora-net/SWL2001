@@ -51,6 +51,8 @@ extern "C" {
 #include "lr1_stack_mac_layer.h"
 #include "lorawan_certification.h"
 #include "smtc_real_defs.h"
+#include "smtc_beacon_sniff.h"
+#include "smtc_d2d.h"
 #include "radio_planner.h"
 #include "fifo_ctrl.h"
 
@@ -81,7 +83,7 @@ typedef enum lorawan_multicast_rc_e
     LORAWAN_MC_RC_ERROR_CRYPTO,
     LORAWAN_MC_RC_ERROR_PARAM,
     LORAWAN_MC_RC_ERROR_INCOMPATIBLE_SESSION,
-    LORAWAN_MC_RC_ERROR_NOT_INIT,
+    LORAWAN_MC_RC_ERROR_CLASS_NOT_ENABLED,
 } lorawan_multicast_rc_t;
 
 /*
@@ -119,14 +121,10 @@ status_lorawan_t lorawan_api_set_region( smtc_real_region_types_t region_type );
  * \param [in] const uint8_t     sizeIn         User Payload Size
  * \param [in] const uint8_t     PacketType     User Packet Type : UNCONF_DATA_UP, CONF_DATA_UP,
  * \param [in] uint32_t          TargetTimeMs   RTC time when the packet must be sent
- * \param [out] lr1mac_states_t         Current state of the LoraWan stack :
- * \param                                            => return LWPSATE_SEND if all is ok
- * \param                                            => return Error in case of payload too long
- * \param                                            => return Error In case of the Lorawan stack previous state is not
- *                                                      equal to idle
+ * \return status_lorawan_t
  */
-lr1mac_states_t lorawan_api_payload_send( uint8_t fPort, bool fport_enabled, const uint8_t* dataIn,
-                                          const uint8_t sizeIn, uint8_t PacketType, uint32_t TargetTimeMs );
+status_lorawan_t lorawan_api_payload_send( uint8_t fPort, bool fport_enabled, const uint8_t* dataIn,
+                                           const uint8_t sizeIn, uint8_t PacketType, uint32_t TargetTimeMs );
 
 /*!
  * \brief Sends an uplink at time
@@ -136,48 +134,24 @@ lr1mac_states_t lorawan_api_payload_send( uint8_t fPort, bool fport_enabled, con
  * \param [in] const uint8_t     sizeIn         User Payload Size
  * \param [in] const uint8_t     PacketType     User Packet Type : UNCONF_DATA_UP, CONF_DATA_UP,
  * \param [in] uint32_t          TargetTimeMs   RTC time when the packet must be sent
- * \param [out] lr1mac_states_t         Current state of the LoraWan stack :
- * \param                                            => return LWPSATE_SEND if all is ok
- * \param                                            => return Error in case of payload too long
- * \param                                            => return Error In case of the Lorawan stack previous state is not
- *                                                      equal to idle
+ * \return status_lorawan_t
  */
-lr1mac_states_t lorawan_api_payload_send_at_time( uint8_t fPort, bool fport_enabled, const uint8_t* dataIn,
-                                                  const uint8_t sizeIn, uint8_t PacketType, uint32_t TargetTimeMs );
+status_lorawan_t lorawan_api_payload_send_at_time( uint8_t fPort, bool fport_enabled, const uint8_t* dataIn,
+                                                   const uint8_t sizeIn, uint8_t PacketType, uint32_t TargetTimeMs );
 
 /**
  * @brief
  *
  * @param  [in] cid_req          Command ID request by the User LINK_CHECK_REQ or DEVICE_TIME_REQ
- * @return lr1mac_states_t Current state of the LoraWan stack :
- * \param                                            => return LWPSATE_SEND if all is ok
- * \param                                            => return Error in case of payload too long
- * \param                                            => return Error In case of the Lorawan stack previous state is not
- *                                                      equal to idle
  */
-lr1mac_states_t lorawan_api_send_stack_cid_req( cid_from_device_t cid_req );
-
-/*!
- * \brief  Receive Applicative Downlink
- * \param [in] uint8_t*          UserRxFport            Downlinklink Fport
- * \param [in] uint8_t*          UserRxPayload          Applicative Downlink Payload
- * \param [in] uint8_t*          UserRxPayloadSize      Applicative Downlink Payload Size
- * \param [in] const uint8_t     PacketType             User Packet Type : UNCONF_DATA_UP, CONF_DATA_UP,
-
- * \param [out] eStatusLoRaWan   Return an error if No Packet available.
- */
-status_lorawan_t lorawan_api_payload_receive( uint8_t* UserRxFport, uint8_t* UserRxPayload,
-                                              uint8_t* UserRxPayloadSize );
+status_lorawan_t lorawan_api_send_stack_cid_req( cid_from_device_t cid_req );
 
 /*!
  * \brief to Send a Join request
  * \param [] None
- * \param [out] lr1mac_states_t         Current state of the LoraWan stack :
- *                                                 => return LWPSATE_SEND if all is ok
- *                                                 => return Error In case of the Lorawan stack previous state is not
- *                                                      equal to idle
+ * \return status_lorawan_t
  */
-lr1mac_states_t lorawan_api_join( uint32_t target_time_ms );
+status_lorawan_t lorawan_api_join( uint32_t target_time_ms );
 
 /*!
  * \brief Returns the join state
@@ -210,7 +184,7 @@ void lorawan_api_join_status_clear( void );
  */
 status_lorawan_t lorawan_api_dr_strategy_set( dr_strategy_t adrModeSelect );
 dr_strategy_t    lorawan_api_dr_strategy_get( void );
-void             lorawan_api_dr_custom_set( uint32_t DataRateCustom );
+void             lorawan_api_dr_custom_set( uint32_t* DataRateCustom );
 
 /*!
  * \brief   Runs the MAC layer state machine.
@@ -283,13 +257,6 @@ void lorawan_api_set_activation_mode( lr1mac_activation_mode_t activation_mode )
  * \param [out] Return max payload length for next Transmission
  */
 uint32_t lorawan_api_next_max_payload_length_get( void );
-
-/*!
- * \brief   Call this function to set the loraWan join variable in NOT_JOINED state
- * \param [in]  none
- * \param [out] none
- */
-void lorawan_api_new_join( void );
 
 /*!
  * \brief   Return the DevAddr of the device
@@ -473,24 +440,27 @@ void lorawan_api_class_c_start( void );
  * \param [out] none
  */
 void lorawan_api_class_c_stop( void );
-/*!
- * \brief   Get the downlink frame ACK bit state
- * \remark
- * \param [in]  none
- * \param [out] return
- */
 
 /**
- * @brief Configure a multicast group
+ * @brief Configure a multicast group session keys
+ *
+ * @param [in] mc_group_id The multicast group id
+ * @param [in] mc_ntw_skey The multicast network session key for the group
+ * @param [in] mc_app_skey The multicast application session key for the group
+ * @return lorawan_multicast_rc_t
+ */
+lorawan_multicast_rc_t lorawan_api_multicast_set_group_session_keys( uint8_t       mc_group_id,
+                                                                     const uint8_t mc_ntw_skey[LORAWAN_KEY_SIZE],
+                                                                     const uint8_t mc_app_skey[LORAWAN_KEY_SIZE] );
+
+/**
+ * @brief Configure a multicast group address
  *
  * @param [in] mc_group_id      The multicast group id that will be configured (0 to 3)
  * @param [in] mc_group_address The multicast group addr
- * @param [in] mc_group_key     The Multicast key associated
  * @return lorawan_multicast_rc_t
  */
-lorawan_multicast_rc_t lorawan_api_multicast_set_group_config( uint8_t mc_group_id, uint32_t mc_group_address,
-                                                               const uint8_t mc_ntw_skey[LORAWAN_KEY_SIZE],
-                                                               const uint8_t mc_app_skey[LORAWAN_KEY_SIZE] );
+lorawan_multicast_rc_t lorawan_api_multicast_set_group_address( uint8_t mc_group_id, uint32_t mc_group_address );
 
 /**
  * @brief Get a multicast group configuration
@@ -499,20 +469,21 @@ lorawan_multicast_rc_t lorawan_api_multicast_set_group_config( uint8_t mc_group_
  * @param [out] mc_group_address The current multicast group addr for chosen group id
  * @return lorawan_multicast_rc_t
  */
-lorawan_multicast_rc_t lorawan_api_multicast_get_group_config( uint8_t mc_group_id, uint32_t* mc_group_address );
+lorawan_multicast_rc_t lorawan_api_multicast_get_group_address( uint8_t mc_group_id, uint32_t* mc_group_address );
 
 /**
- * @brief Start a multicast on a previously configured group id
+ * @brief Get the current running status of a multicast session
  *
- * @param [in] mc_group_id  The multicast group id
- * @param [in] freq         Rx frequency
- * @param [in] dr           Rx Datarate
+ * @remark In class B a session will be marcked as running only after the beacon reception
+ *
+ * @param mc_group_id
+ * @param session_running
  * @return lorawan_multicast_rc_t
  */
-lorawan_multicast_rc_t lorawan_api_multicast_start_session( uint8_t mc_group_id, uint32_t freq, uint8_t dr );
+lorawan_multicast_rc_t lorawan_api_multicast_get_running_status( uint8_t mc_group_id, bool* session_running );
 
 /**
- * @brief Get the status of a multicast session
+ * @brief Get the status of a class C multicast session
  *
  * @param [in]  mc_group_id         The multicast group id
  * @param [out] is_session_started  Boolean to indicate if session is active
@@ -520,66 +491,134 @@ lorawan_multicast_rc_t lorawan_api_multicast_start_session( uint8_t mc_group_id,
  * @param [out] dr                  Rx Datarate
  * @return lorawan_multicast_rc_t
  */
-lorawan_multicast_rc_t lorawan_api_multicast_get_session_status( uint8_t mc_group_id, bool* is_session_started,
-                                                                 uint32_t* freq, uint8_t* dr );
+lorawan_multicast_rc_t lorawan_api_multicast_c_get_session_status( uint8_t mc_group_id, bool* is_session_started,
+                                                                   uint32_t* freq, uint8_t* dr );
 
 /**
- * @brief Stop the chosen multicast session
+ * @brief Start a class C multicast on a previously configured group id
+ *
+ * @param [in] mc_group_id  The multicast group id
+ * @param [in] freq         Rx frequency
+ * @param [in] dr           Rx Datarate
+ * @return lorawan_multicast_rc_t
+ */
+lorawan_multicast_rc_t lorawan_api_multicast_c_start_session( uint8_t mc_group_id, uint32_t freq, uint8_t dr );
+
+/**
+ * @brief Stop the chosen class C multicast session
  *
  * @param [in] mc_group_id The multicast group id
  * @return lorawan_multicast_rc_t
  */
-lorawan_multicast_rc_t lorawan_api_multicast_stop_session( uint8_t mc_group_id );
+lorawan_multicast_rc_t lorawan_api_multicast_c_stop_session( uint8_t mc_group_id );
 
 /**
- * @brief Stop all multicast sessions
+ * @brief Stop all class C multicast sessions
  *
  * @return lorawan_multicast_rc_t
  */
-lorawan_multicast_rc_t lorawan_api_multicast_stop_all_sessions( void );
+lorawan_multicast_rc_t lorawan_api_multicast_c_stop_all_sessions( void );
 
 /**
- * @brief
+ * @brief Get the status of a class B multicast session
+ *
+ * @param [in] mc_group_id             The multicast group id
+ * @param [out] is_session_started      Boolean to indicate if session is active
+ * @param [out] waiting_beacon_to_start Boolean to indicate if session is waiting for beacon
+ * @param [out] freq                    The session Rx frequency
+ * @param [out] dr                      The session Rx Datarate
+ * @param [out] ping_slot_periodicity   The session ping slot periodicity
+ * @return lorawan_multicast_rc_t
+ */
+lorawan_multicast_rc_t lorawan_api_multicast_b_get_session_status( uint8_t mc_group_id, bool* is_session_started,
+                                                                   bool* waiting_beacon_to_start, uint32_t* freq,
+                                                                   uint8_t* dr, uint8_t* ping_slot_periodicity );
+
+/**
+ * @brief Start a class B multicast on a previously configured group id
+ *
+ * @param [in] mc_group_id           The multicast group id
+ * @param [in] freq                  The session Rx frequency
+ * @param [in] dr                    The session Rx Datarate
+ * @param [in] ping_slot_periodicity The session ping slot periodicity
+ * @return lorawan_multicast_rc_t
+ */
+lorawan_multicast_rc_t lorawan_api_multicast_b_start_session( uint8_t mc_group_id, uint32_t freq, uint8_t dr,
+                                                              uint8_t ping_slot_periodicity );
+
+/**
+ * @brief Stop the chosen class B multicast session
+ *
+ * @param [in] mc_group_id The multicast group id
+ * @return lorawan_multicast_rc_t
+ */
+lorawan_multicast_rc_t lorawan_api_multicast_b_stop_session( uint8_t mc_group_id );
+
+/**
+ * @brief Stop all class B multicast sessions
+ *
+ * @return lorawan_multicast_rc_t
+ */
+lorawan_multicast_rc_t lorawan_api_multicast_b_stop_all_sessions( void );
+
+/**
+ * @brief Get the ack bit status corresponding to the last uplink
  *
  * @return uint8_t
  */
 uint8_t lorawan_api_rx_ack_bit_get( void );
 
-/*!
- * \brief   Set the number uplink without downlink before reset stack
- * \remark
- * \param  [in]  uint16_t no_rx_packet_count
- * \retval [out] status_lorawan_t
+/**
+ * @brief Get the frame pending bit status to know if downlink opportunity is required
+ *
+ * @return uint8_t
  */
-status_lorawan_t lorawan_api_no_rx_packet_count_config_set( uint16_t no_rx_packet_count );
-
-/*!
- * \brief   Get the configured number of uplink without downlink before reset stack
- * \remark
- * \retval [out] uint16_t
- */
-uint16_t lorawan_api_no_rx_packet_count_config_get( void );
+uint8_t lorawan_api_rx_fpending_bit_get( void );
 
 /**
- * @brief  Get the current number of uplink without downlink before reset stack
+ * @brief Set the threshold number of uplinks without downlink before reset stack
+ *
+ * @param [in] no_rx_packet_reset_threshold
+ */
+void lorawan_api_set_no_rx_packet_threshold( uint16_t no_rx_packet_reset_threshold );
+
+/**
+ * @brief Get the configured threshold number of uplink without downlink before reset stack
  *
  * @return uint16_t
  */
-uint16_t lorawan_api_no_rx_packet_count_current_get( void );
+uint16_t lorawan_api_get_no_rx_packet_threshold( void );
 
-/*!
- * \brief   Get the number uplink without downlink in mobile mode
- * \remark
- * \retval [out] uint16_t
+/**
+ * @brief Get the current value of internal adr ack cnt that is used for reset threshold trigger
+ *
+ * @remark The adr_ack_cnt values is not incremented during nb trans and will also fallow the backoff strategy in case
+ * device is in network controlled mode. The value is reset when a downlink happened
+ *
+ * @return uint16_t
  */
-uint16_t lorawan_api_no_rx_packet_count_in_mobile_mode_get( void );
+uint16_t lorawan_api_get_current_adr_ack_cnt( void );
 
-/*!
- * \brief   Set the current counter of number uplink without downlink in mobile mode
- * \remark
- * \retval [in] uint32_t
+/**
+ * @brief Get the threshold number of uplinks without downlink in mobile mode before going network controlled
+ *
+ * @return uint16_t
  */
-void lorawan_api_no_rx_packet_count_in_mobile_mode_set( uint16_t no_rx_packet_count );
+uint16_t lorawan_api_get_current_no_rx_packet_in_mobile_mode_cnt( void );
+
+/**
+ * @brief Reset the counter of uplinks without downlink in mobile mode before going network controlled
+ */
+void lorawan_api_reset_no_rx_packet_in_mobile_mode_cnt( void );
+
+/**
+ * @brief Get the current value of internal "tx without rx" counter
+ *
+ * @remark This counter is incremented at each tx done (even during nb trans) and reset when a downlink happened
+ *
+ * @return uint16_t
+ */
+uint16_t lorawan_api_get_current_no_rx_packet_cnt( void );
 
 /*!
  * \brief   Set the status of the Modem LoRaWAN certification
@@ -597,6 +636,21 @@ void lorawan_api_modem_certification_set( uint8_t enable );
  */
 bool lorawan_api_certification_is_enabled( void );
 
+/**
+ * @brief Build Class B Beacon Status Indication frame
+ *
+ * @param beacon_buffer
+ * @param beacon_buffer_length
+ * @param tx_buffer
+ * @param tx_buffer_length
+ * @param rssi
+ * @param snr
+ * @param beacon_dr
+ * @param beacon_freq
+ */
+void lorawan_api_certification_build_beacon_rx_status_ind( uint8_t* beacon_buffer, uint8_t beacon_buffer_length,
+                                                           uint8_t* tx_buffer, uint8_t* tx_buffer_length, int8_t rssi,
+                                                           int8_t snr, uint8_t beacon_dr, uint32_t beacon_freq );
 /*!
  * \brief   Get the status of the Modem LoRaWAN certification
  * \remark  Is certification is authorized in modem
@@ -604,6 +658,13 @@ bool lorawan_api_certification_is_enabled( void );
  * \param [out] return uint8_t
  */
 uint8_t lorawan_api_modem_certification_is_enabled( void );
+
+/**
+ * @brief Get the requested class bu the certification mode
+ *
+ * @return lorawan_certification_class_t
+ */
+lorawan_certification_class_t lorawan_api_certification_get_requested_class( void );
 
 /**
  * @brief call LoRaWAN Certification state machine
@@ -656,6 +717,14 @@ bool lorawan_api_certification_is_cw_running( void );
  *
  */
 void lorawan_api_certification_cw_set_as_stopped( void );
+
+/**
+ * @brief Get the status of beacon rx status indication control
+ *
+ * @return true
+ * @return false
+ */
+bool lorawan_api_certification_get_beacon_rx_status_ind_ctrl( void );
 
 /*!
  * \brief   Api to choose the lorawan key in case of a crc error
@@ -748,11 +817,13 @@ lr1mac_version_t lorawan_api_get_regional_parameters_version( void );
 /**
  * @brief Get Network Time
  *
- * @param [in] rtc_ms
- * @param [out] seconds_since_epoch
- * @param [out] fractional_second
+ * @param rtc_ms
+ * @param seconds_since_epoch
+ * @param fractional_second
+ * @return true                 Time is valid
+ * @return false                Time is not valid
  */
-void lorawan_api_convert_rtc_to_gps_epoch_time( uint32_t rtc_ms, uint32_t* seconds_since_epoch,
+bool lorawan_api_convert_rtc_to_gps_epoch_time( uint32_t rtc_ms, uint32_t* seconds_since_epoch,
                                                 uint32_t* fractional_second );
 
 /**
@@ -762,6 +833,13 @@ void lorawan_api_convert_rtc_to_gps_epoch_time( uint32_t rtc_ms, uint32_t* secon
  * @return false
  */
 bool lorawan_api_is_time_valid( void );
+
+/**
+ * @brief Get the left delais before to concider device time no more valid
+ *
+ * @return uint32_t
+ */
+uint32_t lorawan_api_get_time_left_connection_lost( void );
 
 /**
  * @brief Configure the callback for the stack when will received the network time sync
@@ -801,6 +879,172 @@ status_lorawan_t lorawan_api_get_link_check_ans( uint8_t* margin, uint8_t* gw_cn
  * @return status_lorawan_t
  */
 status_lorawan_t lorawan_api_get_device_time_req_status( void );
+
+/**
+ * @brief Set the LBT parameters
+ *
+ * @param [in] listen_duration_ms duration of the listen task
+ * @param [in] threshold_dbm threshold in dbm to decide if the channel is free or busy
+ * @param [in] bw_hz bandwith in hertz to listen a channel
+ */
+void lorawan_api_lbt_set_parameters( uint32_t listen_duration_ms, int16_t threshold_dbm, uint32_t bw_hz );
+
+/**
+ * @brief Get the configured lbt parameters
+ *
+ * @param [out] listen_duration_ms duration of the listen task
+ * @param [out] threshold_dbm threshold in dbm
+ * @param [out] bw_hz bandwith in hertz
+ */
+void lorawan_api_lbt_get_parameters( uint32_t* listen_duration_ms, int16_t* threshold_dbm, uint32_t* bw_hz );
+
+/**
+ * @brief  Enable/Disable LBT service
+ *
+ * @param [in] enable true to enable lbt service, false to disable it
+ */
+void lorawan_api_lbt_set_state( bool enable );
+
+/**
+ * @brief Return the current enabled state of the lbt service
+ *
+ * @return true if service is currently enabled
+ * @return false  if service is currently disabled
+ */
+bool lorawan_api_get_state( void );
+
+/**
+ * @brief Enable the class B
+ *
+ * @param enable
+ */
+void lorawan_api_class_b_enabled( bool enable );
+
+/**
+ * @brief start beacon sniffing
+ *
+ */
+void lorawan_api_beacon_sniff_start( void );
+
+/**
+ * @brief stop beacon sniffing
+ *
+ */
+void lorawan_api_beacon_sniff_stop( void );
+
+/**
+ * @brief Get the beacon metadata
+ *
+ * @param beacon_metadata
+ */
+void lorawan_api_beacon_get_metadata( smtc_beacon_metadata_t* beacon_metadata );
+
+/**
+ * @brief Get Ping Slot Info Request status
+ *
+ * @return status_lorawan_t
+ */
+status_lorawan_t lorawan_api_get_ping_slot_info_req_status( void );
+
+/**
+ * @brief Set the ping-slot periodicity as described in Link layer specification [TS001]
+ *
+ * @param ping_slot_periodicity
+ * @return status_lorawan_t
+ */
+status_lorawan_t lorawan_api_set_ping_slot_periodicity( uint8_t ping_slot_periodicity );
+
+/**
+ * @brief Get the ping-slot periodicity as described in Link layer specification [TS001]
+ *
+ * @return uint8_t
+ */
+uint8_t lorawan_api_get_ping_slot_periodicity( void );
+
+/**
+ * @brief Get the status of class B bit
+ *
+ * @return true
+ * @return false
+ */
+bool lorawan_api_get_class_b_status( void );
+
+/**
+ * @brief Convert LoRaWAN Datarate to SF and bandwidth
+ *
+ * @param in_dr
+ * @param out_sf
+ * @param out_bw
+ */
+void lorawan_api_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw );
+
+/**
+ * @brief Get the LoRaWAN Frequency factor to convert freq to 24bits
+ *
+ * @return uint8_t
+ */
+uint8_t lorawan_api_get_frequency_factor( void );
+
+/**
+ * @brief Get status of push network downlink (mac commands, beacon, ..) to the user
+ *
+ * @return true
+ * @return false
+ */
+bool lorawan_api_get_status_push_network_downlink_to_user( void );
+
+/**
+ * @brief Set status of push network downlink (mac commands, beacon, ..) to the user
+ *
+ * @param enable
+ */
+void lorawan_api_set_status_push_network_downlink_to_user( bool enable );
+
+/**
+ * @brief Set the ADR ACK limit and ADR ACK delay regarding the ADR fallback in case no downlink are received
+ *
+ * @param adr_ack_limit   Accepted value: ( adr_ack_limit > 1 ) && ( adr_ack_limit < 128 )
+ * @param adr_ack_delay   Accepted value: ( adr_ack_delay > 1 ) && ( adr_ack_delay < 128 )
+ * @return status_lorawan_t
+ */
+status_lorawan_t lorawan_api_set_adr_ack_limit_delay( uint8_t adr_ack_limit, uint8_t adr_ack_delay );
+
+/**
+ * @brief Get the ADR ACK limit and ADR ACK delay configured regarding the ADR fallback in case no downlink are
+ * received
+ *
+ * @param adr_ack_limit
+ * @param adr_ack_delay
+ */
+void lorawan_api_get_adr_ack_limit_delay( uint8_t* adr_ack_limit, uint8_t* adr_ack_delay );
+
+/**
+ * @brief Device To Device Reques Tx
+ *
+ * @param multi_cast_group_id
+ * @param fport
+ * @param priority
+ * @param payload
+ * @param payload_size
+ * @param nb_rep
+ * @param nb_ping_slot_tries
+ * @param ping_slots_mask
+ * @param ping_slots_mask_size
+ * @return smtc_class_b_d2d_status_t
+ */
+smtc_class_b_d2d_status_t lorawan_api_class_b_d2d_request_tx( rx_session_type_t multi_cast_group_id, uint8_t fport,
+                                                              uint8_t priority, const uint8_t* payload,
+                                                              uint8_t payload_size, uint8_t nb_rep,
+                                                              uint16_t nb_ping_slot_tries, uint8_t* ping_slots_mask,
+                                                              uint8_t ping_slots_mask_size );
+
+/**
+ * @brief Get the next max payload length for multicast class B session
+ *
+ * @param multi_cast_group_id
+ * @return uint8_t
+ */
+uint8_t lorawan_api_class_b_d2d_next_max_payload_length_get( rx_session_type_t multi_cast_group_id );
 
 #ifdef __cplusplus
 }

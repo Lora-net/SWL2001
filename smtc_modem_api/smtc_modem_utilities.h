@@ -74,9 +74,9 @@ extern "C" {
  * @brief Init the soft modem and set the modem event chosen callback
  * @remark The callback will be called each time an modem event is raised internally
  *
- * @param [in] callback  the user event callback prototype
+ * @param [in] event_callback User event callback prototype
  */
-void smtc_modem_init( const ralf_t* radio, void ( *callback )( void ) );
+void smtc_modem_init( const ralf_t* radio, void ( *event_callback )( void ) );
 
 /**
  * @brief Run the modem engine

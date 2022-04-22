@@ -403,39 +403,27 @@ sx126x_status_t sx126x_cal( const void* context, const sx126x_cal_mask_t param )
     return ( sx126x_status_t ) sx126x_hal_write( context, buf, SX126X_SIZE_CALIBRATE, 0, 0 );
 }
 
-sx126x_status_t sx126x_cal_img( const void* context, const uint32_t freq_in_hz )
+sx126x_status_t sx126x_cal_img( const void* context, const uint8_t freq1, const uint8_t freq2 )
 {
-    uint8_t buf[SX126X_SIZE_CALIBRATE_IMAGE] = { 0 };
-
-    buf[0] = SX126X_CALIBRATE_IMAGE;
-
-    if( freq_in_hz > 900000000 )
-    {
-        buf[1] = 0xE1;
-        buf[2] = 0xE9;
-    }
-    else if( freq_in_hz > 850000000 )
-    {
-        buf[1] = 0xD7;
-        buf[2] = 0xDB;
-    }
-    else if( freq_in_hz > 770000000 )
-    {
-        buf[1] = 0xC1;
-        buf[2] = 0xC5;
-    }
-    else if( freq_in_hz > 460000000 )
-    {
-        buf[1] = 0x75;
-        buf[2] = 0x81;
-    }
-    else
-    {
-        buf[1] = 0x6B;
-        buf[2] = 0x6F;
-    }
+    const uint8_t buf[SX126X_SIZE_CALIBRATE_IMAGE] = {
+        SX126X_CALIBRATE_IMAGE,
+        freq1,
+        freq2,
+    };
 
     return ( sx126x_status_t ) sx126x_hal_write( context, buf, SX126X_SIZE_CALIBRATE_IMAGE, 0, 0 );
+}
+
+sx126x_status_t sx126x_cal_img_in_mhz( const void* context, const uint16_t freq1_in_mhz, const uint16_t freq2_in_mhz )
+{
+    // Perform a floor() to get a value for freq1 corresponding to a frequency lower than or equal to freq1_in_mhz
+    const uint8_t freq1 = freq1_in_mhz / SX126X_IMAGE_CALIBRATION_STEP_IN_MHZ;
+
+    // Perform a ceil() to get a value for freq2 corresponding to a frequency higher than or equal to freq2_in_mhz
+    const uint8_t freq2 =
+        ( freq2_in_mhz + SX126X_IMAGE_CALIBRATION_STEP_IN_MHZ - 1 ) / SX126X_IMAGE_CALIBRATION_STEP_IN_MHZ;
+
+    return sx126x_cal_img( context, freq1, freq2 );
 }
 
 sx126x_status_t sx126x_set_pa_cfg( const void* context, const sx126x_pa_cfg_params_t* params )

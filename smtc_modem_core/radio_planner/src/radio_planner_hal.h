@@ -92,15 +92,24 @@ void rp_hal_timer_stop( void );
  */
 void rp_hal_timer_start( void* rp, uint32_t alarm_in_ms, void ( *callback )( void* context ) );
 
-/*!
+/**
+ * @brief Gets current time in ms
  *
+ * @return uint32_t
  */
-uint32_t rp_hal_timestamp_get( void );
+uint32_t rp_hal_get_time_in_ms( void );
+
+/**
+ * @brief Gets the time in 100µs at which the last radio IRQ occurred
+ *
+ * @return uint32_t
+ */
+uint32_t rp_hal_get_radio_irq_timestamp_in_100us( void );
 
 /*!
  *
  */
-uint8_t rp_hal_irq_get_pending( void );
+void rp_hal_irq_clear_pending( void );
 
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
 /*!
@@ -110,8 +119,8 @@ void rp_hal_get_gnss_conso_us( uint32_t* p_radio_t, uint32_t* p_arc_process_t );
 #endif  // LR1110_MODEM_E && _MODEM_E_GNSS_ENABLE
 
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_WIFI_ENABLE ) /*! \
-                                                                *  \
-                                                                */
+                                                                  *  \
+                                                                  */
 void rp_hal_get_wifi_conso_us( uint32_t* p_radio_t, uint32_t* p_arc_process_t );
 #endif  // LR1110_MODEM_E && _MODEM_E_WIFI_ENABLE
 

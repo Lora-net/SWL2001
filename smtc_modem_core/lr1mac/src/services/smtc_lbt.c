@@ -49,55 +49,54 @@ void smtc_lbt_init( smtc_lbt_t* lbt_obj, radio_planner_t* rp, uint8_t lbt_id_rp,
     {
         smtc_modem_hal_mcu_panic( "lbt bad init\n" );
     }
-    lbt_obj->rp              = rp;
-    lbt_obj->lbt_id4rp       = lbt_id_rp;  //@none protection if this id already used by un other task
-    lbt_obj->free_callback   = free_callback;
-    lbt_obj->free_context    = free_context;
-    lbt_obj->busy_callback   = busy_callback;
-    lbt_obj->busy_context    = busy_context;
-    lbt_obj->abort_callback  = abort_callback;
-    lbt_obj->abort_context   = abort_context;
-    lbt_obj->rssi_inst       = 0;
-    lbt_obj->rssi_accu       = 0;
-    lbt_obj->rssi_nb_of_meas = 0;
-    lbt_obj->is_at_time      = false;
-    lbt_obj->enabled         = false;
+    lbt_obj->rp                 = rp;
+    lbt_obj->lbt_id4rp          = lbt_id_rp;  //@none protection if this id already used by un other task
+    lbt_obj->free_callback      = free_callback;
+    lbt_obj->free_context       = free_context;
+    lbt_obj->busy_callback      = busy_callback;
+    lbt_obj->busy_context       = busy_context;
+    lbt_obj->abort_callback     = abort_callback;
+    lbt_obj->abort_context      = abort_context;
+    lbt_obj->rssi_inst          = 0;
+    lbt_obj->rssi_accu          = 0;
+    lbt_obj->rssi_nb_of_meas    = 0;
+    lbt_obj->is_at_time         = false;
+    lbt_obj->enabled            = false;
+    lbt_obj->listen_duration_ms = 0;
+    lbt_obj->threshold          = 0;
+    lbt_obj->bw_hz              = 0;
     rp_release_hook( rp, lbt_id_rp );
     rp_hook_init( rp, lbt_id_rp, ( void ( * )( void* ) )( smtc_lbt_rp_callback ), lbt_obj );
 }
-void smtc_lbt_configure( smtc_lbt_t* lbt_obj, uint32_t listen_duration_ms, int16_t threshold, uint32_t bw_hz )
+
+void smtc_lbt_set_parameters( smtc_lbt_t* lbt_obj, uint32_t listen_duration_ms, int16_t threshold_dbm, uint32_t bw_hz )
 {
     lbt_obj->rssi_inst          = 0;
     lbt_obj->rssi_accu          = 0;
     lbt_obj->rssi_nb_of_meas    = 0;
-    lbt_obj->enabled            = true;
     lbt_obj->listen_duration_ms = listen_duration_ms + LAP_OF_TIME_TO_GET_A_RSSI_VALID;
-    lbt_obj->threshold          = threshold;
+    lbt_obj->threshold          = threshold_dbm;
     lbt_obj->bw_hz              = bw_hz;
 }
-void smtc_lbt_disable( smtc_lbt_t* lbt_obj )
+
+void smtc_lbt_get_parameters( smtc_lbt_t* lbt_obj, uint32_t* listen_duration_ms, int16_t* threshold_dbm,
+                              uint32_t* bw_hz )
 {
-    lbt_obj->enabled = false;
+    *listen_duration_ms = lbt_obj->listen_duration_ms - LAP_OF_TIME_TO_GET_A_RSSI_VALID;
+    *threshold_dbm      = lbt_obj->threshold;
+    *bw_hz              = lbt_obj->bw_hz;
 }
-bool smtc_lbt_is_enable( smtc_lbt_t* lbt_obj )
+
+void smtc_lbt_set_state( smtc_lbt_t* lbt_obj, bool enable )
 {
-    return ( lbt_obj->enabled );
+    lbt_obj->enabled = enable;
 }
-void smtc_lbt_get_param( smtc_lbt_t* lbt_obj, uint32_t* listen_duration_ms, int16_t* threshold, bool* enable )
+
+bool smtc_lbt_get_state( smtc_lbt_t* lbt_obj )
 {
-    if( lbt_obj->enabled == true )
-    {
-        *listen_duration_ms = lbt_obj->listen_duration_ms;
-        *threshold          = lbt_obj->threshold;
-        *enable             = true;
-    }
-    else
-    {
-        *listen_duration_ms = 0;
-        *threshold          = 0;
-        *enable             = false;
-    }
+    return lbt_obj->enabled;
 }
+
 void smtc_lbt_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
@@ -105,28 +104,21 @@ void smtc_lbt_launch_callback_for_rp( void* rp_void )
     int16_t          rssi_tmp;
     smtc_modem_hal_start_radio_tcxo( );
     ral_init( &( rp->radio->ral ) );
-    if( ralf_setup_gfsk( rp->radio, &rp->radio_params[id].rx.gfsk ) != RAL_STATUS_OK )
-    {
-        smtc_modem_hal_mcu_panic( "ralf_setup_gfsk\n" );
-    }
-    if( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_NONE ) != RAL_STATUS_OK )
-    {
-        smtc_modem_hal_mcu_panic( "ral_set_dio_irq_params" );
-    }
-    if( ral_set_rx( &( rp->radio->ral ), RAL_RX_TIMEOUT_CONTINUOUS_MODE ) != RAL_STATUS_OK )
-    {
-        smtc_modem_hal_mcu_panic( "ral_set_rx" );
-    }
-    uint32_t carrier_sense_time = rp_hal_timestamp_get( );
-    while( ( int32_t )( carrier_sense_time + LAP_OF_TIME_TO_GET_A_RSSI_VALID - rp_hal_timestamp_get( ) ) > 0 )
+    smtc_modem_hal_assert( ral_set_pkt_type( &( rp->radio->ral ), rp->radio_params[id].pkt_type ) == RAL_STATUS_OK );
+    smtc_modem_hal_assert( ral_set_rf_freq( &( rp->radio->ral ), rp->radio_params[id].rx.gfsk.rf_freq_in_hz ) ==
+                           RAL_STATUS_OK );
+    smtc_modem_hal_assert( ral_set_gfsk_mod_params( &( rp->radio->ral ), &rp->radio_params[id].rx.gfsk.mod_params ) ==
+                           RAL_STATUS_OK );
+    smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_NONE ) == RAL_STATUS_OK );
+    smtc_modem_hal_assert( ral_set_rx( &( rp->radio->ral ), RAL_RX_TIMEOUT_CONTINUOUS_MODE ) == RAL_STATUS_OK );
+
+    uint32_t carrier_sense_time = smtc_modem_hal_get_time_in_ms( );
+    while( ( int32_t )( carrier_sense_time + LAP_OF_TIME_TO_GET_A_RSSI_VALID - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {  // delay LAP_OF_TIME_TO_GET_A_RSSI_VALID ms
     }
     do
     {
-        if( ral_get_rssi_inst( &( rp->radio->ral ), &rssi_tmp ) != RAL_STATUS_OK )
-        {
-            smtc_modem_hal_mcu_panic( );
-        }
+        smtc_modem_hal_assert( ral_get_rssi_inst( &( rp->radio->ral ), &rssi_tmp ) == RAL_STATUS_OK );
         ( ( smtc_lbt_t* ) rp->hooks[id] )->rssi_inst = rssi_tmp;
         ( ( smtc_lbt_t* ) rp->hooks[id] )->rssi_accu += rssi_tmp;
         ( ( smtc_lbt_t* ) rp->hooks[id] )->rssi_nb_of_meas++;
@@ -137,7 +129,8 @@ void smtc_lbt_launch_callback_for_rp( void* rp_void )
             rp_radio_irq_callback( rp_void );
             return;
         }
-    } while( ( int32_t )( carrier_sense_time + rp->radio_params[id].rx.timeout_in_ms - rp_hal_timestamp_get( ) ) > 0 );
+    } while( ( int32_t )( carrier_sense_time + rp->radio_params[id].rx.timeout_in_ms -
+                          smtc_modem_hal_get_time_in_ms( ) ) > 0 );
 
     rp->status[id] = RP_STATUS_LBT_FREE_CHANNEL;
     rp_radio_irq_callback( rp_void );
@@ -155,16 +148,18 @@ void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_tim
 
     ralf_params_gfsk_t gfsk_param;
     rp_radio_params_t  radio_params;
-    rp_task_t          rp_task;
+    rp_task_t          rp_task = { 0 };
     memset( &radio_params, 0, sizeof( rp_radio_params_t ) );
     memset( &rp_task, 0, sizeof( rp_task_t ) );
     memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-    gfsk_param.dc_free_is_on           = true;
-    gfsk_param.rf_freq_in_hz           = freq;
+    gfsk_param.dc_free_is_on = true;
+    gfsk_param.rf_freq_in_hz = freq;
+
     gfsk_param.mod_params.br_in_bps    = lbt_obj->bw_hz >> 1;
     gfsk_param.mod_params.bw_dsb_in_hz = lbt_obj->bw_hz;
     gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
+    gfsk_param.mod_params.fdev_in_hz   = lbt_obj->bw_hz >> 2;
 
     radio_params.pkt_type         = RAL_PKT_TYPE_GFSK;
     radio_params.rx.gfsk          = gfsk_param;
@@ -189,7 +184,7 @@ void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_tim
     {
         rp_task.state = RP_TASK_STATE_ASAP;
     }
-    SMTC_MODEM_HAL_TRACE_PRINTF( "  Listen Frequency = %d during %d ms \n", freq,
+    SMTC_MODEM_HAL_TRACE_PRINTF( "  Listen Frequency = %u during %d ms \n", freq,
                                  lbt_obj->listen_duration_ms - LAP_OF_TIME_TO_GET_A_RSSI_VALID );
     if( rp_task_enqueue( lbt_obj->rp, &rp_task, NULL, 0, &radio_params ) != RP_HOOK_STATUS_OK )
     {

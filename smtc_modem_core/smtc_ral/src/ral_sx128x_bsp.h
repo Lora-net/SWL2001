@@ -1,8 +1,7 @@
 /**
  * @file      ral_sx128x_bsp.h
  *
- * @brief Board Support Package for the base section of the
- * SX128x-specific Radio Abstraction Layer.
+ * @brief     Board Support Package for the SX128x-specific RAL.
  *
  * The Clear BSD License
  * Copyright Semtech Corporation 2021. All rights reserved.

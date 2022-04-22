@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 // clang-format off
 #define NUMBER_OF_CHANNEL_EU_868            (16)
@@ -62,12 +72,21 @@ extern "C" {
 #define RX2DR_INIT_EU_868                   (0)
 #define SYNC_WORD_PRIVATE_EU_868            (0x12)
 #define SYNC_WORD_PUBLIC_EU_868             (0x34)
-#define MIN_DR_EU_868                       (0)
-#define MAX_DR_EU_868                       (7)
+#define MIN_TX_DR_EU_868                    (0)
+#define MAX_TX_DR_EU_868                    (11)
 #define MIN_TX_DR_LIMIT_EU_868              (0)
-#define MAX_TX_DEFAULT_DR_EU_868            (5)
-#define NUMBER_OF_TX_DR_EU_868              (8)
-#define DR_BITFIELD_SUPPORTED_EU_868        (uint16_t)(0x00FF) // DR7..DR0 Datarate bitfield supported by the region
+#define NUMBER_OF_TX_DR_EU_868              (12)
+#define MIN_RX_DR_EU_868                    (0)
+#define MAX_RX_DR_EU_868                    (7)
+
+#if defined( RP2_101 )
+#define DR_BITFIELD_SUPPORTED_EU_868        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
+                                                        ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#elif defined( RP2_103 )
+#define DR_BITFIELD_SUPPORTED_EU_868        (uint16_t)( ( 1 << DR11 ) | ( 1 << DR10 ) | ( 1 << DR9 ) | ( 1 << DR8 ) | ( 1 << DR7 ) | ( 1 << DR6 ) | \
+                                                        ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#endif
+
 #define DEFAULT_TX_DR_BIT_FIELD_EU_868      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
 #define TX_PARAM_SETUP_REQ_SUPPORTED_EU_868 (false)         // This mac command is NOT required for EU868
 #define NEW_CHANNEL_REQ_SUPPORTED_EU_868    (true)
@@ -83,103 +102,14 @@ extern "C" {
 #define BEACON_FREQ_EU_868                  (869525000)     // Hz
 #define PING_SLOT_FREQ_EU_868               (869525000)     // Hz
 
+// LR-FHSS
+#define LR_FHSS_NA                          (0xFFFFFFFF) // LR-FHSS Not Applicable
 // clang-format on
 
-static const char SYNC_WORD_GFSK_EU_868[] = { 0xC1, 0x94, 0xC1 };
-
-/**
- * Default frequencies at boot
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
  */
-static const uint32_t default_freq_eu_868[] = { 868100000, 868300000, 868500000 };
-
-/**
- * Up/Down link data rates offset definition
- */
-static const uint8_t datarate_offsets_eu_868[8][6] = {
-    { 0, 0, 0, 0, 0, 0 },  // DR 0
-    { 1, 0, 0, 0, 0, 0 },  // DR 1
-    { 2, 1, 0, 0, 0, 0 },  // DR 2
-    { 3, 2, 1, 0, 0, 0 },  // DR 3
-    { 4, 3, 2, 1, 0, 0 },  // DR 4
-    { 5, 4, 3, 2, 1, 0 },  // DR 5
-    { 6, 5, 4, 3, 2, 1 },  // DR 6
-    { 7, 6, 5, 4, 3, 2 },  // DR 7
-};
-
-static const uint8_t MAX_RX1_DR_OFSSET_EU_868 =
-    sizeof( datarate_offsets_eu_868[0] ) / sizeof( datarate_offsets_eu_868[0][0] );
-
-/**
- * Data rates table definition
- */
-static const uint8_t datarates_to_sf_eu_868[] = { 12, 11, 10, 9, 8, 7, 7, 50 };
-
-/**
- * Bandwidths table definition in KHz
- */
-static const uint32_t datarates_to_bandwidths_eu_868[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250, BW125 };
-
-/**
- * Payload max size table definition in bytes
- */
-static const uint8_t M_eu_868[8] = { 59, 59, 59, 123, 250, 250, 250, 250 };
-
-/**
- * Payload max size table definition in bytes
- */
-static const uint8_t N_eu_868[8] = { 51, 51, 51, 115, 242, 242, 242, 242 };
-
-/**
- * Mobile long range datarate distribution
- * DR0: 20%,
- * DR1: 20%,
- * DR2: 30%,
- * DR3: 30%,
- * DR4:  0%,
- * DR5:  0%,
- * DR6:  0%,
- * DR7:  0%
- */
-static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_EU_868[] = { 2, 2, 3, 3, 0, 0, 0, 0 };
-
-/**
- * Mobile low power datarate distribution
- * DR0:  0%,
- * DR1:  0%,
- * DR2: 10%,
- * DR3: 30%,
- * DR4: 30%,
- * DR5: 30%,
- * DR6:  0%,
- * DR7:  0%
- */
-static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_EU_868[] = { 0, 0, 1, 3, 3, 3, 0, 0 };
-
-/**
- * Join datarate distribution
- * DR0:  5%,
- * DR1: 10%,
- * DR2: 15%,
- * DR3: 20%,
- * DR4: 20%,
- * DR5: 30%,
- * DR6:  0%,
- * DR7:  0%
- */
-static const uint8_t JOIN_DR_DISTRIBUTION_EU_868[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
-
-/**
- * Default datarate distribution
- * DR0: 100%,
- * DR1:   0%,
- * DR2:   0%,
- * DR3:   0%,
- * DR4:   0%,
- * DR5:   0%,
- * DR6:   0%,
- * DR7:   0%
- */
-static const uint8_t DEFAULT_DR_DISTRIBUTION_EU_868[] = { 1, 0, 0, 0, 0, 0, 0, 0 };
 
 /**
  * Bank contains 8 channels
@@ -205,6 +135,166 @@ typedef enum region_eu_868_band_e
     BAND_EU868_MAX
 } region_eu_868_band_t;
 
+typedef struct region_eu868_context_s
+{
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_EU_868];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_EU_868];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_EU_868];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_EU_868];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_EU_868];
+    uint8_t  channel_index_enabled[BANK_MAX_EU868];   // Enable by Network
+    uint8_t  unwrapped_channel_mask[BANK_MAX_EU868];  // Temp conf send by Network
+} region_eu868_context_t;
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_GFSK_EU_868[]    = { 0xC1, 0x94, 0xC1 };
+static const uint8_t SYNC_WORD_LR_FHSS_EU_868[] = { 0x2C, 0x0F, 0x79, 0x95 };
+
+/**
+ * Default frequencies at boot
+ */
+static const uint32_t default_freq_eu_868[] = { 868100000, 868300000, 868500000 };
+
+/**
+ * Up/Down link data rates offset definition
+ */
+static const uint8_t datarate_offsets_eu_868[12][6] = {
+    { 0, 0, 0, 0, 0, 0 },  // DR 0
+    { 1, 0, 0, 0, 0, 0 },  // DR 1
+    { 2, 1, 0, 0, 0, 0 },  // DR 2
+    { 3, 2, 1, 0, 0, 0 },  // DR 3
+    { 4, 3, 2, 1, 0, 0 },  // DR 4
+    { 5, 4, 3, 2, 1, 0 },  // DR 5
+    { 6, 5, 4, 3, 2, 1 },  // DR 6
+    { 7, 6, 5, 4, 3, 2 },  // DR 7
+    { 1, 0, 0, 0, 0, 0 },  // DR 8
+    { 2, 1, 0, 0, 0, 0 },  // DR 9
+    { 1, 0, 0, 0, 0, 0 },  // DR 10
+    { 2, 1, 0, 0, 0, 0 },  // DR 11
+};
+
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_eu_868[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    4,  // DR5 -> DR4
+    5,  // DR6 -> DR5
+    6,  // DR7 -> DR6
+    0,  // DR8 -> DR0
+    8,  // DR9 -> DR8
+    0,  // DR10 -> DR0
+    10  // DR11 -> DR10
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_EU_868 =
+    sizeof( datarate_offsets_eu_868[0] ) / sizeof( datarate_offsets_eu_868[0][0] );
+
+/**
+ * Data rates table definition
+ */
+static const uint8_t datarates_to_sf_eu_868[] = { 12, 11, 10, 9, 8, 7, 7 };
+
+/**
+ * Bandwidths table definition in KHz
+ */
+static const uint32_t datarates_to_bandwidths_eu_868[] = { BW125, BW125, BW125, BW125, BW125, BW125, BW250 };
+
+/**
+ * LR-FHSS Bandwidths table definition in Hz depending on DR
+ */
+static const uint32_t datarates_to_lr_fhss_bw_eu_868[NUMBER_OF_TX_DR_EU_868] = { LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_NA,
+                                                                                 LR_FHSS_V1_BW_136719_HZ,
+                                                                                 LR_FHSS_V1_BW_136719_HZ,
+                                                                                 LR_FHSS_V1_BW_335938_HZ,
+                                                                                 LR_FHSS_V1_BW_335938_HZ };
+
+/**
+ * LR-FHSS Coding Rate table definition depending on DR
+ */
+static const uint32_t datarates_to_lr_fhss_cr_eu_868[NUMBER_OF_TX_DR_EU_868] = {
+    LR_FHSS_NA, LR_FHSS_NA, LR_FHSS_NA,        LR_FHSS_NA,        LR_FHSS_NA,        LR_FHSS_NA,
+    LR_FHSS_NA, LR_FHSS_NA, LR_FHSS_V1_CR_1_3, LR_FHSS_V1_CR_2_3, LR_FHSS_V1_CR_1_3, LR_FHSS_V1_CR_2_3
+};
+
+/**
+ * Payload max size table definition in bytes with FHDROFFSET
+ */
+static const uint8_t M_eu_868[12] = { 59, 59, 59, 123, 250, 250, 250, 250, 58, 123, 58, 123 };
+
+/**
+ * Payload max size table definition in bytes without FHDROFFSET
+ */
+static const uint8_t N_eu_868[12] = { 51, 51, 51, 115, 242, 242, 242, 242, 50, 115, 50, 115 };
+
+/**
+ * Mobile long range datarate distribution
+ * DR0: 20%,
+ * DR1: 20%,
+ * DR2: 30%,
+ * DR3: 30%,
+ * DR4:  0%,
+ * DR5:  0%,
+ * DR6:  0%,
+ * DR7:  0%
+ */
+static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_EU_868[] = { 2, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+/**
+ * Mobile low power datarate distribution
+ * DR0:  0%,
+ * DR1:  0%,
+ * DR2: 10%,
+ * DR3: 30%,
+ * DR4: 30%,
+ * DR5: 30%,
+ * DR6:  0%,
+ * DR7:  0%
+ */
+static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_EU_868[] = { 0, 0, 1, 3, 3, 3, 0, 0, 0, 0, 0, 0 };
+
+/**
+ * Join datarate distribution
+ * DR0:  5%,
+ * DR1: 10%,
+ * DR2: 15%,
+ * DR3: 20%,
+ * DR4: 20%,
+ * DR5: 30%,
+ * DR6:  0%,
+ * DR7:  0%
+ */
+static const uint8_t JOIN_DR_DISTRIBUTION_EU_868[] = { 1, 2, 3, 4, 4, 6, 0, 0, 0, 0, 0, 0 };
+
+/**
+ * Default datarate distribution
+ * DR0: 100%,
+ * DR1:   0%,
+ * DR2:   0%,
+ * DR3:   0%,
+ * DR4:   0%,
+ * DR5:   0%,
+ * DR6:   0%,
+ * DR7:   0%
+ */
+static const uint8_t DEFAULT_DR_DISTRIBUTION_EU_868[] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
 /**
  * Duty Cycle table definition by bands
  */
@@ -224,19 +314,15 @@ static const uint32_t frequency_range_by_band_eu_868[BAND_EU868_MAX][2] = {
     [BAND_EU868_4] = { 869400000, 869650001 }, [BAND_EU868_5] = { 869700000, 870000001 },
 };
 
-typedef struct region_eu868_context_s
-{
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_EU_868];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_EU_868];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_EU_868];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_EU_868];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_EU_868];
-    uint8_t  channel_index_enabled[BANK_MAX_EU868];   // Enable by Network
-    uint8_t  unwrapped_channel_mask[BANK_MAX_EU868];  // Temp conf send by Network
-} region_eu868_context_t;
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_EU_868_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

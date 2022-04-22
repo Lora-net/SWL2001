@@ -47,6 +47,7 @@ extern "C" {
 #include <stdbool.h>  // bool type
 #include "lr1_stack_mac_layer.h"
 #include "lr1mac_defs.h"
+#include "smtc_multicast.h"
 #include "radio_planner.h"
 #include "smtc_secure_element.h"
 
@@ -61,8 +62,7 @@ extern "C" {
  */
 // clang-format off
 #define LR1MAC_RCX_MIN_DURATION_MS   20
-#define LR1MAC_NUMBER_OF_MC_SESSION  4
-#define LR1MAC_NUMBER_OF_RXC_SESSION (1 + LR1MAC_NUMBER_OF_MC_SESSION) // 1 RxC + 4 Multicast address
+#define LR1MAC_NUMBER_OF_RXC_SESSION RX_SESSION_COUNT // Unicast + Multicast
 
 // clang-format on
 
@@ -71,40 +71,30 @@ extern "C" {
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
 
-typedef struct lr1mac_rx_session_param_e
-{
-    bool                     enabled;
-    uint32_t                 dev_addr;
-    uint32_t                 fcnt_dwn;
-    smtc_se_key_identifier_t nwk_skey;
-    smtc_se_key_identifier_t app_skey;
-    uint8_t                  rx_data_rate;
-    uint32_t                 rx_frequency;
-} lr1mac_rx_session_param_t;
-
 typedef struct lr1mac_class_c_s
 {
-    bool             enabled;
-    bool             started;
-    lr1_stack_mac_t* lr1_mac;
-    uint8_t          class_c_id4rp;
-    radio_planner_t* rp;
+    bool             enabled;        // Service is enabled/disabled
+    bool             started;        // Class C window is opened/stopped
+    lr1_stack_mac_t* lr1_mac;        // lr1mac object
+    uint8_t          class_c_id4rp;  // Hook ID for radio planner
+    radio_planner_t* rp;             // Radio planner object
     rp_status_t      planner_status;
 
-    void ( *rx_callback )( void* );
+    void ( *rx_callback )( void* );  // radio planner callback to set the Rx windows parameters
     void* rx_context;
-    void ( *push_callback )( void* );
+    void ( *push_callback )( void* );  // Callback to handle received downlink
     void* push_context;
 
     lr1mac_down_metadata_t rx_metadata;
     uint8_t                rx_payload_size;
     uint8_t                rx_payload[255];
 
-    rx_session_type_t          rx_session_type;
-    lr1mac_rx_session_param_t  rx_session_param[LR1MAC_NUMBER_OF_RXC_SESSION];
-    lr1mac_rx_session_param_t* rx_session_param_ptr;
+    rx_session_type_t rx_session_index;
 
-    receive_win_t    receive_window_type;
+    // Contains All Rx Session, Unicast and Multicast
+    lr1mac_rx_session_param_t  rx_session_param_unicast;
+    lr1mac_rx_session_param_t* rx_session_param[LR1MAC_NUMBER_OF_RXC_SESSION];
+
     rx_packet_type_t valid_rx_packet;
     uint8_t          tx_ack_bit;
     uint8_t          tx_mtype;
@@ -119,52 +109,102 @@ typedef struct lr1mac_class_c_s
 
 } lr1mac_class_c_t;
 
-typedef enum lr1mac_multicast_config_rc_e
-{
-    LR1MAC_MC_RC_OK,
-    LR1MAC_MC_RC_ERROR_BAD_ID,
-    LR1MAC_MC_RC_ERROR_BUSY,
-    LR1MAC_MC_RC_ERROR_CRYPTO,
-    LR1MAC_MC_RC_ERROR_PARAM,
-    LR1MAC_MC_RC_ERROR_INCOMPATIBLE_SESSION,
-    LR1MAC_MC_RC_ERROR_NOT_INIT,
-} lr1mac_multicast_config_rc_t;
-
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
-void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac, radio_planner_t* rp,
-                          uint8_t class_c_id_rp, void ( *rx_callback )( void* rx_context ), void* rx_context,
-                          void ( *push_callback )( void* push_context ), void* push_context );
+/**
+ * @brief Init the class C and the callback to push downlink
+ *
+ * @param class_c_obj   // Class C object
+ * @param lr1_mac       // lr1mac object
+ * @param rp            // Radio planner object
+ * @param class_c_id_rp // Hook ID for radio planner
+ * @param rx_callback   // radio planner callback to set the Rx windows parameters
+ * @param rx_context
+ * @param push_callback // Callback to handle received downlink
+ * @param push_context
+ */
+void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac, smtc_multicast_t* multicast_obj,
+                          radio_planner_t* rp, uint8_t class_c_id_rp, void ( *rx_callback )( void* rx_context ),
+                          void* rx_context, void ( *push_callback )( void* push_context ), void* push_context );
 
+/**
+ * @brief Class C service enablement
+ *
+ * @remark this function does not start the class C, just enable the service
+ *
+ * @param class_c_obj
+ * @param enable
+ */
 void lr1mac_class_c_enabled( lr1mac_class_c_t* class_c_obj, bool enable );
 
+/**
+ * @brief Stop class C windows
+ *
+ * @param class_c_obj
+ */
 void lr1mac_class_c_stop( lr1mac_class_c_t* class_c_obj );
+
+/**
+ * @brief Start class C windows
+ *
+ * @param class_c_obj
+ */
 void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj );
+
+/**
+ * @brief Callback called by radio planner on interrupt
+ *
+ * @param class_c_obj
+ */
 void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj );
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_set_group_config( lr1mac_class_c_t* class_c_obj,
-                                                                        uint8_t mc_group_id, uint32_t mc_group_address,
-                                                                        const uint8_t mc_ntw_skey[SMTC_SE_KEY_SIZE],
-                                                                        const uint8_t mc_app_skey[SMTC_SE_KEY_SIZE] );
+/**
+ * @brief Start the class C multicast session
+ *
+ * @remark need to configured before
+ *
+ * @param class_c_obj
+ * @param mc_group_id
+ * @param freq
+ * @param dr
+ * @return smtc_multicast_config_rc_t
+ */
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id,
+                                                                   uint32_t freq, uint8_t dr );
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_get_group_config( lr1mac_class_c_t* class_c_obj,
-                                                                        uint8_t           mc_group_id,
-                                                                        uint32_t*         mc_group_address );
+/**
+ * @brief Stop the class C multicast session
+ *
+ * @param class_c_obj
+ * @param mc_group_id
+ * @return smtc_multicast_config_rc_t
+ */
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id );
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id,
-                                                                     uint32_t freq, uint8_t dr );
+/**
+ * @brief Stop all class C multicast session
+ *
+ * @param class_c_obj
+ * @return smtc_multicast_config_rc_t
+ */
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_class_c_t* class_c_obj );
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,
-                                                                          uint8_t mc_group_id, bool* is_session_started,
-                                                                          uint32_t* freq, uint8_t* dr );
-
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c_t* class_c_obj,
-                                                                    uint8_t           mc_group_id );
-
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_class_c_t* class_c_obj );
+/**
+ * @brief Get class C multicast status for a session
+ *
+ * @param class_c_obj
+ * @param mc_group_id
+ * @param is_session_started
+ * @param freq
+ * @param dr
+ * @return smtc_multicast_config_rc_t
+ */
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,
+                                                                        uint8_t mc_group_id, bool* is_session_started,
+                                                                        uint32_t* freq, uint8_t* dr );
 
 #ifdef __cplusplus
 }

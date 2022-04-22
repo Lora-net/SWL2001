@@ -195,7 +195,7 @@ smtc_se_return_code_t smtc_secure_element_verify_aes_cmac( uint8_t* buffer, uint
  * @brief Encrypt a buffer
  *
  * @param [in] buffer Data buffer
- * @param [in] size Data buffer size
+ * @param [in] size Data buffer size - this value shall be a multiple of 16
  * @param [in] key_id Key identifier to determine the AES key to be used
  * @param [in] enc_buffer Encrypted buffer
  * @return Secure element return code as defined in @ref smtc_se_return_code_t

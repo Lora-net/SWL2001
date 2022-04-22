@@ -81,14 +81,28 @@
 #error "Unknown region selected..."
 #endif
 
-#define tx_frequency_channel_ctx lr1_mac->real.real_ctx.tx_frequency_channel_ctx
-#define rx1_frequency_channel_ctx lr1_mac->real.real_ctx.rx1_frequency_channel_ctx
-#define channel_index_enabled_ctx lr1_mac->real.real_ctx.channel_index_enabled_ctx
-#define unwrapped_channel_mask_ctx lr1_mac->real.real_ctx.unwrapped_channel_mask_ctx
-#define dr_bitfield_tx_channel_ctx lr1_mac->real.real_ctx.dr_bitfield_tx_channel_ctx
-#define dr_distribution_init_ctx lr1_mac->real.real_ctx.dr_distribution_init_ctx
-#define dr_distribution_ctx lr1_mac->real.real_ctx.dr_distribution_ctx
-#define sync_word_ctx lr1_mac->real.real_ctx.sync_word_ctx
+#define tx_frequency_channel_ctx lr1_mac->real->real_ctx.tx_frequency_channel_ctx
+#define rx1_frequency_channel_ctx lr1_mac->real->real_ctx.rx1_frequency_channel_ctx
+#define channel_index_enabled_ctx lr1_mac->real->real_ctx.channel_index_enabled_ctx
+#define unwrapped_channel_mask_ctx lr1_mac->real->real_ctx.unwrapped_channel_mask_ctx
+#define dr_bitfield_tx_channel_ctx lr1_mac->real->real_ctx.dr_bitfield_tx_channel_ctx
+#define dr_distribution_init_ctx lr1_mac->real->real_ctx.dr_distribution_init_ctx
+#define dr_distribution_ctx lr1_mac->real->real_ctx.dr_distribution_ctx
+#define sync_word_ctx lr1_mac->real->real_ctx.sync_word_ctx
+
+smtc_real_status_t smtc_real_is_supported_region( smtc_real_region_types_t region_type )
+{
+    for( uint8_t i = 0; i < SMTC_REAL_REGION_LIST_LENGTH; i++ )
+    {
+        if( smtc_real_region_list[i] == region_type )
+        {
+            return SMTC_REAL_STATUS_OK;
+        }
+    }
+
+    SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Region 0x%02x\n", region_type );
+    return SMTC_REAL_STATUS_UNSUPPORTED_FEATURE;
+}
 
 void smtc_real_config( lr1_stack_mac_t* lr1_mac )
 {
@@ -96,9 +110,9 @@ void smtc_real_config( lr1_stack_mac_t* lr1_mac )
     smtc_duty_cycle_init( lr1_mac->dtc_obj );
 
     // Init all const_xxx to 0
-    memset( &( lr1_mac->real.real_const ), 0, sizeof( smtc_real_const_t ) );
+    memset( &( lr1_mac->real->real_const ), 0, sizeof( smtc_real_const_t ) );
 
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -125,6 +139,12 @@ void smtc_real_config( lr1_stack_mac_t* lr1_mac )
         region_as_923_config( lr1_mac, 3 );
         break;
     }
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4: {
+        region_as_923_config( lr1_mac, 4 );
+        break;
+    }
+#endif
 #endif
 #if defined( REGION_US_915 )
     case SMTC_REAL_REGION_US_915: {
@@ -178,8 +198,9 @@ void smtc_real_config( lr1_stack_mac_t* lr1_mac )
                    ( void ( * )( void* ) ) lr1_stack_mac_radio_abort_lbt, lr1_mac );
     if( const_lbt_supported == true )
     {
-        smtc_lbt_configure( lr1_mac->lbt_obj, smtc_real_get_lbt_duration_ms( lr1_mac ),
-                            smtc_real_get_lbt_threshold_dbm( lr1_mac ), smtc_real_get_lbt_bw_hz( lr1_mac ) );
+        smtc_lbt_set_parameters( lr1_mac->lbt_obj, smtc_real_get_lbt_duration_ms( lr1_mac ),
+                                 smtc_real_get_lbt_threshold_dbm( lr1_mac ), smtc_real_get_lbt_bw_hz( lr1_mac ) );
+        smtc_lbt_set_state( lr1_mac->lbt_obj, true );
     }
 
     smtc_duty_cycle_enable_set( lr1_mac->dtc_obj, const_dtc_supported );
@@ -191,7 +212,7 @@ void smtc_real_init( lr1_stack_mac_t* lr1_mac )
 {
     lr1_mac->rx2_frequency    = const_rx2_freq;
     lr1_mac->tx_power         = const_tx_power_dbm;
-    lr1_mac->max_eirp_dbm     = const_tx_power_dbm;
+    lr1_mac->max_erp_dbm      = const_tx_power_dbm;
     lr1_mac->rx1_dr_offset    = 0;
     lr1_mac->rx2_data_rate    = const_rx2_dr_init;
     lr1_mac->rx1_delay_s      = const_received_delay1;
@@ -200,11 +221,13 @@ void smtc_real_init( lr1_stack_mac_t* lr1_mac )
     lr1_mac->uplink_dwell_time   = 0;
     lr1_mac->downlink_dwell_time = 0;
 
-    lr1_mac->beacon_freq_hz =
-        0;  // If 0 the beacon of the region is used, else this freq is used even if the beacon must be hopping
-    lr1_mac->ping_slot_periodicity = 7;  // max ping slot period approximately every 128s
+    // If 0 the beacon of the region is used, else this freq is used even if the beacon must be hopping
+    lr1_mac->beacon_freq_hz = 0;
 
-    switch( lr1_mac->real.region_type )
+    lr1_mac->ping_slot_dr              = const_beacon_dr;
+    lr1_mac->ping_slot_periodicity_req = SMTC_REAL_PING_SLOT_PERIODICITY_DEFAULT;
+
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -221,7 +244,11 @@ void smtc_real_init( lr1_stack_mac_t* lr1_mac )
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         region_as_923_init( lr1_mac );
         break;
     }
@@ -276,7 +303,7 @@ void smtc_real_init( lr1_stack_mac_t* lr1_mac )
 
 void smtc_real_init_session( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -288,6 +315,9 @@ void smtc_real_init_session( lr1_stack_mac_t* lr1_mac )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_US_915 )
     case SMTC_REAL_REGION_US_915:
@@ -357,7 +387,13 @@ void smtc_real_set_dr_distribution( lr1_stack_mac_t* lr1_mac, uint8_t adr_mode )
     case USER_DR_DISTRIBUTION:
         for( uint8_t i = 0; i < const_number_of_tx_dr; i++ )
         {
-            dr_distribution_init_ctx[i] = ( lr1_mac->adr_custom >> ( ( 7 - i ) * 4 ) ) & 0x0F;
+            if( i < 8 )
+                dr_distribution_init_ctx[i] = ( lr1_mac->adr_custom[0] >> ( ( 7 - i ) * 4 ) ) & 0x0F;
+            else
+            {
+                uint8_t tmpi                = i % 8;
+                dr_distribution_init_ctx[i] = ( lr1_mac->adr_custom[1] >> ( ( 7 - tmpi ) * 4 ) ) & 0x0F;
+            }
         }
         memcpy( dr_distribution_ctx, dr_distribution_init_ctx, const_number_of_tx_dr );
         lr1_mac->nb_trans = BSP_USER_NUMBER_OF_RETRANSMISSION;
@@ -464,15 +500,12 @@ status_lorawan_t smtc_real_update_cflist( lr1_stack_mac_t* lr1_mac )
                 rx1_frequency_channel_ctx[const_number_of_boot_tx_channel + i] =
                     tx_frequency_channel_ctx[const_number_of_boot_tx_channel + i];
 
-                if( smtc_real_is_tx_frequency_valid(
+                if( smtc_real_is_nwk_received_tx_frequency_valid(
                         lr1_mac, tx_frequency_channel_ctx[const_number_of_boot_tx_channel + i] ) == OKLORAWAN &&
                     tx_frequency_channel_ctx[const_number_of_boot_tx_channel + i] != 0 )
                 {
-                    // Apply Datarate
-                    for( uint8_t dr = const_min_tx_dr; dr < const_max_tx_default_dr; dr++ )
-                    {
-                        SMTC_PUT_BIT16( &dr_bitfield_tx_channel_ctx[const_number_of_boot_tx_channel + i], dr, 1 );
-                    }
+                    // Enable default datarate for all added channels
+                    dr_bitfield_tx_channel_ctx[const_number_of_boot_tx_channel + i] = const_default_tx_dr_bit_field;
 
                     // Enable Channel
                     SMTC_PUT_BIT8( channel_index_enabled_ctx, ( const_number_of_boot_tx_channel + i ),
@@ -547,7 +580,7 @@ status_lorawan_t smtc_real_update_cflist( lr1_stack_mac_t* lr1_mac )
 
 uint8_t smtc_real_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -559,6 +592,9 @@ uint8_t smtc_real_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -605,7 +641,7 @@ uint8_t smtc_real_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac )
 
 status_lorawan_t smtc_real_get_next_channel( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -620,7 +656,11 @@ status_lorawan_t smtc_real_get_next_channel( lr1_stack_mac_t* lr1_mac )
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         return region_as_923_get_next_channel( lr1_mac );
     }
 #endif
@@ -668,7 +708,7 @@ status_lorawan_t smtc_real_get_next_channel( lr1_stack_mac_t* lr1_mac )
 
 status_lorawan_t smtc_real_get_join_next_channel( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -683,7 +723,11 @@ status_lorawan_t smtc_real_get_join_next_channel( lr1_stack_mac_t* lr1_mac )
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         return region_as_923_get_join_next_channel( lr1_mac );
     }
 #endif
@@ -731,7 +775,7 @@ status_lorawan_t smtc_real_get_join_next_channel( lr1_stack_mac_t* lr1_mac )
 
 void smtc_real_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -748,7 +792,11 @@ void smtc_real_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type )
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         region_as_923_set_rx_config( lr1_mac, type );
         break;
     }
@@ -805,19 +853,19 @@ void smtc_real_set_power( lr1_stack_mac_t* lr1_mac, uint8_t power_cmd )
 {
     if( power_cmd > const_max_tx_power_idx )
     {
-        lr1_mac->tx_power = lr1_mac->max_eirp_dbm;
+        lr1_mac->tx_power = lr1_mac->max_erp_dbm;
         SMTC_MODEM_HAL_TRACE_WARNING( "INVALID %d \n", power_cmd );
     }
     else
     {
-        int8_t pwr_tmp    = lr1_mac->max_eirp_dbm - ( 2 * power_cmd );
-        lr1_mac->tx_power = ( pwr_tmp < 2 ) ? 2 : pwr_tmp;
+        int8_t pwr_tmp    = lr1_mac->max_erp_dbm - ( 2 * power_cmd );
+        lr1_mac->tx_power = ( pwr_tmp < 0 ) ? 0 : pwr_tmp;
     }
 }
 
 void smtc_real_set_channel_mask( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -834,7 +882,11 @@ void smtc_real_set_channel_mask( lr1_stack_mac_t* lr1_mac )
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         region_as_923_set_channel_mask( lr1_mac );
         break;
     }
@@ -894,7 +946,7 @@ void smtc_real_init_channel_mask( lr1_stack_mac_t* lr1_mac )
 
 void smtc_real_init_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -906,6 +958,9 @@ void smtc_real_init_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_CN_470 )
     case SMTC_REAL_REGION_CN_470:
@@ -950,7 +1005,7 @@ void smtc_real_init_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
 
 void smtc_real_init_after_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -962,6 +1017,9 @@ void smtc_real_init_after_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_CN_470 )
     case SMTC_REAL_REGION_CN_470:
@@ -1006,7 +1064,7 @@ void smtc_real_init_after_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
 
 status_channel_t smtc_real_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ch_mask_cntl, uint16_t ch_mask )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -1021,7 +1079,11 @@ status_channel_t smtc_real_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         return region_as_923_build_channel_mask( lr1_mac, ch_mask_cntl, ch_mask );
     }
 #endif
@@ -1075,7 +1137,12 @@ uint8_t smtc_real_decrement_dr_simulation( lr1_stack_mac_t* lr1_mac )
     // while( ( data_rate_simulation > const_min_tx_dr ) && ( is_valid_dr == 0 ) )
     while( data_rate_simulation > const_min_tx_dr )
     {
-        data_rate_simulation--;
+        uint8_t index = ( lr1_mac->uplink_dwell_time * const_number_of_tx_dr ) + data_rate_simulation;
+        if( index > ( const_max_tx_dr * ( lr1_mac->uplink_dwell_time + 1 ) ) )
+        {
+            smtc_modem_hal_lr1mac_panic( );
+        }
+        data_rate_simulation = const_datarate_backoff[index];
 
         if( smtc_real_is_tx_dr_acceptable( lr1_mac, data_rate_simulation, false ) == OKLORAWAN )
         {
@@ -1090,7 +1157,7 @@ uint8_t smtc_real_decrement_dr_simulation( lr1_stack_mac_t* lr1_mac )
         return lr1_mac->tx_data_rate_adr;
     }
 
-    return data_rate_simulation;  // decrement at least one channel
+    return data_rate_simulation;
 }
 
 void smtc_real_decrement_dr( lr1_stack_mac_t* lr1_mac )
@@ -1124,7 +1191,7 @@ void smtc_real_decrement_dr( lr1_stack_mac_t* lr1_mac )
 
 void smtc_real_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1136,6 +1203,9 @@ void smtc_real_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_KR_920 )
     case SMTC_REAL_REGION_KR_920:
@@ -1194,7 +1264,7 @@ void smtc_real_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac )
 status_lorawan_t smtc_real_is_rx1_dr_offset_valid( lr1_stack_mac_t* lr1_mac, uint8_t rx1_dr_offset )
 {
     status_lorawan_t status = OKLORAWAN;
-    if( rx1_dr_offset >= const_max_rx1_dr_offset )
+    if( rx1_dr_offset >= const_number_rx1_dr_offset )
     {
         status = ERRORLORAWAN;
         SMTC_MODEM_HAL_TRACE_MSG( "RECEIVE AN INVALID RX1 DR OFFSET \n" );
@@ -1232,7 +1302,7 @@ status_lorawan_t smtc_real_is_tx_dr_valid( lr1_stack_mac_t* lr1_mac, uint8_t dr 
 
 status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_t dr, bool is_ch_mask_from_link_adr )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1244,6 +1314,9 @@ status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_CN_470 )
     case SMTC_REAL_REGION_CN_470:
@@ -1264,7 +1337,6 @@ status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_
     defined( REGION_CN_470_RP_1_0 ) || defined( REGION_IN_865 ) || defined( REGION_KR_920 ) ||                     \
     defined( REGION_RU_864 )
     {
-
         uint8_t* ch_mask_to_check =
             ( is_ch_mask_from_link_adr == true ) ? unwrapped_channel_mask_ctx : channel_index_enabled_ctx;
 
@@ -1307,9 +1379,9 @@ status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_
     return ERRORLORAWAN;  // never reach => avoid warning
 }
 
-status_lorawan_t smtc_real_is_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency )
+status_lorawan_t smtc_real_is_nwk_received_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1321,6 +1393,9 @@ status_lorawan_t smtc_real_is_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1339,29 +1414,7 @@ status_lorawan_t smtc_real_is_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint
         {
             return ( status );
         }
-        // [MLu][Minor]
-        // For EU868 region there are gaps in the frequencies range.
-        // Should we check them as well?
-        // Please refer to the following
-        //
-        // if( ( ( frequency >= 863000000 ) && ( frequency < 865000000 ) ) ||
-        //     ( ( frequency >= 865000000 ) && ( frequency <= 868000000 ) ) ||
-        //     ( ( frequency > 868000000 ) && ( frequency <= 868600000 ) ) ||
-        //     ( ( frequency >= 868700000 ) && ( frequency <= 869200000 ) ) ||
-        //     ( ( frequency >= 869400000 ) && ( frequency <= 869650000 ) ) ||
-        //     ( ( frequency >= 869700000 ) && ( frequency <= 870000000 ) ) ||
-        // {
-        //     status =  OKLORAWAN;
-        // }
-        // else
-        // {
-        //     status = ERRORLORAWAN;
-        // }
-        if( ( frequency > const_freq_max ) || ( frequency < const_freq_min ) )
-        {
-            status = ERRORLORAWAN;
-            SMTC_MODEM_HAL_TRACE_WARNING( "RECEIVE AN INVALID FREQUENCY = %d\n", frequency );
-        }
+        status = smtc_real_is_frequency_valid( lr1_mac, frequency );
         return ( status );
     }
 #endif
@@ -1391,7 +1444,7 @@ status_lorawan_t smtc_real_is_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint
 
 status_lorawan_t smtc_real_is_channel_index_valid( lr1_stack_mac_t* lr1_mac, uint8_t channel_index )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1403,6 +1456,9 @@ status_lorawan_t smtc_real_is_channel_index_valid( lr1_stack_mac_t* lr1_mac, uin
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1461,7 +1517,7 @@ status_lorawan_t smtc_real_is_payload_size_valid( lr1_stack_mac_t* lr1_mac, uint
     uint8_t index = ( dwell_time_enabled * const_number_of_tx_dr ) + dr;
 
 #if defined( REGION_AU_915 )
-    if( lr1_mac->real.region_type == SMTC_REAL_REGION_AU_915 )
+    if( lr1_mac->real->region_type == SMTC_REAL_REGION_AU_915 )
     {
         // *2 because the array contains Tx and Rx datarate
         index = ( dwell_time_enabled * const_number_of_tx_dr * 2 ) + dr;
@@ -1480,7 +1536,7 @@ status_lorawan_t smtc_real_is_payload_size_valid( lr1_stack_mac_t* lr1_mac, uint
 
 void smtc_real_set_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t tx_freq, uint8_t channel_index )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1492,6 +1548,9 @@ void smtc_real_set_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t tx_f
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1541,7 +1600,7 @@ void smtc_real_set_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t tx_f
 status_lorawan_t smtc_real_set_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t rx_freq,
                                                       uint8_t channel_index )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1553,6 +1612,9 @@ status_lorawan_t smtc_real_set_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, 
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1604,7 +1666,7 @@ status_lorawan_t smtc_real_set_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, 
 
 void smtc_real_set_channel_dr( lr1_stack_mac_t* lr1_mac, uint8_t channel_index, uint8_t dr_min, uint8_t dr_max )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1616,6 +1678,9 @@ void smtc_real_set_channel_dr( lr1_stack_mac_t* lr1_mac, uint8_t channel_index, 
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1669,7 +1734,7 @@ void smtc_real_set_channel_dr( lr1_stack_mac_t* lr1_mac, uint8_t channel_index, 
 
 void smtc_real_set_channel_enabled( lr1_stack_mac_t* lr1_mac, uint8_t enable, uint8_t channel_index )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1681,6 +1746,9 @@ void smtc_real_set_channel_enabled( lr1_stack_mac_t* lr1_mac, uint8_t enable, ui
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1729,7 +1797,7 @@ void smtc_real_set_channel_enabled( lr1_stack_mac_t* lr1_mac, uint8_t enable, ui
 
 uint32_t smtc_real_get_tx_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t channel_index )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1741,6 +1809,9 @@ uint32_t smtc_real_get_tx_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t c
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1793,7 +1864,7 @@ uint32_t smtc_real_get_tx_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t c
 
 uint32_t smtc_real_get_rx1_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t channel_index )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -1805,6 +1876,9 @@ uint32_t smtc_real_get_rx1_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t 
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -1940,7 +2014,7 @@ uint16_t smtc_real_mask_tx_dr_channel_up_dwell_time_check( lr1_stack_mac_t* lr1_
 
 uint8_t smtc_real_get_preamble_len( const lr1_stack_mac_t* lr1_mac, uint8_t sf )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -2013,7 +2087,7 @@ status_lorawan_t smtc_real_is_channel_mask_for_mobile_mode( const lr1_stack_mac_
 
 modulation_type_t smtc_real_get_modulation_type_from_datarate( lr1_stack_mac_t* lr1_mac, uint8_t datarate )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -2030,7 +2104,11 @@ modulation_type_t smtc_real_get_modulation_type_from_datarate( lr1_stack_mac_t* 
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         return region_as_923_get_modulation_type_from_datarate( datarate );
         break;
     }
@@ -2083,10 +2161,9 @@ modulation_type_t smtc_real_get_modulation_type_from_datarate( lr1_stack_mac_t* 
     }
     return 0;  // never reach => avoid warning
 }
-
 void smtc_real_lora_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4: {
@@ -2103,7 +2180,11 @@ void smtc_real_lora_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         region_as_923_lora_dr_to_sf_bw( in_dr, out_sf, out_bw );
         break;
     }
@@ -2158,7 +2239,7 @@ void smtc_real_lora_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_
 
 void smtc_real_fsk_dr_to_bitrate( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_t* out_bitrate )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_EU_868 )
     case SMTC_REAL_REGION_EU_868: {
@@ -2169,7 +2250,11 @@ void smtc_real_fsk_dr_to_bitrate( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8
 #if defined( REGION_AS_923 )
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
+    case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
+    {
         region_as_923_fsk_dr_to_bitrate( in_dr, out_bitrate );
         break;
     }
@@ -2198,70 +2283,26 @@ void smtc_real_fsk_dr_to_bitrate( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8
     }
 }
 
-void smtc_real_rx_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw,
-                               modulation_type_t* modulation_type )
+void smtc_real_lr_fhss_dr_to_cr_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, lr_fhss_v1_cr_t* out_cr,
+                                    lr_fhss_v1_bw_t* out_bw )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
-#if defined( REGION_WW2G4 )
-    case SMTC_REAL_REGION_WW2G4: {
-        region_ww2g4_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
 #if defined( REGION_EU_868 )
     case SMTC_REAL_REGION_EU_868: {
-        region_eu_868_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
-#if defined( REGION_AS_923 )
-    case SMTC_REAL_REGION_AS_923:
-    case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
-        region_as_923_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
+        region_eu_868_lr_fhss_dr_to_cr_bw( in_dr, out_cr, out_bw );
         break;
     }
 #endif
 #if defined( REGION_US_915 )
     case SMTC_REAL_REGION_US_915: {
-        region_us_915_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
+        region_us_915_lr_fhss_dr_to_cr_bw( in_dr, out_cr, out_bw );
         break;
     }
 #endif
 #if defined( REGION_AU_915 )
     case SMTC_REAL_REGION_AU_915: {
-        region_au_915_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
-#if defined( REGION_CN_470 )
-    case SMTC_REAL_REGION_CN_470: {
-        region_cn_470_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
-#if defined( REGION_CN_470_RP_1_0 )
-    case SMTC_REAL_REGION_CN_470_RP_1_0: {
-        region_cn_470_rp_1_0_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
-#if defined( REGION_IN_865 )
-    case SMTC_REAL_REGION_IN_865: {
-        region_in_865_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
-#if defined( REGION_KR_920 )
-    case SMTC_REAL_REGION_KR_920: {
-        region_kr_920_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
-        break;
-    }
-#endif
-#if defined( REGION_RU_864 )
-    case SMTC_REAL_REGION_RU_864: {
-        region_ru_864_rx_dr_to_sf_bw( dr, sf, bw, modulation_type );
+        region_au_915_lr_fhss_dr_to_cr_bw( in_dr, out_cr, out_bw );
         break;
     }
 #endif
@@ -2271,69 +2312,40 @@ void smtc_real_rx_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t dr, uint8_t* sf
     }
 }
 
-uint8_t smtc_real_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw )
+lr_fhss_hc_t smtc_real_lr_fhss_get_header_count( lr_fhss_v1_cr_t in_cr )
 {
-    switch( lr1_mac->real.region_type )
+    if( in_cr == LR_FHSS_V1_CR_1_3 )
     {
-#if defined( REGION_WW2G4 )
-    case SMTC_REAL_REGION_WW2G4: {
-        return region_ww2g4_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
+        return LR_FHSS_HC_3;
     }
-#endif
+    else if( in_cr == LR_FHSS_V1_CR_2_3 )
+    {
+        return LR_FHSS_HC_2;
+    }
+
+    smtc_modem_hal_lr1mac_panic( );
+    return 0;
+}
+
+lr_fhss_v1_grid_t smtc_real_lr_fhss_get_grid( lr1_stack_mac_t* lr1_mac )
+{
+    switch( lr1_mac->real->region_type )
+    {
 #if defined( REGION_EU_868 )
     case SMTC_REAL_REGION_EU_868: {
-        return region_eu_868_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
-#endif
-#if defined( REGION_AS_923 )
-    case SMTC_REAL_REGION_AS_923:
-    case SMTC_REAL_REGION_AS_923_GRP2:
-    case SMTC_REAL_REGION_AS_923_GRP3: {
-        return region_as_923_sf_bw_to_dr( lr1_mac, sf, bw );
+        return LR_FHSS_V1_GRID_3906_HZ;
         break;
     }
 #endif
 #if defined( REGION_US_915 )
-    case SMTC_REAL_REGION_US_915: {
-        return region_us_915_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
+    case SMTC_REAL_REGION_US_915:
 #endif
 #if defined( REGION_AU_915 )
-    case SMTC_REAL_REGION_AU_915: {
-        return region_au_915_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
+    case SMTC_REAL_REGION_AU_915:
 #endif
-#if defined( REGION_CN_470 )
-    case SMTC_REAL_REGION_CN_470: {
-        return region_cn_470_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
-#endif
-#if defined( REGION_CN_470_RP_1_0 )
-    case SMTC_REAL_REGION_CN_470_RP_1_0: {
-        return region_cn_470_rp_1_0_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
-#endif
-#if defined( REGION_IN_865 )
-    case SMTC_REAL_REGION_IN_865: {
-        return region_in_865_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
-#endif
-#if defined( REGION_KR_920 )
-    case SMTC_REAL_REGION_KR_920: {
-        return region_kr_920_sf_bw_to_dr( lr1_mac, sf, bw );
-        break;
-    }
-#endif
-#if defined( REGION_RU_864 )
-    case SMTC_REAL_REGION_RU_864: {
-        return region_ru_864_sf_bw_to_dr( lr1_mac, sf, bw );
+#if defined( REGION_US_915 ) || defined( REGION_AU_915 )
+    {
+        return LR_FHSS_V1_GRID_25391_HZ;
         break;
     }
 #endif
@@ -2341,7 +2353,7 @@ uint8_t smtc_real_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw 
         smtc_modem_hal_lr1mac_panic( );
         break;
     }
-    return ERRORLORAWAN;  // never reach => avoid warning
+    return -1;  // never reach => avoid warning
 }
 
 uint8_t smtc_real_get_number_of_enabled_channels_for_a_datarate( lr1_stack_mac_t* lr1_mac, uint8_t datarate )
@@ -2364,7 +2376,7 @@ uint8_t smtc_real_get_number_of_enabled_channels_for_a_datarate( lr1_stack_mac_t
 int8_t smtc_real_clamp_output_power_eirp_vs_freq_and_dr( lr1_stack_mac_t* lr1_mac, int8_t tx_power,
                                                          uint32_t tx_frequency, uint8_t datarate )
 {
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -2376,6 +2388,9 @@ int8_t smtc_real_clamp_output_power_eirp_vs_freq_and_dr( lr1_stack_mac_t* lr1_ma
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_AU_915 )
     case SMTC_REAL_REGION_AU_915:
@@ -2405,11 +2420,11 @@ int8_t smtc_real_clamp_output_power_eirp_vs_freq_and_dr( lr1_stack_mac_t* lr1_ma
     case SMTC_REAL_REGION_US_915: {
         if( datarate == DR4 )
         {
-            return MIN( tx_power, 21 );
+            return MIN( tx_power, 26 );
         }
         else if( smtc_real_get_number_of_enabled_channels_for_a_datarate( lr1_mac, datarate ) < 50 )
         {
-            return MIN( tx_power, 26 );
+            return MIN( tx_power, 21 );
         }
         return tx_power;
         break;
@@ -2528,6 +2543,15 @@ uint8_t* smtc_real_get_gfsk_sync_word( lr1_stack_mac_t* lr1_mac )
     return 0;  // never reach => avoid warning
 }
 
+uint8_t* smtc_real_get_lr_fhss_sync_word( lr1_stack_mac_t* lr1_mac )
+{
+#if defined( REGION_EU_868 ) || defined( REGION_AU_915 ) || defined( REGION_US_915 )
+    return ( uint8_t* ) const_sync_word_lr_fhss;
+#endif
+    smtc_modem_hal_lr1mac_panic( );
+    return 0;  // never reach => avoid warning
+}
+
 bool smtc_real_is_dtc_supported( const lr1_stack_mac_t* lr1_mac )
 {
     return const_dtc_supported;
@@ -2576,7 +2600,7 @@ uint8_t smtc_real_get_max_payload_size( lr1_stack_mac_t* lr1_mac, uint8_t dr, ui
     uint8_t index = ( dwell_time_enabled * const_number_of_tx_dr ) + dr;
 
 #if defined( REGION_AU_915 )
-    if( lr1_mac->real.region_type == SMTC_REAL_REGION_AU_915 )
+    if( lr1_mac->real->region_type == SMTC_REAL_REGION_AU_915 )
     {
         // *2 because the array contains Tx and Rx datarate
         index = ( dwell_time_enabled * const_number_of_tx_dr * 2 ) + dr;
@@ -2598,12 +2622,7 @@ uint8_t smtc_real_get_beacon_dr( lr1_stack_mac_t* lr1_mac )
 
 uint32_t smtc_real_get_beacon_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s )
 {
-    if( lr1_mac->beacon_freq_hz != 0 )
-    {
-        return lr1_mac->beacon_freq_hz;
-    }
-
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -2615,6 +2634,9 @@ uint32_t smtc_real_get_beacon_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -2666,12 +2688,7 @@ uint32_t smtc_real_get_beacon_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_
 
 uint32_t smtc_real_get_ping_slot_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s, uint32_t dev_addr )
 {
-    if( lr1_mac->ping_slot_freq_hz != 0 )
-    {
-        return lr1_mac->ping_slot_freq_hz;
-    }
-
-    switch( lr1_mac->real.region_type )
+    switch( lr1_mac->real->region_type )
     {
 #if defined( REGION_WW2G4 )
     case SMTC_REAL_REGION_WW2G4:
@@ -2683,6 +2700,9 @@ uint32_t smtc_real_get_ping_slot_frequency( lr1_stack_mac_t* lr1_mac, uint32_t g
     case SMTC_REAL_REGION_AS_923:
     case SMTC_REAL_REGION_AS_923_GRP2:
     case SMTC_REAL_REGION_AS_923_GRP3:
+#if defined( RP2_103 )
+    case SMTC_REAL_REGION_AS_923_GRP4:
+#endif
 #endif
 #if defined( REGION_IN_865 )
     case SMTC_REAL_REGION_IN_865:
@@ -2734,11 +2754,7 @@ uint32_t smtc_real_get_ping_slot_frequency( lr1_stack_mac_t* lr1_mac, uint32_t g
 
 uint8_t smtc_real_get_ping_slot_datarate( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->ping_slot_freq_hz != 0 )  // If the frequency is not 0, the network changed also the datarate
-    {
-        return lr1_mac->ping_slot_dr;
-    }
-    return const_beacon_dr;  // Else return the default ping slot datarate, it's the same for beacon and ping-slot
+    return const_beacon_dr;  // Return the default ping slot datarate, it's the same for beacon and ping-slot
 }
 
 uint32_t smtc_real_decode_freq_from_buf( lr1_stack_mac_t* lr1_mac, uint8_t freq_buf[3] )
@@ -2748,13 +2764,13 @@ uint32_t smtc_real_decode_freq_from_buf( lr1_stack_mac_t* lr1_mac, uint8_t freq_
     return freq;
 }
 
-status_lorawan_t smtc_real_is_rx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency )
+status_lorawan_t smtc_real_is_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency )
 {
     status_lorawan_t status = OKLORAWAN;
     if( ( frequency > const_freq_max ) || ( frequency < const_freq_min ) )
     {
         status = ERRORLORAWAN;
-        SMTC_MODEM_HAL_TRACE_WARNING( "RECEIVE AN INVALID Rx FREQUENCY = %d\n", frequency );
+        SMTC_MODEM_HAL_TRACE_WARNING( "INVALID FREQUENCY = %d\n", frequency );
     }
     return ( status );
 }
@@ -2770,10 +2786,108 @@ status_lorawan_t smtc_real_is_tx_power_valid( lr1_stack_mac_t* lr1_mac, uint8_t 
     return ( status );
 }
 
-lr1mac_version_t smtc_real_get_regional_parameters_version( lr1_stack_mac_t* lr1_mac )
+lr1mac_version_t smtc_real_get_regional_parameters_version( void )
 {
     lr1mac_version_t version = {
         .major = RP_VERSION_MAJOR, .minor = RP_VERSION_MINOR, .patch = RP_VERSION_PATCH, .revision = RP_VERSION_REVISION
     };
     return version;
+}
+
+uint32_t smtc_real_get_symbol_duration_us( lr1_stack_mac_t* lr1_mac, uint8_t datarate )
+{
+    modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate( lr1_mac, datarate );
+    uint32_t          bw_temp         = 125;
+    if( modulation_type == LORA )
+    {
+        uint8_t            sf;
+        lr1mac_bandwidth_t bw;
+        smtc_real_lora_dr_to_sf_bw( lr1_mac, datarate, &sf, &bw );
+        // Use lr1mac_utilities_get_symb_time_us
+        switch( bw )
+        {
+        case BW125:
+            bw_temp = 125;
+            break;
+        case BW250:
+            bw_temp = 250;
+            break;
+        case BW500:
+            bw_temp = 500;
+            break;
+        case BW800:
+            bw_temp = 800;
+            break;
+        default:
+            smtc_modem_hal_mcu_panic( " invalid BW " );
+            break;
+        }
+        return ( ( ( uint32_t )( ( 1 << sf ) * 1000 ) / bw_temp ) );
+    }
+    else
+    {
+        uint8_t kbitrate;
+        smtc_real_fsk_dr_to_bitrate( lr1_mac, datarate, &kbitrate );
+        return ( 8000 / ( kbitrate ) );  // 1 symbol equals 1 byte
+    }
+}
+
+void smtc_real_get_rx_window_parameters( lr1_stack_mac_t* lr1_mac, uint8_t datarate, uint32_t rx_delay_ms,
+                                         uint16_t* rx_window_symb, uint32_t* rx_timeout_symb_in_ms,
+                                         uint32_t* rx_timeout_preamble_locked_in_ms, uint8_t rx_done_incertitude )
+{
+    uint32_t          tsymbol_us              = smtc_real_get_symbol_duration_us( lr1_mac, datarate );
+    uint32_t          min_rx_symb_duration_ms = MIN_RX_WINDOW_DURATION_MS + rx_done_incertitude;
+    modulation_type_t modulation_type         = smtc_real_get_modulation_type_from_datarate( lr1_mac, datarate );
+
+    if( modulation_type == FSK )
+    {
+        min_rx_symb_duration_ms += 2;
+    }
+
+    *rx_timeout_symb_in_ms = MAX( ( ( ( ( rx_delay_ms * 2 * lr1_mac->crystal_error ) / 1000 ) +
+                                      ( MIN_RX_WINDOW_SYMB * tsymbol_us ) ) /
+                                    1000 ),
+                                  min_rx_symb_duration_ms );
+
+    *rx_window_symb =
+        MIN( MAX( ( ( *rx_timeout_symb_in_ms * 1000 ) / tsymbol_us ), MIN_RX_WINDOW_SYMB ), MAX_RX_WINDOW_SYMB );
+
+    // Because the hardware allows an even number of symbols
+    if( ( *rx_window_symb % 2 ) == 1 )  //
+    {
+        *rx_window_symb = *rx_window_symb + 1;
+    }
+
+    *rx_timeout_symb_in_ms = MAX( ( *rx_window_symb * tsymbol_us ) / 1000, MIN_RX_WINDOW_DURATION_MS );
+
+    *rx_timeout_preamble_locked_in_ms = 3000;
+
+#if defined( SX128X )
+    // rx timeout is used to simuate a symb timeout in sx128x (need to open preamb + sync +header)
+    *rx_timeout_preamble_locked_in_ms =
+        MAX( ceilf( ( ( ( float ) *rx_window_symb + 16.25f ) * tsymbol_us ) ) / 1000, MIN_RX_WINDOW_DURATION_MS );
+    *rx_timeout_symb_in_ms = *rx_timeout_preamble_locked_in_ms;
+#endif
+}
+
+void smtc_real_get_rx_start_time_offset_ms( lr1_stack_mac_t* lr1_mac, uint8_t datarate, int8_t board_delay_ms,
+                                            uint16_t rx_window_symb, int32_t* rx_offset_ms )
+{
+    modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate( lr1_mac, datarate );
+    int32_t           tsymbol_us      = ( int32_t ) smtc_real_get_symbol_duration_us( lr1_mac, datarate );
+
+    if( modulation_type == FSK )
+    {
+        *rx_offset_ms = ( ( tsymbol_us * -1 * ( rx_window_symb / 2 ) ) / 1000 ) - ( int32_t ) board_delay_ms;
+    }
+    else
+    {
+        *rx_offset_ms =
+            ( ( tsymbol_us * ( 1 - ( ( ( int32_t ) rx_window_symb - MIN_RX_WINDOW_SYMB ) / 2 ) ) ) / 1000 ) -
+            ( int32_t ) board_delay_ms;
+    }
+    // SMTC_MODEM_HAL_TRACE_PRINTF(
+    //    "rx_start_target -> datarate:%d, rx_window_symb:%u, rx_offset_ms:%d, board_delay_ms:%d\n", datarate,
+    //   rx_window_symb, *rx_offset_ms, board_delay_ms );
 }

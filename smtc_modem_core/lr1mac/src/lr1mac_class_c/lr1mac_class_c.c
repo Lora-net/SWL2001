@@ -56,6 +56,8 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
+#define RX_SESSION_PARAM_CURRENT class_c_obj->rx_session_param[class_c_obj->rx_session_index]
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
@@ -76,34 +78,10 @@
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
 
-typedef struct lr1mac_class_c_multicast_key_s
-{
-    smtc_se_key_identifier_t mc_app_skey;
-    smtc_se_key_identifier_t mc_ntw_skey;
-} lr1mac_class_c_multicast_key_t;
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
-lr1mac_class_c_multicast_key_t lr1mac_class_mc_skey_tab[LR1MAC_NUMBER_OF_MC_SESSION] = {
-    {
-        .mc_app_skey = SMTC_SE_MC_APP_S_KEY_0,
-        .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_0,
-    },
-    {
-        .mc_app_skey = SMTC_SE_MC_APP_S_KEY_1,
-        .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_1,
-    },
-    {
-        .mc_app_skey = SMTC_SE_MC_APP_S_KEY_2,
-        .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_2,
-    },
-    {
-        .mc_app_skey = SMTC_SE_MC_APP_S_KEY_3,
-        .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_3,
-    },
-};
 
 /*
  * -----------------------------------------------------------------------------
@@ -112,18 +90,17 @@ lr1mac_class_c_multicast_key_t lr1mac_class_mc_skey_tab[LR1MAC_NUMBER_OF_MC_SESS
 static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* class_c_obj );
 static void             lr1mac_class_c_rp_callback( lr1mac_class_c_t* class_c_obj );
 static int              lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c_obj );
-static void             lr1mac_class_c_set_keys( lr1mac_class_c_t* class_c_obj );
-
+static void             lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj );
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac, radio_planner_t* rp,
-                          uint8_t class_c_id_rp, void ( *rx_callback )( void* rx_context ), void* rx_context,
-                          void ( *push_callback )( void* push_context ), void* push_context )
+void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac, smtc_multicast_t* multicast_obj,
+                          radio_planner_t* rp, uint8_t class_c_id_rp, void ( *rx_callback )( void* rx_context ),
+                          void* rx_context, void ( *push_callback )( void* push_context ), void* push_context )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "class_c_obj INIT\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "class_c_obj INIT\n" );
     memset( class_c_obj, 0, sizeof( lr1mac_class_c_t ) );
 
     class_c_obj->lr1_mac       = lr1_mac;
@@ -136,16 +113,17 @@ void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_ma
     class_c_obj->push_callback = push_callback;
     class_c_obj->push_context  = push_context;
 
-    // set rx_session_param multicast keys to no_key, freq to no freq, and datarate to no datarate
-    for( uint8_t i = 0; i < LR1MAC_NUMBER_OF_MC_SESSION; i++ )
-    {
-        class_c_obj->rx_session_param[i + 1].app_skey     = SMTC_SE_NO_KEY;
-        class_c_obj->rx_session_param[i + 1].nwk_skey     = SMTC_SE_NO_KEY;
-        class_c_obj->rx_session_param[i + 1].rx_frequency = LR1MAC_CLASS_C_MC_NO_FREQUENCY;
-        class_c_obj->rx_session_param[i + 1].rx_data_rate = LR1MAC_CLASS_C_MC_NO_DATARATE;
-    }
+    class_c_obj->rx_session_param_unicast.enabled  = true;
+    class_c_obj->rx_session_param_unicast.nwk_skey = SMTC_SE_NWK_S_ENC_KEY;
+    class_c_obj->rx_session_param_unicast.app_skey = SMTC_SE_APP_S_KEY;
 
-    class_c_obj->rx_session_param[RX_SESSION_UNICAST].enabled = true;
+    class_c_obj->rx_session_param[RX_SESSION_UNICAST] = &class_c_obj->rx_session_param_unicast;
+
+    // start to 1 because index 0 is set with lorawan class A value
+    for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
+    {
+        class_c_obj->rx_session_param[i + 1] = &multicast_obj->rx_session_param[i];
+    }
 
     rp_release_hook( class_c_obj->rp, class_c_obj->class_c_id4rp );
     rp_hook_init( class_c_obj->rp, class_c_obj->class_c_id4rp, ( void ( * )( void* ) )( lr1mac_class_c_rp_callback ),
@@ -169,13 +147,22 @@ void lr1mac_class_c_stop( lr1mac_class_c_t* class_c_obj )
         return;
     }
     class_c_obj->started = false;
+    lr1mac_class_c_multicast_stop_all_sessions( class_c_obj );
     rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
-    class_c_obj->receive_window_type = RECEIVE_NONE;
+    class_c_obj->rx_metadata.rx_window = RECEIVE_NONE;
 }
 
 void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "class_c_obj START (%d)\n", class_c_obj->started );
+    if( class_c_obj->started == false )
+    {
+        lr1mac_class_c_launch( class_c_obj );
+    }
+}
+
+void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
+{
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "class_c_obj START (%d)\n", class_c_obj->started );
     if( class_c_obj->enabled == false )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "class_c_obj disabled\n" );
@@ -187,42 +174,43 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
     }
 
     // copy context from LR1MAC class A for the unicast session
-    class_c_obj->rx_session_param[RX_SESSION_UNICAST].dev_addr     = class_c_obj->lr1_mac->dev_addr;
-    class_c_obj->rx_session_param[RX_SESSION_UNICAST].fcnt_dwn     = class_c_obj->lr1_mac->fcnt_dwn;
-    class_c_obj->rx_session_param[RX_SESSION_UNICAST].rx_data_rate = class_c_obj->lr1_mac->rx2_data_rate;
-    class_c_obj->rx_session_param[RX_SESSION_UNICAST].rx_frequency = class_c_obj->lr1_mac->rx2_frequency;
+    class_c_obj->rx_session_param[RX_SESSION_UNICAST]->dev_addr     = class_c_obj->lr1_mac->dev_addr;
+    class_c_obj->rx_session_param[RX_SESSION_UNICAST]->rx_data_rate = class_c_obj->lr1_mac->rx2_data_rate;
+    class_c_obj->rx_session_param[RX_SESSION_UNICAST]->rx_frequency = class_c_obj->lr1_mac->rx2_frequency;
 
-    class_c_obj->rx_session_param_ptr = NULL;
+    class_c_obj->rx_session_index = RX_SESSION_COUNT;
     for( rx_session_type_t i = 0; i < LR1MAC_NUMBER_OF_RXC_SESSION; i++ )
     {
-        if( class_c_obj->rx_session_param[i].enabled == true )
+        if( class_c_obj->rx_session_param[i]->enabled == true )
         {
-            class_c_obj->rx_session_param_ptr = &class_c_obj->rx_session_param[i];
+            class_c_obj->rx_session_index = i;
+            break;
         }
     }
 
-    if( class_c_obj->rx_session_param_ptr == NULL )
+    if( class_c_obj->rx_session_index == RX_SESSION_COUNT )
     {
         smtc_modem_hal_lr1mac_panic( "no RxC session enabled\n" );
     }
 
     rp_radio_params_t rp_radio_params = { 0 };
-    rp_radio_params.rx.timeout_in_ms  = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
+    rp_radio_params.rx.timeout_in_ms  = 120000;
 
-    uint8_t            sf;
-    lr1mac_bandwidth_t bw;
-    modulation_type_t  modulation_type;
-    smtc_real_rx_dr_to_sf_bw( class_c_obj->lr1_mac, class_c_obj->rx_session_param_ptr->rx_data_rate, &sf, &bw,
-                              &modulation_type );
+    modulation_type_t modulation_type =
+        smtc_real_get_modulation_type_from_datarate( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate );
 
     if( modulation_type == LORA )
     {
+        uint8_t            sf;
+        lr1mac_bandwidth_t bw;
+        smtc_real_lora_dr_to_sf_bw( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate, &sf, &bw );
+
         ralf_params_lora_t lora_param;
         memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
         lora_param.sync_word       = smtc_real_get_sync_word( class_c_obj->lr1_mac );
         lora_param.symb_nb_timeout = 0;
-        lora_param.rf_freq_in_hz   = class_c_obj->rx_session_param_ptr->rx_frequency;
+        lora_param.rf_freq_in_hz   = RX_SESSION_PARAM_CURRENT->rx_frequency;
 
         lora_param.pkt_params.header_type      = RAL_LORA_PKT_EXPLICIT;
         lora_param.pkt_params.pld_len_in_bytes = 255;
@@ -242,6 +230,8 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
     else if( modulation_type == FSK )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "MODULATION FSK\n" );
+        uint8_t kbitrate;
+        smtc_real_fsk_dr_to_bitrate( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate, &kbitrate );
         ralf_params_gfsk_t gfsk_param;
         memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
@@ -250,7 +240,7 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
         gfsk_param.whitening_seed = GFSK_WHITENING_SEED;
         gfsk_param.crc_seed       = GFSK_CRC_SEED;
         gfsk_param.crc_polynomial = GFSK_CRC_POLYNOMIAL;
-        gfsk_param.rf_freq_in_hz  = class_c_obj->rx_session_param_ptr->rx_frequency;
+        gfsk_param.rf_freq_in_hz  = RX_SESSION_PARAM_CURRENT->rx_frequency;
 
         gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
         gfsk_param.pkt_params.pld_len_in_bytes      = 255;
@@ -262,7 +252,7 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
         gfsk_param.mod_params.fdev_in_hz   = 25000;
         gfsk_param.mod_params.bw_dsb_in_hz = 100000;
         gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
-        gfsk_param.mod_params.br_in_bps    = sf * 1000;
+        gfsk_param.mod_params.br_in_bps    = kbitrate * 1000;
 
         rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
         rp_radio_params.rx.gfsk  = gfsk_param;
@@ -272,7 +262,7 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
         smtc_modem_hal_lr1mac_panic( "MODULATION NOT SUPPORTED\n" );
     }
 
-    rp_task_t rp_task;
+    rp_task_t rp_task        = { 0 };
     rp_task.hook_id          = class_c_obj->class_c_id4rp;
     rp_task.state            = RP_TASK_STATE_ASAP;
     rp_task.start_time_ms    = smtc_modem_hal_get_time_in_ms( );
@@ -294,35 +284,37 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "class_c_obj START ERREUR \n" );
     }
-
-    class_c_obj->started             = true;
-    class_c_obj->receive_window_type = RECEIVE_NONE;
+    else
+    {
+        class_c_obj->started = true;
+    }
+    class_c_obj->rx_metadata.rx_window = RECEIVE_NONE;
 }
 
 static void lr1mac_class_c_rp_callback( lr1mac_class_c_t* class_c_obj )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "%s\n", __func__ );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s\n", __func__ );
 
     rp_status_t rp_status = class_c_obj->rp->status[class_c_obj->class_c_id4rp];
     if( rp_status == RP_STATUS_RX_PACKET )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "--> RP_STATUS_RX_PACKET\n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "--> RP_STATUS_RX_PACKET\n" );
         class_c_obj->rx_callback( class_c_obj->rx_context );
     }
     else
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "--> %d\n", rp_status );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "--> %d\n", rp_status );
     }
 
     if( class_c_obj->started == true )
     {
-        lr1mac_class_c_start( class_c_obj );
+        lr1mac_class_c_launch( class_c_obj );
     }
 }
 
 void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "%s\n", __func__ );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s\n", __func__ );
 
     int      status = OKLORAWAN;
     uint32_t tcurrent_ms;
@@ -355,17 +347,18 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
 
         if( status == OKLORAWAN )
         {
-            // take also multicast rx in count in window type
-            class_c_obj->receive_window_type = RECEIVE_ON_RXC + ( uint8_t ) class_c_obj->rx_session_type;
-            // deprecated ( class_c_obj->receive_window_type == RECEIVE_NACK ) ? RECEIVE_ACK_ON_RX2 : RECEIVE_ON_RX2;
-
             class_c_obj->valid_rx_packet = lr1mac_class_c_mac_rx_frame_decode( class_c_obj );
 
-            SMTC_MODEM_HAL_TRACE_PRINTF( "Receive a downlink RXC for Hook Id = %d\n", from_hook_id );
+            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "Receive a downlink RXC for Hook Id = %d\n", from_hook_id );
 
             if( class_c_obj->valid_rx_packet == USER_RX_PACKET )
             {
-                SMTC_MODEM_HAL_TRACE_ARRAY( "RxC app Payload", class_c_obj->rx_payload, class_c_obj->rx_payload_size );
+                SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( "RxC app Payload", class_c_obj->rx_payload,
+                                                  class_c_obj->rx_payload_size );
+                class_c_obj->rx_metadata.rx_datarate     = RX_SESSION_PARAM_CURRENT->rx_data_rate;
+                class_c_obj->rx_metadata.rx_frequency_hz = RX_SESSION_PARAM_CURRENT->rx_frequency;
+                // take also multicast rx in count in window type
+                class_c_obj->rx_metadata.rx_window = RECEIVE_ON_RXC + ( uint8_t ) class_c_obj->rx_session_index;
 
                 class_c_obj->push_callback( class_c_obj->push_context );
             }
@@ -389,95 +382,39 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
     }
 }
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_set_group_config( lr1mac_class_c_t* class_c_obj,
-                                                                        uint8_t mc_group_id, uint32_t mc_group_address,
-                                                                        const uint8_t mc_ntw_skey[SMTC_SE_KEY_SIZE],
-                                                                        const uint8_t mc_app_skey[SMTC_SE_KEY_SIZE] )
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id,
+                                                                   uint32_t freq, uint8_t dr )
 {
+    // Class C must be running to start multicast
+    if( class_c_obj->enabled == false )
+    {
+        return SMTC_MC_RC_ERROR_CLASS_NOT_ENABLED;
+    }
+
     // Check if multicast group id is in acceptable range
-    if( mc_group_id > ( LR1MAC_NUMBER_OF_MC_SESSION - 1 ) )
+    if( mc_group_id > ( LR1MAC_MC_NUMBER_OF_SESSION - 1 ) )
     {
-        return LR1MAC_MC_RC_ERROR_BAD_ID;
-    }
-    // check if there is an ongoing mylticast session on this group_id
-    if( class_c_obj->rx_session_param[mc_group_id + 1].enabled == true )
-    {
-        return LR1MAC_MC_RC_ERROR_BUSY;
-    }
-
-    // save config in rx_session_param tab
-    class_c_obj->rx_session_param[mc_group_id + 1].dev_addr = mc_group_address;
-
-    // Save multicast keys
-    if( smtc_modem_crypto_set_key( lr1mac_class_mc_skey_tab[mc_group_id].mc_ntw_skey, mc_ntw_skey ) !=
-        SMTC_MODEM_CRYPTO_RC_SUCCESS )
-    {
-        SMTC_MODEM_HAL_TRACE_ERROR( "Error setting multicast ntw_skey for group:%d\n", mc_group_id );
-        return LR1MAC_MC_RC_ERROR_CRYPTO;
-    }
-
-    if( smtc_modem_crypto_set_key( lr1mac_class_mc_skey_tab[mc_group_id].mc_app_skey, mc_app_skey ) !=
-        SMTC_MODEM_CRYPTO_RC_SUCCESS )
-    {
-        SMTC_MODEM_HAL_TRACE_ERROR( "Error setting multicast ntw_skey for group:%d\n", mc_group_id );
-        return LR1MAC_MC_RC_ERROR_CRYPTO;
-    }
-
-    // TODO: remove dynamic assignment and use a LUT
-    class_c_obj->rx_session_param[mc_group_id + 1].app_skey = lr1mac_class_mc_skey_tab[mc_group_id].mc_app_skey;
-    class_c_obj->rx_session_param[mc_group_id + 1].nwk_skey = lr1mac_class_mc_skey_tab[mc_group_id].mc_ntw_skey;
-
-    return LR1MAC_MC_RC_OK;
-}
-
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_get_group_config( lr1mac_class_c_t* class_c_obj,
-                                                                        uint8_t           mc_group_id,
-                                                                        uint32_t*         mc_group_address )
-
-{
-    // Check if multicast group id is in acceptable range
-    if( mc_group_id > ( LR1MAC_NUMBER_OF_MC_SESSION - 1 ) )
-    {
-        return LR1MAC_MC_RC_ERROR_BAD_ID;
-    }
-
-    *mc_group_address = class_c_obj->rx_session_param[mc_group_id + 1].dev_addr;
-    return LR1MAC_MC_RC_OK;
-}
-
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id,
-                                                                     uint32_t freq, uint8_t dr )
-{
-    // Check if multicast group id is in acceptable range
-    if( mc_group_id > ( LR1MAC_NUMBER_OF_MC_SESSION - 1 ) )
-    {
-        return LR1MAC_MC_RC_ERROR_BAD_ID;
+        return SMTC_MC_RC_ERROR_BAD_ID;
     }
 
     // check if there is an ongoing multicast session on this group_id
-    if( class_c_obj->rx_session_param[mc_group_id + 1].enabled == true )
+    if( class_c_obj->rx_session_param[mc_group_id + 1]->enabled == true )
     {
-        return LR1MAC_MC_RC_ERROR_BUSY;
-    }
-
-    // Check if multicast group has been configured ie has a valid key id (different from SMTC_SE_NO_KEY)
-    if( class_c_obj->rx_session_param[mc_group_id + 1].app_skey == SMTC_SE_NO_KEY )
-    {
-        return LR1MAC_MC_RC_ERROR_NOT_INIT;
+        return SMTC_MC_RC_ERROR_BUSY;
     }
 
     // Check if frequency and datarate are acceptable
-    if( ( smtc_real_is_rx_frequency_valid( class_c_obj->lr1_mac, freq ) != OKLORAWAN ) ||
+    if( ( smtc_real_is_frequency_valid( class_c_obj->lr1_mac, freq ) != OKLORAWAN ) ||
         ( smtc_real_is_rx_dr_valid( class_c_obj->lr1_mac, dr ) != OKLORAWAN ) )
     {
-        return LR1MAC_MC_RC_ERROR_PARAM;
+        return SMTC_MC_RC_ERROR_PARAM;
     }
 
     // Search for the first active multicast session
     uint32_t mc_session = 0;
-    while( ( mc_session < LR1MAC_NUMBER_OF_MC_SESSION ) )
+    while( ( mc_session < LR1MAC_MC_NUMBER_OF_SESSION ) )
     {
-        if( ( class_c_obj->rx_session_param[mc_session + 1].enabled ) == true )
+        if( ( class_c_obj->rx_session_param[mc_session + 1]->enabled ) == true )
         {
             // an active multicast session was found => break
             break;
@@ -487,74 +424,60 @@ lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_clas
             mc_session++;
         }
     }
-    if( mc_session < LR1MAC_NUMBER_OF_MC_SESSION )
+    if( mc_session < LR1MAC_MC_NUMBER_OF_SESSION )
     {
         // at least one session is already enabled
         // Check if param are compatible with already enabled, if not do not accept session
-        if( ( class_c_obj->rx_session_param[mc_session + 1].rx_frequency != freq ) ||
-            ( class_c_obj->rx_session_param[mc_session + 1].rx_data_rate != dr ) )
+        if( ( class_c_obj->rx_session_param[mc_session + 1]->rx_frequency != freq ) ||
+            ( class_c_obj->rx_session_param[mc_session + 1]->rx_data_rate != dr ) )
         {
-            return LR1MAC_MC_RC_ERROR_INCOMPATIBLE_SESSION;
+            return SMTC_MC_RC_ERROR_INCOMPATIBLE_SESSION;
         }
     }
 
     // Save param (for first session or compatible with already enabled session )
-    class_c_obj->rx_session_param[mc_group_id + 1].rx_frequency = freq;
-    class_c_obj->rx_session_param[mc_group_id + 1].rx_data_rate = dr;
+    class_c_obj->rx_session_param[mc_group_id + 1]->rx_frequency = freq;
+    class_c_obj->rx_session_param[mc_group_id + 1]->rx_data_rate = dr;
+
+    // Reset session fcntdown counter
+    class_c_obj->rx_session_param[mc_group_id + 1]->fcnt_dwn = ~0;
 
     // Set the enable bit to true to activate the session
-    class_c_obj->rx_session_param[mc_group_id + 1].enabled = true;
+    class_c_obj->rx_session_param[mc_group_id + 1]->enabled = true;
 
     // Stop current unicast if param differs
-    if( ( class_c_obj->rx_session_param[RX_SESSION_UNICAST].rx_frequency != freq ) ||
-        ( class_c_obj->rx_session_param[RX_SESSION_UNICAST].rx_data_rate != dr ) )
+    if( ( class_c_obj->rx_session_param[RX_SESSION_UNICAST]->rx_frequency != freq ) ||
+        ( class_c_obj->rx_session_param[RX_SESSION_UNICAST]->rx_data_rate != dr ) )
     {
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST].enabled = false;
+        class_c_obj->rx_session_param[RX_SESSION_UNICAST]->enabled = false;
         // Abort current continuous reception (will be automatically restarted in rp abort callback)
         rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
     }
 
-    return LR1MAC_MC_RC_OK;
+    return SMTC_MC_RC_OK;
 }
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,
-                                                                          uint8_t mc_group_id, bool* is_session_started,
-                                                                          uint32_t* freq, uint8_t* dr )
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id )
 {
     // Check if multicast group id is in acceptable range
-    if( mc_group_id > ( LR1MAC_NUMBER_OF_MC_SESSION - 1 ) )
+    if( mc_group_id > ( LR1MAC_MC_NUMBER_OF_SESSION - 1 ) )
     {
-        return LR1MAC_MC_RC_ERROR_BAD_ID;
-    }
-
-    *is_session_started = class_c_obj->rx_session_param[mc_group_id + 1].enabled;
-    *freq               = class_c_obj->rx_session_param[mc_group_id + 1].rx_frequency;
-    *dr                 = class_c_obj->rx_session_param[mc_group_id + 1].rx_data_rate;
-
-    return LR1MAC_MC_RC_OK;
-}
-
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id )
-{
-    // Check if multicast group id is in acceptable range
-    if( mc_group_id > ( LR1MAC_NUMBER_OF_MC_SESSION - 1 ) )
-    {
-        return LR1MAC_MC_RC_ERROR_BAD_ID;
+        return SMTC_MC_RC_ERROR_BAD_ID;
     }
 
     // Set the enable bit to false to indicate that the session is stopped
-    class_c_obj->rx_session_param[mc_group_id + 1].enabled = false;
+    class_c_obj->rx_session_param[mc_group_id + 1]->enabled = false;
 
     // Reset frequency and datarate to their not init values
-    class_c_obj->rx_session_param[mc_group_id + 1].rx_frequency = 0;
-    class_c_obj->rx_session_param[mc_group_id + 1].rx_data_rate = 0xFF;
+    class_c_obj->rx_session_param[mc_group_id + 1]->rx_frequency = 0;
+    class_c_obj->rx_session_param[mc_group_id + 1]->rx_data_rate = 0xFF;
 
     uint8_t enabled_multicast_sessions = 0;
 
     // Check if there is still an enabled multicast session
-    for( uint8_t i = 0; i < LR1MAC_NUMBER_OF_MC_SESSION; i++ )
+    for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
     {
-        if( class_c_obj->rx_session_param[i + 1].enabled == true )
+        if( class_c_obj->rx_session_param[i + 1]->enabled == true )
         {
             enabled_multicast_sessions++;
         }
@@ -564,7 +487,7 @@ lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class
     if( enabled_multicast_sessions == 0 )
     {
         // Enable unicast session
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST].enabled = true;
+        class_c_obj->rx_session_param[RX_SESSION_UNICAST]->enabled = true;
         // Abort current continuous reception for multicast session
         rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
         // a new rx c with unicast param task will be enqueue automatically if class C is still active
@@ -573,22 +496,22 @@ lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class
     {
         // At least 1 multicast session is still active, do nothing
     }
-    return LR1MAC_MC_RC_OK;
+    return SMTC_MC_RC_OK;
 }
 
-lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_class_c_t* class_c_obj )
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_class_c_t* class_c_obj )
 {
     uint8_t active_sessions = 0;
 
-    for( uint8_t i = 0; i < LR1MAC_NUMBER_OF_MC_SESSION; i++ )
+    for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
     {
-        if( class_c_obj->rx_session_param[i + 1].enabled == true )
+        if( class_c_obj->rx_session_param[i + 1]->enabled == true )
         {
             // Set the enable bit to false to indicate that the session is stopped
-            class_c_obj->rx_session_param[i + 1].enabled = false;
+            class_c_obj->rx_session_param[i + 1]->enabled = false;
             // Reset frequency and datarate to their not init values
-            class_c_obj->rx_session_param[i + 1].rx_frequency = 0;
-            class_c_obj->rx_session_param[i + 1].rx_data_rate = 0xFF;
+            class_c_obj->rx_session_param[i + 1]->rx_frequency = 0;
+            class_c_obj->rx_session_param[i + 1]->rx_data_rate = LR1MAC_MC_NO_DATARATE;
             // Increment the counter of active sessions
             active_sessions++;
         }
@@ -598,11 +521,28 @@ lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_
     {
         // As there is no more multicast sessions enabled => restart unicast session
         // a new rx c with unicast param task will be enqueue automatically if class C is still active
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST].enabled = true;
+        class_c_obj->rx_session_param[RX_SESSION_UNICAST]->enabled = true;
         // Abort current continuous reception for multicast sessions
         rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
     }
-    return LR1MAC_MC_RC_OK;
+    return SMTC_MC_RC_OK;
+}
+
+smtc_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,
+                                                                        uint8_t mc_group_id, bool* is_session_started,
+                                                                        uint32_t* freq, uint8_t* dr )
+{
+    // Check if multicast group id is in acceptable range
+    if( mc_group_id > ( LR1MAC_MC_NUMBER_OF_SESSION - 1 ) )
+    {
+        return SMTC_MC_RC_ERROR_BAD_ID;
+    }
+
+    *is_session_started = class_c_obj->rx_session_param[mc_group_id + 1]->enabled;
+    *freq               = class_c_obj->rx_session_param[mc_group_id + 1]->rx_frequency;
+    *dr                 = class_c_obj->rx_session_param[mc_group_id + 1]->rx_data_rate;
+
+    return SMTC_MC_RC_OK;
 }
 
 /*
@@ -612,10 +552,10 @@ lr1mac_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_
 
 static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c_obj )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "%s\n", __func__ );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s\n", __func__ );
     int status = OKLORAWAN;
 
-    class_c_obj->rx_session_type = RX_SESSION_NONE;
+    class_c_obj->rx_session_index = RX_SESSION_COUNT;
 
     // check Mtype
     uint8_t rx_ftype_tmp = class_c_obj->rx_payload[0] >> 5;
@@ -624,7 +564,6 @@ static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c
     {
         status += ERRORLORAWAN;
         SMTC_MODEM_HAL_TRACE_PRINTF( " BAD Ftype = %u for RX Frame \n", rx_ftype_tmp );
-        class_c_obj->rx_session_type = RX_SESSION_NONE;
     }
     // check devaddr
     if( ( class_c_obj->lr1_mac->join_status == JOINED ) && ( status == OKLORAWAN ) )
@@ -634,33 +573,24 @@ static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c
 
         for( rx_session_type_t i = 0; i < LR1MAC_NUMBER_OF_RXC_SESSION; i++ )
         {
-            if( ( dev_addr_tmp == class_c_obj->rx_session_param[i].dev_addr ) &&
-                ( class_c_obj->rx_session_param[i].enabled == true ) )
+            if( ( dev_addr_tmp == class_c_obj->rx_session_param[i]->dev_addr ) &&
+                ( class_c_obj->rx_session_param[i]->enabled == true ) )
             {
-                class_c_obj->rx_session_type = i;
+                class_c_obj->rx_session_index = i;
                 break;
             }
         }
 
-        if( class_c_obj->rx_session_type < LR1MAC_NUMBER_OF_RXC_SESSION )
-        {
-            lr1mac_class_c_set_keys( class_c_obj );
-            class_c_obj->rx_session_param_ptr = &class_c_obj->rx_session_param[class_c_obj->rx_session_type];
-        }
-        else
+        if( class_c_obj->rx_session_index >= LR1MAC_NUMBER_OF_RXC_SESSION )
         {
             status += ERRORLORAWAN;
-            class_c_obj->rx_session_type = RX_SESSION_NONE;
+            class_c_obj->rx_session_index = RX_SESSION_COUNT;
             for( rx_session_type_t i = 0; i < LR1MAC_NUMBER_OF_RXC_SESSION; i++ )
             {
                 SMTC_MODEM_HAL_TRACE_INFO( " BAD DevAddr = %x for RX Frame and %x \n \n",
-                                           class_c_obj->rx_session_param[i].dev_addr, dev_addr_tmp );
+                                           class_c_obj->rx_session_param[i]->dev_addr, dev_addr_tmp );
             }
         }
-    }
-    else
-    {
-        class_c_obj->rx_session_type = RX_SESSION_NONE;
     }
 
     if( status != OKLORAWAN )
@@ -671,39 +601,9 @@ static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c
     return ( status );
 }
 
-void lr1mac_class_c_set_keys( lr1mac_class_c_t* class_c_obj )
-{
-    switch( class_c_obj->rx_session_type )
-    {
-    case RX_SESSION_UNICAST:
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST].nwk_skey = SMTC_SE_NWK_S_ENC_KEY;
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST].app_skey = SMTC_SE_APP_S_KEY;
-        break;
-    case RX_SESSION_MULTICAST_G0:
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].nwk_skey = SMTC_SE_MC_NWK_S_KEY_0;
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].app_skey = SMTC_SE_MC_APP_S_KEY_0;
-        break;
-    case RX_SESSION_MULTICAST_G1:
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].nwk_skey = SMTC_SE_MC_NWK_S_KEY_1;
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].app_skey = SMTC_SE_MC_APP_S_KEY_1;
-        break;
-    case RX_SESSION_MULTICAST_G2:
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].nwk_skey = SMTC_SE_MC_NWK_S_KEY_2;
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].app_skey = SMTC_SE_MC_APP_S_KEY_2;
-        break;
-    case RX_SESSION_MULTICAST_G3:
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].nwk_skey = SMTC_SE_MC_NWK_S_KEY_3;
-        class_c_obj->rx_session_param[class_c_obj->rx_session_type].app_skey = SMTC_SE_MC_APP_S_KEY_3;
-        break;
-    case RX_SESSION_NONE:
-    default:
-        smtc_modem_hal_lr1mac_panic( );
-        break;
-    }
-}
 static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* class_c_obj )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "%s\n", __func__ );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s\n", __func__ );
     int              status         = OKLORAWAN;
     rx_packet_type_t rx_packet_type = NO_MORE_VALID_RX_PACKET;
     uint32_t         mic_in;
@@ -712,7 +612,8 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
 
     status += lr1mac_rx_payload_min_size_check( class_c_obj->rx_payload_size );
     status += lr1mac_rx_payload_max_size_check( class_c_obj->lr1_mac, class_c_obj->rx_payload_size,
-                                                class_c_obj->rx_session_param_ptr->rx_data_rate );
+                                                RX_SESSION_PARAM_CURRENT->rx_data_rate );
+
     if( status != OKLORAWAN )
     {
         return NO_MORE_VALID_RX_PACKET;
@@ -724,16 +625,28 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         return NO_MORE_VALID_RX_PACKET;
     }
 
+    if( class_c_obj->rx_session_index != RX_SESSION_UNICAST )
+    {
+        if( ( class_c_obj->tx_ack_bit == true ) || ( rx_ftype == CONF_DATA_UP ) )
+        {
+            return NO_MORE_VALID_RX_PACKET;
+        }
+    }
+
     /************************************************************************/
     /*               Case : the receive packet is not a JoinResponse */
     /************************************************************************/
+
+    // Read Fcntdown in lr1mac in case of the downlink came from unicast dev address
+    class_c_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn = class_c_obj->lr1_mac->fcnt_dwn;
+
     uint16_t fcnt_dwn_tmp       = 0;
-    uint32_t fcnt_dwn_stack_tmp = class_c_obj->rx_session_param_ptr->fcnt_dwn;
+    uint32_t fcnt_dwn_stack_tmp = RX_SESSION_PARAM_CURRENT->fcnt_dwn;
 
     status += lr1mac_rx_fhdr_extract(
         class_c_obj->rx_payload, class_c_obj->rx_payload_size, &( class_c_obj->rx_fopts_length ), &fcnt_dwn_tmp,
-        class_c_obj->rx_session_param_ptr->dev_addr, &( class_c_obj->rx_metadata.rx_fport ),
-        &( class_c_obj->rx_payload_empty ), &( class_c_obj->rx_fctrl ), class_c_obj->rx_fopts );
+        RX_SESSION_PARAM_CURRENT->dev_addr, &( class_c_obj->rx_metadata.rx_fport ), &( class_c_obj->rx_payload_empty ),
+        &( class_c_obj->rx_fctrl ), class_c_obj->rx_fopts );
 
     if( status == OKLORAWAN )
     {
@@ -745,17 +658,21 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         memcpy1( ( uint8_t* ) &mic_in, &class_c_obj->rx_payload[class_c_obj->rx_payload_size], MICSIZE );
 
         if( smtc_modem_crypto_verify_mic( &class_c_obj->rx_payload[0], class_c_obj->rx_payload_size,
-                                          class_c_obj->rx_session_param_ptr->nwk_skey,
-                                          class_c_obj->rx_session_param_ptr->dev_addr, 1, fcnt_dwn_stack_tmp,
-                                          mic_in ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
+                                          RX_SESSION_PARAM_CURRENT->nwk_skey, RX_SESSION_PARAM_CURRENT->dev_addr, 1,
+                                          fcnt_dwn_stack_tmp, mic_in ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
         {
             status = ERRORLORAWAN;
         }
     }
     if( status == OKLORAWAN )
     {
-        class_c_obj->rx_session_param_ptr->fcnt_dwn = fcnt_dwn_stack_tmp;
-        class_c_obj->lr1_mac->fcnt_dwn              = class_c_obj->rx_session_param[RX_SESSION_UNICAST].fcnt_dwn;
+        // Set FPending bit in stack
+        // !!!! SHALL NOT USED IN CLASS C
+        // class_c_obj->lr1_mac->rx_fpending_bit_current = ( class_c_obj->rx_fctrl >> 4 ) & 0x01;
+        // class_c_obj->rx_metadata.rx_fpending_bit      = class_c_obj->lr1_mac->rx_fpending_bit_current;
+
+        RX_SESSION_PARAM_CURRENT->fcnt_dwn = fcnt_dwn_stack_tmp;
+        class_c_obj->lr1_mac->fcnt_dwn     = class_c_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn;
 
         if( class_c_obj->rx_payload_empty == 0 )  // rx payload not empty
         {
@@ -770,8 +687,8 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
             {
                 if( smtc_modem_crypto_payload_decrypt(
                         &class_c_obj->rx_payload[FHDROFFSET + 1 + class_c_obj->rx_fopts_length],
-                        class_c_obj->rx_payload_size, class_c_obj->rx_session_param_ptr->app_skey,
-                        class_c_obj->rx_session_param_ptr->dev_addr, 1, class_c_obj->rx_session_param_ptr->fcnt_dwn,
+                        class_c_obj->rx_payload_size, RX_SESSION_PARAM_CURRENT->app_skey,
+                        RX_SESSION_PARAM_CURRENT->dev_addr, 1, RX_SESSION_PARAM_CURRENT->fcnt_dwn,
                         &class_c_obj->rx_payload[0] ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
                 {
                     smtc_modem_hal_lr1mac_panic( "Crypto error during payload decryption\n" );
@@ -817,7 +734,7 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         }
     }
 
-    SMTC_MODEM_HAL_TRACE_PRINTF( " RxC rx_packet_type = %d \n", rx_packet_type );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( " RxC rx_packet_type = %d \n", rx_packet_type );
     return ( rx_packet_type );
 }
 /* --- EOF ------------------------------------------------------------------ */

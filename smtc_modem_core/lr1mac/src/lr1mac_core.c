@@ -45,7 +45,6 @@
 #include "smtc_real.h"
 #include "smtc_real_defs.h"
 #include "smtc_real_defs_str.h"
-#include "smtc_duty_cycle.h"
 #include "smtc_lbt.h"
 #include "lr1mac_config.h"
 
@@ -66,10 +65,14 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
+#define FAILSAFE_DURATION 300U
 
 #if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
-static const char* smtc_name_bw[] = { "BW007", "BW010", "BW015", "BW020", "BW031", "BW041", "BW062",
+static const char* smtc_name_bw[]         = { "BW007", "BW010", "BW015", "BW020", "BW031", "BW041", "BW062",
                                       "BW125", "BW200", "BW250", "BW400", "BW500", "BW800", "BW1600" };
+static const char* smtc_name_lr_fhss_bw[] = { "BW 39063",  "BW 85938",  "BW 136719", "BW 183594",  "BW 335938",
+                                              "BW 386719", "BW 722656", "BW 773438", "BW 1523438", "BW 1574219" };
+static const char* smtc_name_lr_fhss_cr[] = { "CR 5/6", "CR 2/3", "CR 1/2", "CR 1/3" };
 #endif
 
 /*
@@ -92,16 +95,18 @@ static void        try_recover_nvm( lr1_stack_mac_t* lr1_mac_obj );
  *--- PUBLIC FUNCTIONS DEFINITIONS --------------------------------------------------
  */
 
-void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_lbt_t* lbt_obj, smtc_dtc_t* dtc_obj, radio_planner_t* rp,
-                       lr1mac_activation_mode_t activation_mode, smtc_real_region_types_t smtc_real_region_types,
-                       void ( *push_callback )( void* push_context ), void*               push_context )
+void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_real_t* real, smtc_lbt_t* lbt_obj, smtc_dtc_t* dtc_obj,
+                       radio_planner_t* rp, lr1mac_activation_mode_t activation_mode,
+                       smtc_real_region_types_t smtc_real_region_types, void ( *push_callback )( void* push_context ),
+                       void*                    push_context )
 {
     memset( lr1_mac_obj, 0, sizeof( lr1_stack_mac_t ) );
 
     lr1_mac_obj->lr1mac_state                = LWPSTATE_IDLE;
     lr1_mac_obj->valid_rx_packet             = NO_MORE_VALID_RX_PACKET;
-    lr1_mac_obj->receive_window_type         = RECEIVE_NONE;
+    lr1_mac_obj->rx_metadata.rx_window       = RECEIVE_NONE;
     lr1_mac_obj->stack_id4rp                 = RP_HOOK_ID_LR1MAC_STACK;
+    lr1_mac_obj->real                        = real;
     lr1_mac_obj->lbt_obj                     = lbt_obj;
     lr1_mac_obj->dtc_obj                     = dtc_obj;
     lr1_mac_obj->send_at_time                = false;
@@ -123,15 +128,23 @@ void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_lbt_t* lbt_obj, smtc_d
     if( status == OKLORAWAN )
     {
         // Check if the region stored in flash is still valid
-        status = lr1mac_core_is_supported_region( lr1_mac_obj, lr1_mac_obj->real.region_type );
+        if( smtc_real_is_supported_region( lr1_mac_obj->real->region_type ) == SMTC_REAL_STATUS_OK )
+        {
+            status = OKLORAWAN;
+        }
+        else
+        {
+            status = ERRORLORAWAN;
+        }
     }
 
     if( status == ERRORLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_WARNING( "No valid lr1mac context --> Use default value\n" );
 
-        lr1_mac_obj->adr_custom       = BSP_USER_DR_DISTRIBUTION_PARAMETERS;  // (dr0 only)
-        lr1_mac_obj->real.region_type = ( smtc_real_region_types_t ) smtc_real_region_list[0];
+        lr1_mac_obj->adr_custom[0]     = BSP_USER_DR_DISTRIBUTION_PARAMETERS;  // (dr0 only)
+        lr1_mac_obj->adr_custom[1]     = 0;
+        lr1_mac_obj->real->region_type = ( smtc_real_region_types_t ) smtc_real_region_list[0];
         lr1mac_core_context_save( lr1_mac_obj );
     }
 
@@ -143,18 +156,23 @@ void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_lbt_t* lbt_obj, smtc_d
                                  lr1_mac_obj->join_nonce[0], lr1_mac_obj->join_nonce[1], lr1_mac_obj->join_nonce[2],
                                  lr1_mac_obj->join_nonce[3], lr1_mac_obj->join_nonce[4], lr1_mac_obj->join_nonce[5] );
     SMTC_MODEM_HAL_TRACE_PRINTF( " NbOfReset = %d\n", lr1_mac_obj->nb_of_reset );
-    SMTC_MODEM_HAL_TRACE_PRINTF( " Region = %s\n", smtc_real_region_list_str[lr1_mac_obj->real.region_type] );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " Region = %s\n", smtc_real_region_list_str[lr1_mac_obj->real->region_type] );
 
-    lr1_mac_obj->rp                 = rp;
-    lr1_mac_obj->no_rx_packet_count = NO_RX_PACKET_CNT;
+    lr1_mac_obj->rp                           = rp;
+    lr1_mac_obj->no_rx_packet_reset_threshold = LR1MAC_NO_RX_PACKET_RESET_THRESHOLD;
     rp_hook_init( lr1_mac_obj->rp, lr1_mac_obj->stack_id4rp, ( void ( * )( void* ) )( lr1_stack_mac_rp_callback ),
                   ( lr1_mac_obj ) );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "rp_hook_init done\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "rp_hook_init done\n" );
 
     smtc_real_config( lr1_mac_obj );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "smtc_real_config done\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "smtc_real_config done\n" );
     smtc_real_init( lr1_mac_obj );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "smtc_real_init done\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "smtc_real_init done\n" );
+
+    // Initialize here adr_ack_limit_init and adr_ack_delay_init which are real dependant and must be updated after the
+    // real is initialized and not reinit after the join accept
+    lr1_mac_obj->adr_ack_limit_init = smtc_real_get_adr_ack_limit( lr1_mac_obj );
+    lr1_mac_obj->adr_ack_delay_init = smtc_real_get_adr_ack_delay( lr1_mac_obj );
 }
 
 /***********************************************************************************************/
@@ -181,12 +199,13 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
 #endif
 
     if( ( lr1_mac_obj->lr1mac_state != LWPSTATE_IDLE ) &&
-        ( ( smtc_modem_hal_get_time_in_s( ) - failsafe_timstamp_get( lr1_mac_obj ) ) > 300 ) )
+        ( ( int32_t )( smtc_modem_hal_get_time_in_s( ) - failsafe_timstamp_get( lr1_mac_obj ) - FAILSAFE_DURATION ) >
+          0 ) )
     {
         smtc_modem_hal_lr1mac_panic( "FAILSAFE EVENT OCCUR (lr1mac_state:0x%x)\n", lr1_mac_obj->lr1mac_state );
         lr1_mac_obj->lr1mac_state = LWPSTATE_ERROR;
     }
-    if( lr1_stack_mac_radio_state_get( lr1_mac_obj ) == RADIOSTATE_ABORTED_BY_RP )
+    if( lr1_mac_obj->radio_process_state == RADIOSTATE_ABORTED_BY_RP )
     {
         lr1mac_mac_update( lr1_mac_obj, available_rx_packet );
     }
@@ -203,12 +222,13 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
     //                                    STATE TX
     //**********************************************************************************
     case LWPSTATE_SEND:
-        switch( lr1_stack_mac_radio_state_get( lr1_mac_obj ) )
+        switch( lr1_mac_obj->radio_process_state )
         {
         case RADIOSTATE_IDLE:
             lr1_mac_obj->radio_process_state = RADIOSTATE_PENDING;
             DBG_PRINT_WITH_LINE( "Send Payload  HOOK ID = %d", myhook_id );
 
+#if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
             modulation_type_t tx_modulation_type =
                 smtc_real_get_modulation_type_from_datarate( lr1_mac_obj, lr1_mac_obj->tx_data_rate );
 
@@ -219,7 +239,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
                 smtc_real_lora_dr_to_sf_bw( lr1_mac_obj, lr1_mac_obj->tx_data_rate, &tx_sf, &tx_bw );
 
                 SMTC_MODEM_HAL_TRACE_PRINTF(
-                    "  Tx  LoRa at %u ms: freq:%d, SF%u, %s, len %u bytes %d dBm, fcnt_up %d, toa = %d\n",
+                    "  Tx  LoRa at %u ms: freq:%u, SF%u, %s, len %u bytes %d dBm, fcnt_up %d, toa = %d\n",
                     lr1_mac_obj->rtc_target_timer_ms, lr1_mac_obj->tx_frequency, tx_sf, smtc_name_bw[tx_bw],
                     lr1_mac_obj->tx_payload_size, lr1_mac_obj->tx_power, lr1_mac_obj->fcnt_up,
                     lr1_stack_toa_get( lr1_mac_obj ) );
@@ -227,12 +247,24 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
             else if( tx_modulation_type == FSK )
             {
                 SMTC_MODEM_HAL_TRACE_PRINTF(
-                    "  Tx  FSK  at %u ms: freq:%d, len %u bytes %d dBm, fcnt_up %d, toa = %d\n",
+                    "  Tx  FSK  at %u ms: freq:%u, len %u bytes %d dBm, fcnt_up %d, toa = %d\n",
                     lr1_mac_obj->rtc_target_timer_ms, lr1_mac_obj->tx_frequency, lr1_mac_obj->tx_payload_size,
                     lr1_mac_obj->tx_power, lr1_mac_obj->fcnt_up, lr1_stack_toa_get( lr1_mac_obj ) );
             }
+            else if( tx_modulation_type == LR_FHSS )
+            {
+                lr_fhss_v1_cr_t tx_cr;
+                lr_fhss_v1_bw_t tx_bw;
+                smtc_real_lr_fhss_dr_to_cr_bw( lr1_mac_obj, lr1_mac_obj->tx_data_rate, &tx_cr, &tx_bw );
+                SMTC_MODEM_HAL_TRACE_PRINTF(
+                    "  Tx  LR FHSS at %u ms: freq:%u, DR%u (%s, %s Hz), len %u bytes, %d dBm, fcnt_up %d, toa = %d\n",
+                    lr1_mac_obj->rtc_target_timer_ms, lr1_mac_obj->tx_frequency, lr1_mac_obj->tx_data_rate,
+                    smtc_name_lr_fhss_cr[tx_cr], smtc_name_lr_fhss_bw[tx_bw], lr1_mac_obj->tx_payload_size,
+                    lr1_mac_obj->tx_power, lr1_mac_obj->fcnt_up, lr1_stack_toa_get( lr1_mac_obj ) );
+            }
+#endif
 
-            if( smtc_lbt_is_enable( lr1_mac_obj->lbt_obj ) == true )
+            if( smtc_lbt_get_state( lr1_mac_obj->lbt_obj ) == true )
             {
                 smtc_lbt_listen_channel( ( lr1_mac_obj->lbt_obj ), lr1_mac_obj->tx_frequency, lr1_mac_obj->send_at_time,
                                          lr1_mac_obj->rtc_target_timer_ms - RP_MARGIN_DELAY,
@@ -245,6 +277,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
             break;
 
         case RADIOSTATE_TX_FINISHED:
+            DBG_PRINT_WITH_LINE( " TX DONE" );
             lr1_mac_obj->lr1mac_state               = LWPSTATE_RX1;
             lr1_mac_obj->tx_duty_cycle_timestamp_ms = lr1_mac_obj->isr_tx_done_radio_timestamp;
             lr1_mac_obj->tx_duty_cycle_time_off_ms =
@@ -260,6 +293,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
             lr1_stack_mac_update_tx_done( lr1_mac_obj );
             smtc_duty_cycle_sum( lr1_mac_obj->dtc_obj, lr1_mac_obj->tx_frequency,
                                  lr1_mac_obj->rp->stats.tx_last_toa_ms[myhook_id] );
+
             break;
 
         default:
@@ -272,12 +306,12 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
     //                                   STATE RX1
     //**********************************************************************************
     case LWPSTATE_RX1:
-        if( lr1_stack_mac_radio_state_get( lr1_mac_obj ) == RADIOSTATE_RX_FINISHED )
+        if( lr1_mac_obj->radio_process_state == RADIOSTATE_RX_FINISHED )
         {
             if( rp_status_get( lr1_mac_obj ) == RP_STATUS_RX_PACKET )
             {
-                lr1_mac_obj->receive_window_type = RECEIVE_ON_RX1;
-                lr1_mac_obj->valid_rx_packet     = lr1_stack_mac_rx_frame_decode( lr1_mac_obj );
+                lr1_mac_obj->rx_metadata.rx_window = RECEIVE_ON_RX1;
+                lr1_mac_obj->valid_rx_packet       = lr1_stack_mac_rx_frame_decode( lr1_mac_obj );
                 if( lr1_mac_obj->valid_rx_packet == NO_MORE_VALID_RX_PACKET )
                 {
                     lr1_mac_obj->lr1mac_state = LWPSTATE_RX2;
@@ -303,12 +337,12 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
     //                                   STATE RX2
     //**********************************************************************************
     case LWPSTATE_RX2:
-        if( lr1_stack_mac_radio_state_get( lr1_mac_obj ) == RADIOSTATE_RX_FINISHED )
+        if( lr1_mac_obj->radio_process_state == RADIOSTATE_RX_FINISHED )
         {
             if( rp_status_get( lr1_mac_obj ) == RP_STATUS_RX_PACKET )
             {
-                lr1_mac_obj->receive_window_type = RECEIVE_ON_RX2;
-                lr1_mac_obj->valid_rx_packet     = lr1_stack_mac_rx_frame_decode( lr1_mac_obj );
+                lr1_mac_obj->rx_metadata.rx_window = RECEIVE_ON_RX2;
+                lr1_mac_obj->valid_rx_packet       = lr1_stack_mac_rx_frame_decode( lr1_mac_obj );
                 if( lr1_mac_obj->valid_rx_packet == NO_MORE_VALID_RX_PACKET )
                 {
                     DBG_PRINT_WITH_LINE( "Receive a bad packet on RX2 for Hook Id = %d", myhook_id );
@@ -331,7 +365,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
     //**********************************************************************************
     case LWPSTATE_TX_WAIT:
         SMTC_MODEM_HAL_TRACE_MSG( " ." );
-        if( smtc_modem_hal_get_time_in_ms( ) > lr1_mac_obj->rtc_target_timer_ms )
+        if( ( int32_t )( smtc_modem_hal_get_time_in_ms( ) - lr1_mac_obj->rtc_target_timer_ms ) > 0 )
         {
             lr1_mac_obj->lr1mac_state = LWPSTATE_SEND;  //@note the frame have already been prepare in Update Mac Layer
         }
@@ -352,17 +386,17 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packe
 /**************************************************/
 /*            LoraWan  Join  Method               */
 /**************************************************/
-lr1mac_states_t lr1mac_core_join( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_time_ms )
+status_lorawan_t lr1mac_core_join( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_time_ms )
 {
     if( lr1_mac_obj->lr1mac_state != LWPSTATE_IDLE )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "LP STATE NOT EQUAL TO IDLE\n" );
-        return ( LWPSTATE_ERROR );
+        return ERRORLORAWAN;
     }
     if( lr1mac_core_get_activation_mode( lr1_mac_obj ) == ACTIVATION_MODE_ABP )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "ABP DEVICE CAN'T PROCCED A JOIN REQUEST\n" );
-        return ( LWPSTATE_ERROR );
+        return ERRORLORAWAN;
     }
     uint32_t current_timestamp       = smtc_modem_hal_get_time_in_s( );
     lr1_mac_obj->timestamp_failsafe  = current_timestamp;
@@ -370,8 +404,6 @@ lr1mac_states_t lr1mac_core_join( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_
     lr1_mac_obj->join_status         = NOT_JOINED;
 
     smtc_real_init( lr1_mac_obj );
-
-    lr1_mac_obj->rx2_data_rate = smtc_real_get_rx2_join_dr( lr1_mac_obj );
 
     // check adr mode to see if it is already set in join DR and it is the first join try or if adr was set to other DR
     if( ( lr1_mac_obj->adr_mode_select != JOIN_DR_DISTRIBUTION ) ||
@@ -386,12 +418,12 @@ lr1mac_states_t lr1mac_core_join( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_
     smtc_duty_cycle_update( lr1_mac_obj->dtc_obj );
     if( smtc_real_get_join_next_channel( lr1_mac_obj ) != OKLORAWAN )
     {
-        return ( LWPSTATE_ERROR );
+        return ERRORLORAWAN;
     }
 
     lr1_stack_mac_join_request_build( lr1_mac_obj );
-    lr1_stack_rx1_join_delay_set( lr1_mac_obj );
-    lr1_stack_rx2_join_dr_set( lr1_mac_obj );
+    lr1_mac_obj->rx1_delay_s   = smtc_real_get_rx1_join_delay( lr1_mac_obj );
+    lr1_mac_obj->rx2_data_rate = smtc_real_get_rx2_join_dr( lr1_mac_obj );
 
     // check if it first join try
     if( lr1_mac_obj->retry_join_cpt == 0 )
@@ -401,7 +433,7 @@ lr1mac_states_t lr1mac_core_join( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_
     }
 
     lr1_mac_obj->lr1mac_state = LWPSTATE_SEND;
-    return ( lr1_mac_obj->lr1mac_state );
+    return OKLORAWAN;
 }
 
 /**************************************************/
@@ -423,21 +455,12 @@ void lr1mac_core_join_status_clear( lr1_stack_mac_t* lr1_mac_obj )
 }
 
 /**************************************************/
-/*          LoraWan  IsJoined  Method             */
-/**************************************************/
-void lr1mac_core_new_join( lr1_stack_mac_t* lr1_mac_obj )
-{
-    lr1_mac_obj->join_status = NOT_JOINED;
-}
-
-/**************************************************/
 /*         LoraWan  SendPayload  Method           */
 /**************************************************/
-lr1mac_states_t lr1mac_core_send_stack_cid_req( lr1_stack_mac_t* lr1_mac_obj, cid_from_device_t cid_req )
+status_lorawan_t lr1mac_core_send_stack_cid_req( lr1_stack_mac_t* lr1_mac_obj, cid_from_device_t cid_req )
 {
     uint8_t  data_in[242];
     uint8_t  size_in = 0;
-    uint8_t  fport   = 0;
     uint32_t target_time_ms =
         smtc_modem_hal_get_time_in_ms( ) + ( smtc_modem_hal_get_random_nb_in_range( 1, 3 ) * 1000 );
 
@@ -477,26 +500,27 @@ lr1mac_states_t lr1mac_core_send_stack_cid_req( lr1_stack_mac_t* lr1_mac_obj, ci
         {
             lr1_mac_obj->ping_slot_info_user_req = USER_MAC_REQ_REQUESTED;
             data_in[size_in++]                   = cid_req;
-            data_in[size_in++]                   = lr1_mac_obj->ping_slot_periodicity & 0x7;
+            data_in[size_in++]                   = lr1_mac_obj->ping_slot_periodicity_req & 0x7;
+            lr1_mac_obj->tx_class_b_bit          = 0;
         }
         break;
 
     default:
-        return LWPSTATE_INVALID;
+        return ERRORLORAWAN;
         break;
     }
 
-    return lr1mac_core_payload_send( lr1_mac_obj, fport, true, data_in, size_in, UNCONF_DATA_UP, target_time_ms );
+    return lr1mac_core_payload_send( lr1_mac_obj, PORTNWK, true, data_in, size_in, UNCONF_DATA_UP, target_time_ms );
 }
 
-lr1mac_states_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
-                                                  const uint8_t* data_in, const uint8_t size_in, uint8_t packet_type,
-                                                  uint32_t target_time_ms )
+status_lorawan_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
+                                                   const uint8_t* data_in, const uint8_t size_in, uint8_t packet_type,
+                                                   uint32_t target_time_ms )
 {
-    lr1mac_states_t status =
+    status_lorawan_t status =
         lr1mac_core_payload_send( lr1_mac_obj, fport, fport_enabled, data_in, size_in, packet_type, target_time_ms );
 
-    if( status == LWPSTATE_SEND )
+    if( status == OKLORAWAN )
     {
         lr1_mac_obj->send_at_time = true;
         lr1_mac_obj->nb_trans_cpt = 1;  // Overwrite nb_trans_cpt, when downlink is At Time, repetitions are out dated
@@ -504,41 +528,46 @@ lr1mac_states_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj, 
     return status;
 }
 
-lr1mac_states_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
-                                          const uint8_t* data_in, const uint8_t size_in, uint8_t packet_type,
-                                          uint32_t target_time_ms )
+status_lorawan_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
+                                           const uint8_t* data_in, const uint8_t size_in, uint8_t packet_type,
+                                           uint32_t target_time_ms )
 {
     status_lorawan_t status = smtc_real_is_payload_size_valid( lr1_mac_obj, lr1_mac_obj->tx_data_rate, size_in,
                                                                lr1_mac_obj->uplink_dwell_time );
     if( status == ERRORLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "PAYLOAD SIZE TOO HIGH\n" );
-        return ( LWPSTATE_INVALID );
+        return ERRORLORAWAN;
+    }
+    if( ( packet_type != CONF_DATA_UP ) && ( packet_type != UNCONF_DATA_UP ) )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "PAYLOAD PACKET TYPE INVALID\n" );
+        return ERRORLORAWAN;
     }
     if( lr1mac_core_get_activation_mode( lr1_mac_obj ) == ACTIVATION_MODE_OTAA )
     {
         if( lr1_mac_obj->join_status == NOT_JOINED )
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "OTAA DEVICE NOT JOINED YET\n" );
-            return ( LWPSTATE_INVALID );
+            return ERRORLORAWAN;
         }
     }
     if( lr1_mac_obj->lr1mac_state != LWPSTATE_IDLE )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "LP STATE NOT EQUAL TO IDLE\n" );
-        return ( LWPSTATE_ERROR );
+        return ERRORLORAWAN;
     }
     // Decrement duty cycle before check the available DTC
     smtc_duty_cycle_update( lr1_mac_obj->dtc_obj );
     if( smtc_real_get_next_channel( lr1_mac_obj ) != OKLORAWAN )
     {
-        return ( LWPSTATE_DUTY_CYCLE_FULL );
+        return ERRORLORAWAN;
     }
 
     if( lr1mac_core_next_free_duty_cycle_ms_get( lr1_mac_obj ) > 0 )
     {
         SMTC_MODEM_HAL_TRACE_WARNING( "Duty Cycle is full\n" );
-        return ( LWPSTATE_DUTY_CYCLE_FULL );
+        return ERRORLORAWAN;
     }
 
     lr1_mac_obj->timestamp_failsafe  = smtc_modem_hal_get_time_in_s( );
@@ -555,36 +584,10 @@ lr1mac_states_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t 
 
     lr1_stack_mac_tx_frame_build( lr1_mac_obj );
     lr1_stack_mac_tx_frame_encrypt( lr1_mac_obj );
-    if( packet_type == CONF_DATA_UP )
-    {
-        lr1_mac_obj->receive_window_type = RECEIVE_NONE;
-    }
-    else
-    {
-        lr1_mac_obj->nb_trans_cpt = lr1_mac_obj->nb_trans;
-        // deprecated lr1_mac_obj->receive_window_type = RECEIVE_NACK;
-    }
-    lr1_mac_obj->nb_trans_cpt = lr1_mac_obj->nb_trans;
-    lr1_mac_obj->lr1mac_state = LWPSTATE_SEND;
 
-    return ( lr1_mac_obj->lr1mac_state );
-}
-
-/**************************************************/
-/*        LoraWan  Receive  Method                */
-/**************************************************/
-status_lorawan_t lr1mac_core_payload_receive( lr1_stack_mac_t* lr1_mac_obj, uint8_t* user_rx_port,
-                                              uint8_t* user_rx_payload, uint8_t* user_rx_payloadSize )
-{
-    if( lr1_mac_obj->available_app_packet == NO_LORA_RXPACKET_AVAILABLE )
-    {
-        return ERRORLORAWAN;
-    }
-
-    *user_rx_payloadSize = lr1_mac_obj->rx_payload_size;
-    *user_rx_port        = lr1_mac_obj->rx_metadata.rx_fport;
-    memcpy1( user_rx_payload, lr1_mac_obj->rx_payload, lr1_mac_obj->rx_payload_size );
-    lr1_mac_obj->available_app_packet = NO_LORA_RXPACKET_AVAILABLE;
+    lr1_mac_obj->rx_metadata.rx_window = RECEIVE_NONE;
+    lr1_mac_obj->nb_trans_cpt          = lr1_mac_obj->nb_trans;
+    lr1_mac_obj->lr1mac_state          = LWPSTATE_SEND;
 
     return OKLORAWAN;
 }
@@ -630,9 +633,11 @@ dr_strategy_t lr1mac_core_dr_strategy_get( lr1_stack_mac_t* lr1_mac_obj )
 /*************************************************************/
 /*       LoraWan  Set DataRate Custom for custom adr profile */
 /*************************************************************/
-void lr1mac_core_dr_custom_set( lr1_stack_mac_t* lr1_mac_obj, uint32_t DataRateCustom )
+
+void lr1mac_core_dr_custom_set( lr1_stack_mac_t* lr1_mac_obj, uint32_t* datarate_custom )
 {
-    lr1_mac_obj->adr_custom = DataRateCustom;
+    lr1_mac_obj->adr_custom[0] = datarate_custom[0];
+    lr1_mac_obj->adr_custom[1] = datarate_custom[1];
     lr1mac_core_context_save( lr1_mac_obj );
 }
 
@@ -666,12 +671,12 @@ lr1mac_states_t lr1mac_core_state_get( lr1_stack_mac_t* lr1_mac_obj )
 void lr1mac_core_context_save( lr1_stack_mac_t* lr1_mac_obj )
 {
     // don't save in nvm if only nb of reset has been modified
-    if( ( lr1_mac_obj->mac_context.adr_custom != lr1_mac_obj->adr_custom ) ||
-        ( lr1_mac_obj->mac_context.region_type != lr1_mac_obj->real.region_type ) ||
+    if( ( lr1_mac_obj->mac_context.adr_custom != lr1_mac_obj->adr_custom[0] ) ||
+        ( lr1_mac_obj->mac_context.region_type != lr1_mac_obj->real->region_type ) ||
         ( lr1_mac_obj->mac_context.certification_enabled != lr1_mac_obj->is_lorawan_modem_certification_enabled ) )
     {
-        lr1_mac_obj->mac_context.adr_custom            = lr1_mac_obj->adr_custom;
-        lr1_mac_obj->mac_context.region_type           = lr1_mac_obj->real.region_type;
+        lr1_mac_obj->mac_context.adr_custom            = lr1_mac_obj->adr_custom[0];
+        lr1_mac_obj->mac_context.region_type           = lr1_mac_obj->real->region_type;
         lr1_mac_obj->mac_context.certification_enabled = lr1_mac_obj->is_lorawan_modem_certification_enabled;
         lr1_mac_obj->mac_context.crc =
             lr1mac_utilities_crc( ( uint8_t* ) &( lr1_mac_obj->mac_context ), sizeof( lr1_mac_obj->mac_context ) - 4 );
@@ -691,7 +696,7 @@ void lr1mac_core_context_save( lr1_stack_mac_t* lr1_mac_obj )
 uint32_t lr1mac_core_next_max_payload_length_get( lr1_stack_mac_t* lr1_mac_obj )
 {
     return ( smtc_real_get_max_payload_size( lr1_mac_obj, lr1_mac_obj->tx_data_rate, lr1_mac_obj->uplink_dwell_time ) -
-             lr1_mac_obj->tx_fopts_current_length - 8 );
+             lr1_mac_obj->tx_fopts_current_length - FHDROFFSET );
 }
 
 /**************************************************/
@@ -703,14 +708,14 @@ uint8_t lr1mac_core_next_dr_get( lr1_stack_mac_t* lr1_mac_obj )
 }
 
 uint32_t lr1mac_core_next_frequency_get( lr1_stack_mac_t* lr1_mac_obj )
-{  // note return datareate in case of adr
+{
     return ( lr1_mac_obj->tx_frequency );
 }
 
 void lr1mac_core_factory_reset( lr1_stack_mac_t* lr1_mac_obj )
 {
-    lr1_mac_obj->mac_context.adr_custom            = lr1_mac_obj->adr_custom;
-    lr1_mac_obj->mac_context.region_type           = lr1_mac_obj->real.region_type;
+    lr1_mac_obj->mac_context.adr_custom            = lr1_mac_obj->adr_custom[0];
+    lr1_mac_obj->mac_context.region_type           = lr1_mac_obj->real->region_type;
     lr1_mac_obj->mac_context.certification_enabled = lr1_mac_obj->is_lorawan_modem_certification_enabled;
     lr1_mac_obj->mac_context.crc =
         lr1mac_utilities_crc( ( uint8_t* ) &( lr1_mac_obj->mac_context ), sizeof( lr1_mac_obj->mac_context ) - 4 ) + 1;
@@ -758,27 +763,6 @@ int16_t lr1mac_core_last_rssi_get( lr1_stack_mac_t* lr1_mac_obj )
     return lr1_mac_obj->rx_metadata.rx_rssi;
 }
 
-uint8_t lr1mac_core_min_tx_dr_get( lr1_stack_mac_t* lr1_mac_obj )
-{
-    uint8_t tmp = lr1_stack_mac_min_tx_dr_get( lr1_mac_obj );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "Min DataRate = %d\n", tmp );
-    return ( tmp );
-}
-
-uint8_t lr1mac_core_max_tx_dr_get( lr1_stack_mac_t* lr1_mac_obj )
-{
-    uint8_t tmp = lr1_stack_mac_max_tx_dr_get( lr1_mac_obj );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "Max DataRate = %d\n", tmp );
-    return ( tmp );
-}
-
-uint16_t lr1mac_core_mask_tx_dr_channel_up_dwell_time_check( lr1_stack_mac_t* lr1_mac_obj )
-{
-    uint8_t tmp = lr1_stack_mac_mask_tx_dr_channel_up_dwell_time_check( lr1_mac_obj );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "Mask DataRate = 0x%x\n", tmp );
-    return ( tmp );
-}
-
 status_lorawan_t lr1mac_core_context_load( lr1_stack_mac_t* lr1_mac_obj )
 {
     smtc_modem_hal_context_restore( CONTEXT_LR1MAC, ( uint8_t* ) &( lr1_mac_obj->mac_context ),
@@ -787,8 +771,8 @@ status_lorawan_t lr1mac_core_context_load( lr1_stack_mac_t* lr1_mac_obj )
     if( lr1mac_utilities_crc( ( uint8_t* ) &( lr1_mac_obj->mac_context ), sizeof( lr1_mac_obj->mac_context ) - 4 ) ==
         lr1_mac_obj->mac_context.crc )
     {
-        lr1_mac_obj->adr_custom       = lr1_mac_obj->mac_context.adr_custom;
-        lr1_mac_obj->real.region_type = ( smtc_real_region_types_t ) lr1_mac_obj->mac_context.region_type;
+        lr1_mac_obj->adr_custom[0]     = lr1_mac_obj->mac_context.adr_custom;
+        lr1_mac_obj->real->region_type = ( smtc_real_region_types_t ) lr1_mac_obj->mac_context.region_type;
         lr1_mac_obj->is_lorawan_modem_certification_enabled = lr1_mac_obj->mac_context.certification_enabled;
 
         return OKLORAWAN;
@@ -800,7 +784,7 @@ status_lorawan_t lr1mac_core_context_load( lr1_stack_mac_t* lr1_mac_obj )
 }
 receive_win_t lr1mac_core_rx_window_get( lr1_stack_mac_t* lr1_mac_obj )
 {
-    return ( lr1_mac_obj->receive_window_type );
+    return ( lr1_mac_obj->rx_metadata.rx_window );
 }
 
 uint32_t lr1mac_core_fcnt_up_get( lr1_stack_mac_t* lr1_mac_obj )
@@ -842,45 +826,26 @@ int32_t lr1mac_core_next_free_duty_cycle_ms_get( lr1_stack_mac_t* lr1_mac_obj )
     return ret;
 }
 
-uint8_t lr1mac_core_duty_cycle_enable_set( lr1_stack_mac_t* lr1_mac_obj, smtc_dtc_enablement_type_t enable )
-{
-    return smtc_duty_cycle_enable_set( lr1_mac_obj->dtc_obj, enable );
-}
-
-smtc_dtc_enablement_type_t lr1mac_core_duty_cycle_enable_get( lr1_stack_mac_t* lr1_mac_obj )
-{
-    return smtc_duty_cycle_enable_get( lr1_mac_obj->dtc_obj );
-}
-
 uint8_t lr1mac_core_rx_ack_bit_get( lr1_stack_mac_t* lr1_mac_obj )
 {
     return ( lr1_mac_obj->rx_ack_bit );
 }
 
-status_lorawan_t lr1mac_core_is_supported_region( lr1_stack_mac_t* lr1_mac_obj, smtc_real_region_types_t region_type )
+uint8_t lr1mac_core_rx_fpending_bit_get( lr1_stack_mac_t* lr1_mac_obj )
 {
-    for( uint8_t i = 0; i < SMTC_REAL_REGION_LIST_LENGTH; i++ )
-    {
-        if( smtc_real_region_list[i] == region_type )
-        {
-            return OKLORAWAN;
-        }
-    }
-
-    SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Region 0x%02x\n", region_type );
-    return ERRORLORAWAN;
+    return ( lr1_mac_obj->rx_fpending_bit_current );
 }
 
 smtc_real_region_types_t lr1mac_core_get_region( lr1_stack_mac_t* lr1_mac_obj )
 {
-    return lr1_mac_obj->real.region_type;
+    return lr1_mac_obj->real->region_type;
 }
 
 status_lorawan_t lr1mac_core_set_region( lr1_stack_mac_t* lr1_mac_obj, smtc_real_region_types_t region_type )
 {
-    if( lr1mac_core_is_supported_region( lr1_mac_obj, region_type ) == OKLORAWAN )
+    if( smtc_real_is_supported_region( region_type ) == SMTC_REAL_STATUS_OK )
     {
-        lr1_mac_obj->real.region_type = region_type;
+        lr1_mac_obj->real->region_type = region_type;
         lr1mac_core_context_save( lr1_mac_obj );
         smtc_real_config( lr1_mac_obj );
         smtc_real_init( lr1_mac_obj );
@@ -891,36 +856,34 @@ status_lorawan_t lr1mac_core_set_region( lr1_stack_mac_t* lr1_mac_obj, smtc_real
     return ERRORLORAWAN;
 }
 
-status_lorawan_t lr1mac_core_set_no_rx_packet_count_config( lr1_stack_mac_t* lr1_mac_obj, uint16_t no_rx_packet_count )
+void lr1mac_core_set_no_rx_packet_threshold( lr1_stack_mac_t* lr1_mac_obj, uint16_t no_rx_packet_reset_threshold )
 {
-    // 0 means this protection is deactivated
-    // if( no_rx_packet_count > 0 )
-    //  {
-    lr1_mac_obj->no_rx_packet_count = no_rx_packet_count;
-    // lr1_mac_obj->adr_ack_cnt                 = 0;  // reset adr counter,
-    return OKLORAWAN;
-    //  }
-    // return ERRORLORAWAN;
+    lr1_mac_obj->no_rx_packet_reset_threshold = no_rx_packet_reset_threshold;
 }
 
-uint16_t lr1mac_core_get_no_rx_packet_count_config( lr1_stack_mac_t* lr1_mac_obj )
+uint16_t lr1mac_core_get_no_rx_packet_threshold( lr1_stack_mac_t* lr1_mac_obj )
 {
-    return lr1_mac_obj->no_rx_packet_count;
+    return lr1_mac_obj->no_rx_packet_reset_threshold;
 }
 
-uint16_t lr1mac_core_get_no_rx_packet_count_current( lr1_stack_mac_t* lr1_mac_obj )
+uint16_t lr1mac_core_get_current_adr_ack_cnt( lr1_stack_mac_t* lr1_mac_obj )
 {
     return lr1_mac_obj->adr_ack_cnt;
 }
 
-uint16_t lr1mac_core_get_no_rx_packet_count_in_mobile_mode( lr1_stack_mac_t* lr1_mac_obj )
+uint16_t lr1mac_core_get_current_no_rx_packet_in_mobile_mode( lr1_stack_mac_t* lr1_mac_obj )
 {
     return lr1_mac_obj->no_rx_packet_count_in_mobile_mode;
 }
 
-void lr1mac_core_set_no_rx_packet_count_in_mobile_mode( lr1_stack_mac_t* lr1_mac_obj, uint16_t no_rx_packet_count )
+void lr1mac_core_reset_no_rx_packet_in_mobile_mode_cnt( lr1_stack_mac_t* lr1_mac_obj )
 {
-    lr1_mac_obj->no_rx_packet_count_in_mobile_mode = no_rx_packet_count;
+    lr1_mac_obj->no_rx_packet_count_in_mobile_mode = 0;
+}
+
+uint16_t lr1mac_core_get_current_no_rx_packet_cnt( lr1_stack_mac_t* lr1_mac_obj )
+{
+    return lr1_mac_obj->no_rx_packet_count;
 }
 
 bool lr1mac_core_available_link_adr_get( lr1_stack_mac_t* lr1_mac_obj )
@@ -972,7 +935,7 @@ bool lr1mac_core_convert_rtc_to_gps_epoch_time( lr1_stack_mac_t* lr1_mac_obj, ui
     // SMTC_MODEM_HAL_TRACE_PRINTF( "tx: %u, rx:%u, diff:%u\n",
     // lr1_mac->timestamp_tx_done_device_time_req_ms,
     //                              lr1_mac->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "DeviceTime GPS : %u.%u s\n", tmp_seconds_since_epoch, tmp_fractional_second );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "DeviceTime GPS : %u.%u s\n", tmp_seconds_since_epoch, tmp_fractional_second );
 
     *seconds_since_epoch = tmp_seconds_since_epoch;
     *fractional_second   = tmp_fractional_second;
@@ -985,11 +948,35 @@ bool lr1mac_core_is_time_valid( lr1_stack_mac_t* lr1_mac_obj )
     uint32_t rtc_s = smtc_modem_hal_get_time_in_s( );
 
     if( ( lr1_mac_obj->timestamp_last_device_time_ans_s != 0 ) &&
-        ( ( rtc_s - lr1_mac_obj->timestamp_last_device_time_ans_s ) < lr1_mac_obj->device_time_invalid_delay_s ) )
+        ( ( int32_t )( rtc_s - lr1_mac_obj->timestamp_last_device_time_ans_s -
+                       lr1_mac_obj->device_time_invalid_delay_s ) < 0 ) )
     {
         return true;
     }
     return false;
+}
+
+uint32_t lr1mac_core_get_time_left_connection_lost( lr1_stack_mac_t* lr1_mac_obj )
+{
+    uint32_t rtc_s                        = smtc_modem_hal_get_time_in_s( );
+    uint32_t time_since_last_correction_s = 0;
+    uint32_t time_left_connection_lost    = lr1_mac_obj->device_time_invalid_delay_s;
+
+    if( lr1_mac_obj->timestamp_last_device_time_ans_s > 0 )
+    {
+        time_since_last_correction_s = rtc_s - lr1_mac_obj->timestamp_last_device_time_ans_s;
+        if( time_since_last_correction_s <= lr1_mac_obj->device_time_invalid_delay_s )
+        {
+            time_left_connection_lost = lr1_mac_obj->device_time_invalid_delay_s - time_since_last_correction_s;
+            // manage the wrapping case shouldn't occur if it occur launch a sync in 1h
+            if( time_left_connection_lost > lr1_mac_obj->device_time_invalid_delay_s )
+            {
+                time_left_connection_lost = 3600;  // todo
+            }
+        }
+    }
+
+    return ( time_left_connection_lost );
 }
 
 void lr1mac_core_set_device_time_callback( lr1_stack_mac_t* lr1_mac_obj,
@@ -1020,18 +1007,30 @@ uint32_t lr1_mac_core_get_device_time_invalid_delay_s( lr1_stack_mac_t* lr1_mac_
 
 status_lorawan_t lr1mac_core_set_ping_slot_periodicity( lr1_stack_mac_t* lr1_mac_obj, uint8_t ping_slot_periodicity )
 {
-    if( ping_slot_periodicity > 7 )
+    if( ping_slot_periodicity > SMTC_REAL_PING_SLOT_PERIODICITY_DEFAULT )
     {
         return ERRORLORAWAN;
     }
 
-    lr1_mac_obj->ping_slot_periodicity = ping_slot_periodicity;
+    // The periodicity must not be modified when the MAC command is currently requested
+    if( ( lr1_mac_obj->ping_slot_info_user_req == USER_MAC_REQ_REQUESTED ) ||
+        ( lr1_mac_obj->ping_slot_info_user_req == USER_MAC_REQ_SENT ) )
+    {
+        return ERRORLORAWAN;
+    }
+
+    lr1_mac_obj->ping_slot_periodicity_req = ping_slot_periodicity;
     return OKLORAWAN;
 }
 
 uint8_t lr1mac_core_get_ping_slot_periodicity( lr1_stack_mac_t* lr1_mac_obj )
 {
-    return lr1_mac_obj->ping_slot_periodicity;
+    return lr1_mac_obj->ping_slot_periodicity_req;
+}
+
+bool lr1mac_core_get_class_b_status( lr1_stack_mac_t* lr1_mac_obj )
+{
+    return lr1_mac_obj->tx_class_b_bit;
 }
 
 status_lorawan_t lr1_mac_core_get_link_check_ans( lr1_stack_mac_t* lr1_mac_obj, uint8_t* margin, uint8_t* gw_cnt )
@@ -1062,6 +1061,46 @@ status_lorawan_t lr1_mac_core_get_device_time_req_status( lr1_stack_mac_t* lr1_m
     return ERRORLORAWAN;
 }
 
+status_lorawan_t lr1_mac_core_get_ping_slot_info_req_status( lr1_stack_mac_t* lr1_mac_obj )
+{
+    if( lr1_mac_obj->ping_slot_info_user_req == USER_MAC_REQ_ACKED )
+    {
+        return OKLORAWAN;
+    }
+    return ERRORLORAWAN;
+}
+
+bool lr1mac_core_get_status_push_network_downlink_to_user( lr1_stack_mac_t* lr1_mac_obj )
+{
+    return lr1_mac_obj->push_network_downlink_to_user;
+}
+
+void lr1mac_core_set_status_push_network_downlink_to_user( lr1_stack_mac_t* lr1_mac_obj, bool enable )
+{
+    lr1_mac_obj->push_network_downlink_to_user = enable;
+}
+
+status_lorawan_t lr1mac_core_set_adr_ack_limit_delay( lr1_stack_mac_t* lr1_mac_obj, uint8_t adr_ack_limit,
+                                                      uint8_t adr_ack_delay )
+{
+    if( ( adr_ack_limit > 1 ) && ( adr_ack_limit < 128 ) && ( adr_ack_delay > 1 ) && ( adr_ack_delay < 128 ) )
+    {
+        lr1_mac_obj->adr_ack_limit_init = adr_ack_limit;
+        lr1_mac_obj->adr_ack_delay_init = adr_ack_delay;
+
+        lr1_mac_obj->adr_ack_cnt = 0;
+        return OKLORAWAN;
+    }
+
+    return ERRORLORAWAN;
+}
+
+void lr1mac_core_get_adr_ack_limit_delay( lr1_stack_mac_t* lr1_mac_obj, uint8_t* adr_ack_limit, uint8_t* adr_ack_delay )
+{
+    *adr_ack_limit = lr1_mac_obj->adr_ack_limit_init;
+    *adr_ack_delay = lr1_mac_obj->adr_ack_delay_init;
+}
+
 /*
  *-----------------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITIONS ------------------------------------------------
@@ -1086,10 +1125,10 @@ static rp_status_t rp_status_get( lr1_stack_mac_t* lr1_mac_obj )
 
 void lr1mac_core_abort( lr1_stack_mac_t* lr1_mac_obj )
 {
-    lr1_mac_obj->valid_rx_packet     = NO_MORE_VALID_RX_PACKET;
-    lr1_mac_obj->type_of_ans_to_send = NOFRAME_TOSEND;
-    lr1_mac_obj->receive_window_type = RECEIVE_NONE;
-    lr1_mac_obj->nb_trans_cpt        = 1;
+    lr1_mac_obj->valid_rx_packet       = NO_MORE_VALID_RX_PACKET;
+    lr1_mac_obj->type_of_ans_to_send   = NOFRAME_TOSEND;
+    lr1_mac_obj->rx_metadata.rx_window = RECEIVE_NONE;
+    lr1_mac_obj->nb_trans_cpt          = 1;
     rp_task_abort( lr1_mac_obj->rp, lr1_mac_obj->stack_id4rp );
 }
 
@@ -1118,6 +1157,23 @@ static void lr1mac_mac_update( lr1_stack_mac_t* lr1_mac_obj, user_rx_packet_type
     }
     lr1_stack_mac_update( lr1_mac_obj );
     *available_rx_packet = lr1_mac_obj->available_app_packet;
+
+    /// If those MAC commands are not acked, set as not requested ///
+    if( lr1_mac_obj->link_check_user_req == USER_MAC_REQ_SENT )
+    {
+        lr1_mac_obj->link_check_user_req = USER_MAC_REQ_NOT_REQUESTED;
+    }
+
+    if( lr1_mac_obj->device_time_user_req == USER_MAC_REQ_SENT )
+    {
+        lr1_mac_obj->device_time_user_req = USER_MAC_REQ_NOT_REQUESTED;
+    }
+
+    if( lr1_mac_obj->ping_slot_info_user_req == USER_MAC_REQ_SENT )
+    {
+        lr1_mac_obj->ping_slot_info_user_req = USER_MAC_REQ_NOT_REQUESTED;
+    }
+    /////////////////////////////////////////////////////////////////
 
     if( lr1_mac_obj->available_app_packet == LORA_RX_PACKET_AVAILABLE )
     {
@@ -1209,10 +1265,10 @@ static void try_recover_nvm( lr1_stack_mac_t* lr1_mac_obj )
         // memcpy1( lr1_mac_obj->join_eui, old_save_fmt.joineui, 8 );
         // memcpy1( lr1_mac_obj->dev_eui, old_save_fmt.deveui, 8 );
         // memcpy1( lr1_mac_obj->app_key, old_save_fmt.appkey, 16 );
-        lr1_mac_obj->dev_nonce        = old_save_fmt.devnonce + 10;  // in 1.0.7 dev nonce was save every 10
-        lr1_mac_obj->adr_custom       = old_save_fmt.adr_custom;
-        lr1_mac_obj->nb_of_reset      = old_save_fmt.nb_reset;
-        lr1_mac_obj->real.region_type = ( smtc_real_region_types_t ) old_save_fmt.region_type;
+        lr1_mac_obj->dev_nonce         = old_save_fmt.devnonce + 10;  // in 1.0.7 dev nonce was save every 10
+        lr1_mac_obj->adr_custom[0]     = old_save_fmt.adr_custom;
+        lr1_mac_obj->nb_of_reset       = old_save_fmt.nb_reset;
+        lr1_mac_obj->real->region_type = ( smtc_real_region_types_t ) old_save_fmt.region_type;
 
         save_devnonce_rst( lr1_mac_obj );
         lr1mac_core_context_save( lr1_mac_obj );  // to save new number of reset

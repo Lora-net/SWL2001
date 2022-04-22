@@ -76,7 +76,7 @@ extern "C" {
                                                         + ALC_SYNC_DEVICE_APP_TIME_PERIODICITY_ANS_SIZE )
 
 #define ALC_SYNC_DEFAULT_REQUEST_PERIOD_S               ( 129600UL )   // 36 hours
-#define ALC_SYNC_DEFAULT_S_SINCE_LAST_CORRECTION        ( 4233600 )    // 49 days (49d×24h×3600s)
+#define ALC_SYNC_DEFAULT_S_SINCE_LAST_CORRECTION        ( 4233600UL )    // 49 days (49d×24h×3600s)
 
 // clang-format on
 
@@ -100,6 +100,7 @@ typedef struct alc_sync_ctx_s
     uint32_t timestamp_last_correction_s;
     uint32_t delay_before_time_no_more_valid_s;
     uint8_t  sync_status;
+    bool     is_sync_dl_received;
 } alc_sync_ctx_t;
 
 /**
@@ -119,7 +120,7 @@ typedef enum alc_sync_cid_req_e
 /**
  * @brief ALC Sync Command ID Answer
  *
- * @enum alc_sync_cid_req_t
+ * @enum alc_sync_cid_ans_t
  */
 typedef enum alc_sync_cid_ans_e
 {
@@ -135,17 +136,6 @@ typedef enum alc_sync_status_e
     ALC_SYNC_MANUAL_SYNC       = 1,
     ALC_SYNC_NETWORK_SYNC_DONE = 2,
 } alc_sync_status_t;
-
-/**
- * @brief App timer structure
- *
- * @struct alc_sync_app_time_ans_t
- */
-typedef struct alc_sync_app_time_ans_s
-{
-    uint32_t time_correction;
-    uint8_t  param;
-} alc_sync_app_time_ans_t;
 
 /*
  * -----------------------------------------------------------------------------
@@ -170,54 +160,6 @@ void alc_sync_init( alc_sync_ctx_t* ctx );
  * @return uint8_t                          Return a bitfield where each bit corresponding to a requested command
  */
 uint8_t alc_sync_parser( alc_sync_ctx_t* ctx, uint8_t* alc_sync_rx_buffer, uint8_t alc_sync_rx_buffer_length );
-
-/**
- * @brief Construct the package version answer
- *
- * @param [in] alc_sync_ctx_t *ctx          clock sync pointer context
- * @return None
- */
-void alc_sync_construct_package_version_answer( alc_sync_ctx_t* ctx );
-
-/**
- * @brief Construct the applicative time request
- *
- * @param [in] alc_sync_ctx_t *ctx  Clock sync pointer context
- * @param [in] device_time          DeviceTime is the current end-device clock and is expressed as the time in seconds
- *                                  since 00:00:00, Sunday 6 th of January 1980 (start of the GPS epoch) modulo 2^32
- * @param [in] ans_required         If the AnsRequired bit is set to 1 the end-device expects an answer whether its
- *                                  clock is well synchronized or not. If this bit is set to 0, this signals to the AS
- *                                  that it only needs to answer if the end-device clock is de-synchronized.
- * @param [in] force_resync_status  If True and NbTransmissions > 0: AppTimeReq will be generate
- *                                  Else: AppTimeReq will be generate what ever the NbTransmissions value
- *
- * @return None
- */
-void alc_sync_construct_app_time_request( alc_sync_ctx_t* ctx, uint32_t device_time, uint8_t ans_required,
-                                          uint8_t force_resync_status );
-
-/**
- * @brief Construct the applicative time periodicity answer
- *
- * @param [in] alc_sync_ctx_t *ctx  Clock sync pointer context
- * @param status                    NotSupported bit is set to 1 if the end-device’s application does not accept a
- *                                  periodicity set by the application server and manages the clock synchronization
- *                                  process and periodicity itself
- * @param time                      Is the current end-device’s clock time captured immediately before the transmission
- *                                  of the radio message
- * @return None
- */
-void alc_sync_construct_app_time_periodicity_answer( alc_sync_ctx_t* ctx, uint8_t status, uint32_t time );
-
-/**
- * @brief Get ALC Sync Tx buffer
- *
- * @param [in] alc_sync_ctx_t *ctx      Clock sync pointer context
- * @param [out] tx_buffer_out*          Contains the output payload for the Application Server
- * @param [out] tx_buffer_length_out*   Contains the output payload length
- * @return void
- */
-void alc_sync_get_tx_buffer( alc_sync_ctx_t* ctx, uint8_t* tx_buffer_out, uint8_t* tx_buffer_length_out );
 
 /**
  * @brief Get ALC Sync periodicity

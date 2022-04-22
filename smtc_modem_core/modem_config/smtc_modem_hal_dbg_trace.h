@@ -68,6 +68,10 @@ extern "C" {
 #ifndef MODEM_HAL_DBG_TRACE_RP
 #define MODEM_HAL_DBG_TRACE_RP                            MODEM_HAL_FEATURE_OFF
 #endif
+
+#ifndef MODEM_HAL_DEEP_DBG_TRACE
+#define MODEM_HAL_DEEP_DBG_TRACE                          MODEM_HAL_FEATURE_OFF
+#endif
 // clang-format on
 
 /*
@@ -77,15 +81,15 @@ extern "C" {
 
 // clang-format off
 #if ( MODEM_HAL_DBG_TRACE_COLOR == MODEM_HAL_FEATURE_ON )
-    #define MODEM_HAL_DBG_TRACE_COLOR_BLACK               "\x1B[0;30m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_RED                 "\x1B[0;31m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_GREEN               "\x1B[0;32m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_YELLOW              "\x1B[0;33m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_BLUE                "\x1B[0;34m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_MAGENTA             "\x1B[0;35m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_CYAN                "\x1B[0;36m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_WHITE               "\x1B[0;37m"
-    #define MODEM_HAL_DBG_TRACE_COLOR_DEFAULT             "\x1B[0m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_BLACK   "\x1B[0;30m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_RED     "\x1B[0;31m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_GREEN   "\x1B[0;32m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_YELLOW  "\x1B[0;33m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_BLUE    "\x1B[0;34m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_MAGENTA "\x1B[0;35m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_CYAN    "\x1B[0;36m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_WHITE   "\x1B[0;37m"
+    #define MODEM_HAL_DBG_TRACE_COLOR_DEFAULT "\x1B[0m"
 #else
     #define MODEM_HAL_DBG_TRACE_COLOR_BLACK   ""
     #define MODEM_HAL_DBG_TRACE_COLOR_RED     ""
@@ -102,73 +106,88 @@ extern "C" {
 
     #define SMTC_MODEM_HAL_TRACE_PRINTF( ... )  smtc_modem_hal_print_trace (  __VA_ARGS__ )
 
-    #define SMTC_MODEM_HAL_TRACE_MSG( msg )                                           \
-    do                                                                         \
-    {                                                                          \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                   \
-        SMTC_MODEM_HAL_TRACE_PRINTF( msg );                                           \
+    #define SMTC_MODEM_HAL_TRACE_MSG( msg )                                                         \
+    do                                                                                              \
+    {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF( "%s%s", MODEM_HAL_DBG_TRACE_COLOR_DEFAULT, msg);               \
     } while ( 0 );
 
-    #define SMTC_MODEM_HAL_TRACE_MSG_COLOR( msg, color )                              \
-    do                                                                         \
-    {                                                                          \
-        SMTC_MODEM_HAL_TRACE_PRINTF( color );                                         \
-        SMTC_MODEM_HAL_TRACE_PRINTF( msg );                                           \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                   \
+    #define SMTC_MODEM_HAL_TRACE_MSG_COLOR( msg, color )                                            \
+    do                                                                                              \
+    {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF( "%s%s%s", color, msg, MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );     \
     } while ( 0 );
 
-    #define SMTC_MODEM_HAL_TRACE_INFO( ... )                                          \
-    do                                                                         \
-    {                                                                          \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_GREEN );                     \
-        SMTC_MODEM_HAL_TRACE_PRINTF( "INFO : " );                                     \
-        SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ );                                   \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                   \
+    #define SMTC_MODEM_HAL_TRACE_INFO( ... )                                                        \
+    do                                                                                              \
+    {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_GREEN "INFO: " __VA_ARGS__);         \
+        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                           \
     } while ( 0 );
 
-    #define SMTC_MODEM_HAL_TRACE_WARNING( ... )                                       \
-    do                                                                         \
-    {                                                                          \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_YELLOW );                    \
-        SMTC_MODEM_HAL_TRACE_PRINTF( "WARN : " );                                     \
-        SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ );                                   \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                   \
+    #define SMTC_MODEM_HAL_TRACE_WARNING( ... )                                                     \
+    do                                                                                              \
+    {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_YELLOW "WARN: " __VA_ARGS__ );       \
+        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                           \
     } while ( 0 );
 
-    #define SMTC_MODEM_HAL_TRACE_ERROR( ... )                                         \
-    do                                                                         \
-    {                                                                          \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_RED );                       \
-        SMTC_MODEM_HAL_TRACE_PRINTF( "ERROR: " );                                     \
-        SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ );                                   \
-        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                   \
+    #define SMTC_MODEM_HAL_TRACE_ERROR( ... )                                                       \
+    do                                                                                              \
+    {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_RED "ERROR: " __VA_ARGS__);          \
+        SMTC_MODEM_HAL_TRACE_PRINTF( MODEM_HAL_DBG_TRACE_COLOR_DEFAULT );                           \
     } while ( 0 );
 
-    #define SMTC_MODEM_HAL_TRACE_ARRAY( msg, array, len )                             \
-    do                                                                         \
-    {                                                                          \
-        SMTC_MODEM_HAL_TRACE_PRINTF("%s - (%lu bytes):\n", msg, ( uint32_t )len );    \
-        for( uint32_t i = 0; i < ( uint32_t )len; i++ )                        \
-        {                                                                      \
-            if( ( ( i % 16 ) == 0 ) && ( i > 0 ) )                             \
-            {                                                                  \
-                SMTC_MODEM_HAL_TRACE_PRINTF("\n");                                    \
-            }                                                                  \
-            SMTC_MODEM_HAL_TRACE_PRINTF( " %02X", array[i] );                         \
-        }                                                                      \
-        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );                                          \
+    #define SMTC_MODEM_HAL_TRACE_ARRAY( msg, array, len )                                           \
+    do                                                                                              \
+    {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF("%s - (%lu bytes):\n", msg, ( uint32_t )len );                  \
+        for( uint32_t i = 0; i < ( uint32_t )len; i++ )                                             \
+        {                                                                                           \
+            if( ( ( i % 16 ) == 0 ) && ( i > 0 ) )                                                  \
+            {                                                                                       \
+                SMTC_MODEM_HAL_TRACE_PRINTF("\n");                                                  \
+            }                                                                                       \
+            SMTC_MODEM_HAL_TRACE_PRINTF( " %02X", array[i] );                                       \
+        }                                                                                           \
+        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );                                                        \
     } while ( 0 );
 
-    #define SMTC_MODEM_HAL_TRACE_PACKARRAY( msg, array, len )   \
-    do                                                   \
-    {                                                    \
-        for( uint32_t i = 0; i < ( uint32_t ) len; i++ ) \
-        {                                                \
-            SMTC_MODEM_HAL_TRACE_PRINTF( "%02X", array[i] );    \
-        }                                                \
+    #define SMTC_MODEM_HAL_TRACE_PACKARRAY( msg, array, len )                                       \
+    do                                                                                              \
+    {                                                                                               \
+        for( uint32_t i = 0; i < ( uint32_t ) len; i++ )                                            \
+        {                                                                                           \
+            SMTC_MODEM_HAL_TRACE_PRINTF( "%02X", array[i] );                                        \
+        }                                                                                           \
     } while( 0 );
 
+    #if (MODEM_HAL_DEEP_DBG_TRACE)
+// Deep debug trace default definitions
+    #define SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( ... )            SMTC_MODEM_HAL_TRACE_PRINTF(__VA_ARGS__)
+    #define SMTC_MODEM_HAL_TRACE_MSG_DEBUG( msg )               SMTC_MODEM_HAL_TRACE_MSG(msg)
+    #define SMTC_MODEM_HAL_TRACE_MSG_COLOR_DEBUG( msg, color )  SMTC_MODEM_HAL_TRACE_MSG_COLOR( msg, color )
+    #define SMTC_MODEM_HAL_TRACE_INFO_DEBUG( ... )              SMTC_MODEM_HAL_TRACE_INFO(__VA_ARGS__)
+    #define SMTC_MODEM_HAL_TRACE_WARNING_DEBUG( ... )           SMTC_MODEM_HAL_TRACE_WARNING(__VA_ARGS__)
+    #define SMTC_MODEM_HAL_TRACE_ERROR_DEBUG( ... )             SMTC_MODEM_HAL_TRACE_ERROR(__VA_ARGS__)
+    #define SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( msg, array, len ) SMTC_MODEM_HAL_TRACE_ARRAY( msg, array, len )
+    #define SMTC_MODEM_HAL_TRACE_PACKARRAY_DEBUG( ... )         SMTC_MODEM_HAL_TRACE_PACKARRAY(__VA_ARGS__)
+
+    #else
+// Deep debug trace default definitions
+    #define SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_MSG_DEBUG( msg )
+    #define SMTC_MODEM_HAL_TRACE_MSG_COLOR_DEBUG( msg, color )
+    #define SMTC_MODEM_HAL_TRACE_INFO_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_WARNING_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_ERROR_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( msg, array, len )
+    #define SMTC_MODEM_HAL_TRACE_PACKARRAY_DEBUG( ... )
+    #endif 
+
 #else
+//Trace default definitions
     #define SMTC_MODEM_HAL_TRACE_PRINTF( ... )
     #define SMTC_MODEM_HAL_TRACE_MSG( msg )
     #define SMTC_MODEM_HAL_TRACE_MSG_COLOR( msg, color )
@@ -178,6 +197,15 @@ extern "C" {
     #define SMTC_MODEM_HAL_TRACE_ARRAY( msg, array, len )
     #define SMTC_MODEM_HAL_TRACE_PACKARRAY( ... )
 
+// Deep debug trace default definitions
+    #define SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_MSG_DEBUG( msg )
+    #define SMTC_MODEM_HAL_TRACE_MSG_COLOR_DEBUG( msg, color )
+    #define SMTC_MODEM_HAL_TRACE_INFO_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_WARNING_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_ERROR_DEBUG( ... )
+    #define SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( msg, array, len )
+    #define SMTC_MODEM_HAL_TRACE_PACKARRAY_DEBUG( ... )
 #endif
 
 #if defined (PERF_TEST_ENABLED)

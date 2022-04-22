@@ -46,6 +46,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "lr_fhss_v1_base_types.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -56,6 +57,16 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
+
+/**
+ * @brief Number of state bytes necessary to guarantee functionality for all radios
+ */
+#define RAL_LR_FHSS_STATE_MAXSIZE ( 24 )
+
+/**
+ * @brief Length, in bytes, of a LR-FHSS sync word
+ */
+#define LR_FHSS_SYNC_WORD_BYTES ( 4 )
 
 /**
  * @brief Reserved value used to configure a reception in continuous mode
@@ -132,11 +143,11 @@ typedef enum ral_lora_bw_e
     RAL_LORA_BW_041_KHZ,   // All except SX128X and SX1272
     RAL_LORA_BW_062_KHZ,   // All except SX128X and SX1272
     RAL_LORA_BW_125_KHZ,   // All except SX128X
-    RAL_LORA_BW_200_KHZ,   // SX128X only
+    RAL_LORA_BW_200_KHZ,   // LR112X and SX128X only
     RAL_LORA_BW_250_KHZ,   // All except SX128X
-    RAL_LORA_BW_400_KHZ,   // SX128X only
+    RAL_LORA_BW_400_KHZ,   // LR112X and SX128X only
     RAL_LORA_BW_500_KHZ,   // All except SX128X
-    RAL_LORA_BW_800_KHZ,   // SX128X only
+    RAL_LORA_BW_800_KHZ,   // LR112X and SX128X only
     RAL_LORA_BW_1600_KHZ,  // SX128X only
 } ral_lora_bw_t;
 
@@ -378,8 +389,31 @@ typedef struct ral_flrc_pkt_params_s
     ral_flrc_crc_type_t crc_type;
 } ral_flrc_pkt_params_t;
 
-/*
- * IRQ definitions
+/*!
+ * @brief LR FHSS parameters
+ */
+typedef struct ral_lr_fhss_params_s
+{
+    lr_fhss_v1_params_t lr_fhss_params;
+    uint32_t            center_frequency_in_hz;
+    int8_t              device_offset;
+} ral_lr_fhss_params_t;
+
+/*!
+ * @brief Memory allocated to hold LR-FHSS state
+ *
+ * This memory is to be allocated by the caller. It is used by the radio driver to store internal
+ * LR-FHSS state. This is not needed by all radio drivers, but in order to support all transceivers,
+ * this should point to a block of at least RAL_LR_FHSS_STATE_MAXSIZE bytes of RAM. If you are only
+ * targeting LR11XX, for instance, you may use NULL.
+ */
+typedef void* ral_lr_fhss_memory_state_t;
+
+/**
+ * @brief IRQ definitions
+ *
+ * @remark This enumeration cannot accept more than 16 entries in addition to @ref RAL_IRQ_NONE and @ref RAL_IRQ_ALL -
+ * this is related to the fact that @ref ral_irq_t is 16-bit long
  */
 enum ral_irq_e
 {
@@ -393,18 +427,19 @@ enum ral_irq_e
     RAL_IRQ_RX_CRC_ERROR         = ( 1 << 7 ),
     RAL_IRQ_CAD_DONE             = ( 1 << 8 ),
     RAL_IRQ_CAD_OK               = ( 1 << 9 ),
-    RAL_IRQ_WIFI_SCAN_DONE       = ( 1 << 10 ),
-    RAL_IRQ_GNSS_SCAN_DONE       = ( 1 << 11 ),
+    RAL_IRQ_LR_FHSS_HOP          = ( 1 << 10 ),
+    RAL_IRQ_WIFI_SCAN_DONE       = ( 1 << 11 ),
+    RAL_IRQ_GNSS_SCAN_DONE       = ( 1 << 12 ),
     RAL_IRQ_ALL = RAL_IRQ_TX_DONE | RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT | RAL_IRQ_RX_PREAMBLE_DETECTED |
                   RAL_IRQ_RX_HDR_OK | RAL_IRQ_RX_HDR_ERROR | RAL_IRQ_RX_CRC_ERROR | RAL_IRQ_CAD_DONE | RAL_IRQ_CAD_OK |
-                  RAL_IRQ_WIFI_SCAN_DONE | RAL_IRQ_GNSS_SCAN_DONE,
+                  RAL_IRQ_LR_FHSS_HOP | RAL_IRQ_WIFI_SCAN_DONE | RAL_IRQ_GNSS_SCAN_DONE,
 };
 
 typedef uint16_t ral_irq_t;
 
 /*
  * -----------------------------------------------------------------------------
- * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ * --- PUBLIC FUNCTION PROTOTYPES ----------------------------------------------
  */
 
 static inline uint8_t ral_compute_lora_ldro( const ral_lora_sf_t sf, const ral_lora_bw_t bw )

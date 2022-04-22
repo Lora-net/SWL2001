@@ -39,12 +39,37 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "smtc_real_defs.h"
 #include "lr1mac_defs.h"
 #include "lr1_stack_mac_layer.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
 
 /**
  * \brief
@@ -148,22 +173,6 @@ uint32_t region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_stack_mac_t* lr1_mac
  * \param [OUT] return
  */
 uint32_t region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8_t index );
-/**
- * \brief   Convert DR to SF and BW
- * \remark
- * \param  [IN]  uint8_t datarate
- */
-void region_cn_470_rp_1_0_rx_dr_to_sf_bw( uint8_t dr, uint8_t* sf, lr1mac_bandwidth_t* bw,
-                                          modulation_type_t* modulation_type );
-
-/**
- * @brief Convert SF and BW to DR
- *
- * @param sf
- * @param bw
- * @return uint8_t
- */
-uint8_t region_cn_470_rp_1_0_sf_bw_to_dr( lr1_stack_mac_t* lr1_mac, uint8_t sf, uint8_t bw );
 
 /**
  * @brief Get the beacon frequency corresponding to a gps_time
@@ -190,3 +199,5 @@ uint32_t region_cn_470_rp_1_0_get_rx_ping_slot_frequency_channel( lr1_stack_mac_
 #endif
 
 #endif  // REGION_CN470_RP_1_0_H
+
+/* --- EOF ------------------------------------------------------------------ */

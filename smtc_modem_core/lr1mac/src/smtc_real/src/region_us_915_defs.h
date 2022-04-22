@@ -39,10 +39,20 @@
 extern "C" {
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "lr1mac_defs.h"
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
 
 /* clang-format off */
 #define NUMBER_OF_TX_CHANNEL_US_915         (72)            // TX 64 125KHz + 8 500KHz channels
@@ -50,10 +60,12 @@ extern "C" {
 #define JOIN_ACCEPT_DELAY1_US_915           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_US_915           (6)             // define in seconds
 #define RECEIVE_DELAY1_US_915               (1)             // define in seconds
-#if defined( LR1110 )
-#define TX_POWER_EIRP_US_915                (22)            // define in dbm
+#if defined( LR11XX ) || defined( SX1262 )
+// This value must be the MIN of MAX supported by the region and the radio, region is 30dBm but radio is 22dBm ERP (+2 to EIRP) 
+#define TX_POWER_EIRP_US_915                (24)            // define in dbm
 #else
-#define TX_POWER_EIRP_US_915                (14)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
+// This value must be the MIN of MAX supported by the region and the radio, region is 30dBm but radio is 14dBm ERP (+2 to EIRP)
+#define TX_POWER_EIRP_US_915                (16)            // define in dbm  // TODO must be checked, SX126x dependent for the max power
 #endif
 #define MAX_TX_POWER_IDX_US_915             (14)            // index ex LinkADRReq
 #define ADR_ACK_LIMIT_US_915                (64)
@@ -67,15 +79,30 @@ extern "C" {
 #define SYNC_WORD_PRIVATE_US_915            (0x12)
 #define SYNC_WORD_PUBLIC_US_915             (0x34)
 #define MIN_TX_DR_US_915                    (0)
-#define MAX_TX_DR_US_915                    (4)
+#define MAX_TX_DR_LORA_US_915               (4)
+#define MAX_TX_DR_US_915                    (6)
 #define MIN_TX_DR_LIMIT_US_915              (0)
-#define MAX_TX_DEFAULT_DR_US915             (3)
-#define NUMBER_OF_TX_DR_US_915              (5)
+#define NUMBER_OF_TX_DR_US_915              (7)
 #define MIN_RX_DR_US_915                    (8)
 #define MAX_RX_DR_US_915                    (13)
-#define DR_BITFIELD_SUPPORTED_US_915        (uint16_t)(0x3F1F) // DR13..DR8-DR4..DR0 Datarate bitfield supported by the region
+
+#if defined( RP2_101 )
+#define DR_BITFIELD_SUPPORTED_US_915        (uint16_t)( ( 1 << DR13 ) | ( 1 << DR12 ) | ( 1 << DR11 ) | ( 1 << DR10 ) | ( 1 << DR9 ) | ( 1 << DR8 ) | \
+                                                        ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#elif defined( RP2_103 )
+#define DR_BITFIELD_SUPPORTED_US_915        (uint16_t)( ( 1 << DR13 ) | ( 1 << DR12 ) | ( 1 << DR11 ) | ( 1 << DR10 ) | ( 1 << DR9 ) | ( 1 << DR8 ) | \
+                                                        ( 1 << DR6 ) | ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#endif
+
 #define DEFAULT_TX_DR_125_BIT_FIELD_US_915  (uint16_t)( ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+
+#if defined( RP2_101 )
 #define DEFAULT_TX_DR_500_BIT_FIELD_US_915  (uint16_t)( ( 1 << DR4 ) )
+#elif defined( RP2_103 )
+#define DEFAULT_TX_DR_500_BIT_FIELD_US_915  (uint16_t)( ( 1 << DR6 ) | ( 1 << DR5 ) | ( 1 << DR4 ) )
+#endif
+
+
 #define TX_PARAM_SETUP_REQ_SUPPORTED_US_915 (false)         // This mac command is NOT required for US915
 #define NEW_CHANNEL_REQ_SUPPORTED_US_915    (false)         // This mac command is NOT required for US915
 #define DTC_SUPPORTED_US_915                (false)
@@ -92,87 +119,19 @@ extern "C" {
 
 // Class B
 #define BEACON_DR_US_915                    (8)
-#define BEACON_FREQ_START_US_915            (923300000)     // Hz
-#define BEACON_STEP_US_915                  (60000000)      // Hz
-#define PING_SLOT_FREQ_START_US_915         (923300000)     // Hz
-#define PING_SLOT_STEP_US_915               (60000000)      // Hz
+#define BEACON_FREQ_START_US_915            (923300000) // Hz
+#define BEACON_STEP_US_915                  (600000)    // Hz
+#define PING_SLOT_FREQ_START_US_915         (923300000) // Hz
+#define PING_SLOT_STEP_US_915               (600000)    // Hz
 
+// LR-FHSS
+#define LR_FHSS_NA                          (0xFFFFFFFF) // LR-FHSS Not Applicable
 // clang-format on
 
-/**
- * Up/Down link data rates offset definition
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
  */
-static const uint8_t datarate_offsets_us_915[5][4] = {
-    { 10, 9, 8, 8 },     // DR 0
-    { 11, 10, 9, 8 },    // DR 1
-    { 12, 11, 10, 9 },   // DR 2
-    { 13, 12, 11, 10 },  // DR 3
-    { 13, 13, 12, 11 },  // DR 4
-};
-
-static const uint8_t MAX_RX1_DR_OFSSET_US_915 =
-    sizeof( datarate_offsets_us_915[0] ) / sizeof( datarate_offsets_us_915[0][0] );
-
-/**
- * Data rates table definition
- */
-static const uint8_t datarates_to_sf_us_915[] = { 10, 9, 8, 7, 8, 0, 0, 0, 12, 11, 10, 9, 8, 7, 0, 0 };
-
-/**
- * Bandwidths table definition in KHz
- */
-static const uint32_t datarates_to_bandwidths_us_915[] = { BW125, BW125, BW125, BW125, BW500, BW_RFU, BW_RFU, BW_RFU,
-                                                           BW500, BW500, BW500, BW500, BW500, BW500,  BW_RFU, BW_RFU };
-
-/**
- * Payload max size table definition in bytes
- */
-static const uint8_t M_us_915[] = { 19, 61, 133, 250, 250, 0, 0, 0, 61, 137, 250, 250, 250, 250, 0, 0 };
-
-/**
- * Payload max size table definition in bytes
- */
-static const uint8_t N_us_915[] = { 11, 53, 125, 242, 242, 0, 0, 0, 53, 129, 242, 242, 242, 242, 0, 0 };
-
-/**
- * Mobile long range datarate distribution
- * DR0: 20%,
- * DR1: 20%,
- * DR2: 30%,
- * DR3: 30%,
- * DR4:  0%
- */
-static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_US_915[] = { 2, 2, 3, 3, 0 };
-
-/**
- * Mobile low power datarate distribution
- * DR0:  0%,
- * DR1: 10%,
- * DR2: 40%,
- * DR3: 50%,
- * DR4:  0%
- */
-static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_US_915[] = { 0, 1, 4, 5, 0 };
-
-/**
- * Join datarate distribution
- * DR0: 50%,
- * DR1:  0%,
- * DR2:  0%,
- * DR3:  0%,
- * DR4: 50%
- */
-static const uint8_t JOIN_DR_DISTRIBUTION_US_915[] = { 5, 0, 0, 0, 5 };
-
-/**
- * Default datarate distribution
- * DR0: 100%,
- * DR1:   0%,
- * DR2:   0%,
- * DR3:   0%,
- * DR4:   0%
- */
-static const uint8_t DEFAULT_DR_DISTRIBUTION_US_915[] = { 1, 0, 0, 0, 0 };
 
 /**
  * Bank contains 8 channels
@@ -205,8 +164,122 @@ typedef struct region_us915_context_s
 
 } region_us915_context_t;
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
+
+static const uint8_t SYNC_WORD_LR_FHSS_US_915[] = { 0x2C, 0x0F, 0x79, 0x95 };
+
+/**
+ * Up/Down link data rates offset definition
+ */
+static const uint8_t datarate_offsets_us_915[7][4] = {
+    { 10, 9, 8, 8 },     // DR 0
+    { 11, 10, 9, 8 },    // DR 1
+    { 12, 11, 10, 9 },   // DR 2
+    { 13, 12, 11, 10 },  // DR 3
+    { 13, 13, 12, 11 },  // DR 4
+    { 10, 9, 8, 8 },     // DR 5
+    { 11, 10, 9, 8 },    // DR 6
+};
+
+/**
+ * @brief uplink darate backoff
+ *
+ */
+static const uint8_t datarate_backoff_us_915[] = {
+    0,  // DR0 -> DR0
+    0,  // DR1 -> DR0
+    1,  // DR2 -> DR1
+    2,  // DR3 -> DR2
+    3,  // DR4 -> DR3
+    0,  // DR5 -> DR0
+    5   // DR6 -> DR5
+};
+
+static const uint8_t NUMBER_RX1_DR_OFFSET_US_915 =
+    sizeof( datarate_offsets_us_915[0] ) / sizeof( datarate_offsets_us_915[0][0] );
+
+/**
+ * Data rates table definition
+ */
+static const uint8_t datarates_to_sf_us_915[] = { 10, 9, 8, 7, 8, 0, 0, 0, 12, 11, 10, 9, 8, 7, 0, 0 };
+
+/**
+ * Bandwidths table definition in KHz
+ */
+static const uint32_t datarates_to_bandwidths_us_915[] = { BW125, BW125, BW125, BW125, BW500, BW_RFU, BW_RFU, BW_RFU,
+                                                           BW500, BW500, BW500, BW500, BW500, BW500,  BW_RFU, BW_RFU };
+
+/**
+ * LR-FHSS Coding Rate table definition depending on DR
+ */
+static const uint32_t datarates_to_lr_fhss_cr_us_915[NUMBER_OF_TX_DR_US_915] = {
+    LR_FHSS_NA, LR_FHSS_NA, LR_FHSS_NA, LR_FHSS_NA, LR_FHSS_NA, LR_FHSS_V1_CR_1_3, LR_FHSS_V1_CR_2_3
+};
+
+/**
+ * Payload max size table definition in bytes
+ */
+static const uint8_t M_us_915[] = { 19, 61, 133, 250, 250, 58, 133, 0, 61, 137, 250, 250, 250, 250, 0, 0 };
+
+/**
+ * Payload max size table definition in bytes
+ */
+static const uint8_t N_us_915[] = { 11, 53, 125, 242, 242, 50, 125, 0, 53, 129, 242, 242, 242, 242, 0, 0 };
+
+/**
+ * Mobile long range datarate distribution
+ * DR0: 20%,
+ * DR1: 20%,
+ * DR2: 30%,
+ * DR3: 30%,
+ * DR4:  0%
+ */
+static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_US_915[] = { 2, 2, 3, 3, 0, 0, 0 };
+
+/**
+ * Mobile low power datarate distribution
+ * DR0:  0%,
+ * DR1: 10%,
+ * DR2: 40%,
+ * DR3: 50%,
+ * DR4:  0%
+ */
+static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_US_915[] = { 0, 1, 4, 5, 0, 0, 0 };
+
+/**
+ * !! NOT USED IN US915 !!
+ *
+ * Join datarate distribution
+ * DR0: 50%,
+ * DR1:  0%,
+ * DR2:  0%,
+ * DR3:  0%,
+ * DR4: 50%
+ */
+static const uint8_t JOIN_DR_DISTRIBUTION_US_915[] = { 5, 0, 0, 0, 5, 0, 0 };
+
+/**
+ * Default datarate distribution
+ * DR0: 100%,
+ * DR1:   0%,
+ * DR2:   0%,
+ * DR3:   0%,
+ * DR4:   0%
+ */
+static const uint8_t DEFAULT_DR_DISTRIBUTION_US_915[] = { 1, 0, 0, 0, 0, 0, 0 };
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif  // REGION_US915_DEFS_H
+
+/* --- EOF ------------------------------------------------------------------ */

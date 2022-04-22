@@ -28,24 +28,6 @@ MODEM_C_INCLUDES =  \
 	-Ismtc_modem_core/smtc_modem_crypto/soft_secure_element
 
 #-----------------------------------------------------------------------------
-# Region
-#-----------------------------------------------------------------------------
-REGION_AS_923 = no
-REGION_AU_915 = no
-REGION_CN_470 = no
-REGION_CN_470_RP_1_0 = no
-REGION_EU_868 = no
-REGION_IN_865 = no
-REGION_KR_920 = no
-REGION_RU_864 = no
-REGION_US_915 = no
-
-override REGION := WW2G4
-
-MODEM_C_DEFS += \
-	-DREGION_WW2G4
-
-#-----------------------------------------------------------------------------
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
 MODEM_C_DEFS += \

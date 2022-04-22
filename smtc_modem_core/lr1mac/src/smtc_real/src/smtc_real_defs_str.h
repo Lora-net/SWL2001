@@ -35,12 +35,27 @@
 #ifndef __REAL_DEFS_STR_H__
 #define __REAL_DEFS_STR_H__
 
-#include <stdint.h>
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- DEPENDENCIES ------------------------------------------------------------
+ */
+
+#include <stdint.h>
+#include <stdbool.h>
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC MACROS -----------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC CONSTANTS --------------------------------------------------------
+ */
 
 #if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
 static const char* smtc_real_region_list_str[] = {
@@ -80,8 +95,25 @@ static const char* smtc_real_region_list_str[] = {
 #if defined( REGION_CN_470_RP_1_0 )
     [SMTC_REAL_REGION_CN_470_RP_1_0] = "CN470_RP_1_0",
 #endif
+#if defined( RP2_103 )
+#if defined( REGION_AS_923 )
+    [SMTC_REAL_REGION_AS_923_GRP4] = "AS923_GRP4",
+#endif
+#endif
 };
 
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+ */
+
 #endif  // __REAL_DEFS_STR_H__
+
+/* --- EOF ------------------------------------------------------------------ */

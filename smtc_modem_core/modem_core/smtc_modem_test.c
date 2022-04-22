@@ -59,8 +59,8 @@
 #include "sx128x_hal.h"
 #elif defined( SX126X )
 #include "sx126x_hal.h"
-#elif defined( LR1110 )
-#include "lr1110_hal.h"
+#elif defined( LR11XX )
+#include "lr11xx_hal.h"
 #else
 #error "Please select radio board.."
 #endif
@@ -281,7 +281,7 @@ smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_l
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_rx_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %d\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
@@ -356,7 +356,7 @@ smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_l
         rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
         rp_radio_params.tx.lora  = lora_param;
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Tx - Freq:%d, Power:%d, sf:%u, bw:%u, cr:%u, length:%u\n", frequency_hz,
+        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Tx - Freq:%u, Power:%d, sf:%u, bw:%u, cr:%u, length:%u\n", frequency_hz,
                                      tx_power_dbm, rp_radio_params.tx.lora.mod_params.sf, lora_param.mod_params.bw,
                                      lora_param.mod_params.cr, payload_length );
     }
@@ -402,7 +402,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_rx_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %d\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
@@ -418,7 +418,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
     lora_param.mod_params.bw = RAL_LORA_BW_800_KHZ;
 #elif defined( SX126X )
     lora_param.mod_params.bw = RAL_LORA_BW_125_KHZ;
-#elif defined( LR1110 )
+#elif defined( LR11XX )
     lora_param.mod_params.bw = RAL_LORA_BW_125_KHZ;
 #endif
     lora_param.mod_params.cr = smtc_real_get_coding_rate( modem_test_context.lr1_mac_obj );
@@ -428,7 +428,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
     radio_params.pkt_type          = RAL_PKT_TYPE_LORA;
     radio_params.tx.lora           = lora_param;
 
-    rp_task_t rp_task;
+    rp_task_t rp_task             = { 0 };
     rp_task.hook_id               = modem_test_context.hook_id;
     rp_task.state                 = RP_TASK_STATE_ASAP;
     rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 2;
@@ -441,7 +441,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
         SMTC_MODEM_HAL_TRACE_PRINTF( "Radio planner hook %d is busy \n", rp_task.hook_id );
     }
 
-    SMTC_MODEM_HAL_TRACE_PRINTF( "Tx CW - Freq:%d, Power:%d\n", frequency_hz, lora_param.output_pwr_in_dbm );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "Tx CW - Freq:%u, Power:%d\n", frequency_hz, lora_param.output_pwr_in_dbm );
     return SMTC_MODEM_RC_OK;
 }
 
@@ -453,9 +453,9 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_rx_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %d\n", frequency_hz );
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %u\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
     }
     if( sf >= SMTC_MODEM_TEST_LORA_SF_COUNT )
@@ -531,7 +531,7 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
         rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
         rp_radio_params.rx.lora  = lora_param;
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Rx - Freq:%d, sf:%u, bw:%u, cr:%u\n", frequency_hz,
+        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Rx - Freq:%u, sf:%u, bw:%u, cr:%u\n", frequency_hz,
                                      rp_radio_params.rx.lora.mod_params.sf, bw, cr );
     }
 
@@ -566,7 +566,7 @@ smtc_modem_return_code_t smtc_modem_test_rssi( uint32_t frequency_hz, smtc_modem
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_rx_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( " Invalid Frequency %d\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
@@ -593,7 +593,8 @@ smtc_modem_return_code_t smtc_modem_test_rssi( uint32_t frequency_hz, smtc_modem
                    ( void ( * )( void* ) ) modem_test_compute_rssi_callback, ( void* ) ( &modem_test_context ),
                    ( void ( * )( void* ) ) modem_test_compute_rssi_callback, ( void* ) ( &modem_test_context ),
                    ( void ( * )( void* ) ) modem_test_compute_rssi_callback, ( void* ) ( &modem_test_context ) );
-    smtc_lbt_configure( modem_test_context.lr1_mac_obj->lbt_obj, time_ms, 50, bw_tmp );
+    smtc_lbt_set_parameters( modem_test_context.lr1_mac_obj->lbt_obj, time_ms, 50, bw_tmp );
+    smtc_lbt_set_state( modem_test_context.lr1_mac_obj->lbt_obj, true );
     smtc_lbt_listen_channel( modem_test_context.lr1_mac_obj->lbt_obj, frequency_hz, 0, smtc_modem_hal_get_time_in_ms( ),
                              0 );
 
@@ -686,9 +687,9 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_write( uint8_t* command, u
 #elif defined( SX126X )
     if( sx126x_hal_write( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
         SX126X_HAL_STATUS_OK )
-#elif defined( LR1110_TRANSCEIVER )
-    if( lr1110_hal_write( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
-        LR1110_HAL_STATUS_OK )
+#elif defined( LR11XX_TRANSCEIVER )
+    if( lr11xx_hal_write( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
+        LR11XX_HAL_STATUS_OK )
 #elif defined( LR1110_MODEM_E )
     return SMTC_MODEM_RC_FAIL;
 #else
@@ -714,9 +715,9 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_read( uint8_t* command, ui
 #elif defined( SX126X )
     if( sx126x_hal_read( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
         SX126X_HAL_STATUS_OK )
-#elif defined( LR1110_TRANSCEIVER )
-    if( lr1110_hal_read( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
-        LR1110_HAL_STATUS_OK )
+#elif defined( LR11XX_TRANSCEIVER )
+    if( lr11xx_hal_read( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
+        LR11XX_HAL_STATUS_OK )
 #elif defined( LR1110_MODEM_E )
     return SMTC_MODEM_RC_FAIL;
 #else
@@ -760,7 +761,7 @@ void modem_test_tx_callback( modem_test_context_t* context )
         SMTC_MODEM_HAL_TRACE_PRINTF( " modem_test_tx_callback ABORTED\n" );
         return;
     }
-    rp_task_t rp_task;
+    rp_task_t rp_task = { 0 };
 
     rp_radio_params_t radio_params = context->radio_params;
 
@@ -833,7 +834,7 @@ void modem_test_rx_callback( modem_test_context_t* context )
         return;
     }
 
-    rp_task_t         rp_task;
+    rp_task_t         rp_task      = { 0 };
     rp_radio_params_t radio_params = context->radio_params;
 
     rp_task.hook_id          = context->hook_id;
@@ -861,18 +862,9 @@ void test_mode_cw_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    if( ral_init( &( rp->radio->ral ) ) )
-    {
-        smtc_modem_hal_mcu_panic( );
-    }
-    if( ralf_setup_lora( rp->radio, &rp->radio_params[id].tx.lora ) != RAL_STATUS_OK )
-    {
-        smtc_modem_hal_mcu_panic( );
-    }
-    if( ral_set_tx_cw( &( rp->radio->ral ) ) != RAL_STATUS_OK )
-    {
-        smtc_modem_hal_mcu_panic( );
-    }
+    smtc_modem_hal_assert( ral_init( &( rp->radio->ral ) ) == RAL_STATUS_OK );
+    smtc_modem_hal_assert( ralf_setup_lora( rp->radio, &rp->radio_params[id].tx.lora ) == RAL_STATUS_OK );
+    smtc_modem_hal_assert( ral_set_tx_cw( &( rp->radio->ral ) ) == RAL_STATUS_OK );
 }
 
 /* --- EOF ------------------------------------------------------------------ */

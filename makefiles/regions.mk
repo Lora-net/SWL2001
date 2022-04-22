@@ -11,8 +11,10 @@ REGION_IN_865 = no
 REGION_KR_920 = no
 REGION_RU_864 = no
 REGION_US_915 = no
+REGION_WW_2G4 = no
 
 ifndef REGION
+ifneq ($(RADIO),sx128x)
 REGION_AS_923 = yes
 REGION_AU_915 = yes
 REGION_CN_470 = yes
@@ -22,7 +24,29 @@ REGION_IN_865 = yes
 REGION_KR_920 = yes
 REGION_RU_864 = yes
 REGION_US_915 = yes
+else
+REGION_WW_2G4 = yes
+endif
+ifeq ($(RADIO),lr1120)
+REGION_WW_2G4 = yes
+endif
 endif # REGION
+
+#-----------------------------------------------------------------------------
+# Regional Parameter Version
+#-----------------------------------------------------------------------------
+
+ifndef RP_VERSION
+MODEM_C_DEFS += -DRP2_101
+endif
+
+ifeq ($(RP_VERSION),RP2_103)
+MODEM_C_DEFS += -DRP2_103
+endif
+
+ifeq ($(RP_VERSION),RP2_101)
+MODEM_C_DEFS += -DRP2_101
+endif
 
 #-----------------------------------------------------------------------------
 # Extract all comma-separated regions into a list
@@ -59,6 +83,9 @@ REGION_RU_864 = yes
 endif
 ifneq ($(filter US_915,$(REGION_LIST)),)
 REGION_US_915 = yes
+endif
+ifneq ($(filter WW_2G4,$(REGION_LIST)),)
+REGION_WW_2G4 = yes
 endif
 
 #-----------------------------------------------------------------------------
@@ -100,3 +127,9 @@ ifeq ($(REGION_US_915), yes)
 LR1MAC_C_SOURCES += smtc_modem_core/lr1mac/src/smtc_real/src/region_us_915.c
 MODEM_C_DEFS += -DREGION_US_915
 endif
+ifeq ($(REGION_WW_2G4), yes)
+LR1MAC_C_SOURCES += smtc_modem_core/lr1mac/src/smtc_real/src/region_ww2g4.c
+MODEM_C_DEFS += -DREGION_WW2G4
+endif
+
+

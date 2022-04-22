@@ -10,16 +10,27 @@ The LoRaWAN version that is currently implemented in LoRa Basics Modem is v1.0.4
 
 LoRa Basics Modem supports the following LoRaWAN regions:
 
-* EU868
-* US915
-* CN470_RP_1_0
+* AS_923 (AS923-1, AS923-2, AS923-3)
+* AU_915
+* CN_470
+* CN_470_RP_1_0
+* EU_868
+* IN_865
+* KR_920
+* RU_864
+* US_915
+
+### LoRaWAN regional parameters
+
+Default regional parameters version supported by LoRa Basics Modem is rp2-1.0.1. It is possible to switch to rp2-1.0.3 at compile time.
 
 ### LoRaWAN class
 
 LoRa Basics Modem supports the following LoRaWAN classes:
 
 * Class A
-* Class C
+* Class B (with up to 4 multicast sessions)
+* Class C (with up to 4 multicast sessions)
 
 ## LoRa Basics Modem services
 
@@ -49,10 +60,21 @@ The Hardware Abstraction Layer of LoRa Basics Modem is defined in the `smtc_mode
 LoRa Basics Modem supports the following transceivers:
 
 * LR1110 with firmware 0x0307.
+* SX1261
+* SX1262
+
+## Known Limitations
+
+* [LFU] In case LoRa Basics Modem is acting in US915 region with datarate DR0, files smaller than 13 bytes are not properly sent and cannot be econstructed on LoRa Cloud side
+* [LFU] LoRa Basics Modem does not reject files with a size between 8181 and 8192 bytes while they cannot be sent properly
+* [charge] Values returned by `smtc_modem_get_charge()` for regions CN470 and CN470_RP1 are not accurate
+* [charge] Values returned by `smtc_modem_get_charge()` for the LR-FHSS based datarate are not accurate
+* [LBT] On LR1110 target, sometimes the LBT pre-hook can be outdated and aborted which leads to no uplink issued (this is due to a radio reset called before starting LBT operation which adds the LR1110 boot delay before any LBT actions) - as workaround, the call to `ral_init()` can be removed from `smtc_modem_core/lr1mac/src/services/smtc_lbt.c`
+* [ADR] When a MAC command `link_adr_req` with a new channel mask is received, it is rejected if the custom datarate profile is enabled and configured with the highest datarate of the corresponding region - as a workaround, make sure there is at least one datarate different from the highest possible one in the custom ADR list
 
 ## Disclaimer
 
-This software has been extensively tested when targeting LR1110 for the EU868, US915, and CN470_RP_1_0 LoRaWAN regions. For all other combinations of features this software shall be considered an Engineering Sample.
+This software has been extensively tested when targeting LR1110 / SX1261 / SX1262 for LoRaWAN regions mentioned in [this paragraph](#lorawan-region). For all other combinations of features this software shall be considered an Engineering Sample.
 
 All customers wanting to leverage LoRa Basics Modem for 2.4GHz running with SX1280 transceiver must still refer to the [release v1.0.1](https://github.com/lorabasics/lorabasicsmodem/releases/tag/v1.0.1) for which Semtech provides technical customer support.
 
