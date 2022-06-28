@@ -67,10 +67,29 @@ LoRa Basics Modem supports the following transceivers:
 
 * [LFU] In case LoRa Basics Modem is acting in US915 region with datarate DR0, files smaller than 13 bytes are not properly sent and cannot be econstructed on LoRa Cloud side
 * [LFU] LoRa Basics Modem does not reject files with a size between 8181 and 8192 bytes while they cannot be sent properly
+* [LFU] Enabling encryption on a file with a size larger than 4080 bytes will prevent this file from being properly decrypted. Recommendation is to not use encryption for files with a size larger than 4080 bytes.
 * [charge] Values returned by `smtc_modem_get_charge()` for regions CN470 and CN470_RP1 are not accurate
 * [charge] Values returned by `smtc_modem_get_charge()` for the LR-FHSS based datarate are not accurate
 * [LBT] On LR1110 target, sometimes the LBT pre-hook can be outdated and aborted which leads to no uplink issued (this is due to a radio reset called before starting LBT operation which adds the LR1110 boot delay before any LBT actions) - as workaround, the call to `ral_init()` can be removed from `smtc_modem_core/lr1mac/src/services/smtc_lbt.c`
 * [ADR] When a MAC command `link_adr_req` with a new channel mask is received, it is rejected if the custom datarate profile is enabled and configured with the highest datarate of the corresponding region - as a workaround, make sure there is at least one datarate different from the highest possible one in the custom ADR list
+
+In [the simple application example](/utilities/user_app/), the implementation of [smtc_modem_hal_get_time_in_ms](/utilities/user_app/smtc_hal_l4/smtc_hal_rtc.c) does not cover the full scale of the 32-bit counter and will wrap earlier than expected. As a consequence, LoRa Basics Modem may reset after the wrapping time around 4.9 days. Find below a correct implementation:
+
+```c
+uint32_t hal_rtc_get_time_ms( void )
+{
+    uint32_t seconds             = 0;
+    uint16_t milliseconds_div_10 = 0;
+
+    seconds = rtc_get_calendar_time( &milliseconds_div_10 );
+
+    return seconds * 1000 + ( milliseconds_div_10 / 10 );
+}
+```
+
+This workaround requires the following modification to be applied in the radio planner source code - [radio_planner.c, line 423](/smtc_modem_core/radio_planner/src/radio_planner.c):
+
+rp->irq_timestamp_ms[rp->radio_task_id] = rp_hal_get_time_in_ms( );
 
 ## Disclaimer
 
