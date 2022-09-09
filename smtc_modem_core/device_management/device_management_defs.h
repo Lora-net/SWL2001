@@ -67,18 +67,24 @@ extern "C" {
  */
 typedef enum dm_opcode_e
 {
-    DM_RESET       = 0x00,  //!< reset modem or application MCU
-    DM_FUOTA       = 0x01,  //!< FUOTA firmware update chunk
-    DM_FILE_DONE   = 0x02,  //!< file upload complete
+    DM_RESET = 0x00,  //!< reset modem or application MCU
+    DM_FUOTA = 0x01,  //!< FUOTA firmware update chunk
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    DM_FILE_DONE = 0x02,    //!< file upload complete
+#endif                      // ADD_SMTC_FILE_UPLOAD
     DM_GET_INFO    = 0x03,  //!< get info fields
     DM_SET_CONF    = 0x04,  //!< set config field
     DM_REJOIN      = 0x05,  //!< rejoin network
     DM_MUTE        = 0x06,  //!< permanently disable/enable modem
     DM_SET_DM_INFO = 0x07,  //!< set list of default info fields
-    DM_STREAM      = 0x08,  //!< set data stream parameters
-    DM_ALC_SYNC    = 0x09,  //!< application layer clock sync data
-    DM_ALM_UPDATE  = 0x0A,  //!< almanac update, short, long, full updates
-    DM_ALM_DBG     = 0x0B,  //!< almanac debug
+#if defined( ADD_SMTC_STREAM )
+    DM_STREAM = 0x08,      //!< set data stream parameters
+#endif                     // ADD_SMTC_STREAM
+    DM_ALC_SYNC   = 0x09,  //!< application layer clock sync data
+    DM_ALM_UPDATE = 0x0A,  //!< almanac update, short, long, full updates
+#if !defined( DISABLE_ALMANAC_DBG_OPCODE )
+    DM_ALM_DBG = 0x0B,      //!< almanac debug
+#endif                      // !DISABLE_ALMANAC_DBG_OPCODE
     DM_SOLV_UPDATE = 0x0C,  //!< assistance position, xtal update
     DM_ALM_FUPDATE = 0x0D,  //!< Force almanac update, short, long, full updates
     DM_CMD_MAX              //!< number of elements
@@ -225,6 +231,7 @@ typedef enum modem_upload_state_e
     MODEM_UPLOAD_FINISHED          //!< The upload process is finished
 } modem_upload_state_t;
 
+#if defined( ADD_SMTC_STREAM )
 /**
  * @brief Modem stream state
  *
@@ -236,6 +243,7 @@ typedef enum modem_stream_status_e
     MODEM_STREAM_INIT,
     MODEM_STREAM_DATA_PENDING,
 } modem_stream_status_t;
+#endif  // ADD_SMTC_STREAM
 
 /**
  * @brief RF Output definition
@@ -259,11 +267,11 @@ typedef enum modem_status_offset_e
 {
     MODEM_STATUS_OFFSET_BROWNOUT  = 0,  //!< reset after brownout
     MODEM_STATUS_OFFSET_CRASH     = 1,  //!< reset after panic
-    MODEM_STATUS_OFFSET_MUTE      = 2,  //!< device is muted
-    MODEM_STATUS_OFFSET_JOINED    = 3,  //!< device has joined network
+    MODEM_STATUS_OFFSET_MUTE      = 2,  //!< modem is muted
+    MODEM_STATUS_OFFSET_JOINED    = 3,  //!< modem has joined network
     MODEM_STATUS_OFFSET_SUSPEND   = 4,  //!< radio operations suspended (low power)
     MODEM_STATUS_OFFSET_UPLOAD    = 5,  //!< file upload in progress
-    MODEM_STATUS_OFFSET_JOINING   = 6,  //!< device is trying to join the network
+    MODEM_STATUS_OFFSET_JOINING   = 6,  //!< modem is trying to join the network
     MODEM_STATUS_OFFSET_STREAMING = 7   //!< streaming in progress
 } modem_status_offset_t;
 
@@ -318,6 +326,7 @@ typedef enum dm_interval_unit_e
     DM_INTERVAL_UNIT_MIN  = 3   //!< Interval in minute(s)
 } dm_interval_unit_t;
 
+#if defined( ADD_SMTC_STREAM )
 /**
  * @brief Modem stream structure
  *
@@ -329,6 +338,7 @@ typedef struct modem_stream_s
     modem_stream_status_t state;
     bool                  encryption;
 } modem_stream_t;
+#endif  // ADD_SMTC_STREAM
 
 /**
  * @brief Downlink message structure

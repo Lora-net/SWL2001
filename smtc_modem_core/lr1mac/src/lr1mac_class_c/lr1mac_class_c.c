@@ -119,10 +119,13 @@ void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_ma
 
     class_c_obj->rx_session_param[RX_SESSION_UNICAST] = &class_c_obj->rx_session_param_unicast;
 
-    // start to 1 because index 0 is set with lorawan class A value
-    for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
+    if( multicast_obj != NULL )
     {
-        class_c_obj->rx_session_param[i + 1] = &multicast_obj->rx_session_param[i];
+        // start to 1 because index 0 is set with lorawan class A value
+        for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
+        {
+            class_c_obj->rx_session_param[i + 1] = &multicast_obj->rx_session_param[i];
+        }
     }
 
     rp_release_hook( class_c_obj->rp, class_c_obj->class_c_id4rp );
@@ -147,7 +150,9 @@ void lr1mac_class_c_stop( lr1mac_class_c_t* class_c_obj )
         return;
     }
     class_c_obj->started = false;
+#if defined( SMTC_MULTICAST )
     lr1mac_class_c_multicast_stop_all_sessions( class_c_obj );
+#endif
     rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
     class_c_obj->rx_metadata.rx_window = RECEIVE_NONE;
 }
@@ -382,6 +387,7 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
     }
 }
 
+#if defined( SMTC_MULTICAST )
 smtc_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_c_t* class_c_obj, uint8_t mc_group_id,
                                                                    uint32_t freq, uint8_t dr )
 {
@@ -544,6 +550,7 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_c
 
     return SMTC_MC_RC_OK;
 }
+#endif
 
 /*
  * -----------------------------------------------------------------------------

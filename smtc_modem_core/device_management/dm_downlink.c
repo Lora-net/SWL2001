@@ -55,13 +55,18 @@
 #include "gnss_ctrl_api.h"
 #endif  // LR1110_MODEM_E && _MODEM_E_GNSS_ENABLE
 
-#if defined( LR11XX_TRANSCEIVER )
+#if defined( LR11XX_TRANSCEIVER ) || defined( LR1110_MODEM_E )
 #include "smtc_basic_modem_lr11xx_api_extension.h"
-#if defined( ENABLE_MODEM_GNSS_FEATURE )
+#endif  // LR11XX_TRANSCEIVER || LR1110_MODEM_E
+
+#if defined( ENABLE_MODEM_GNSS_FEATURE ) && defined( LR11XX_TRANSCEIVER )
 #include "almanac_update.h"
 #include "lr11xx_gnss.h"
-#endif  // ENABLE_MODEM_GNSS_FEATURE
-#endif  // LR11XX_TRANSCEIVER
+#endif  // ENABLE_MODEM_GNSS_FEATURE && LR11XX_TRANSCEIVER
+
+#if defined( LR1110_MODEM_E )
+#include "smtc_modem_e_api_extension.h"
+#endif  // LR1110_MODEM_E
 
 extern smtc_modem_services_t smtc_modem_services_ctx;
 
@@ -91,31 +96,50 @@ extern smtc_modem_services_t smtc_modem_services_ctx;
 
 #if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
 static const char* dm_cmd_str[DM_CMD_MAX] = {
-    [DM_RESET]       = "RESET",          //
-    [DM_FUOTA]       = "FUOTA",          //
-    [DM_FILE_DONE]   = "FILE_DONE",      //
-    [DM_GET_INFO]    = "GET_INFO",       //
-    [DM_SET_CONF]    = "SET_CONF",       //
-    [DM_REJOIN]      = "REJOIN",         //
-    [DM_MUTE]        = "MUTE",           //
-    [DM_SET_DM_INFO] = "SET_DM_INFO",    //
-    [DM_STREAM]      = "STREAM",         //
-    [DM_ALC_SYNC]    = "ALC_SYNC",       //
-    [DM_ALM_UPDATE]  = "ALM_UPDATE",     //
-    [DM_ALM_DBG]     = "ALM_DEBUG",      //
+    [DM_RESET] = "RESET",  //
+    [DM_FUOTA] = "FUOTA",  //
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    [DM_FILE_DONE] = "FILE_DONE",      //
+#endif                                 // ADD_SMTC_FILE_UPLOAD
+    [DM_GET_INFO]    = "GET_INFO",     //
+    [DM_SET_CONF]    = "SET_CONF",     //
+    [DM_REJOIN]      = "REJOIN",       //
+    [DM_MUTE]        = "MUTE",         //
+    [DM_SET_DM_INFO] = "SET_DM_INFO",  //
+#if defined( ADD_SMTC_STREAM )
+    [DM_STREAM] = "STREAM",          //
+#endif                               // ADD_SMTC_STREAM
+    [DM_ALC_SYNC]   = "ALC_SYNC",    //
+    [DM_ALM_UPDATE] = "ALM_UPDATE",  //
+#if !defined( DISABLE_ALMANAC_DBG_OPCODE )
+    [DM_ALM_DBG] = "ALM_DEBUG",          //
+#endif                                   //! DISABLE_ALMANAC_DBG_OPCODE
     [DM_SOLV_UPDATE] = "SOLVER_UPDATE",  //
     [DM_ALM_FUPDATE] = "ALM_FUPDATE",    //
 };
 #endif
 
 static const uint8_t dm_cmd_len[DM_CMD_MAX][2] = {  // CMD              = {min,       max}
-    [DM_RESET] = { 3, 3 },         [DM_FUOTA] = { 1, 255 },
-    [DM_FILE_DONE] = { 1, 1 },     [DM_GET_INFO] = { 1, 255 },
-    [DM_SET_CONF] = { 2, 255 },    [DM_REJOIN] = { 2, 2 },
-    [DM_MUTE] = { 1, 1 },          [DM_SET_DM_INFO] = { 1, DM_INFO_MAX },
-    [DM_STREAM] = { 1, 255 },      [DM_ALC_SYNC] = { 1, 255 },
-    [DM_ALM_UPDATE] = { 1, 255 },  [DM_ALM_DBG] = { 1, 255 },
-    [DM_SOLV_UPDATE] = { 1, 255 }, [DM_ALM_FUPDATE] = { 1, 255 }
+    [DM_RESET] = { 3, 3 },
+    [DM_FUOTA] = { 1, 255 },
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    [DM_FILE_DONE] = { 1, 1 },
+#endif  // ADD_SMTC_FILE_UPLOAD
+    [DM_GET_INFO]    = { 1, 255 },
+    [DM_SET_CONF]    = { 2, 255 },
+    [DM_REJOIN]      = { 2, 2 },
+    [DM_MUTE]        = { 1, 1 },
+    [DM_SET_DM_INFO] = { 1, DM_INFO_MAX },
+#if defined( ADD_SMTC_STREAM )
+    [DM_STREAM] = { 1, 255 },
+#endif  // ADD_SMTC_STREAM
+    [DM_ALC_SYNC]   = { 1, 255 },
+    [DM_ALM_UPDATE] = { 1, 255 },
+#if !defined( DISABLE_ALMANAC_DBG_OPCODE )
+    [DM_ALM_DBG] = { 1, 255 },
+#endif  // !DISABLE_ALMANAC_DBG_OPCODE
+    [DM_SOLV_UPDATE] = { 1, 255 },
+    [DM_ALM_FUPDATE] = { 1, 255 }
 };
 
 /*
@@ -202,6 +226,7 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
     case DM_FUOTA:
         // Not supported yet
         break;
+#if defined( ADD_SMTC_FILE_UPLOAD )
     case DM_FILE_DONE:
         SMTC_MODEM_HAL_TRACE_WARNING( "DM_FILE_DONE donwlink\n" );
 
@@ -227,6 +252,7 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
             modem_supervisor_remove_task( FILE_UPLOAD_TASK );
         }
         break;
+#endif  // ADD_SMTC_FILE_UPLOAD
     case DM_GET_INFO:
         if( set_dm_info( cmd_input->buffer, cmd_input->buffer_len, DM_INFO_NOW ) != DM_OK )
         {
@@ -258,8 +284,9 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
             ret = DM_ERROR;
             break;
         }
-        set_modem_status_modem_joined( false );
-        lorawan_api_join_status_clear( );
+        // Leave network
+        modem_leave( );
+        // Add a new join task
         modem_supervisor_add_task_join( );
         break;
     }
@@ -279,6 +306,7 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
         }
 
         break;
+#if defined( ADD_SMTC_STREAM )
     case DM_STREAM:
         if( stream_process_dn_frame( &( smtc_modem_services_ctx.stream_ROSE_ctx ), cmd_input->buffer,
                                      cmd_input->buffer_len ) != STREAM_OK )
@@ -286,6 +314,8 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
             ret = DM_ERROR;
         }
         break;
+#endif  // ADD_SMTC_STREAM
+#if defined( ADD_SMTC_ALC_SYNC )
     case DM_ALC_SYNC: {
         uint8_t alc_sync_status =
             alc_sync_parser( &( smtc_modem_services_ctx.alc_sync_ctx ), cmd_input->buffer, cmd_input->buffer_len );
@@ -340,6 +370,8 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
         }
     }
     break;
+#endif  // ADD_SMTC_ALC_SYNC
+
     case DM_ALM_UPDATE: {
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
         if( Gnss_push_almanac_update( cmd_input->buffer, cmd_input->buffer_len, 0 ) != GNSS_CMD_OK )
@@ -412,13 +444,14 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
         }
         break;
     }
+#if !defined( DISABLE_ALMANAC_DBG_OPCODE )
     case DM_ALM_DBG: {
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
         // Is DM set time request (not used in soft modem)
         uint32_t gps_time_s = is_set_time_request( cmd_input->buffer, cmd_input->buffer_len );
         if( gps_time_s )
         {
-            modem_set_time( gps_time_s );
+            smtc_modem_set_time( gps_time_s );
         }
         if( Gnss_push_dbg_request( cmd_input->buffer, cmd_input->buffer_len ) != GNSS_CMD_OK )
         {
@@ -433,10 +466,11 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
         }
 #elif defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
         // Not supported on Basic Modem with LR11XX tranceiver
-        ret                = DM_ERROR;
+        ret = DM_ERROR;
 #endif
         ret = DM_ERROR;
     }
+#endif  // !DISABLE_ALMANAC_DBG_OPCODE
     break;
     case DM_SOLV_UPDATE: {
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )

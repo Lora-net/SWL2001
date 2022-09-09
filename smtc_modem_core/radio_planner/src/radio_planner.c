@@ -40,31 +40,6 @@
 #include <string.h>
 
 //
-// Private planner variable declaration
-//
-#if defined( PERF_TEST_ENABLED )
-
-#if !defined( LR1110_MODEM_E )
-static uint32_t tx_done_count    = 0;
-static uint32_t rx_done_count    = 0;
-static uint32_t rx_timeout_count = 0;
-#else
-struct
-{
-    uint32_t tx_done_count;
-    uint32_t rx_done_count;
-    uint32_t rx_timeout_count;
-} rp_ctx;
-
-// clang-format off
-#define tx_done_count   rp_ctx.tx_done_count
-#define rx_done_count   rp_ctx.rx_done_count
-#define rx_timeout_count   rp_ctx.rx_timeout_count
-// clang-format on
-#endif
-#endif
-
-//
 // Private planner utilities declaration
 //
 
@@ -237,12 +212,7 @@ void rp_init( radio_planner_t* rp, const ralf_t* radio )
     rp_stats_init( &rp->stats );
 
     rp->next_state_status = RP_STATUS_NO_MORE_TASK_SCHEDULE;
-
-#if defined( PERF_TEST_ENABLED )
-    tx_done_count    = 0;
-    rx_done_count    = 0;
-    rx_timeout_count = 0;
-#endif
+    rp->margin_delay      = RP_MARGIN_DELAY;
 }
 
 rp_hook_status_t rp_hook_init( radio_planner_t* rp, const uint8_t id, void ( *callback )( void* context ), void* hook )
@@ -420,7 +390,7 @@ void rp_radio_irq( radio_planner_t* rp )
 
         uint32_t irq_timestamp_100us               = rp_hal_get_radio_irq_timestamp_in_100us( );
         rp->irq_timestamp_100us[rp->radio_task_id] = irq_timestamp_100us;
-        rp->irq_timestamp_ms[rp->radio_task_id]    = irq_timestamp_100us / 10;
+        rp->irq_timestamp_ms[rp->radio_task_id]    = rp_hal_get_time_in_ms( );
         SMTC_MODEM_HAL_RP_TRACE_PRINTF( " RP: INFO - Radio IRQ received for hook #%u\n", rp->radio_task_id );
 
         rp_irq_get_status( rp, rp->radio_task_id );
@@ -428,7 +398,18 @@ void rp_radio_irq( radio_planner_t* rp )
         {
             return;
         }
-        if( rp->status[rp->radio_task_id] == RP_STATUS_CAD_NEGATIVE )
+
+        // Tx can be performed only if no activity detected on channel
+        if( ( rp->status[rp->radio_task_id] == RP_STATUS_CAD_NEGATIVE ) &&
+            ( rp->tasks[rp->radio_task_id].type == RP_TASK_TYPE_CAD_TO_TX ) )
+        {
+            rp_hook_callback( rp, rp->radio_task_id );
+            return;
+        }
+
+        // Rx can be performed if activity detected on channel
+        if( ( rp->status[rp->radio_task_id] == RP_STATUS_CAD_POSITIVE ) &&
+            ( rp->tasks[rp->radio_task_id].type == RP_TASK_TYPE_CAD_TO_RX ) )
         {
             rp_hook_callback( rp, rp->radio_task_id );
             return;
@@ -508,7 +489,7 @@ static void rp_task_update_time( radio_planner_t* rp, uint32_t now )
           ( rp->tasks[rp->radio_task_id].type == RP_TASK_TYPE_RX_FSK ) ) )
     {
         rp->tasks[rp->radio_task_id].duration_time_ms =
-            now + RP_MARGIN_DELAY + 2 - rp->tasks[rp->radio_task_id].start_time_ms;
+            now + rp->margin_delay + 2 - rp->tasks[rp->radio_task_id].start_time_ms;
         SMTC_MODEM_HAL_RP_TRACE_PRINTF( " RP: Extended duration of radio task #%u time to %lu ms\n", rp->radio_task_id,
                                         now );
     }
@@ -529,13 +510,8 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
             " RP: Arbiter has been called by %s and priority-task #%d, timer hook #%d, delay %d, now %d\n ",
             caller_func_name, rp->priority_task.hook_id, rp->timer_hook_id, delay, now );
 
-        // Case where the high priority task is in the future
-        if( delay > RP_MARGIN_DELAY )
-        {  // The high priority task is in the future
-            SMTC_MODEM_HAL_RP_TRACE_PRINTF( " RP: High priority task is in the future\n" );
-        }
         // Case where the high priority task is in the past, error case
-        else if( delay < 0 )
+        if( delay < 0 )
         {  // The high priority task is in the past, error case
             if( rp->priority_task.state != RP_TASK_STATE_RUNNING )
             {
@@ -544,6 +520,11 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
 
                 rp->tasks[rp->priority_task.hook_id].state = RP_TASK_STATE_ABORTED;
             }
+        }
+        // Case where the high priority task is in the future
+        else if( ( uint32_t ) delay > rp->margin_delay )
+        {  // The high priority task is in the future
+            SMTC_MODEM_HAL_RP_TRACE_PRINTF( " RP: High priority task is in the future\n" );
         }
         // Case where the high priority task is now
         else
@@ -583,15 +564,17 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
         // Timer has expired on a not priority task => Have to abort this task
         int32_t tmp = ( int32_t )( rp->tasks[rp->timer_hook_id].start_time_ms - now );
 
-        if( ( tmp > 0 ) && ( tmp < RP_MARGIN_DELAY ) && ( rp->next_state_status == RP_STATUS_HAVE_TO_SET_TIMER ) &&
-            ( rp->timer_hook_id != rp->priority_task.hook_id ) &&
-            ( rp->tasks[rp->timer_hook_id].state == RP_TASK_STATE_SCHEDULE ) )
+        if( tmp > 0 )
         {
-            SMTC_MODEM_HAL_TRACE_WARNING( " RP: Aborted task with hook #%u - not a priority task\n ",
-                                          rp->timer_hook_id );
-            rp->tasks[rp->timer_hook_id].state = RP_TASK_STATE_ABORTED;
+            if( ( ( uint32_t ) tmp < rp->margin_delay ) && ( rp->next_state_status == RP_STATUS_HAVE_TO_SET_TIMER ) &&
+                ( rp->timer_hook_id != rp->priority_task.hook_id ) &&
+                ( rp->tasks[rp->timer_hook_id].state == RP_TASK_STATE_SCHEDULE ) )
+            {
+                SMTC_MODEM_HAL_TRACE_WARNING( " RP: Aborted task with hook #%u - not a priority task\n ",
+                                              rp->timer_hook_id );
+                rp->tasks[rp->timer_hook_id].state = RP_TASK_STATE_ABORTED;
+            }
         }
-
         // Execute the garbage collection if the radio isn't running
         if( rp->tasks[rp->radio_task_id].state != RP_TASK_STATE_RUNNING )
         {
@@ -603,9 +586,9 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
 
         if( rp->next_state_status == RP_STATUS_HAVE_TO_SET_TIMER )
         {
-            if( rp->timer_value > RP_MARGIN_DELAY )
+            if( rp->timer_value > rp->margin_delay )
             {
-                rp_set_alarm( rp, rp->timer_value - RP_MARGIN_DELAY );
+                rp_set_alarm( rp, rp->timer_value - rp->margin_delay );
             }
             else
             {
@@ -646,30 +629,15 @@ static void rp_irq_get_status( radio_planner_t* rp, const uint8_t hook_id )
                                                                &rp->radio_params[hook_id].tx.lr_fhss.ral_lr_fhss_params,
                                                                NULL ) == RAL_STATUS_OK );
         }
-#if defined( PERF_TEST_ENABLED )
-        tx_done_count++;
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "RADIO IRQ: TX DONE\n" );
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "tx_done_count:%lu\n", tx_done_count );
-#endif
     }
     else if( ( ( radio_irq & RAL_IRQ_RX_HDR_ERROR ) == RAL_IRQ_RX_HDR_ERROR ) ||
              ( ( radio_irq & RAL_IRQ_RX_CRC_ERROR ) == RAL_IRQ_RX_CRC_ERROR ) )
     {
         rp->status[hook_id] = RP_STATUS_RX_CRC_ERROR;
-#if defined( PERF_TEST_ENABLED )
-        rx_timeout_count++;
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "RADIO IRQ: HDR_ERROR or CRC_ERROR : %d\n", radio_irq );
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "rx_timeout_count:%lu\n", rx_timeout_count );
-#endif
     }
     else if( ( radio_irq & RAL_IRQ_RX_TIMEOUT ) == RAL_IRQ_RX_TIMEOUT )
     {
         rp->status[hook_id] = RP_STATUS_RX_TIMEOUT;
-#if defined( PERF_TEST_ENABLED )
-        rx_timeout_count++;
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "RADIO IRQ: RX_TIMEOUT\n" );
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "rx_timeout_count:%lu\n", rx_timeout_count );
-#endif
     }
     else if( ( radio_irq & RAL_IRQ_RX_DONE ) == RAL_IRQ_RX_DONE )
     {
@@ -680,11 +648,6 @@ static void rp_irq_get_status( radio_planner_t* rp, const uint8_t hook_id )
             smtc_modem_hal_mcu_panic( );
             return;
         }
-#if defined( PERF_TEST_ENABLED )
-        rx_done_count++;
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "RADIO IRQ: RX_DONE\n" );
-        SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( "rx_done_count:%lu\n", rx_done_count );
-#endif
     }
     else if( ( radio_irq & RAL_IRQ_CAD_OK ) == RAL_IRQ_CAD_OK )
     {
@@ -877,7 +840,7 @@ rp_hook_status_t rp_get_pkt_payload( radio_planner_t* rp, const rp_task_t* task 
     smtc_modem_hal_assert( ral_get_pkt_payload( &( rp->radio->ral ), rp->payload_size[id], rp->payload[id],
                                                 &rp->payload_size[id] ) == RAL_STATUS_OK );
 
-    if( task->type == RP_TASK_TYPE_RX_LORA )
+    if( ( task->type == RP_TASK_TYPE_RX_LORA ) || ( task->type == RP_TASK_TYPE_CAD_TO_RX ) )
     {
         rp->radio_params[id].pkt_type = RAL_PKT_TYPE_LORA;
         status                        = RP_HOOK_STATUS_OK;
@@ -980,8 +943,15 @@ static void rp_task_print( const radio_planner_t* rp, const rp_task_t* task )
         break;
     case RP_TASK_TYPE_TX_LR_FHSS:
         SMTC_MODEM_HAL_RP_TRACE_PRINTF( " TASK_TX_LR_FHSS " );
+        break;
     case RP_TASK_TYPE_CAD:
         SMTC_MODEM_HAL_RP_TRACE_PRINTF( " TASK_CAD " );
+        break;
+    case RP_TASK_TYPE_CAD_TO_TX:
+        SMTC_MODEM_HAL_RP_TRACE_PRINTF( " TASK_CAD_TO_TX " );
+        break;
+    case RP_TASK_TYPE_CAD_TO_RX:
+        SMTC_MODEM_HAL_RP_TRACE_PRINTF( " TASK_CAD_TO_RX " );
         break;
     case RP_TASK_TYPE_NONE:
     case RP_TASK_TYPE_GNSS_SNIFF:

@@ -117,16 +117,21 @@ void region_ww2g4_config( lr1_stack_mac_t* lr1_mac )
     const_dtc_supported                = DTC_SUPPORTED_WW2G4;
     const_lbt_supported                = LBT_SUPPORTED_WW2G4;
     const_max_payload_m                = &M_ww2g4[0];
-    const_max_payload_n                = &N_ww2g4[0];
     const_coding_rate                  = RAL_LORA_CR_LI_4_8;
-    const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_WW2G4[0];
-    const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_WW2G4[0];
-    const_join_dr_distri               = &JOIN_DR_DISTRIBUTION_WW2G4[0];
-    const_default_dr_distri            = &DEFAULT_DR_DISTRIBUTION_WW2G4[0];
-    const_cf_list_type_supported       = CF_LIST_SUPPORTED_WW2G4;
-    const_beacon_dr                    = BEACON_DR_WW2G4;
-    const_beacon_frequency             = BEACON_FREQ_WW2G4;
-    const_ping_slot_frequency          = PING_SLOT_FREQ_WW2G4;
+#if defined( WW2G4_SINGLE_DATARATE )
+    const_join_dr_distri             = &DEFAULT_DR_DISTRIBUTION_WW2G4[0];
+    const_mobile_lowpower_dr_distri  = &DEFAULT_DR_DISTRIBUTION_WW2G4[0];
+    const_mobile_longrange_dr_distri = &DEFAULT_DR_DISTRIBUTION_WW2G4[0];
+#else
+    const_mobile_longrange_dr_distri = &MOBILE_LONGRANGE_DR_DISTRIBUTION_WW2G4[0];
+    const_mobile_lowpower_dr_distri  = &MOBILE_LOWPER_DR_DISTRIBUTION_WW2G4[0];
+    const_join_dr_distri             = &JOIN_DR_DISTRIBUTION_WW2G4[0];
+#endif
+    const_default_dr_distri      = &DEFAULT_DR_DISTRIBUTION_WW2G4[0];
+    const_cf_list_type_supported = CF_LIST_SUPPORTED_WW2G4;
+    const_beacon_dr              = BEACON_DR_WW2G4;
+    const_beacon_frequency       = BEACON_FREQ_WW2G4;
+    const_ping_slot_frequency    = PING_SLOT_FREQ_WW2G4;
 
     real_ctx.tx_frequency_channel_ctx   = &tx_frequency_channel[0];
     real_ctx.rx1_frequency_channel_ctx  = &rx1_frequency_channel[0];

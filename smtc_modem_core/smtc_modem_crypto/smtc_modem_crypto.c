@@ -455,6 +455,46 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t bea
     return SMTC_MODEM_CRYPTO_RC_SUCCESS;
 }
 
+smtc_modem_crypto_return_code_t smtc_modem_crypto_service_encrypt( const uint8_t* clear_buff, uint16_t len,
+                                                                   uint8_t nonce[14], uint8_t* enc_buff )
+{
+    if( ( clear_buff == 0 ) || ( enc_buff == 0 ) )
+    {
+        return SMTC_MODEM_CRYPTO_RC_ERROR_NPE;
+    }
+
+    uint16_t index       = 0;
+    uint16_t ctr         = 1;
+    uint8_t  s_block[16] = { 0 };
+    uint8_t  a_block[16] = { 0 };
+    int16_t  local_size  = len;
+
+    // first copy the 14 bytes of nonce into a_block first 14 bytes
+    memcpy( a_block, nonce, 14 );
+
+    while( local_size > 0 )
+    {
+        a_block[15] = ctr & 0xFF;
+        a_block[14] = ( ctr >> 8 ) & 0xFF;
+
+        ctr++;
+
+        if( smtc_secure_element_aes_encrypt( a_block, 16, SMTC_SE_APP_S_KEY, s_block ) != SMTC_SE_RC_SUCCESS )
+        {
+            return SMTC_MODEM_CRYPTO_RC_ERROR_SECURE_ELEMENT;
+        }
+
+        for( uint8_t i = 0; i < ( ( local_size > 16 ) ? 16 : local_size ); i++ )
+        {
+            enc_buff[index + i] = clear_buff[index + i] ^ s_block[i];
+        }
+        local_size -= 16;
+        index += 16;
+    }
+
+    return SMTC_MODEM_CRYPTO_RC_SUCCESS;
+}
+
 /*
  *-----------------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITIONS ------------------------------------------------

@@ -40,6 +40,7 @@
 #include "frag_decoder.h"
 #include "smtc_modem_hal.h"
 #include "nvmcu_hal.h"
+#include "smtc_modem_hal_dbg_trace.h"
 
 #if defined( TEST )
 #define STATIC

@@ -267,7 +267,8 @@ void smtc_beacon_sniff_stop( smtc_lr1_beacon_t* lr1_beacon_obj )
 
 smtc_class_b_beacon_t smtc_beacon_sniff_start( smtc_lr1_beacon_t* lr1_beacon_obj )
 {
-    uint32_t rtc                 = smtc_modem_hal_get_time_in_ms( ) + 1000; // +1000 to let time for rp enqueue task in case of abort task
+    uint32_t rtc =
+        smtc_modem_hal_get_time_in_ms( ) + 1000;  // +1000 to let time for rp enqueue task in case of abort task
     uint32_t seconds_since_epoch = 0;
     uint32_t fractional_second   = 0;
     uint8_t  beacon_id;

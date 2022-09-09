@@ -129,7 +129,9 @@ MODEM_C_DEFS += -DREGION_US_915
 endif
 ifeq ($(REGION_WW_2G4), yes)
 LR1MAC_C_SOURCES += smtc_modem_core/lr1mac/src/smtc_real/src/region_ww2g4.c
-MODEM_C_DEFS += -DREGION_WW2G4
+MODEM_C_DEFS += \
+	-DREGION_WW2G4\
+	-DWW2G4_SINGLE_DATARATE
 endif
 
 

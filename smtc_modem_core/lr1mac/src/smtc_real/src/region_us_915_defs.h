@@ -60,7 +60,7 @@ extern "C" {
 #define JOIN_ACCEPT_DELAY1_US_915           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_US_915           (6)             // define in seconds
 #define RECEIVE_DELAY1_US_915               (1)             // define in seconds
-#if defined( LR11XX ) || defined( SX1262 )
+#if defined( LR11XX ) || defined( SX1262 ) || defined( SX1268 )
 // This value must be the MIN of MAX supported by the region and the radio, region is 30dBm but radio is 22dBm ERP (+2 to EIRP) 
 #define TX_POWER_EIRP_US_915                (24)            // define in dbm
 #else
@@ -223,11 +223,6 @@ static const uint32_t datarates_to_lr_fhss_cr_us_915[NUMBER_OF_TX_DR_US_915] = {
  * Payload max size table definition in bytes
  */
 static const uint8_t M_us_915[] = { 19, 61, 133, 250, 250, 58, 133, 0, 61, 137, 250, 250, 250, 250, 0, 0 };
-
-/**
- * Payload max size table definition in bytes
- */
-static const uint8_t N_us_915[] = { 11, 53, 125, 242, 242, 50, 125, 0, 53, 129, 242, 242, 242, 242, 0, 0 };
 
 /**
  * Mobile long range datarate distribution

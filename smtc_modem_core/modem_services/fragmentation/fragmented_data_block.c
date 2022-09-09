@@ -41,7 +41,6 @@
 
 #include "gpio.h"
 #include "radio_ctrl.h"
-#include "fragmented_data_block.h"
 #include "frag_decoder.h"
 #include "smtc_modem_hal.h"
 #include "aes.h"
@@ -50,6 +49,7 @@
 #include "modem_utilities.h"  // for crc fw
 #include "patch_upd.h"
 #include "pool_mem.h"
+#include "smtc_modem_hal_dbg_trace.h"
 #include "fragmented_data_block.h"
 
 /*

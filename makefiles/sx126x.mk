@@ -7,7 +7,9 @@ endif
 ifeq ($(RADIO),sx1262)
 TARGET = sx1262
 endif
-
+ifeq ($(RADIO),sx1268)
+TARGET = sx1268
+endif
 
 RADIO_DRIVER_C_SOURCES +=  \
 	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x.c\
@@ -45,4 +47,9 @@ MODEM_C_DEFS += \
 ifeq ($(RADIO),sx1262)
 MODEM_C_DEFS += \
     -DSX1262
+endif
+
+ifeq ($(RADIO),sx1268)
+MODEM_C_DEFS += \
+    -DSX1268
 endif

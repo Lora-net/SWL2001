@@ -731,6 +731,14 @@ sx126x_status_t sx126x_set_lora_pkt_params( const void* context, const sx126x_pk
     return status;
 }
 
+sx126x_status_t sx126x_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                             const uint8_t broadcast_address )
+{
+    const uint8_t addresses[2] = { node_address, broadcast_address };
+
+    return sx126x_write_register( context, SX126X_REG_GFSK_NODE_ADDRESS, addresses, 2 );
+}
+
 sx126x_status_t sx126x_set_cad_params( const void* context, const sx126x_cad_params_t* params )
 {
     const uint8_t buf[SX126X_SIZE_SET_CAD_PARAMS] = {
@@ -1229,6 +1237,11 @@ uint32_t sx126x_convert_freq_in_hz_to_pll_step( uint32_t freq_in_hz )
 uint32_t sx126x_convert_timeout_in_ms_to_rtc_step( uint32_t timeout_in_ms )
 {
     return ( uint32_t )( timeout_in_ms * ( SX126X_RTC_FREQ_IN_HZ / 1000 ) );
+}
+
+sx126x_status_t sx126x_handle_rx_done( const void* context )
+{
+    return sx126x_stop_rtc( context );
 }
 
 //

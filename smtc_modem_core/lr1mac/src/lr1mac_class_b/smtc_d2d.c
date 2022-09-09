@@ -355,8 +355,8 @@ static void class_b_d2d_rp_request( smtc_class_b_d2d_t* class_b_d2d_obj )
     // Enqueue this tx inside , start time is given by the ping slot object itself and
     // corrected using preambule length
     rp_task_t rp_task = { 0 };
-    rp_task.type      = RP_TASK_TYPE_CAD;  // in the radioplanner task is a special case in rp, radio config in case of
-                                           // negative cad can be launched without enqueued a new rp task
+    rp_task.type = RP_TASK_TYPE_CAD_TO_TX;  // in the radioplanner task is a special case in rp, radio config in case of
+                                            // negative cad can be launched without enqueued a new rp task
     rp_task.hook_id = class_b_d2d_obj->classb_d2d_id_rp;
     rp_task.state   = RP_TASK_STATE_SCHEDULE;
     // get the rp param set by the ping slot object itself

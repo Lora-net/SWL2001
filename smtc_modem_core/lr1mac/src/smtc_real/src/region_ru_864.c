@@ -124,7 +124,6 @@ void region_ru_864_config( lr1_stack_mac_t* lr1_mac )
     const_lbt_threshold_dbm            = LBT_THRESHOLD_DBM_RU_864;
     const_lbt_bw_hz                    = LBT_BW_HZ_RU_864;
     const_max_payload_m                = &M_ru_864[0];
-    const_max_payload_n                = &N_ru_864[0];
     const_coding_rate                  = RAL_LORA_CR_4_5;
     const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_RU_864[0];
     const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_RU_864[0];

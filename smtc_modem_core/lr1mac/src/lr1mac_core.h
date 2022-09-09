@@ -136,10 +136,9 @@ void lr1mac_core_dr_custom_set( lr1_stack_mac_t* lr1_mac_obj, uint32_t* datarate
  * @remark Must be called periodically by the application. Not timing critical. Can be interrupted.
  *
  * @param lr1_mac_obj
- * @param [out] AvailableRxPacket  Return if an applicative packet is available
  * @return lr1mac_states_t   return the lorawan state machine state
  */
-lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj, user_rx_packet_type_t* AvailableRxPacket );
+lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj );
 
 /**
  * @brief Reload the LoraWAN context saved in the flash
@@ -292,8 +291,8 @@ join_status_t lr1_mac_joined_status_get( lr1_stack_mac_t* lr1_mac_obj );
  * @return status_lorawan_t
  */
 status_lorawan_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t fPort, bool fport_enabled,
-                                          const uint8_t* dataIn, const uint8_t sizeIn, uint8_t PacketType,
-                                          uint32_t target_time_ms );
+                                           const uint8_t* dataIn, uint8_t sizeIn, uint8_t PacketType,
+                                           uint32_t target_time_ms );
 
 /**
  * @brief Send an uplink payload at the target time
@@ -308,8 +307,8 @@ status_lorawan_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t
  * @return status_lorawan_t
  */
 status_lorawan_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
-                                                  const uint8_t* data_in, const uint8_t size_in, uint8_t packet_type,
-                                                  uint32_t target_time_ms );
+                                                   const uint8_t* data_in, uint8_t size_in, uint8_t packet_type,
+                                                   uint32_t target_time_ms );
 
 /**
  * @brief Send a device mac command request to the network
@@ -531,6 +530,14 @@ bool lr1mac_core_convert_rtc_to_gps_epoch_time( lr1_stack_mac_t* lr1_mac_obj, ui
  * @return false
  */
 bool lr1mac_core_is_time_valid( lr1_stack_mac_t* lr1_mac_obj );
+
+/**
+ * @brief
+ *
+ * @param lr1_mac_obj
+ * @return uint32_t
+ */
+uint32_t lr1mac_core_get_timestamp_last_device_time_ans_s( lr1_stack_mac_t* lr1_mac_obj );
 
 /**
  * @brief Get the left delais before to concider device time no more valid

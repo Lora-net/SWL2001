@@ -62,8 +62,12 @@
 #define LR11XX_HP_MIN_OUTPUT_POWER -9
 #define LR11XX_HP_MAX_OUTPUT_POWER 22
 
+#define LR11XX_HF_MIN_OUTPUT_POWER -17
+#define LR11XX_HF_MAX_OUTPUT_POWER 13
+
 #define LR11XX_LP_CONVERT_TABLE_INDEX_OFFSET 17
 #define LR11XX_HP_CONVERT_TABLE_INDEX_OFFSET 9
+#define LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET 17
 
 static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_lp_vreg[] = {
     10820,  // -17 dBm
@@ -207,6 +211,40 @@ static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_ldo_hp_vbat[] = {
     116530,  //  22 dBm
 };
 
+static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hf_vreg[] = {
+    11800,  // -17 dBm
+    11800,  // -16 dBm
+    11900,  // -15 dBm
+    12020,  // -14 dBm
+    12120,  // -13 dBm
+    12230,  // -12 dBm
+    12390,  // -11 dBm
+    12540,  // -10 dBm
+    12740,  //  -9 dBm
+    12960,  //  -8 dBm
+    13150,  //  -7 dBm
+    13460,  //  -6 dBm
+    13770,  //  -5 dBm
+    14070,  //  -4 dBm
+    14460,  //  -3 dBm
+    15030,  //  -2 dBm
+    15440,  //  -1 dBm
+    16030,  //   0 dBm
+    16980,  //   1 dBm
+    17590,  //   2 dBm
+    18270,  //   3 dBm
+    19060,  //   4 dBm
+    19900,  //   5 dBm
+    20740,  //   6 dBm
+    21610,  //   7 dBm
+    22400,  //   8 dBm
+    23370,  //   9 dBm
+    24860,  //  10 dBm
+    26410,  //  11 dBm
+    26430,  //  12 dBm
+    27890,  //  13 dBm
+};
+
 // TODO: check values
 #define LR11XX_GFSK_RX_CONSUMPTION_DCDC 5400
 #define LR11XX_GFSK_RX_BOOSTED_CONSUMPTION_DCDC 7500
@@ -324,7 +362,7 @@ static void ral_lr11xx_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params
 
 bool ral_lr11xx_handles_part( const char* part_number )
 {
-    return strcmp( "lr11xx", part_number ) == 0;
+    return ( strcmp( "lr1110", part_number ) == 0 ) || ( strcmp( "lr1120", part_number ) == 0 );
 }
 
 ral_status_t ral_lr11xx_reset( const void* context )
@@ -1093,6 +1131,39 @@ ral_status_t ral_lr11xx_get_tx_consumption_in_ua( const void* context, const int
             return RAL_STATUS_UNSUPPORTED_FEATURE;
         }
     }
+    else if( tx_cfg_output_params.pa_cfg.pa_sel == LR11XX_RADIO_PA_SEL_HF )
+    {
+        if( tx_cfg_output_params.pa_cfg.pa_reg_supply == LR11XX_RADIO_PA_REG_SUPPLY_VREG )
+        {
+            uint8_t index = 0;
+
+            if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected > LR11XX_HF_MAX_OUTPUT_POWER )
+            {
+                index = LR11XX_HF_MAX_OUTPUT_POWER + LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET;
+            }
+            else if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected < LR11XX_HF_MIN_OUTPUT_POWER )
+            {
+                index = LR11XX_HF_MIN_OUTPUT_POWER + LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET;
+            }
+            else
+            {
+                index = tx_cfg_output_params.chip_output_pwr_in_dbm_expected + LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET;
+            }
+
+            if( radio_reg_mode == LR11XX_SYSTEM_REG_MODE_DCDC )
+            {
+                *pwr_consumption_in_ua = ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hf_vreg[index];
+            }
+            else
+            {
+                return RAL_STATUS_UNSUPPORTED_FEATURE;
+            }
+        }
+        else
+        {
+            return RAL_STATUS_UNSUPPORTED_FEATURE;
+        }
+    }
     else
     {
         return RAL_STATUS_UNKNOWN_VALUE;
@@ -1643,7 +1714,8 @@ static ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_
     }
     }
 
-    radio_lora_cad_params->cad_timeout = ral_lora_cad_params->cad_timeout_in_ms;
+    radio_lora_cad_params->cad_timeout =
+        lr11xx_radio_convert_time_in_ms_to_rtc_step( ral_lora_cad_params->cad_timeout_in_ms );
 
     return RAL_STATUS_OK;
 }

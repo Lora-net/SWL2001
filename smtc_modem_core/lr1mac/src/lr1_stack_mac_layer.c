@@ -106,37 +106,33 @@ static status_lorawan_t ping_slot_info_ans_parser( lr1_stack_mac_t* lr1_mac );
 void lr1_stack_mac_init( lr1_stack_mac_t* lr1_mac, lr1mac_activation_mode_t activation_mode,
                          smtc_real_region_types_t region )
 {
-    lr1_mac->tx_major_bits                          = LORAWANR1;
-    lr1_mac->radio_process_state                    = RADIOSTATE_IDLE;
-    lr1_mac->next_time_to_join_seconds              = 0;
-    lr1_mac->join_status                            = NOT_JOINED;
-    lr1_mac->type_of_ans_to_send                    = NOFRAME_TOSEND;
-    lr1_mac->activation_mode                        = activation_mode;
-    lr1_mac->nb_trans                               = 1;
-    lr1_mac->available_app_packet                   = NO_LORA_RXPACKET_AVAILABLE;
-    lr1_mac->real->region_type                      = region;
-    lr1_mac->is_lorawan_modem_certification_enabled = false;
-    lr1_mac->isr_tx_done_radio_timestamp            = 0;
-    lr1_mac->dev_nonce                              = 0;
-    lr1_mac->nb_of_reset                            = 0;
-    lr1_mac->adr_mode_select                        = STATIC_ADR_MODE;
-    lr1_mac->adr_mode_select_tmp                    = STATIC_ADR_MODE;
-    lr1_mac->adr_custom[0]                          = BSP_USER_DR_DISTRIBUTION_PARAMETERS;
-    lr1_mac->adr_custom[1]                          = 0;
-    lr1_mac->current_win                            = RX1;
-    lr1_mac->seconds_since_epoch                    = 0;
-    lr1_mac->fractional_second                      = 0;
-    lr1_mac->timestamp_last_device_time_ans_s       = 0;
-    lr1_mac->timestamp_tx_done_device_time_req_ms   = 0;
-    lr1_mac->device_time_callback                   = NULL;
-    lr1_mac->device_time_callback_context           = NULL;
+    lr1_mac->tx_major_bits                            = LORAWANR1;
+    lr1_mac->radio_process_state                      = RADIOSTATE_IDLE;
+    lr1_mac->next_time_to_join_seconds                = 0;
+    lr1_mac->join_status                              = NOT_JOINED;
+    lr1_mac->type_of_ans_to_send                      = NOFRAME_TOSEND;
+    lr1_mac->activation_mode                          = activation_mode;
+    lr1_mac->nb_trans                                 = 1;
+    lr1_mac->available_app_packet                     = NO_LORA_RXPACKET_AVAILABLE;
+    lr1_mac->real->region_type                        = region;
+    lr1_mac->is_lorawan_modem_certification_enabled   = false;
+    lr1_mac->isr_tx_done_radio_timestamp              = 0;
+    lr1_mac->dev_nonce                                = 0;
+    lr1_mac->nb_of_reset                              = 0;
+    lr1_mac->adr_mode_select                          = STATIC_ADR_MODE;
+    lr1_mac->adr_mode_select_tmp                      = STATIC_ADR_MODE;
+    lr1_mac->adr_custom[0]                            = BSP_USER_DR_DISTRIBUTION_PARAMETERS;
+    lr1_mac->adr_custom[1]                            = 0;
+    lr1_mac->current_win                              = RX1;
+    lr1_mac->seconds_since_epoch                      = 0;
+    lr1_mac->fractional_second                        = 0;
+    lr1_mac->timestamp_last_device_time_ans_s         = 0;
+    lr1_mac->timestamp_tx_done_device_time_req_ms     = 0;
+    lr1_mac->timestamp_tx_done_device_time_req_ms_tmp = 0;
+    lr1_mac->device_time_callback                     = NULL;
+    lr1_mac->device_time_callback_context             = NULL;
     memset( lr1_mac->fine_tune_board_setting_delay_ms, 0, sizeof( lr1_mac->fine_tune_board_setting_delay_ms ) );
     memset( lr1_mac->join_nonce, 0xFF, sizeof( lr1_mac->join_nonce ) );
-
-#if defined( PERF_TEST_ENABLED )
-    // bypass join process to allow perf testbench to trigger some modem send tx commands
-    lr1_mac->join_status = JOINED;
-#endif
 
     lr1_stack_mac_session_init( lr1_mac );
 }
@@ -177,23 +173,33 @@ void lr1_stack_mac_session_init( lr1_stack_mac_t* lr1_mac )
 
 void lr1_stack_mac_tx_frame_build( lr1_stack_mac_t* lr1_mac )
 {
+    uint8_t tx_fopts_length = 0;
+    if( lr1_mac->tx_fport != PORTNWK )
+    {
+        tx_fopts_length = lr1_mac->tx_fopts_current_length;
+    }
+
     lr1_mac->tx_fctrl = ( lr1_mac->adr_enable << 7 ) + ( lr1_mac->adr_ack_req << 6 ) + ( lr1_mac->tx_ack_bit << 5 ) +
-                        ( lr1_mac->tx_class_b_bit << 4 ) + ( lr1_mac->tx_fopts_current_length & 0x0F );
+                        ( lr1_mac->tx_class_b_bit << 4 ) + ( tx_fopts_length & 0x0F );
     lr1_mac->tx_ack_bit = 0;
 
     mac_header_set( lr1_mac );
     frame_header_set( lr1_mac );
-    lr1_mac->tx_payload_size =
-        lr1_mac->app_payload_size + FHDROFFSET + lr1_mac->tx_fport_present + lr1_mac->tx_fopts_current_length;
+    lr1_mac->tx_payload_size = lr1_mac->app_payload_size + FHDROFFSET + lr1_mac->tx_fport_present + tx_fopts_length;
 }
 
 void lr1_stack_mac_tx_frame_encrypt( lr1_stack_mac_t* lr1_mac )
 {
+    uint8_t tx_fopts_length = 0;
+    if( lr1_mac->tx_fport != PORTNWK )
+    {
+        tx_fopts_length = lr1_mac->tx_fopts_current_length;
+    }
+
     if( smtc_modem_crypto_payload_encrypt(
-            &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + lr1_mac->tx_fopts_current_length],
-            lr1_mac->app_payload_size, ( lr1_mac->tx_fport == PORTNWK ) ? SMTC_SE_NWK_S_ENC_KEY : SMTC_SE_APP_S_KEY,
-            lr1_mac->dev_addr, UP_LINK, lr1_mac->fcnt_up,
-            &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + lr1_mac->tx_fopts_current_length] ) !=
+            &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + tx_fopts_length], lr1_mac->app_payload_size,
+            ( lr1_mac->tx_fport == PORTNWK ) ? SMTC_SE_NWK_S_ENC_KEY : SMTC_SE_APP_S_KEY, lr1_mac->dev_addr, UP_LINK,
+            lr1_mac->fcnt_up, &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + tx_fopts_length] ) !=
         SMTC_MODEM_CRYPTO_RC_SUCCESS )
     {
         smtc_modem_hal_lr1mac_panic( "Crypto error during payload encryption\n" );
@@ -210,14 +216,14 @@ void lr1_stack_mac_tx_frame_encrypt( lr1_stack_mac_t* lr1_mac )
 void lr1_stack_mac_tx_radio_free_lbt( lr1_stack_mac_t* lr1_mac )
 {
     lr1_mac->radio_process_state = RADIOSTATE_TX_ON;
-    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + RP_MARGIN_DELAY;
+    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + lr1_mac->rp->margin_delay;
     lr1_mac->send_at_time        = true;
     lr1_stack_mac_tx_radio_start( lr1_mac );
 }
 void lr1_stack_mac_radio_busy_lbt( lr1_stack_mac_t* lr1_mac )
 {
     lr1_mac->radio_process_state = RADIOSTATE_IDLE;
-    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + RP_MARGIN_DELAY;
+    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + lr1_mac->rp->margin_delay;
     smtc_real_get_next_channel( lr1_mac );
 }
 void lr1_stack_mac_radio_abort_lbt( lr1_stack_mac_t* lr1_mac )
@@ -228,16 +234,18 @@ void lr1_stack_mac_tx_lora_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
+
     smtc_modem_hal_assert( ralf_setup_lora( rp->radio, &rp->radio_params[id].tx.lora ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_TX_DONE ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_pkt_payload( &( rp->radio->ral ), rp->payload[id], rp->payload_size[id] ) ==
                            RAL_STATUS_OK );
-    // Wait the exact time
+    // Wait the exact expected time (ie target - tcxo startup delay)
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
         // Do nothing
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ral_set_tx( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     rp_stats_set_tx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
@@ -246,16 +254,17 @@ void lr1_stack_mac_tx_gfsk_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
 
     smtc_modem_hal_assert( ralf_setup_gfsk( rp->radio, &rp->radio_params[id].tx.gfsk ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_TX_DONE ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_pkt_payload( &( rp->radio->ral ), rp->payload[id], rp->payload_size[id] ) ==
                            RAL_STATUS_OK );
-    // Wait the exact time
+    // Wait the exact expected time (ie target - tcxo startup delay)
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ral_set_tx( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     rp_stats_set_tx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
@@ -264,7 +273,6 @@ void lr1_stack_mac_tx_lr_fhss_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
 
     // Initialize LR-FHSS
     smtc_modem_hal_assert(
@@ -279,11 +287,13 @@ void lr1_stack_mac_tx_lr_fhss_launch_callback_for_rp( void* rp_void )
                                                     ( ral_lr_fhss_memory_state_t ) rp->radio_params[id].lr_fhss_state,
                                                     rp->radio_params[id].tx.lr_fhss.hop_sequence_id, rp->payload[id],
                                                     rp->payload_size[id] ) == RAL_STATUS_OK );
-    // Wait the exact time
+    // Wait the exact expected time (ie target - tcxo startup delay)
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
         // Do nothing
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ral_set_tx( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     rp_stats_set_tx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
@@ -292,15 +302,17 @@ void lr1_stack_mac_rx_lora_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
+
     smtc_modem_hal_assert( ralf_setup_lora( rp->radio, &rp->radio_params[id].rx.lora ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT |
                                                                             RAL_IRQ_RX_HDR_ERROR |
                                                                             RAL_IRQ_RX_CRC_ERROR ) == RAL_STATUS_OK );
-    // Wait the exact time
+    // Wait the exact expected time (ie target - tcxo startup delay)
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ral_set_rx( &( rp->radio->ral ), rp->radio_params[id].rx.timeout_in_ms ) == RAL_STATUS_OK );
     rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
@@ -309,14 +321,16 @@ void lr1_stack_mac_rx_gfsk_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
+
     smtc_modem_hal_assert( ralf_setup_gfsk( rp->radio, &rp->radio_params[id].rx.gfsk ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT |
                                                                             RAL_IRQ_RX_CRC_ERROR ) == RAL_STATUS_OK );
-    // Wait the exact time
+    // Wait the exact expected time (ie target - tcxo startup delay)
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ral_set_rx( &( rp->radio->ral ), rp->radio_params[id].rx.timeout_in_ms ) == RAL_STATUS_OK );
     rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
@@ -399,7 +413,6 @@ void lr1_stack_mac_tx_radio_start( lr1_stack_mac_t* lr1_mac )
         toa = ral_get_gfsk_time_on_air_in_ms( ( &lr1_mac->rp->radio->ral ), ( &gfsk_param.pkt_params ),
                                               ( &gfsk_param.mod_params ) );
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "  TxFrequency = %d, FSK\n", lr1_mac->tx_frequency );
         rp_task.type                  = RP_TASK_TYPE_TX_FSK;
         rp_task.launch_task_callbacks = lr1_stack_mac_tx_gfsk_launch_callback_for_rp;
     }
@@ -449,7 +462,7 @@ void lr1_stack_mac_tx_radio_start( lr1_stack_mac_t* lr1_mac )
     }
     rp_task.hook_id          = my_hook_id;
     rp_task.duration_time_ms = toa;
-    rp_task.start_time_ms    = lr1_mac->rtc_target_timer_ms;
+    rp_task.start_time_ms    = lr1_mac->rtc_target_timer_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
     if( lr1_mac->send_at_time == true )
     {
         lr1_mac->send_at_time = false;  // reinit the flag
@@ -742,7 +755,6 @@ void lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
         uint8_t            sf;
         lr1mac_bandwidth_t bw;
         uint8_t            kbitrate;
-        uint32_t           board_delay;
 
         modulation_type_t rx_modulation_type =
             smtc_real_get_modulation_type_from_datarate( lr1_mac, lr1_mac->rx_data_rate );
@@ -760,8 +772,9 @@ void lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
             smtc_modem_hal_lr1mac_panic( "MODULATION NOT SUPPORTED\n" );
         }
 
-        board_delay = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) + smtc_modem_hal_get_board_delay_ms( );
-        uint32_t board_delay_ms = board_delay + lr1_mac->fine_tune_board_setting_delay_ms[lr1_mac->rx_data_rate];
+        uint32_t board_delay_ms = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) +
+                                  +smtc_modem_hal_get_board_delay_ms( ) +
+                                  lr1_mac->fine_tune_board_setting_delay_ms[lr1_mac->rx_data_rate];
 
         smtc_real_get_rx_window_parameters( lr1_mac, lr1_mac->rx_data_rate, delay_ms, &lr1_mac->rx_window_symb,
                                             &lr1_mac->rx_timeout_symb_in_ms, &lr1_mac->rx_timeout_ms, 0 );
@@ -835,7 +848,11 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
         //               Case : the receive packet is not a JoinResponse
         //**********************************************************************
         uint16_t fcnt_dwn_tmp = 0;
-        fcnt_dwn_stack_tmp    = lr1_mac->fcnt_dwn;
+#if defined( PERF_TEST_ENABLED )
+        fcnt_dwn_stack_tmp = 0;
+#else
+        fcnt_dwn_stack_tmp = lr1_mac->fcnt_dwn;
+#endif
         status += lr1mac_rx_fhdr_extract( lr1_mac->rx_payload, lr1_mac->rx_payload_size, &( lr1_mac->rx_fopts_length ),
                                           &fcnt_dwn_tmp, lr1_mac->dev_addr, &( lr1_mac->rx_metadata.rx_fport ),
                                           &( lr1_mac->rx_payload_empty ), &( lr1_mac->rx_fctrl ), lr1_mac->rx_fopts );
@@ -1004,8 +1021,8 @@ void lr1_stack_mac_update_tx_done( lr1_stack_mac_t* lr1_mac )
 
     if( lr1_mac->device_time_user_req == USER_MAC_REQ_REQUESTED )
     {
-        lr1_mac->device_time_user_req                 = USER_MAC_REQ_SENT;
-        lr1_mac->timestamp_tx_done_device_time_req_ms = lr1_mac->isr_tx_done_radio_timestamp;
+        lr1_mac->device_time_user_req                     = USER_MAC_REQ_SENT;
+        lr1_mac->timestamp_tx_done_device_time_req_ms_tmp = lr1_mac->isr_tx_done_radio_timestamp;
     }
 
     if( lr1_mac->ping_slot_info_user_req == USER_MAC_REQ_REQUESTED )
@@ -1020,7 +1037,7 @@ void lr1_stack_mac_update( lr1_stack_mac_t* lr1_mac )
     lr1_mac->adr_ack_delay       = lr1_mac->adr_ack_delay_init;
     lr1_mac->type_of_ans_to_send = NOFRAME_TOSEND;
 
-    if( lr1_mac->join_status == NOT_JOINED )
+    if( lr1_mac->join_status == JOINING )
     {
         // get current timestamp to check which duty cycle will be applied
         uint32_t current_time_s = smtc_modem_hal_get_time_in_s( );
@@ -1046,6 +1063,9 @@ void lr1_stack_mac_update( lr1_stack_mac_t* lr1_mac )
             lr1_mac->next_time_to_join_seconds = current_time_s + ( lr1_stack_toa_get( lr1_mac ) ) * 10;
             // ts=cur_ts+(toa_s*10000) = cur_ts + (toa_ms / 1000) * 10000 = cur_ts + toa_ms*10
         }
+
+        // Now join status can be set as not joined
+        lr1_mac->join_status = NOT_JOINED;
     }
 
     if( lr1_mac->adr_ack_cnt >= lr1_mac->adr_ack_limit )
@@ -1227,8 +1247,9 @@ status_lorawan_t lr1_stack_mac_cmd_parse( lr1_stack_mac_t* lr1_mac )
             {
                 if( device_time_ans_parser( lr1_mac ) == OKLORAWAN )
                 {
-                    lr1_mac->device_time_user_req             = USER_MAC_REQ_ACKED;
-                    lr1_mac->timestamp_last_device_time_ans_s = smtc_modem_hal_get_time_in_s( );
+                    lr1_mac->device_time_user_req                 = USER_MAC_REQ_ACKED;
+                    lr1_mac->timestamp_tx_done_device_time_req_ms = lr1_mac->timestamp_tx_done_device_time_req_ms_tmp;
+                    lr1_mac->timestamp_last_device_time_ans_s     = smtc_modem_hal_get_time_in_s( );
                     if( lr1_mac->device_time_callback != NULL )
                     {
                         lr1_mac->device_time_callback( lr1_mac->device_time_callback_context,
@@ -1281,7 +1302,11 @@ void lr1_stack_mac_join_request_build( lr1_stack_mac_t* lr1_mac )
     SMTC_MODEM_HAL_TRACE_ARRAY( "JoinEUI", join_eui, 8 );
     if( lr1_mac->dev_nonce < 0xFFFF )
     {
+#if defined( PERF_TEST_ENABLED )
+        lr1_mac->dev_nonce = 0;
+#else
         lr1_mac->dev_nonce += 1;
+#endif
     }
     SMTC_MODEM_HAL_TRACE_PRINTF( "DevNonce 0x%x\n", lr1_mac->dev_nonce );
     lr1_mac->tx_mtype     = JOIN_REQUEST;
@@ -1316,6 +1341,12 @@ status_lorawan_t lr1_stack_mac_join_accept( lr1_stack_mac_t* lr1_mac )
     uint32_t i;
 
     memcpy1( join_nonce, &lr1_mac->rx_payload[1], 6 );
+
+#if defined( PERF_TEST_ENABLED )
+    lr1_mac->join_nonce[0] = 0;
+    lr1_mac->join_nonce[1] = 0;
+    lr1_mac->join_nonce[2] = 0;
+#endif
 
     join_nonce_prev = lr1_mac->join_nonce[0];
     join_nonce_prev |= lr1_mac->join_nonce[1] << 8;
@@ -1570,13 +1601,21 @@ static void frame_header_set( lr1_stack_mac_t* lr1_mac )
     lr1_mac->tx_payload[5] = lr1_mac->tx_fctrl;
     lr1_mac->tx_payload[6] = ( uint8_t )( ( lr1_mac->fcnt_up & 0x000000FF ) );
     lr1_mac->tx_payload[7] = ( uint8_t )( ( lr1_mac->fcnt_up & 0x0000FF00 ) >> 8 );
-    for( int i = 0; i < lr1_mac->tx_fopts_current_length; i++ )
+
+    if( lr1_mac->tx_fport == PORTNWK )
     {
-        lr1_mac->tx_payload[8 + i] = lr1_mac->tx_fopts_current_data[i];
+        lr1_mac->tx_payload[8] = lr1_mac->tx_fport;
     }
-    if( lr1_mac->tx_fport_present == true )
+    else
     {
-        lr1_mac->tx_payload[8 + lr1_mac->tx_fopts_current_length] = lr1_mac->tx_fport;
+        for( int i = 0; i < lr1_mac->tx_fopts_current_length; i++ )
+        {
+            lr1_mac->tx_payload[8 + i] = lr1_mac->tx_fopts_current_data[i];
+        }
+        if( lr1_mac->tx_fport_present == true )
+        {
+            lr1_mac->tx_payload[8 + lr1_mac->tx_fopts_current_length] = lr1_mac->tx_fport;
+        }
     }
 }
 

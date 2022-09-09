@@ -44,11 +44,20 @@ extern "C" {
  * --- DEPENDENCIES ------------------------------------------------------------
  */
 #include "radio_planner.h"
-#include "alc_sync.h"
-#include "smtc_clock_sync.h"
-#include "stream.h"
-#include "file_upload.h"
 #include "lr1_stack_mac_layer.h"
+
+#if defined( ADD_SMTC_ALC_SYNC )
+#include "smtc_clock_sync.h"
+#include "alc_sync.h"
+#endif  // ADD_SMTC_ALC_SYNC
+
+#if defined( ADD_SMTC_STREAM )
+#include "stream.h"
+#endif  // ADD_SMTC_STREAM
+
+#if defined( ADD_SMTC_FILE_UPLOAD )
+#include "file_upload.h"
+#endif  // ADD_SMTC_FILE_UPLOAD
 
 /*
  * -----------------------------------------------------------------------------
@@ -72,18 +81,23 @@ extern "C" {
  */
 typedef enum
 {
-    SEND_TASK,          //!< task managed by the application such as sensor uplink for example
-    SEND_AT_TIME_TASK,  //!< not used
-    JOIN_TASK,          //!< task managed by the modem itself to join a network
-    DM_TASK,            //!< task managed by the modem itself to report periodically status
-    DM_TASK_NOW,        //!< task managed by the modem when requested by the host or the cloud to report status
+    SEND_TASK,    //!< task managed by the application such as sensor uplink for example
+    JOIN_TASK,    //!< task managed by the modem itself to join a network
+    DM_TASK,      //!< task managed by the modem itself to report periodically status
+    DM_TASK_NOW,  //!< task managed by the modem when requested by the host or the cloud to report status
+#if defined( ADD_SMTC_FILE_UPLOAD )
     FILE_UPLOAD_TASK,  //!< task initiate by the application layer but manage by the modem itself to transfer "big file"
+#endif                 // ADD_SMTC_FILE_UPLOAD
     IDLE_TASK,         //!< mean no more active task schedule
     MUTE_TASK,         //!< task managed by the modem to un-mute the modem
     RETRIEVE_DL_TASK,  //!< task managed by the modem to create downlink opportunities
+#if defined( ADD_SMTC_STREAM )
     STREAM_TASK,  //!< task initiated by the application layer, but managed by the modem itself to transfer long streams
+#endif            // ADD_SMTC_STREAM
+#if defined( ADD_SMTC_ALC_SYNC )
     CLOCK_SYNC_TIME_REQ_TASK,  //!< task managed by the modem to launch Application Layer Clock Synchronisation
     ALC_SYNC_ANS_TASK,         //!< task managed by the modem to launch Application Layer Clock Synchronisation answer
+#endif                         // ADD_SMTC_ALC_SYNC
     FRAG_TASK,                 //!< task managed by the modem to launch Fragmented Data Block uplink
     USER_TASK,                //!< task manage by the modem to launch a user callback (use also for wifi and gnss tasks)
     DM_ALM_DBG_ANS,           //!< task managed by the modem to launch almanac debug answer
@@ -91,8 +105,8 @@ typedef enum
     LINK_CHECK_REQ_TASK,      //!< task managed by the modem to launch a Network Link Check Request
     DEVICE_TIME_REQ_TASK,     //!< task managed by the modem to launch a Network Device Time Request synchronisation
     PING_SLOT_INFO_REQ_TASK,  //!< task managed by the modem to launch a Network Ping Slot Info Request for class B
-    SEND_TASK_EXTENDED_1,       //!< task managed by the application dedicated for middleware gnss/wifi 
-    SEND_TASK_EXTENDED_2,       //!< task managed by the application dedicated for middleware gnss/wifi 
+    SEND_TASK_EXTENDED_1,     //!< task managed by the application dedicated for middleware gnss/wifi
+    SEND_TASK_EXTENDED_2,     //!< task managed by the application dedicated for middleware gnss/wifi
     NUMBER_OF_TASKS           //!< number of tasks
 } task_id_t;
 
@@ -156,10 +170,18 @@ typedef struct stask_manager
 
 typedef struct smtc_modem_services_s
 {
+#if defined( ADD_SMTC_ALC_SYNC )
     alc_sync_ctx_t   alc_sync_ctx;
     clock_sync_ctx_t clock_sync_ctx;
-    rose_t           stream_ROSE_ctx;
-    file_upload_t    file_upload_ctx;
+#endif  // ADD_SMTC_ALC_SYNC
+
+#if defined( ADD_SMTC_STREAM )
+    rose_t stream_ROSE_ctx;
+#endif  // ADD_SMTC_STREAM
+
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    file_upload_t file_upload_ctx;
+#endif  // ADD_SMTC_FILE_UPLOAD
 } smtc_modem_services_t;
 /*
  * -----------------------------------------------------------------------------

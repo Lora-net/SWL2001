@@ -180,11 +180,6 @@ static const uint32_t datarates_to_bandwidths_ww2g4[] = { BW800, BW800, BW800, B
 static const uint8_t M_ww2g4[8] = { 59, 123, 228, 228, 228, 228, 228, 228 };
 
 /**
- * Payload max size table definition in bytes
- */
-static const uint8_t N_ww2g4[8] = { 51, 115, 220, 220, 220, 220, 220, 220 };
-
-/**
  * Mobile long range datarate distribution
  * DR0: 20%,
  * DR1: 20%,

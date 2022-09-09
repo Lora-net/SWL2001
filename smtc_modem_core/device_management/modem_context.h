@@ -71,12 +71,6 @@ extern "C" {
 
 #define MODEM_NUMBER_OF_EVENTS 0x19  // number of possible events in modem
 
-typedef enum charge_counter_value_e
-{
-    CHARGE_COUNTER_MODEM       = 0,
-    CHARGE_COUNTER_USER_DEFINE = 1,
-} charge_counter_value_t;
-
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
@@ -99,6 +93,22 @@ typedef struct power_config_e
 } modem_power_config_t;
 
 typedef void ( *func_callback )( void );
+
+typedef enum charge_counter_value_e
+{
+    CHARGE_COUNTER_MODEM       = 0,
+    CHARGE_COUNTER_USER_DEFINE = 1,
+} charge_counter_value_t;
+
+/**
+ * @brief Modem context return code
+ */
+typedef enum modem_ctx_rc_s
+{
+    MODEM_CTX_RC_SUCCESS,
+    MODEM_CTX_RC_ERROR,
+} modem_ctx_rc_t;
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
@@ -378,13 +388,15 @@ int8_t get_modem_temp( void );
 /*!
  * \brief   return the modem status
  * \remark
- * \retval  uint8_t      bit 5 : file upload in progress
- *                       bit 4 : radio suspend
- *                       bit 3 : modem join
- *                       bit 2 : modem mute
+ * \retval  uint8_t      bit 0 : reset after brownout
  *                       bit 1 : reset after panic
- *                       bit 0 : reset after brownout
- * */
+ *                       bit 2 : modem is muted
+ *                       bit 3 : modem is joined
+ *                       bit 4 : modem radio communication is suspended
+ *                       bit 5 : file upload in progress
+ *                       bit 6 : modem is trying to join the network
+ *                       bit 7 : streaming in progress
+ */
 uint8_t get_modem_status( void );
 
 /*!
@@ -719,18 +731,22 @@ void modem_supervisor_add_task_modem_mute( void );
  */
 void modem_supervisor_add_task_retrieve_dl( uint32_t next_execute );
 
+#if defined( ADD_SMTC_STREAM )
 /*!
  * \brief    add a stream task in scheduler
  * \remark
  */
 void modem_supervisor_add_task_stream( void );
+#endif  // ADD_SMTC_STREAM
 
+#if defined( ADD_SMTC_FILE_UPLOAD )
 /**
  * @brief add a file upload task in scheduler
  *
  * @param [in] delay_in_s The delay in s before task is launched
  */
 void modem_supervisor_add_task_file_upload( uint32_t delay_in_s );
+#endif  // ADD_SMTC_FILE_UPLOAD
 
 /*!
  * \brief    add a fragmented data block task in scheduler
@@ -806,6 +822,7 @@ void modem_load_context( void );
  */
 void modem_context_factory_reset( void );
 
+#if defined( ADD_SMTC_STREAM )
 /*!
  * \brief    get the stream state
  * \param   [in]  void
@@ -847,12 +864,7 @@ void modem_set_stream_port( uint8_t port );
  * \param   [out] void
  */
 void modem_set_stream_encryption( bool enc );
-
-/*!
- * \brief    get the upload session counter variable
- * \retval return session_counter value
- */
-uint8_t modem_context_get_dm_upload_sctr( void );
+#endif  // ADD_SMTC_STREAM
 
 /**
  * @brief compute the next session counter value and return it
@@ -1079,9 +1091,10 @@ modem_power_config_t* modem_context_get_power_config_lut( void );
 /**
  * @brief Check appkey crc and status. And set them if required
  *
- * @param app_key   App key
+ * @param [in] app_key Key buffer
+ * @return modem_ctx_rc_t
  */
-void modem_context_set_appkey( const uint8_t app_key[16] );
+modem_ctx_rc_t modem_context_set_appkey( const uint8_t app_key[16] );
 
 /**
  * @brief Update appkey_crc status to invalid. (because appkey is no longer know)
@@ -1104,7 +1117,6 @@ bool modem_context_get_network_type( void );
  */
 void modem_context_set_network_type( bool network_type );
 
-#if defined( LR11XX_TRANSCEIVER )
 /**
  * @brief get modem radio context
  *
@@ -1118,8 +1130,6 @@ const void* modem_context_get_modem_radio_ctx( void );
  * @param radio_ctx the radio context
  */
 void modem_context_set_modem_radio_ctx( const void* radio_ctx );
-
-#endif  // LR11XX_TRANSCEIVER
 
 /**
  * @brief Set D2D metadata in modem context
@@ -1150,6 +1160,14 @@ void modem_set_extended_callback( func_callback, uint8_t extended_uplink_id );
  * @param [out ] callback provided by the middleware layer , lbm have to call it once the extended tx is finished
  */
 func_callback modem_get_extended_callback( uint8_t extended_uplink_id );
+
+/**
+ * @brief Take action for leaving the network
+ *
+ */
+void modem_leave( void );
+
+
 #ifdef __cplusplus
 }
 #endif

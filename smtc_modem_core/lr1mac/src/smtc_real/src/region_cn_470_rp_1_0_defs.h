@@ -168,11 +168,6 @@ static const uint32_t datarates_to_bandwidths_cn_470_rp_1_0[] = { BW125, BW125, 
 static const uint8_t M_cn_470_rp_1_0[] = { 59, 59, 59, 123, 250, 250 };
 
 /**
- * Payload max size table definition in bytes
- */
-static const uint8_t N_cn_470_rp_1_0[] = { 51, 51, 51, 115, 242, 242 };
-
-/**
  * Mobile long range datarate distribution
  * DR0: 20%,
  * DR1: 20%,

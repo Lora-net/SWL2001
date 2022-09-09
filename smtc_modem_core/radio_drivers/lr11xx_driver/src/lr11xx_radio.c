@@ -806,17 +806,17 @@ lr11xx_status_t lr11xx_radio_set_rssi_calibration( const void*                  
     const uint8_t cbuffer[LR11XX_RADIO_SET_RSSI_CALIBRATION_LENGTH] = {
         ( uint8_t ) ( LR11XX_RADIO_SET_RSSI_CALIBRATION_OC >> 8 ),
         ( uint8_t ) ( LR11XX_RADIO_SET_RSSI_CALIBRATION_OC >> 0 ),
-        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g11 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g10 & 0x0F ) ),
-        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g9 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g8 & 0x0F ) ),
-        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g7 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g6 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g5 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g4 & 0x0F ) ),
-        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp6 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp5 & 0x0F ) ),
-        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp4 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp3 & 0x0F ) ),
+        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g7 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g6 & 0x0F ) ),
+        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g9 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g8 & 0x0F ) ),
+        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g11 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g10 & 0x0F ) ),
+        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g12 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp2 & 0x0F ) << 4 ) +
                       ( rssi_cal_table->gain_tune.g13hp1 & 0x0F ) ),
-        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g12 & 0x0F ) ),
+        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp4 & 0x0F ) << 4 ) +
+                      ( rssi_cal_table->gain_tune.g13hp3 & 0x0F ) ),
+        ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp6 & 0x0F ) << 4 ) +
+                      ( rssi_cal_table->gain_tune.g13hp5 & 0x0F ) ),
         ( uint8_t ) ( rssi_cal_table->gain_tune.g13hp7 & 0x0F ),
         ( uint8_t ) ( rssi_cal_table->gain_offset >> 8 ),
         ( uint8_t ) ( rssi_cal_table->gain_offset >> 0 ),

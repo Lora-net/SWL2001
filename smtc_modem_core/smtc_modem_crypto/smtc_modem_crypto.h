@@ -250,6 +250,18 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_multicast_session_keys(
 smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t beacon_epoch_time, uint32_t dev_addr,
                                                                     uint8_t rand[16] );
 
+/**
+ * @brief Encryption function for modem services (LFU and Stream)
+ *
+ * @param [in]  clear_buff Clear buffer
+ * @param [in]  len        Buffer length
+ * @param [in]  nonce      Nonce to be used
+ * @param [out] enc_buff   Encrypted buffer
+ * @return smtc_modem_crypto_return_code_t
+ */
+smtc_modem_crypto_return_code_t smtc_modem_crypto_service_encrypt( const uint8_t* clear_buff, uint16_t len,
+                                                                   uint8_t nonce[14], uint8_t* enc_buff );
+
 #ifdef __cplusplus
 }
 #endif

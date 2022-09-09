@@ -99,9 +99,9 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
     int16_t power = input_params->system_output_pwr_in_dbm + modem_tx_offset;
 
     output_params->pa_ramp_time  = SX126X_RAMP_40_US;
-    output_params->pa_cfg.pa_lut = 0x01;  // reserved value, same for sx1261 and sx1262
+    output_params->pa_cfg.pa_lut = 0x01;  // reserved value, same for sx1261 sx1262 and sx1268
 
-#if defined( SX1262 )
+#if defined( SX1262 ) || defined( SX1268 )
 
     // Clamp power if needed
     if( power > 22 )
@@ -112,23 +112,11 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
     {
         power = -9;
     }
-    if( power == 22 )
-    {
-        output_params->pa_cfg.device_sel                 = 0x00;  // select SX1262 device
-        output_params->pa_cfg.hp_max                     = 0x07;  // to achieve 22dBm
-        output_params->pa_cfg.pa_duty_cycle              = 0x04;
-        output_params->chip_output_pwr_in_dbm_configured = 22;
-        output_params->chip_output_pwr_in_dbm_expected   = 22;
-    }
-    else
-    {
-        output_params->pa_cfg.device_sel                 = 0x00;  // select SX1262 device
-        output_params->pa_cfg.hp_max                     = 0x07;  // to achieve 22dBm
-        output_params->pa_cfg.pa_duty_cycle              = 0x04;
-        output_params->chip_output_pwr_in_dbm_configured = ( int8_t ) power;
-        output_params->chip_output_pwr_in_dbm_expected   = ( int8_t ) power;
-    }
-
+    output_params->pa_cfg.device_sel                 = 0x00;  // select SX1262/SX1268 device
+    output_params->pa_cfg.hp_max                     = 0x07;  // to achieve 22dBm
+    output_params->pa_cfg.pa_duty_cycle              = 0x04;
+    output_params->chip_output_pwr_in_dbm_configured = ( int8_t ) power;
+    output_params->chip_output_pwr_in_dbm_expected   = ( int8_t ) power;
 #else
     // Clamp power if needed
     if( power > 15 )
@@ -172,7 +160,7 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
 void ral_sx126x_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
                                   sx126x_tcxo_ctrl_voltages_t* supply_voltage, uint32_t* startup_time_in_tick )
 {
-    // No tcxo on Basic Modem sx1261 and sx1262 reference boards
+    // No tcxo on Basic Modem sx1261,sx1262 or sx1268 reference boards
     *tcxo_is_radio_controlled = false;
 }
 

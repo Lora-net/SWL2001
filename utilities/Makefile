@@ -14,18 +14,11 @@ APPBUILD_ROOT = build
 # Prefix for all binaries names
 APPTARGET_ROOT = app
 
-BYPASS=no
-
-PERF_TEST=no
-
 # CRYPTO Management
 CRYPTO ?= SOFT
 
 # Compile for debugging
 DEBUG ?= no
-
-# Compile with coverage analysis support
-COVERAGE ?= no
 
 # Use multithreaded build (make -j)
 MULTITHREAD ?= yes
@@ -57,7 +50,7 @@ USE_GNSS ?= yes
 # default action: print help
 #-----------------------------------------------------------------------------
 help:
-	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	sx1261	sx1262")
+	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	sx1261	sx1262	sx1268")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------------------- Clean -------------------------------------")
 	$(call echo_help, " * make clean_<TARGET>             : clean basic_modem app and lib for a given target")
@@ -122,6 +115,10 @@ ifeq ($(RADIO),sx1262)
 -include makefiles/sx126x.mk
 endif
 
+ifeq ($(RADIO),sx1268)
+-include makefiles/sx126x.mk
+endif
+
 ifeq ($(RADIO),sx128x)
 -include makefiles/sx128x.mk
 endif
@@ -129,7 +126,7 @@ endif
 #-----------------------------------------------------------------------------
 -include makefiles/common.mk
 
-.PHONY: clean_all all help 
+.PHONY: clean_all all help
 .PHONY: FORCE
 FORCE:
 
@@ -154,6 +151,10 @@ clean_sx1261:
 clean_sx1262:
 	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx1262 $(MTHREAD_FLAG)
 	$(MAKE) clean_target RADIO=sx1262 $(MTHREAD_FLAG)
+
+clean_sx1268:
+	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx1268 $(MTHREAD_FLAG)
+	$(MAKE) clean_target RADIO=sx1268 $(MTHREAD_FLAG)
 
 clean_sx128x:
 	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx128x $(MTHREAD_FLAG)
@@ -208,6 +209,17 @@ full_sx1262:
 	$(MAKE) sx1262 $(MTHREAD_FLAG)
 ifneq ($(DRIVE),nc)
 	$(MAKE) flash RADIO=sx1262
+endif
+
+#-- SX1268 -------------------------------------------------------------------
+sx1268:
+	$(MAKE) example RADIO=sx1268 $(MTHREAD_FLAG)
+
+full_sx1268:
+	$(MAKE) clean_sx1268
+	$(MAKE) sx1268 $(MTHREAD_FLAG)
+ifneq ($(DRIVE),nc)
+	$(MAKE) flash RADIO=sx1268
 endif
 
 #-- SX128x -------------------------------------------------------------------

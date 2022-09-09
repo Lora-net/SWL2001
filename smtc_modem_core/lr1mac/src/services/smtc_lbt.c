@@ -103,7 +103,6 @@ void smtc_lbt_launch_callback_for_rp( void* rp_void )
     uint8_t          id = rp->radio_task_id;
     int16_t          rssi_tmp;
     smtc_modem_hal_start_radio_tcxo( );
-    ral_init( &( rp->radio->ral ) );
     smtc_modem_hal_assert( ral_set_pkt_type( &( rp->radio->ral ), rp->radio_params[id].pkt_type ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_rf_freq( &( rp->radio->ral ), rp->radio_params[id].rx.gfsk.rf_freq_in_hz ) ==
                            RAL_STATUS_OK );
@@ -175,7 +174,8 @@ void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_tim
     rp_task.duration_time_ms      = lbt_obj->listen_duration_ms + tx_duration_ms;
     rp_task.type                  = RP_TASK_TYPE_LBT;
     rp_task.launch_task_callbacks = smtc_lbt_launch_callback_for_rp;
-    rp_task.start_time_ms         = target_time_ms - lbt_obj->listen_duration_ms;
+    rp_task.start_time_ms =
+        target_time_ms - lbt_obj->listen_duration_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
     if( is_at_time == true )
     {
         rp_task.state = RP_TASK_STATE_SCHEDULE;
@@ -184,13 +184,18 @@ void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_tim
     {
         rp_task.state = RP_TASK_STATE_ASAP;
     }
-    SMTC_MODEM_HAL_TRACE_PRINTF( "  Listen Frequency = %u during %d ms \n", freq,
-                                 lbt_obj->listen_duration_ms - LAP_OF_TIME_TO_GET_A_RSSI_VALID );
+
     if( rp_task_enqueue( lbt_obj->rp, &rp_task, NULL, 0, &radio_params ) != RP_HOOK_STATUS_OK )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "Radio planner hook %d is busy \n", my_hook_id );
     }
+    else
+    {
+        SMTC_MODEM_HAL_TRACE_PRINTF( "  Listen Frequency = %u during %d ms \n", freq,
+                                     lbt_obj->listen_duration_ms - LAP_OF_TIME_TO_GET_A_RSSI_VALID );
+    }
 }
+
 void smtc_lbt_rp_callback( smtc_lbt_t* lbt_obj )
 {
     uint32_t    tcurrent_ms;

@@ -202,6 +202,20 @@
  */
 #define SX126X_REG_RETENTION_LIST_BASE_ADDRESS 0x029F
 
+/**
+ * @brief GFSK node address
+ *
+ * @remark Reset value is 0x00
+ */
+#define SX126X_REG_GFSK_NODE_ADDRESS 0x06CD
+
+/**
+ * @brief GFSK broadcast address
+ *
+ * @remark Reset value is 0x00
+ */
+#define SX126X_REG_GFSK_BROADCAST_ADDRESS 0x06CE
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------

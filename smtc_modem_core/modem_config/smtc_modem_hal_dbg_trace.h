@@ -102,7 +102,7 @@ extern "C" {
     #define MODEM_HAL_DBG_TRACE_COLOR_DEFAULT ""
 #endif
 
-#if ( MODEM_HAL_DBG_TRACE ) && !defined (PERF_TEST_ENABLED)
+#if ( MODEM_HAL_DBG_TRACE )
 
     #define SMTC_MODEM_HAL_TRACE_PRINTF( ... )  smtc_modem_hal_print_trace (  __VA_ARGS__ )
 
@@ -184,7 +184,7 @@ extern "C" {
     #define SMTC_MODEM_HAL_TRACE_ERROR_DEBUG( ... )
     #define SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( msg, array, len )
     #define SMTC_MODEM_HAL_TRACE_PACKARRAY_DEBUG( ... )
-    #endif 
+    #endif
 
 #else
 //Trace default definitions
@@ -207,14 +207,6 @@ extern "C" {
     #define SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( msg, array, len )
     #define SMTC_MODEM_HAL_TRACE_PACKARRAY_DEBUG( ... )
 #endif
-
-#if defined (PERF_TEST_ENABLED)
-    #define SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( ... )  smtc_modem_hal_print_trace (  __VA_ARGS__ )
-#else
-    #define SMTC_MODEM_HAL_PERF_TEST_TRACE_PRINTF( ... )
-#endif
-
-
 
 #if ( MODEM_HAL_DBG_TRACE_RP == MODEM_HAL_FEATURE_ON )
     #define SMTC_MODEM_HAL_RP_TRACE_MSG( msg )                                        \

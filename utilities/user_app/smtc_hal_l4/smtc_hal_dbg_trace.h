@@ -97,7 +97,7 @@ extern "C" {
     #define HAL_DBG_TRACE_COLOR_DEFAULT ""
 #endif
 
-#if ( HAL_DBG_TRACE ) && !defined (PERF_TEST_ENABLED)
+#if ( HAL_DBG_TRACE )
 
     #define SMTC_HAL_TRACE_PRINTF( ... )  hal_trace_print_var (  __VA_ARGS__ )
 

@@ -118,7 +118,6 @@ void region_in_865_config( lr1_stack_mac_t* lr1_mac )
     const_dtc_supported                = DTC_SUPPORTED_IN_865;
     const_lbt_supported                = LBT_SUPPORTED_IN_865;
     const_max_payload_m                = &M_in_865[0];
-    const_max_payload_n                = &N_in_865[0];
     const_coding_rate                  = RAL_LORA_CR_4_5;
     const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_IN_865[0];
     const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_IN_865[0];

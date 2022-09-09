@@ -275,7 +275,6 @@ typedef struct smtc_real_const_s
     int16_t         const_lbt_threshold_dbm;
     uint32_t        const_lbt_bw_hz;
     const uint8_t*  const_max_payload_m;
-    const uint8_t*  const_max_payload_n;
     ral_lora_cr_t   const_coding_rate;
     uint8_t         const_dtc_number_of_band;
     const uint16_t* const_dtc_by_band;
@@ -328,7 +327,6 @@ typedef struct smtc_real_const_s
 #define const_lbt_threshold_dbm lr1_mac->real->real_const.const_lbt_threshold_dbm
 #define const_lbt_bw_hz lr1_mac->real->real_const.const_lbt_bw_hz
 #define const_max_payload_m lr1_mac->real->real_const.const_max_payload_m
-#define const_max_payload_n lr1_mac->real->real_const.const_max_payload_n
 #define const_coding_rate lr1_mac->real->real_const.const_coding_rate
 #define const_dtc_number_of_band lr1_mac->real->real_const.const_dtc_number_of_band
 #define const_dtc_by_band lr1_mac->real->real_const.const_dtc_by_band

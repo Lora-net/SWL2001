@@ -62,15 +62,13 @@
 #endif  //_MODEM_E_GNSS_ENABLE
 #endif  // LR1110_MODEM_E
 
-#if defined( LR11XX_TRANSCEIVER )
-#if defined( ENABLE_MODEM_GNSS_FEATURE )
+#if defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
 #include "almanac_update.h"
-#endif  // ENABLE_MODEM_GNSS_FEATURE
+#endif  // LR11XX_TRANSCEIVER && ENABLE_MODEM_GNSS_FEATURE
+
 #if defined( USE_LR11XX_CE )
 #include "lr11xx_system.h"
 #endif  // USE_LR11XX_CE
-#endif  // LR11XX_TRANSCEIVER
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -103,23 +101,29 @@ typedef struct modem_context_nvm_idx_s
 } modem_context_nvm_t;
 
 #if !defined( LR1110_MODEM_E )
-static int16_t                modem_appkey_status  = MODEM_APPKEY_CRC_STATUS_INVALID;
-static uint32_t               modem_appkey_crc     = 0;
-static uint8_t                modem_status         = 0;
-static uint8_t                modem_dm_interval    = DEFAULT_DM_REPORTING_INTERVAL;
-static uint8_t                modem_dm_port        = DEFAULT_DM_PORT;
-static uint8_t                modem_frag_port      = DEFAULT_FRAG_PORT;
-static uint8_t                modem_appstatus[8]   = { 0 };
-static smtc_modem_class_t     modem_dm_class       = SMTC_MODEM_CLASS_A;
-static modem_suspend_status_t is_modem_suspend     = MODEM_NOT_SUSPEND;
-static uint32_t               modem_start_time     = 0;
-static uint8_t                modem_dm_upload_sctr = 0;
-static modem_upload_state_t   modem_upload_state   = MODEM_UPLOAD_NOT_INIT;
-static modem_stream_t         modem_stream_state   = {  //
+static int16_t  modem_appkey_status = MODEM_APPKEY_CRC_STATUS_INVALID;
+static uint32_t modem_appkey_crc    = 0;
+static uint8_t  modem_status        = 0;
+static uint8_t  modem_dm_interval   = DEFAULT_DM_REPORTING_INTERVAL;
+static uint8_t  modem_dm_port       = DEFAULT_DM_PORT;
+#if defined( ADD_SMTC_PATCH_UPDATE )
+static uint8_t modem_frag_port = DEFAULT_FRAG_PORT;
+#endif  // ADD_SMTC_PATCH_UPDATE
+static uint8_t                modem_appstatus[8] = { 0 };
+static smtc_modem_class_t     modem_dm_class     = SMTC_MODEM_CLASS_A;
+static modem_suspend_status_t is_modem_suspend   = MODEM_NOT_SUSPEND;
+static uint32_t               modem_start_time   = 0;
+#if defined( ADD_SMTC_FILE_UPLOAD )
+static uint8_t              modem_dm_upload_sctr = 0;
+static modem_upload_state_t modem_upload_state   = MODEM_UPLOAD_NOT_INIT;
+#endif  // ADD_SMTC_FILE_UPLOAD
+#if defined( ADD_SMTC_STREAM )
+static modem_stream_t modem_stream_state = {  //
     .port       = DEFAULT_DM_PORT,            //
     .state      = MODEM_STREAM_NOT_INIT,      //
     .encryption = false
 };
+#endif                                                                            // ADD_SMTC_STREAM
 static uint32_t dm_info_bitfield_periodic         = DEFAULT_DM_REPORTING_FIELDS;  // context for periodic GetInfo
 static uint32_t dm_info_bitfield_now              = 0;                            // User GetInfo
 static uint8_t  tag_number                        = 0;
@@ -142,20 +146,22 @@ static rf_output_t                  modem_rf_output             = MODEM_RFO_LP_L
 static uint8_t                      duty_cycle_disabled_by_host = false;
 static uint32_t                     crc_fw;
 static smtc_modem_adr_profile_t     modem_adr_profile;
-static uint32_t                     modem_upload_avgdelay;
-static uint16_t                     nb_adr_mobile_timeout;
-static bool                         is_modem_in_test_mode = false;
-static int8_t                       rx_pathloss_db        = 0;
-static int8_t                       tx_power_offset_db    = 0;
-static radio_planner_t*             modem_rp              = NULL;
-static modem_power_config_t         power_config_lut[POWER_CONFIG_LUT_SIZE];
-static modem_context_class_b_d2d_t  class_b_d2d_ctx;
+#if defined( ADD_SMTC_FILE_UPLOAD )
+static uint32_t modem_upload_avgdelay;
+#endif  // ADD_SMTC_FILE_UPLOAD
+static uint16_t             nb_adr_mobile_timeout;
+static bool                 is_modem_in_test_mode = false;
+static int8_t               rx_pathloss_db        = 0;
+static int8_t               tx_power_offset_db    = 0;
+static radio_planner_t*     modem_rp              = NULL;
+static modem_power_config_t power_config_lut[POWER_CONFIG_LUT_SIZE];
+#if defined( SMTC_D2D )
+static modem_context_class_b_d2d_t class_b_d2d_ctx;
+#endif  // SMTC_D2D
 static void ( *modem_lbm_notification_extended_1_callback )( void );
 static void ( *modem_lbm_notification_extended_2_callback )( void );
-#if defined( LR11XX_TRANSCEIVER )
 static const void* modem_radio_ctx;  // use to save lr11xx user radio context needed to perform direct access to radio
                                      // withing modem code (almanac update, crypto)
-#endif                               // LR11XX_TRANSCEIVER
 
 #else
 struct
@@ -165,14 +171,21 @@ struct
     uint8_t                      modem_status;
     uint8_t                      modem_dm_interval;
     uint8_t                      modem_dm_port;
+#if defined( ADD_SMTC_PATCH_UPDATE )
     uint8_t                      modem_frag_port;
+#endif  // ADD_SMTC_PATCH_UPDATE
     uint8_t                      modem_appstatus[8];
     smtc_modem_class_t           modem_dm_class;
     modem_suspend_status_t       is_modem_suspend;
     uint32_t                     modem_start_time;
+#if defined( ADD_SMTC_FILE_UPLOAD )
     uint8_t                      modem_dm_upload_sctr;
     modem_upload_state_t         modem_upload_state;
+    uint32_t                     modem_upload_avgdelay;
+#endif  // ADD_SMTC_FILE_UPLOAD
+#if defined( ADD_SMTC_STREAM )
     modem_stream_t               modem_stream_state;
+#endif  // ADD_SMTC_STREAM
     uint32_t                     dm_info_bitfield_periodic;  // context for periodic GetInfo
     uint32_t                     dm_info_bitfield_now;       // User GetInfo
     uint8_t                      tag_number;
@@ -195,62 +208,75 @@ struct
     uint8_t                      duty_cycle_disabled_by_host;
     uint32_t                     crc_fw;
     smtc_modem_adr_profile_t     modem_adr_profile;
-    uint32_t                     modem_upload_avgdelay;
     uint16_t                     nb_adr_mobile_timeout;
     bool                         is_modem_in_test_mode;
     int8_t                       rx_pathloss_db;
     int8_t                       tx_power_offset_db;
     radio_planner_t*             modem_rp;
     modem_power_config_t         power_config_lut[POWER_CONFIG_LUT_SIZE];
+#if defined( ADD_D2D )
     modem_context_class_b_d2d_t  class_b_d2d_ctx;
+#endif  // ADD_D2D
     void ( *modem_lbm_notification_extended_1_callback )( void );
     void ( *modem_lbm_notification_extended_2_callback )( void );
+    const void* modem_radio_ctx;
 } modem_ctx_context;
 
 // clang-format off
-#define  modem_appkey_status                modem_ctx_context.modem_appkey_status
-#define  modem_appkey_crc                   modem_ctx_context.modem_appkey_crc
-#define  modem_status                       modem_ctx_context.modem_status
-#define  modem_dm_interval                  modem_ctx_context.modem_dm_interval
-#define  modem_dm_port                      modem_ctx_context.modem_dm_port
-#define  modem_frag_port                    modem_ctx_context.modem_frag_port
-#define  modem_appstatus                    modem_ctx_context.modem_appstatus
-#define  modem_dm_class                     modem_ctx_context.modem_dm_class
-#define  is_modem_suspend                   modem_ctx_context.is_modem_suspend
-#define  modem_start_time                   modem_ctx_context.modem_start_time
-#define  modem_dm_upload_sctr               modem_ctx_context.modem_dm_upload_sctr
-#define  modem_upload_state                 modem_ctx_context.modem_upload_state
-#define  modem_stream_state                 modem_ctx_context.modem_stream_state
-#define  dm_info_bitfield_periodic          modem_ctx_context.dm_info_bitfield_periodic
-#define  dm_info_bitfield_now               modem_ctx_context.dm_info_bitfield_now
-#define  tag_number                         modem_ctx_context.tag_number
-#define  tag_number_now                     modem_ctx_context.tag_number_now
-#define  number_of_muted_day                modem_ctx_context.number_of_muted_day
-#define  dm_pending_dl                      modem_ctx_context.dm_pending_dl
-#define  user_alarm                         modem_ctx_context.user_alarm
-#define  asynchronous_msgnumber             modem_ctx_context.asynchronous_msgnumber
-#define  modem_event_count                  modem_ctx_context.modem_event_count
-#define  modem_event_status                 modem_ctx_context.modem_event_status
-#define  asynch_msg                         modem_ctx_context.asynch_msg
-#define  modem_dwn_pkt                      modem_ctx_context.modem_dwn_pkt
-#define  is_modem_reset_requested           modem_ctx_context.is_modem_reset_requested
-#define  is_modem_charge_loaded             modem_ctx_context.is_modem_charge_loaded
-#define  modem_charge_offset                modem_ctx_context.modem_charge_offset
-#define  start_time_was_set                 modem_ctx_context.start_time_was_set
-#define  user_define_charge_counter         modem_ctx_context.user_define_charge_counter
-#define  charge_counter_to_send             modem_ctx_context.charge_counter_to_send
-#define  modem_rf_output                    modem_ctx_context.modem_rf_output
-#define  duty_cycle_disabled_by_host        modem_ctx_context.duty_cycle_disabled_by_host
-#define  crc_fw                             modem_ctx_context.crc_fw
-#define  modem_adr_profile                  modem_ctx_context.modem_adr_profile
-#define  modem_upload_avgdelay              modem_ctx_context.modem_upload_avgdelay
-#define  nb_adr_mobile_timeout              modem_ctx_context.nb_adr_mobile_timeout
-#define  is_modem_in_test_mode              modem_ctx_context.is_modem_in_test_mode
-#define  rx_pathloss_db                     modem_ctx_context.rx_pathloss_db
-#define  tx_power_offset_db                 modem_ctx_context.tx_power_offset_db
-#define  modem_rp                           modem_ctx_context.modem_rp
-#define  power_config_lut                   modem_ctx_context.power_config_lut
-#define  class_b_d2d_ctx                    modem_ctx_context.class_b_d2d_ctx
+#define  modem_appkey_status                        modem_ctx_context.modem_appkey_status
+#define  modem_appkey_crc                           modem_ctx_context.modem_appkey_crc
+#define  modem_status                               modem_ctx_context.modem_status
+#define  modem_dm_interval                          modem_ctx_context.modem_dm_interval
+#define  modem_dm_port                              modem_ctx_context.modem_dm_port
+#if defined( ADD_SMTC_PATCH_UPDATE )
+#define  modem_frag_port                            modem_ctx_context.modem_frag_port
+#endif  // ADD_SMTC_PATCH_UPDATE
+#define  modem_appstatus                            modem_ctx_context.modem_appstatus
+#define  modem_dm_class                             modem_ctx_context.modem_dm_class
+#define  is_modem_suspend                           modem_ctx_context.is_modem_suspend
+#define  modem_start_time                           modem_ctx_context.modem_start_time
+#if defined( ADD_SMTC_FILE_UPLOAD )
+#define  modem_dm_upload_sctr                       modem_ctx_context.modem_dm_upload_sctr
+#define  modem_upload_state                         modem_ctx_context.modem_upload_state
+#endif // ADD_SMTC_FILE_UPLOAD
+#if defined( ADD_SMTC_STREAM )
+#define  modem_stream_state                         modem_ctx_context.modem_stream_state
+#endif  // ADD_SMTC_STREAM
+#define  dm_info_bitfield_periodic                  modem_ctx_context.dm_info_bitfield_periodic
+#define  dm_info_bitfield_now                       modem_ctx_context.dm_info_bitfield_now
+#define  tag_number                                 modem_ctx_context.tag_number
+#define  tag_number_now                             modem_ctx_context.tag_number_now
+#define  number_of_muted_day                        modem_ctx_context.number_of_muted_day
+#define  dm_pending_dl                              modem_ctx_context.dm_pending_dl
+#define  user_alarm                                 modem_ctx_context.user_alarm
+#define  asynchronous_msgnumber                     modem_ctx_context.asynchronous_msgnumber
+#define  modem_event_count                          modem_ctx_context.modem_event_count
+#define  modem_event_status                         modem_ctx_context.modem_event_status
+#define  asynch_msg                                 modem_ctx_context.asynch_msg
+#define  modem_dwn_pkt                              modem_ctx_context.modem_dwn_pkt
+#define  is_modem_reset_requested                   modem_ctx_context.is_modem_reset_requested
+#define  is_modem_charge_loaded                     modem_ctx_context.is_modem_charge_loaded
+#define  modem_charge_offset                        modem_ctx_context.modem_charge_offset
+#define  start_time_was_set                         modem_ctx_context.start_time_was_set
+#define  user_define_charge_counter                 modem_ctx_context.user_define_charge_counter
+#define  charge_counter_to_send                     modem_ctx_context.charge_counter_to_send
+#define  modem_rf_output                            modem_ctx_context.modem_rf_output
+#define  duty_cycle_disabled_by_host                modem_ctx_context.duty_cycle_disabled_by_host
+#define  crc_fw                                     modem_ctx_context.crc_fw
+#define  modem_adr_profile                          modem_ctx_context.modem_adr_profile
+#if defined ( ADD_SMTC_FILE_UPLOAD )
+#define  modem_upload_avgdelay                      modem_ctx_context.modem_upload_avgdelay
+#endif // ADD_SMTC_FILE_UPLOAD
+#define  nb_adr_mobile_timeout                      modem_ctx_context.nb_adr_mobile_timeout
+#define  is_modem_in_test_mode                      modem_ctx_context.is_modem_in_test_mode
+#define  rx_pathloss_db                             modem_ctx_context.rx_pathloss_db
+#define  tx_power_offset_db                         modem_ctx_context.tx_power_offset_db
+#define  modem_rp                                   modem_ctx_context.modem_rp
+#define  power_config_lut                           modem_ctx_context.power_config_lut
+#define  class_b_d2d_ctx                            modem_ctx_context.class_b_d2d_ctx
+#define modem_lbm_notification_extended_1_callback  modem_ctx_context.modem_lbm_notification_extended_1_callback
+#define modem_lbm_notification_extended_2_callback  modem_ctx_context.modem_lbm_notification_extended_2_callback
+#define modem_radio_ctx                             modem_ctx_context.modem_radio_ctx
 // clang-format on
 
 #endif
@@ -264,9 +290,11 @@ static const uint8_t dm_info_field_sz[DM_INFO_MAX] = {
     [DM_INFO_CRASHLOG] = 0,  // (variable-length, send as last field or in separate frame)
     [DM_INFO_UPLOAD]   = 0,  // (variable-length, not sent periodically)
     [DM_INFO_RSTCOUNT] = 2,  [DM_INFO_DEVEUI] = 8,    [DM_INFO_RFU_1] = 2,    [DM_INFO_SESSION] = 2,
-    [DM_INFO_CHIPEUI]   = 8,
+    [DM_INFO_CHIPEUI] = 8,
+#if defined( ADD_SMTC_STREAM )
     [DM_INFO_STREAM]    = 0,  // (variable-length, not sent periodically)
     [DM_INFO_STREAMPAR] = 2, [DM_INFO_APPSTATUS] = 8,
+#endif                        // ADD_SMTC_STREAM
     [DM_INFO_ALCSYNC]   = 0,  // (variable-length, not sent periodically)
     [DM_INFO_ALMSTATUS] = 7
 };
@@ -332,45 +360,53 @@ static dm_cmd_length_valid_t check_dm_status_max_size( uint32_t info_requested, 
 
 void modem_context_init( )
 {
-    modem_status                  = 0;
-    modem_dm_interval             = DEFAULT_DM_REPORTING_INTERVAL;
-    modem_dm_port                 = DEFAULT_DM_PORT;
-    modem_frag_port               = DEFAULT_FRAG_PORT;
-    modem_dm_class                = SMTC_MODEM_CLASS_A;
-    is_modem_suspend              = MODEM_NOT_SUSPEND;
-    modem_start_time              = 0;
-    modem_dm_upload_sctr          = 0;
-    modem_upload_state            = MODEM_UPLOAD_NOT_INIT;
+    modem_status      = 0;
+    modem_dm_interval = DEFAULT_DM_REPORTING_INTERVAL;
+    modem_dm_port     = DEFAULT_DM_PORT;
+#if defined( ADD_SMTC_PATCH_UPDATE )
+    modem_frag_port = DEFAULT_FRAG_PORT;
+#endif  // ADD_SMTC_PATCH_UPDATE
+    modem_dm_class   = SMTC_MODEM_CLASS_A;
+    is_modem_suspend = MODEM_NOT_SUSPEND;
+    modem_start_time = 0;
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    modem_dm_upload_sctr = 0;
+    modem_upload_state   = MODEM_UPLOAD_NOT_INIT;
+#endif  // ADD_SMTC_FILE_UPLOAD
+#if defined( ADD_SMTC_STREAM )
     modem_stream_state.port       = DEFAULT_DM_PORT;
     modem_stream_state.state      = MODEM_STREAM_NOT_INIT;
     modem_stream_state.encryption = false;
-    dm_info_bitfield_periodic     = DEFAULT_DM_REPORTING_FIELDS;  // context for periodic GetInfo
-    dm_info_bitfield_now          = 0;                            // User GetInfo
-    tag_number                    = 0;
-    tag_number_now                = 0;
-    number_of_muted_day           = 0;
-    dm_pending_dl.up_count        = 0;
-    dm_pending_dl.up_delay        = 0;
-    user_alarm                    = 0;
-    asynchronous_msgnumber        = 0;
-    is_modem_reset_requested      = false;
-    is_modem_charge_loaded        = false;
-    modem_charge_offset           = 0;
-    start_time_was_set            = false;
-    user_define_charge_counter    = 0;
-    charge_counter_to_send        = CHARGE_COUNTER_MODEM;
-    modem_rf_output               = MODEM_RFO_LP_LF;
-    duty_cycle_disabled_by_host   = false;
-    crc_fw                        = compute_crc_fw( );
-    modem_adr_profile             = SMTC_MODEM_ADR_PROFILE_NETWORK_CONTROLLED;
-    modem_upload_avgdelay         = 0;
-    nb_adr_mobile_timeout         = DEFAULT_ADR_MOBILE_MODE_TIMEOUT;
-    is_modem_in_test_mode         = false;
-    rx_pathloss_db                = 0;
-    tx_power_offset_db            = 0;
-    modem_rp                      = NULL;
-    modem_appkey_status           = MODEM_APPKEY_CRC_STATUS_INVALID;
-    modem_appkey_crc              = 0;
+#endif                                                          // ADD_SMTC_STREAM
+    dm_info_bitfield_periodic   = DEFAULT_DM_REPORTING_FIELDS;  // context for periodic GetInfo
+    dm_info_bitfield_now        = 0;                            // User GetInfo
+    tag_number                  = 0;
+    tag_number_now              = 0;
+    number_of_muted_day         = 0;
+    dm_pending_dl.up_count      = 0;
+    dm_pending_dl.up_delay      = 0;
+    user_alarm                  = 0;
+    asynchronous_msgnumber      = 0;
+    is_modem_reset_requested    = false;
+    is_modem_charge_loaded      = false;
+    modem_charge_offset         = 0;
+    start_time_was_set          = false;
+    user_define_charge_counter  = 0;
+    charge_counter_to_send      = CHARGE_COUNTER_MODEM;
+    modem_rf_output             = MODEM_RFO_LP_LF;
+    duty_cycle_disabled_by_host = false;
+    crc_fw                      = compute_crc_fw( );
+    modem_adr_profile           = SMTC_MODEM_ADR_PROFILE_NETWORK_CONTROLLED;
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    modem_upload_avgdelay = 0;
+#endif  // ADD_SMTC_FILE_UPLOAD
+    nb_adr_mobile_timeout = DEFAULT_ADR_MOBILE_MODE_TIMEOUT;
+    is_modem_in_test_mode = false;
+    rx_pathloss_db        = 0;
+    tx_power_offset_db    = 0;
+    modem_rp              = NULL;
+    modem_appkey_status   = MODEM_APPKEY_CRC_STATUS_INVALID;
+    modem_appkey_crc      = 0;
     memset( modem_appstatus, 0, 8 );
     memset( modem_event_count, 0, MODEM_NUMBER_OF_EVENTS );
     memset( modem_event_status, 0, MODEM_NUMBER_OF_EVENTS );
@@ -378,7 +414,9 @@ void modem_context_init( )
     memset( &modem_dwn_pkt, 0, sizeof( modem_downlink_msg_t ) );
     // init power config tab to 0x80 as it corresponds to an expected power of 128dbm, value that is never reached
     memset( power_config_lut, 0x80, POWER_CONFIG_LUT_SIZE * sizeof( modem_power_config_t ) );
+#if defined( ADD_D2D )
     memset( &class_b_d2d_ctx, 0, sizeof( modem_context_class_b_d2d_t ) );
+#endif  // ADD_D2D
 }
 
 void modem_event_init( void )
@@ -556,6 +594,7 @@ uint8_t get_modem_dm_port( void )
     return ( modem_dm_port );
 }
 
+#if defined( ADD_SMTC_PATCH_UPDATE )
 dm_rc_t set_modem_frag_port( uint8_t port )
 {
     SMTC_MODEM_HAL_TRACE_ERROR( "set_modem_frag_port not implemented\n" );
@@ -566,6 +605,7 @@ uint8_t get_modem_frag_port( void )
 {
     return ( modem_frag_port );
 }
+#endif  // ADD_SMTC_PATCH_UPDATE
 
 smtc_modem_adr_profile_t get_modem_adr_profile( void )
 {
@@ -593,7 +633,7 @@ modem_join_state_t get_join_state( void )
     {
         joinstate = MODEM_JOIN_ONGOING;
     }
-    else if( lorawan_api_isjoined( ) == NOT_JOINED )
+    else if( lorawan_api_isjoined( ) != JOINED )
     {
         joinstate = MODEM_NOT_JOINED;
     }
@@ -683,6 +723,7 @@ void modem_supervisor_add_task_crash_log( uint32_t next_execute )
     modem_supervisor_add_task( &task_dm );
 }
 
+#if defined( ADD_SMTC_ALC_SYNC )
 void modem_supervisor_add_task_clock_sync_time_req( uint32_t next_execute )
 {
     smodem_task task_dm;
@@ -728,6 +769,7 @@ void modem_supervisor_add_task_alc_sync_ans( uint32_t next_execute )
         modem_supervisor_add_task( &task_dm );
     }
 }
+#endif  // ADD_SMTC_ALC_SYNC
 
 void modem_supervisor_add_task_alm_dbg_ans( uint32_t next_execute )
 {
@@ -778,6 +820,7 @@ void modem_supervisor_add_task_frag( uint32_t next_execute )
     }
 }
 
+#if defined( ADD_SMTC_STREAM )
 void modem_supervisor_add_task_stream( void )
 {
     // Modem supervisor copy everything,
@@ -796,7 +839,9 @@ void modem_supervisor_add_task_stream( void )
     // stream task is now on going: set modem status accordingly
     set_modem_status_streaming( true );
 }
+#endif  // ADD_SMTC_STREAM
 
+#if defined( ADD_SMTC_FILE_UPLOAD )
 void modem_supervisor_add_task_file_upload( uint32_t delay_in_s )
 {
     smodem_task upload_task;
@@ -807,6 +852,7 @@ void modem_supervisor_add_task_file_upload( uint32_t delay_in_s )
 
     modem_supervisor_add_task( &upload_task );
 }
+#endif  // ADD_SMTC_FILE_UPLOAD
 
 void modem_supervisor_add_task_link_check_req( uint32_t delay_in_s )
 {
@@ -847,18 +893,6 @@ void modem_supervisor_add_task_ping_slot_info_req( uint32_t delay_in_s )
     }
 }
 
-/*!
- * \brief   return the modem status
- * \remark
- * \param [IN] void
- * \param [OUT] modem status bit 6 : streaming in progress
- *                           bit 5 : file upload in progress
- *                           bit 4 : radio suspend
- *                           bit 3 : modem join
- *                           bit 2 : modem mute
- *                           bit 1 : reset after panic
- *                           bit 0 : reset after brownout
- * */
 uint8_t get_modem_status( void )
 {
     // If the stack is no more join, the modem status was not aware of the disconnection
@@ -1296,7 +1330,7 @@ bool dm_status_payload( uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_l
             }
             break;
             case DM_INFO_FIRMWARE: {
-#if defined( LR1110_MODEM_E )
+#if defined( LR1110_MODEM_E ) && defined( ADD_SMTC_PATCH_UPDATE )
                 // return the crc value of fuota dedicated for test have to be
                 // re implement when fuota availble
                 *( p_tmp + 0 ) = crc_fw & 0xFF;
@@ -1309,7 +1343,7 @@ bool dm_status_payload( uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_l
                 *( p_tmp + 7 ) = ( frag_get_nb_frag_received( ) >> 8 ) & 0xFF;
 #else
                 memset( p_tmp, 0, 8 );  // TODO remove this
-#endif  // LR1110_MODEM_E
+#endif  // LR1110_MODEM_E && ADD_SMTC_PATCH_UPDATE
             }
             break;
             case DM_INFO_ADRMODE:
@@ -1365,10 +1399,12 @@ bool dm_status_payload( uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_l
                 memcpy1_r( p_tmp, p_tmp_chip_eui, 8 );
                 break;
             }
+#if defined( ADD_SMTC_STREAM )
             case DM_INFO_STREAMPAR:
                 *p_tmp         = modem_get_stream_port( );
                 *( p_tmp + 1 ) = modem_get_stream_encryption( );
                 break;
+#endif  // ADD_SMTC_STREAM
             case DM_INFO_APPSTATUS:
                 get_modem_appstatus( p_tmp );
                 break;
@@ -1399,7 +1435,7 @@ bool dm_status_payload( uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_l
     *dm_uplink_message_len = p - dm_uplink_message;
     return pending;
 }
-#if defined( LR1110_MODEM_E )
+#if defined( LR1110_MODEM_E ) && defined( ADD_SMTC_PATCH_UPDATE )
 void dm_frag_uplink_payload( uint8_t max_payload_length, uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_len )
 {
     frag_set_max_length_up_payload( max_payload_length );
@@ -1408,7 +1444,7 @@ void dm_frag_uplink_payload( uint8_t max_payload_length, uint8_t* dm_uplink_mess
 
     frag_get_tx_buffer( &dm_uplink_message[0], dm_uplink_message_len );
 }
-#endif  // LR1110_MODEM_E
+#endif  // LR1110_MODEM_E && ADD_SMTC_PATCH_UPDATE
 
 #if defined( LR1110_MODEM_E ) && defined( _MODEM_E_GNSS_ENABLE )
 void dm_alm_dbg_uplink_payload( uint8_t max_payload_length, uint8_t* dm_uplink_message, uint8_t* dm_uplink_message_len )
@@ -1582,7 +1618,7 @@ void set_modem_downlink_frame( uint8_t* data, uint8_t data_length, lr1mac_down_m
     SMTC_MODEM_HAL_TRACE_ARRAY( "Downlink frame ", modem_dwn_pkt.data, modem_dwn_pkt.length );
     SMTC_MODEM_HAL_TRACE_PRINTF( "DL Port = %d , ", modem_dwn_pkt.port );
     SMTC_MODEM_HAL_TRACE_PRINTF( "DL SNR = %d , DL RSSI = %d , ", modem_dwn_pkt.snr, modem_dwn_pkt.rssi );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "DL Freq = %d , DL DR = %d , ", modem_dwn_pkt.frequency_hz, modem_dwn_pkt.datarate );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "DL Freq = %lu , DL DR = %d , ", modem_dwn_pkt.frequency_hz, modem_dwn_pkt.datarate );
     SMTC_MODEM_HAL_TRACE_PRINTF( "DL Fpending Bit = %d \n", modem_dwn_pkt.fpending_bit );
 }
 void get_modem_downlink_frame( modem_downlink_msg_t* modem_dwn_in )
@@ -1651,8 +1687,11 @@ void modem_load_context( void )
         modem_appkey_status = ctx.appkey_crc_status;
         modem_appkey_crc    = ctx.appkey_crc;
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "Modem Load Config :\n Port = %d \n Upload_sctr = %d\n", modem_dm_port,
-                                     modem_dm_upload_sctr );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "Modem Load Config :\n Port = %d\n", modem_dm_port );
+
+#if defined( ADD_SMTC_FILE_UPLOAD )
+        SMTC_MODEM_HAL_TRACE_PRINTF( "Upload_sctr = %d\n", modem_dm_upload_sctr );
+#endif  // ADD_SMTC_FILE_UPLOAD
     }
     else
     {
@@ -1680,11 +1719,7 @@ void modem_context_factory_reset( void )
     SMTC_MODEM_HAL_TRACE_INFO( "modem_context_factory_reset done\n" );
 }
 
-uint8_t modem_context_get_dm_upload_sctr( void )
-{
-    return ( modem_dm_upload_sctr & 0xf );
-}
-
+#if defined( ADD_SMTC_FILE_UPLOAD )
 uint8_t modem_context_compute_and_get_next_dm_upload_sctr( void )
 {
     // take current and add 1 then mask to fit 4bits length (overflow is implicitely managed)
@@ -1701,7 +1736,9 @@ void modem_set_upload_state( modem_upload_state_t upload_state )
 {
     modem_upload_state = upload_state;
 }
+#endif  // ADD_SMTC_FILE_UPLOAD
 
+#if defined( ADD_SMTC_STREAM )
 modem_stream_status_t modem_get_stream_state( void )
 {
     return ( modem_stream_state.state );
@@ -1731,6 +1768,7 @@ void modem_set_stream_encryption( bool enc )
 {
     modem_stream_state.encryption = enc;
 }
+#endif  // ADD_SMTC_STREAM
 
 void modem_set_dm_info_bitfield_periodic( uint32_t value )
 {
@@ -1852,6 +1890,39 @@ void modem_context_empty_callback( void* ctx )
     // SMTC_MODEM_HAL_TRACE_ERROR( " empty call back \n" );
 }
 
+#if !defined( LR1110_MODEM_E )
+bool modem_context_suspend_user_radio_access( rp_task_types_t type )
+{
+    rp_radio_params_t fake_radio_params = { 0 };
+
+    rp_task_t rp_task = {
+        .hook_id                    = RP_HOOK_ID_USER_SUSPEND,
+        .launch_task_callbacks      = modem_context_empty_callback, /* called when the task starts */
+        .duration_time_ms           = 20000,
+        .state                      = RP_TASK_STATE_SCHEDULE,
+        .type                       = type,
+        .schedule_task_low_priority = false,
+        .start_time_ms              = smtc_modem_hal_get_time_in_ms( ) + 4,
+    };
+    rp_hook_status_t status = rp_task_enqueue( modem_rp, &rp_task, NULL, 0, &fake_radio_params );
+
+    return ( status == RP_HOOK_STATUS_OK ) ? true : false;
+}
+
+bool modem_context_resume_user_radio_access( void )
+{
+    bool status = true;
+
+    if( rp_task_abort( modem_rp, RP_HOOK_ID_USER_SUSPEND ) != RP_HOOK_STATUS_OK )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "Fail to abort hook\n" );
+        status = false;
+    }
+
+    return status;
+}
+#endif  // !LR1110_MODEM_E
+
 bool modem_context_suspend_radio_access( rp_task_types_t type )
 {
     rp_radio_params_t fake_radio_params = { 0 };
@@ -1874,24 +1945,6 @@ bool modem_context_suspend_radio_access( rp_task_types_t type )
     return ( status == RP_HOOK_STATUS_OK ) ? true : false;
 }
 
-bool modem_context_suspend_user_radio_access( rp_task_types_t type )
-{
-    rp_radio_params_t fake_radio_params = { 0 };
-
-    rp_task_t rp_task = {
-        .hook_id                    = RP_HOOK_ID_USER_SUSPEND,
-        .launch_task_callbacks      = modem_context_empty_callback, /* called when the task starts */
-        .duration_time_ms           = 20000,
-        .state                      = RP_TASK_STATE_SCHEDULE,
-        .type                       = type,
-        .schedule_task_low_priority = false,
-        .start_time_ms              = smtc_modem_hal_get_time_in_ms( ) + 4,
-    };
-    rp_hook_status_t status = rp_task_enqueue( modem_rp, &rp_task, NULL, 0, &fake_radio_params );
-
-    return ( status == RP_HOOK_STATUS_OK ) ? true : false;
-}
-
 bool modem_context_resume_radio_access( void )
 {
     bool status = true;
@@ -1904,19 +1957,6 @@ bool modem_context_resume_radio_access( void )
 
     // After the suspension re-enable modem irq
     smtc_modem_hal_enable_modem_irq( );
-
-    return status;
-}
-
-bool modem_context_resume_user_radio_access( void )
-{
-    bool status = true;
-
-    if( rp_task_abort( modem_rp, RP_HOOK_ID_USER_SUSPEND ) != RP_HOOK_STATUS_OK )
-    {
-        SMTC_MODEM_HAL_TRACE_ERROR( "Fail to abort hook\n" );
-        status = false;
-    }
 
     return status;
 }
@@ -1939,10 +1979,11 @@ modem_power_config_t* modem_context_get_power_config_lut( void )
     return power_config_lut;
 }
 
-void modem_context_set_appkey( const uint8_t app_key[16] )
+modem_ctx_rc_t modem_context_set_appkey( const uint8_t app_key[16] )
 {
+    modem_ctx_rc_t rc = MODEM_CTX_RC_SUCCESS;
 // To prevent too much flash access first check crc on key in case of Hardware Secure element
-#if defined( LR1110_MODEM_E ) || defined( USE_LR11XX_CE )
+#if( defined( LR1110_MODEM_E ) && defined( USE_LR11XX_CE ) ) || defined( USE_LR11XX_CE )
     uint32_t new_crc = crc( app_key, 16 );
 
     if( ( modem_appkey_status == MODEM_APPKEY_CRC_STATUS_INVALID ) || ( modem_appkey_crc != new_crc ) )
@@ -1950,14 +1991,23 @@ void modem_context_set_appkey( const uint8_t app_key[16] )
         modem_appkey_crc    = new_crc;
         modem_appkey_status = MODEM_APPKEY_CRC_STATUS_VALID;
 
-        lorawan_api_set_appkey( app_key );
-        // Store appkey crc and status
-        modem_store_context( );
+        if( lorawan_api_set_appkey( app_key ) != OKLORAWAN )
+        {
+            rc = MODEM_CTX_RC_ERROR;
+        }
+        else
+        {
+            // Store appkey crc and status
+            modem_store_context( );
+        }
     }
 #else
-    lorawan_api_set_appkey( app_key );
-
+    if( lorawan_api_set_appkey( app_key ) != OKLORAWAN )
+    {
+        rc = MODEM_CTX_RC_ERROR;
+    }
 #endif
+    return rc;
 }
 
 void modem_context_appkey_is_derived( void )
@@ -1976,7 +2026,6 @@ void modem_context_set_network_type( bool network_type )
     lorawan_api_set_network_type( network_type );
 }
 
-#if defined( LR11XX_TRANSCEIVER )
 const void* modem_context_get_modem_radio_ctx( void )
 {
     return modem_radio_ctx;
@@ -1986,8 +2035,8 @@ void modem_context_set_modem_radio_ctx( const void* radio_ctx )
 {
     modem_radio_ctx = radio_ctx;
 }
-#endif  // LR11XX_TRANSCEIVER
 
+#if defined( ADD_D2D )
 void modem_context_set_class_b_d2d_last_metadata( uint8_t mc_grp_id, bool tx_done, uint8_t nb_trans_not_send )
 {
     class_b_d2d_ctx.tx_done           = tx_done;
@@ -2010,6 +2059,8 @@ void modem_context_get_class_b_d2d_last_metadata( modem_context_class_b_d2d_t* c
 {
     memcpy( class_b_d2d, &class_b_d2d_ctx, sizeof( modem_context_class_b_d2d_t ) );
 }
+#endif  // ADD_D2D
+
 void modem_set_extended_callback( func_callback callback, uint8_t extended_uplink_id )
 {
     if( extended_uplink_id == 1 )
@@ -2040,4 +2091,32 @@ func_callback modem_get_extended_callback( uint8_t extended_uplink_id )
         return NULL;
     }
 }
+
+void modem_leave( void )
+{
+    // Set joined/joining status to false
+    set_modem_status_modem_joined( false );
+    lorawan_api_join_status_clear( );
+    set_modem_status_joining( false );
+
+    // Disable properly class B and class C
+    lorawan_api_class_b_enabled( false );
+    lorawan_api_class_c_enabled( false );
+
+#if defined( ADD_SMTC_FILE_UPLOAD )
+    // Stop and reset file upload service
+    set_modem_status_file_upload( false );
+    modem_set_upload_state( MODEM_UPLOAD_NOT_INIT );
+#endif  // ADD_SMTC_FILE_UPLOAD
+
+#if defined( ADD_SMTC_STREAM )
+    // Stop and reset stream service
+    set_modem_status_streaming( false );
+    modem_set_stream_state( MODEM_STREAM_NOT_INIT );
+#endif  // ADD_SMTC_STREAM
+
+    // re init task to retrieve a clean env (and clear all ongoing tasks)
+    modem_supervisor_init_task( );
+}
+
 /* --- EOF ------------------------------------------------------------------ */

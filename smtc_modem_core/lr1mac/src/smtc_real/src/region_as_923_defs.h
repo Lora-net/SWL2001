@@ -216,12 +216,6 @@ static const uint8_t M_as_923[2][8] = { { 59, 59, 123, 123, 250, 250, 250, 250 }
                                         { 0, 0, 19, 61, 133, 250, 250, 250 } };    // [1][dr] dwell time On
 
 /**
- * Payload max size table definition in bytes
- */
-static const uint8_t N_as_923[2][8] = { { 51, 51, 115, 115, 242, 242, 242, 242 },  // [0][dr] dwell time Off
-                                        { 0, 0, 11, 53, 125, 242, 242, 242 } };    // [1][dr] dwell time On
-
-/**
  * Mobile long range datarate distribution
  * DR0: 20%,
  * DR1: 20%,

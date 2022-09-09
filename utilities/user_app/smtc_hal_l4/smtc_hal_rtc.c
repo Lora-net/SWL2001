@@ -160,12 +160,12 @@ static uint32_t rtc_set_time_ref_in_ticks( void );
 static uint32_t rtc_ms_2_wakeup_timer_tick( const uint32_t milliseconds );
 
 /*!
- * Converts time in ticks to time in ms
+ * Converts time in ticks to time in 100 us
  *
  * \param[IN] ticks Time in timer ticks
- * \retval milliseconds Time in milliseconds
+ * \retval milliseconds Time in 100 us
  */
-static uint32_t rtc_tick_2_ms( const uint32_t tick );
+static uint32_t rtc_tick_2_100us( const uint32_t tick );
 
 /*!
  * Get the elapsed time in seconds and milliseconds since RTC initialization
@@ -239,8 +239,8 @@ uint32_t hal_rtc_get_time_s( void )
 
 uint32_t hal_rtc_get_time_100us( void )
 {
-    uint32_t seconds      = 0;
-    uint16_t  milliseconds_div_10 = 0;
+    uint32_t seconds             = 0;
+    uint16_t milliseconds_div_10 = 0;
 
     seconds = rtc_get_calendar_time( &milliseconds_div_10 );
 
@@ -248,7 +248,12 @@ uint32_t hal_rtc_get_time_100us( void )
 }
 uint32_t hal_rtc_get_time_ms( void )
 {
-    return (hal_rtc_get_time_100us( ) / 10);
+    uint32_t seconds             = 0;
+    uint16_t milliseconds_div_10 = 0;
+
+    seconds = rtc_get_calendar_time( &milliseconds_div_10 );
+
+    return seconds * 1000 + ( milliseconds_div_10 / 10 );
 }
 
 void hal_rtc_wakeup_timer_set_ms( const int32_t milliseconds )
@@ -283,12 +288,12 @@ static uint32_t rtc_set_time_ref_in_ticks( void )
     return bsp_rtc.context.time_ref_in_ticks;
 }
 
-static uint32_t rtc_tick_2_ms( const uint32_t tick )
+static uint32_t rtc_tick_2_100us( const uint32_t tick )
 {
     uint32_t seconds    = tick >> N_PREDIV_S;
     uint32_t local_tick = tick & PREDIV_S;
 
-    return ( uint32_t ) ( ( seconds * 1000 ) + ( ( local_tick * 10000 ) >> N_PREDIV_S ) );
+    return ( uint32_t )( ( seconds * 10000 ) + ( ( local_tick * 10000 ) >> N_PREDIV_S ) );
 }
 
 static uint32_t rtc_ms_2_wakeup_timer_tick( const uint32_t milliseconds )
@@ -308,11 +313,11 @@ static uint32_t rtc_get_calendar_time( uint16_t* milliseconds_div_10 )
 
     uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( &date, &time );
 
-    uint32_t seconds = ( uint32_t ) ( timestamp_in_ticks >> N_PREDIV_S );
+    uint32_t seconds = ( uint32_t )( timestamp_in_ticks >> N_PREDIV_S );
 
     ticks = ( uint32_t ) timestamp_in_ticks & PREDIV_S;
 
-    *milliseconds_div_10 = rtc_tick_2_ms( ticks );
+    *milliseconds_div_10 = rtc_tick_2_100us( ticks );
 
     return seconds;
 }

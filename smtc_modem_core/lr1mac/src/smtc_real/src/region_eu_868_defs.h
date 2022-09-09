@@ -239,11 +239,6 @@ static const uint32_t datarates_to_lr_fhss_cr_eu_868[NUMBER_OF_TX_DR_EU_868] = {
 static const uint8_t M_eu_868[12] = { 59, 59, 59, 123, 250, 250, 250, 250, 58, 123, 58, 123 };
 
 /**
- * Payload max size table definition in bytes without FHDROFFSET
- */
-static const uint8_t N_eu_868[12] = { 51, 51, 51, 115, 242, 242, 242, 242, 50, 115, 50, 115 };
-
-/**
  * Mobile long range datarate distribution
  * DR0: 20%,
  * DR1: 20%,

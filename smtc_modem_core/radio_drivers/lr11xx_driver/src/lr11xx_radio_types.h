@@ -537,22 +537,22 @@ typedef struct lr11xx_radio_rssi_calibration_table_s
 {
     struct
     {
-        uint8_t g11;
-        uint8_t g10;
-        uint8_t g9;
-        uint8_t g8;
-        uint8_t g7;
-        uint8_t g6;
-        uint8_t g5;
         uint8_t g4;
-        uint8_t g13hp6;
-        uint8_t g13hp5;
-        uint8_t g13hp4;
-        uint8_t g13hp3;
-        uint8_t g13hp2;
-        uint8_t g13hp1;
-        uint8_t g13;
+        uint8_t g5;
+        uint8_t g6;
+        uint8_t g7;
+        uint8_t g8;
+        uint8_t g9;
+        uint8_t g10;
+        uint8_t g11;
         uint8_t g12;
+        uint8_t g13;
+        uint8_t g13hp1;
+        uint8_t g13hp2;
+        uint8_t g13hp3;
+        uint8_t g13hp4;
+        uint8_t g13hp5;
+        uint8_t g13hp6;
         uint8_t g13hp7;
     } gain_tune;  //!< Used to set gain tune value for RSSI calibration
 

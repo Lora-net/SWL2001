@@ -216,7 +216,7 @@ COMMON_C_DEFS += \
 	-DPERF_TEST_ENABLED
 endif
 
-CFLAGS += -fno-builtin $(MCU) $(BOARD_C_DEFS) $(COMMON_C_DEFS) $(MODEM_C_DEFS) $(BOARD_C_INCLUDES) $(COMMON_C_INCLUDES) $(MODEM_C_INCLUDES) $(OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
+CFLAGS += -fno-builtin $(MCU_FLAGS) $(BOARD_C_DEFS) $(COMMON_C_DEFS) $(MODEM_C_DEFS) $(BOARD_C_INCLUDES) $(COMMON_C_INCLUDES) $(MODEM_C_INCLUDES) $(OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
 CFLAGS += -falign-functions=4
 CFLAGS += -std=c17
 
@@ -228,7 +228,7 @@ LIBS += -lstdc++ -lsupc++ -lm -lc -lnosys
 
 LIBDIR =
 
-LDFLAGS += $(MCU) 
+LDFLAGS += $(MCU_FLAGS) 
 LDFLAGS += --specs=nano.specs 
 LDFLAGS += --specs=nosys.specs
 LDFLAGS += -T$(BOARD_LDSCRIPT) $(LIBDIR) $(LIBS) $(COVERAGE_LDFLAGS)
@@ -303,7 +303,7 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 #-----------------------------------------------------------------------------
 example:
 ifeq ($(RADIO),nc)
-	$(call echo_error,"No radio selected! Please specified the target radio using RADIO=sx128x or RADIO=sx1261 or RADIO=sx1262 or RADIO=lr1110 or RADIO=lr1120")
+	$(call echo_error,"No radio selected! Please specified the target radio using RADIO=radio_name option")
 else
 	$(MAKE) example_build
 endif 
@@ -352,7 +352,7 @@ endif
 
 .PHONY: $(BASIC_MODEM_LIB)
 $(BASIC_MODEM_LIB):
-	$(MAKE) -C $(LORA_BASICS_MODEM) basic_modem $(MTHREAD_FLAG)
+	$(MAKE) -C $(LORA_BASICS_MODEM) basic_modem  MCU_FLAGS="$(MCU_FLAGS)" $(MTHREAD_FLAG)
 
 $(BUILD_DIR_MODEM)/$(TARGET_MODEM).elf: $(OBJECTS) Makefile $(BASIC_MODEM_LIB)
 	$(call build,'CC',$@)
@@ -447,7 +447,7 @@ endif
 		sudo mount -t drvfs ${DRIVE}: /mnt/${DRIVE}
 	cp $(BUILD_DIR_MODEM)/$(TARGET_MODEM).bin  /mnt/${DRIVE}/ ; sudo umount /mnt/${DRIVE}
 else	
-	$(call warn,"No radio selected! Please specified the target radio using RADIO=sx128x or RADIO=sx1261 or RADIO=sx1262 or RADIO=lr1110 or RADIO=lr1120")
+	$(call warn,"No radio selected! Please specified the target radio using RADIO=radio_name option")
 endif
 else
 	$(call echo_error,"No Drive letter specified: please use compiling option: DRIVE=your_drive_letter")

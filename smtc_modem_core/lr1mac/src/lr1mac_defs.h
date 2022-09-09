@@ -168,14 +168,6 @@ typedef enum lr1mac_radio_state_e
     RADIOSTATE_RX_FINISHED,
     RADIOSTATE_ABORTED_BY_RP,
 } lr1mac_radio_state_t;
-
-typedef enum lr1mac_tx_status_e
-{
-    TX_BEGIN,
-    TX_ABORTED_DUTY_CYCLE,
-    TX_ABORTED_BY_RP,  // lbt or anything else
-    TX_OK,
-} lr1mac_tx_status_t;
 /********************************************************************************/
 /*                   LoraWan Mac Layer Parameters                               */
 /********************************************************************************/
@@ -292,12 +284,6 @@ enum
     CHANNEL_ENABLED,
 };
 
-typedef enum valid_channel_e
-{
-    UNVALID_CHANNEL,
-    VALID_CHANNEL,
-} valid_channel_t;
-
 // User Config for Adr Mode select
 typedef enum dr_strategy_e
 {
@@ -352,13 +338,12 @@ typedef enum user_rx_packet_type_e
 {
     NO_LORA_RXPACKET_AVAILABLE,
     LORA_RX_PACKET_AVAILABLE,
-    MULTI_CAST_G0_RX_PACKET_AVAILABLE,
-    MULTI_CAST_G1_RX_PACKET_AVAILABLE,
 } user_rx_packet_type_t;
 
 typedef enum join_status_e
 {
     NOT_JOINED,
+    JOINING,
     JOINED,
 } join_status_t;
 
@@ -377,24 +362,6 @@ typedef enum modulation_type_e
     LR_FHSS,
 } modulation_type_t;
 
-typedef enum crc_mode_e
-{
-    CRC_YES,
-    CRC_NO
-} crc_mode_t;
-
-typedef enum iq_mode_e
-{
-    IQ_NORMAL,
-    IQ_INVERTED
-} iq_mode_t;
-
-typedef enum header_mode_e
-{
-    IMPLICIT_HEADER,
-    EXPLICIT_HEADER
-} header_mode_t;
-
 /**
  * @brief Rx Session type enum
  *
@@ -402,10 +369,12 @@ typedef enum header_mode_e
 typedef enum rx_session_type_e
 {
     RX_SESSION_UNICAST,
+#if defined( SMTC_MULTICAST ) || defined( SMTC_D2D )
     RX_SESSION_MULTICAST_G0,
     RX_SESSION_MULTICAST_G1,
     RX_SESSION_MULTICAST_G2,
     RX_SESSION_MULTICAST_G3,
+#endif
     RX_SESSION_COUNT,
 } rx_session_type_t;
 
@@ -430,23 +399,24 @@ typedef enum smtc_multicast_fpending_bit_prioritization_e
 /********************************************************************************/
 typedef enum receive_win_s
 {
-    RECEIVE_NONE,
-    RECEIVE_ON_RX1,
-    RECEIVE_ON_RX2,
-    RECEIVE_ON_RXC,
-    RECEIVE_ON_RXC_MC_GRP0,
-    RECEIVE_ON_RXC_MC_GRP1,
-    RECEIVE_ON_RXC_MC_GRP2,
-    RECEIVE_ON_RXC_MC_GRP3,
-    RECEIVE_ON_RXB,
-    RECEIVE_ON_RXB_MC_GRP0,
-    RECEIVE_ON_RXB_MC_GRP1,
-    RECEIVE_ON_RXB_MC_GRP2,
-    RECEIVE_ON_RXB_MC_GRP3,
-    RECEIVE_ON_RXBEACON,
-    // deprecated RECEIVE_NACK       = 0x40,
-    // deprecated RECEIVE_ACK_ON_RX1 = 0x81,
-    // deprecated RECEIVE_ACK_ON_RX2 = 0x82,
+    RECEIVE_NONE   = 0,
+    RECEIVE_ON_RX1 = 1,
+    RECEIVE_ON_RX2 = 2,
+    RECEIVE_ON_RXC = 3,
+#if defined( SMTC_MULTICAST )
+    RECEIVE_ON_RXC_MC_GRP0 = 4,
+    RECEIVE_ON_RXC_MC_GRP1 = 5,
+    RECEIVE_ON_RXC_MC_GRP2 = 6,
+    RECEIVE_ON_RXC_MC_GRP3 = 7,
+#endif
+    RECEIVE_ON_RXB = 8,
+#if defined( SMTC_MULTICAST )
+    RECEIVE_ON_RXB_MC_GRP0 = 9,
+    RECEIVE_ON_RXB_MC_GRP1 = 10,
+    RECEIVE_ON_RXB_MC_GRP2 = 11,
+    RECEIVE_ON_RXB_MC_GRP3 = 12,
+#endif
+    RECEIVE_ON_RXBEACON = 13,
 } receive_win_t;
 
 typedef struct lr1mac_down_metadata_s

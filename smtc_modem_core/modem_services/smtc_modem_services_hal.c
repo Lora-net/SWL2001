@@ -83,16 +83,12 @@
 void smtc_modem_services_aes_encrypt( const uint8_t* raw_buffer, uint16_t size, uint8_t aes_ctr_nonce[14],
                                       uint8_t* enc_buffer )
 {
-    uint32_t address = ( uint32_t )( aes_ctr_nonce[6] ) | ( uint32_t )( aes_ctr_nonce[7] << 8 ) |
-                       ( uint32_t )( aes_ctr_nonce[8] << 16 ) | ( uint32_t )( aes_ctr_nonce[9] << 24 );
-    uint8_t  dir              = aes_ctr_nonce[5];
-    uint32_t sequence_counter = ( uint32_t )( aes_ctr_nonce[10] ) | ( uint32_t )( aes_ctr_nonce[11] << 8 ) |
-                                ( uint32_t )( aes_ctr_nonce[12] << 16 ) | ( uint32_t )( aes_ctr_nonce[13] << 24 );
-    // lora_crypto_payload_encrypt( raw_buffer, size, key, address, dir, sequence_counter, enc_buffer );
-
     // Modem crypto lib can be used here
-    smtc_modem_crypto_payload_encrypt( raw_buffer, size, SMTC_SE_APP_S_KEY, address, dir, sequence_counter,
-                                       enc_buffer );
+    if( smtc_modem_crypto_service_encrypt( raw_buffer, size, aes_ctr_nonce, enc_buffer ) !=
+        SMTC_MODEM_CRYPTO_RC_SUCCESS )
+    {
+        smtc_modem_hal_mcu_panic( "Encryption of lfu failed\n" );
+    }
 }
 
 uint32_t smtc_modem_services_get_time_s( void )

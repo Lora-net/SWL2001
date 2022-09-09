@@ -95,6 +95,7 @@ typedef struct radio_planner_s
     void ( *hook_callbacks[RP_NB_HOOKS] )( void* );
     rp_next_state_status_t next_state_status;
     const ralf_t*          radio;
+    uint32_t               margin_delay;
 } radio_planner_t;
 
 /*

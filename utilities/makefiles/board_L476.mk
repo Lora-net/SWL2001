@@ -6,7 +6,9 @@
 #-----------------------------------------------------------------------------
 # Compilation flags
 #-----------------------------------------------------------------------------
--include $(LORA_BASICS_MODEM)/makefiles/cortex_m4.mk
+
+#MCU compilation flags
+MCU_FLAGS ?= -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
 BOARD_C_DEFS =  \
 	-DUSE_HAL_DRIVER \

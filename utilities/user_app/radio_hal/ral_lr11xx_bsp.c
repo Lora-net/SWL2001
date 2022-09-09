@@ -41,7 +41,7 @@
 #include <stdbool.h>  // bool type
 
 #include "ral_lr11xx_bsp.h"
-#include "smtc_board_pa_pwr_cfg.h"
+#include "lr11xx_pa_pwr_cfg.h"
 #include "smtc_hal_mcu.h"
 #include "smtc_modem_api.h"
 
@@ -52,13 +52,44 @@
 
 /*
  * -----------------------------------------------------------------------------
- * --- PRIVATE CONSTANTS -------------------------------------------------------
+ * --- PRIVATE TYPES -----------------------------------------------------------
  */
+
+typedef enum lr11xx_pa_type_s
+{
+    LR11XX_WITH_LF_LP_PA,
+    LR11XX_WITH_LF_HP_PA,
+    LR11XX_WITH_LF_LP_HP_PA,
+    LR11XX_WITH_HF_PA,
+} lr11xx_pa_type_t;
+
+typedef struct lr11xx_pa_pwr_cfg_s
+{
+    int8_t  power;
+    uint8_t pa_duty_cycle;
+    uint8_t pa_hp_sel;
+} lr11xx_pa_pwr_cfg_t;
 
 /*
  * -----------------------------------------------------------------------------
- * --- PRIVATE TYPES -----------------------------------------------------------
+ * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
+
+#define LR11XX_PWR_VREG_VBAT_SWITCH 8
+
+#define LR11XX_MIN_PWR_LP_LF -17
+#define LR11XX_MAX_PWR_LP_LF 15
+
+#define LR11XX_MIN_PWR_HP_LF -9
+#define LR11XX_MAX_PWR_HP_LF 22
+
+#define LR11XX_MIN_PWR_PA_HF -18
+#define LR11XX_MAX_PWR_PA_HF 13
+
+const lr11xx_pa_pwr_cfg_t pa_lp_cfg_table[LR11XX_MAX_PWR_LP_LF - LR11XX_MIN_PWR_LP_LF + 1] = LR11XX_PA_LP_LF_CFG_TABLE;
+const lr11xx_pa_pwr_cfg_t pa_hp_cfg_table[LR11XX_MAX_PWR_HP_LF - LR11XX_MIN_PWR_HP_LF + 1] = LR11XX_PA_HP_LF_CFG_TABLE;
+
+const lr11xx_pa_pwr_cfg_t pa_hf_cfg_table[LR11XX_MAX_PWR_PA_HF - LR11XX_MIN_PWR_PA_HF + 1] = LR11XX_PA_HF_CFG_TABLE;
 
 /*
  * -----------------------------------------------------------------------------
@@ -69,6 +100,16 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
+
+/**
+ * @brief Get the tx output param configuration given the type of power amplifier and expected output power
+ *
+ * @param [in] pa_type Power Amplifier type
+ * @param [in] expected_output_pwr_in_dbm TX output power in dBm
+ * @param [out] output_params The tx config output params
+ */
+void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_dbm,
+                        ral_lr11xx_bsp_tx_cfg_output_params_t* output_params );
 
 /*
  * -----------------------------------------------------------------------------
@@ -103,54 +144,21 @@ void ral_lr11xx_bsp_get_tx_cfg( const void* context, const ral_lr11xx_bsp_tx_cfg
 
     int16_t power = input_params->system_output_pwr_in_dbm + modem_tx_offset;
 
-    // check frequency band first
+    lr11xx_pa_type_t pa_type;
+
+    // check frequency band first to choose LF of HF PA
     if( input_params->freq_in_hz >= 2400000000 )
     {
-        // Modem is acting in 2g4 band: use HF PA
-        // Check power boundaries for HF PA: The output power must be in range [ -18 , +13 ] dBm
-        if( power < -18 )
-        {
-            power = -18;
-        }
-        else if( power > 13 )
-        {
-            power = 13;
-        }
+        pa_type = LR11XX_WITH_HF_PA;
     }
     else
     {
-        // Modem is acting in subgig band: use LP/HP PA
-        // Check power boundaries for LP/HP PA: The output power must be in range [ -17 , +22 ] dBm
-        if( power < -17 )
-        {
-            power = -17;
-        }
-        else if( power > 22 )
-        {
-            power = 22;
-        }
-    }
-    // get the pa configuration given the frequency and expected output power
-    const smtc_board_pa_pwr_cfg_t* pa_pwr_cfg = smtc_board_get_pa_pwr_cfg( input_params->freq_in_hz, ( int8_t ) power );
-
-    if( pa_pwr_cfg == NULL )
-    {
-        SMTC_HAL_TRACE_ERROR( "Invalid target frequency or power level\n" );
-        while( true )
-        {
-        }
+        // Modem is acting in subgig band: use LP/HP PA (both LP and HP are connected on lr11xx evk board)
+        pa_type = LR11XX_WITH_LF_LP_HP_PA;
     }
 
-    // Fill the output_params structure
-    output_params->pa_cfg.pa_duty_cycle = pa_pwr_cfg->pa_config.pa_duty_cycle;
-    output_params->pa_cfg.pa_hp_sel     = pa_pwr_cfg->pa_config.pa_hp_sel;
-    output_params->pa_cfg.pa_reg_supply = pa_pwr_cfg->pa_config.pa_reg_supply;
-    output_params->pa_cfg.pa_sel        = pa_pwr_cfg->pa_config.pa_sel;
-
-    output_params->chip_output_pwr_in_dbm_configured = pa_pwr_cfg->power;
-    output_params->chip_output_pwr_in_dbm_expected   = ( int8_t ) power;
-
-    output_params->pa_ramp_time = LR11XX_RADIO_RAMP_48_US;
+    // call the configuration function
+    lr11xx_get_tx_cfg( pa_type, power, output_params );
 }
 
 void ral_lr11xx_bsp_get_reg_mode( const void* context, lr11xx_system_reg_mode_t* reg_mode )
@@ -181,74 +189,184 @@ void ral_lr11xx_bsp_get_crc_state( const void* context, bool* crc_is_activated )
 void ral_lr11xx_bsp_get_rssi_calibration_table( const void* context, const uint32_t freq_in_hz,
                                                 lr11xx_radio_rssi_calibration_table_t* rssi_calibration_table )
 {
-    // Workaround for lr11xx_driver v2.1.0 that contains a bug in command bytes management
-    // rssi_calibration_table structure members are not written in good order during spi transaction
-    // g4 gain value has to be put in g10, g5 in g11, g6 in g8, g7 in g9, g8 in g6, g9 in g7, g10 in g4, g11 in g5, g12
-    // in g13hp5, g13 in g13hp6, g13hp1 in g13hp3, g13hp2 in g13hp4, g13hp3 in g13hp1, g13hp4 in g13hp2, g13hp5 in g12,
-    // g13hp6 in g13
-
     if( freq_in_hz <= 600000000 )
     {
         rssi_calibration_table->gain_offset      = 0;
-        rssi_calibration_table->gain_tune.g10    = 12;
-        rssi_calibration_table->gain_tune.g11    = 12;
-        rssi_calibration_table->gain_tune.g8     = 14;
-        rssi_calibration_table->gain_tune.g9     = 0;
-        rssi_calibration_table->gain_tune.g6     = 1;
-        rssi_calibration_table->gain_tune.g7     = 3;
-        rssi_calibration_table->gain_tune.g4     = 4;
-        rssi_calibration_table->gain_tune.g5     = 4;
-        rssi_calibration_table->gain_tune.g13hp5 = 3;
-        rssi_calibration_table->gain_tune.g13hp6 = 6;
-        rssi_calibration_table->gain_tune.g13hp3 = 6;
-        rssi_calibration_table->gain_tune.g13hp4 = 6;
+        rssi_calibration_table->gain_tune.g4     = 12;
+        rssi_calibration_table->gain_tune.g5     = 12;
+        rssi_calibration_table->gain_tune.g6     = 14;
+        rssi_calibration_table->gain_tune.g7     = 0;
+        rssi_calibration_table->gain_tune.g8     = 1;
+        rssi_calibration_table->gain_tune.g9     = 3;
+        rssi_calibration_table->gain_tune.g10    = 4;
+        rssi_calibration_table->gain_tune.g11    = 4;
+        rssi_calibration_table->gain_tune.g12    = 3;
+        rssi_calibration_table->gain_tune.g13    = 6;
         rssi_calibration_table->gain_tune.g13hp1 = 6;
         rssi_calibration_table->gain_tune.g13hp2 = 6;
-        rssi_calibration_table->gain_tune.g12    = 6;
-        rssi_calibration_table->gain_tune.g13    = 6;
+        rssi_calibration_table->gain_tune.g13hp3 = 6;
+        rssi_calibration_table->gain_tune.g13hp4 = 6;
+        rssi_calibration_table->gain_tune.g13hp5 = 6;
+        rssi_calibration_table->gain_tune.g13hp6 = 6;
         rssi_calibration_table->gain_tune.g13hp7 = 6;
     }
     else if( ( 600000000 <= freq_in_hz ) && ( freq_in_hz <= 2000000000 ) )
     {
         rssi_calibration_table->gain_offset      = 0;
-        rssi_calibration_table->gain_tune.g10    = 2;
-        rssi_calibration_table->gain_tune.g11    = 2;
-        rssi_calibration_table->gain_tune.g8     = 2;
-        rssi_calibration_table->gain_tune.g9     = 3;
-        rssi_calibration_table->gain_tune.g6     = 3;
-        rssi_calibration_table->gain_tune.g7     = 4;
-        rssi_calibration_table->gain_tune.g4     = 5;
-        rssi_calibration_table->gain_tune.g5     = 4;
-        rssi_calibration_table->gain_tune.g13hp5 = 4;
-        rssi_calibration_table->gain_tune.g13hp6 = 6;
-        rssi_calibration_table->gain_tune.g13hp3 = 5;
-        rssi_calibration_table->gain_tune.g13hp4 = 5;
-        rssi_calibration_table->gain_tune.g13hp1 = 6;
-        rssi_calibration_table->gain_tune.g13hp2 = 6;
-        rssi_calibration_table->gain_tune.g12    = 6;
-        rssi_calibration_table->gain_tune.g13    = 7;
+        rssi_calibration_table->gain_tune.g4     = 2;
+        rssi_calibration_table->gain_tune.g5     = 2;
+        rssi_calibration_table->gain_tune.g6     = 2;
+        rssi_calibration_table->gain_tune.g7     = 3;
+        rssi_calibration_table->gain_tune.g8     = 3;
+        rssi_calibration_table->gain_tune.g9     = 4;
+        rssi_calibration_table->gain_tune.g10    = 5;
+        rssi_calibration_table->gain_tune.g11    = 4;
+        rssi_calibration_table->gain_tune.g12    = 4;
+        rssi_calibration_table->gain_tune.g13    = 6;
+        rssi_calibration_table->gain_tune.g13hp1 = 5;
+        rssi_calibration_table->gain_tune.g13hp2 = 5;
+        rssi_calibration_table->gain_tune.g13hp3 = 6;
+        rssi_calibration_table->gain_tune.g13hp4 = 6;
+        rssi_calibration_table->gain_tune.g13hp5 = 6;
+        rssi_calibration_table->gain_tune.g13hp6 = 7;
         rssi_calibration_table->gain_tune.g13hp7 = 6;
     }
     else  // freq_in_hz > 2000000000
     {
         rssi_calibration_table->gain_offset      = 2030;
-        rssi_calibration_table->gain_tune.g10    = 6;
-        rssi_calibration_table->gain_tune.g11    = 7;
-        rssi_calibration_table->gain_tune.g8     = 6;
-        rssi_calibration_table->gain_tune.g9     = 4;
-        rssi_calibration_table->gain_tune.g6     = 3;
+        rssi_calibration_table->gain_tune.g4     = 6;
+        rssi_calibration_table->gain_tune.g5     = 7;
+        rssi_calibration_table->gain_tune.g6     = 6;
         rssi_calibration_table->gain_tune.g7     = 4;
-        rssi_calibration_table->gain_tune.g4     = 14;
-        rssi_calibration_table->gain_tune.g5     = 12;
-        rssi_calibration_table->gain_tune.g13hp5 = 14;
-        rssi_calibration_table->gain_tune.g13hp6 = 12;
-        rssi_calibration_table->gain_tune.g13hp3 = 12;
-        rssi_calibration_table->gain_tune.g13hp4 = 12;
+        rssi_calibration_table->gain_tune.g8     = 3;
+        rssi_calibration_table->gain_tune.g9     = 4;
+        rssi_calibration_table->gain_tune.g10    = 14;
+        rssi_calibration_table->gain_tune.g11    = 12;
+        rssi_calibration_table->gain_tune.g12    = 14;
+        rssi_calibration_table->gain_tune.g13    = 12;
         rssi_calibration_table->gain_tune.g13hp1 = 12;
-        rssi_calibration_table->gain_tune.g13hp2 = 8;
-        rssi_calibration_table->gain_tune.g12    = 8;
-        rssi_calibration_table->gain_tune.g13    = 9;
+        rssi_calibration_table->gain_tune.g13hp2 = 12;
+        rssi_calibration_table->gain_tune.g13hp3 = 12;
+        rssi_calibration_table->gain_tune.g13hp4 = 8;
+        rssi_calibration_table->gain_tune.g13hp5 = 8;
+        rssi_calibration_table->gain_tune.g13hp6 = 9;
         rssi_calibration_table->gain_tune.g13hp7 = 9;
+    }
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
+ */
+
+void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_dbm,
+                        ral_lr11xx_bsp_tx_cfg_output_params_t* output_params )
+{
+    int8_t power = expected_output_pwr_in_dbm;
+
+    // Ramp time is the same for any config
+    output_params->pa_ramp_time = LR11XX_RADIO_RAMP_48_US;
+
+    switch( pa_type )
+    {
+    case LR11XX_WITH_LF_LP_PA:
+    {
+        // Check power boundaries for LP LF PA: The output power must be in range [ -17 , +15 ] dBm
+        if( power < LR11XX_MIN_PWR_LP_LF )
+        {
+            power = LR11XX_MIN_PWR_LP_LF;
+        }
+        else if( power > LR11XX_MAX_PWR_LP_LF )
+        {
+            power = LR11XX_MAX_PWR_LP_LF;
+        }
+        output_params->pa_cfg.pa_sel                     = LR11XX_RADIO_PA_SEL_LP;
+        output_params->pa_cfg.pa_reg_supply              = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
+        output_params->pa_cfg.pa_duty_cycle              = pa_lp_cfg_table[power - LR11XX_MIN_PWR_LP_LF].pa_duty_cycle;
+        output_params->pa_cfg.pa_hp_sel                  = pa_lp_cfg_table[power - LR11XX_MIN_PWR_LP_LF].pa_hp_sel;
+        output_params->chip_output_pwr_in_dbm_configured = pa_lp_cfg_table[power - LR11XX_MIN_PWR_LP_LF].power;
+        output_params->chip_output_pwr_in_dbm_expected   = power;
+        break;
+    }
+    case LR11XX_WITH_LF_HP_PA:
+    {
+        // Check power boundaries for HP LF PA: The output power must be in range [ -9 , +22 ] dBm
+        if( power < LR11XX_MIN_PWR_HP_LF )
+        {
+            power = LR11XX_MIN_PWR_HP_LF;
+        }
+        else if( power > LR11XX_MAX_PWR_HP_LF )
+        {
+            power = LR11XX_MAX_PWR_HP_LF;
+        }
+        output_params->pa_cfg.pa_sel                   = LR11XX_RADIO_PA_SEL_HP;
+        output_params->chip_output_pwr_in_dbm_expected = power;
+
+        if( power <= LR11XX_PWR_VREG_VBAT_SWITCH )
+        {
+            // For powers below 8dBm use regulated supply for HP PA for a better efficiency.
+            output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
+        }
+        else
+        {
+            output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VBAT;
+        }
+
+        output_params->pa_cfg.pa_duty_cycle              = pa_hp_cfg_table[power - LR11XX_MIN_PWR_HP_LF].pa_duty_cycle;
+        output_params->pa_cfg.pa_hp_sel                  = pa_hp_cfg_table[power - LR11XX_MIN_PWR_HP_LF].pa_hp_sel;
+        output_params->chip_output_pwr_in_dbm_configured = pa_hp_cfg_table[power - LR11XX_MIN_PWR_HP_LF].power;
+        break;
+    }
+    case LR11XX_WITH_LF_LP_HP_PA:
+    {
+        // Check power boundaries for LP/HP LF PA: The output power must be in range [ -17 , +22 ] dBm
+        if( power < LR11XX_MIN_PWR_LP_LF )
+        {
+            power = LR11XX_MIN_PWR_LP_LF;
+        }
+        else if( power > LR11XX_MAX_PWR_HP_LF )
+        {
+            power = LR11XX_MAX_PWR_HP_LF;
+        }
+        output_params->chip_output_pwr_in_dbm_expected = power;
+
+        if( power <= LR11XX_MAX_PWR_LP_LF )
+        {
+            output_params->pa_cfg.pa_sel        = LR11XX_RADIO_PA_SEL_LP;
+            output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
+            output_params->pa_cfg.pa_duty_cycle = pa_lp_cfg_table[power - LR11XX_MIN_PWR_LP_LF].pa_duty_cycle;
+            output_params->pa_cfg.pa_hp_sel     = pa_lp_cfg_table[power - LR11XX_MIN_PWR_LP_LF].pa_hp_sel;
+            output_params->chip_output_pwr_in_dbm_configured = pa_lp_cfg_table[power - LR11XX_MIN_PWR_LP_LF].power;
+        }
+        else
+        {
+            output_params->pa_cfg.pa_sel        = LR11XX_RADIO_PA_SEL_HP;
+            output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VBAT;
+            output_params->pa_cfg.pa_duty_cycle = pa_hp_cfg_table[power - LR11XX_MIN_PWR_HP_LF].pa_duty_cycle;
+            output_params->pa_cfg.pa_hp_sel     = pa_hp_cfg_table[power - LR11XX_MIN_PWR_HP_LF].pa_hp_sel;
+            output_params->chip_output_pwr_in_dbm_configured = pa_hp_cfg_table[power - LR11XX_MIN_PWR_HP_LF].power;
+        }
+        break;
+    }
+    case LR11XX_WITH_HF_PA:
+    {
+        // Check power boundaries for HF PA: The output power must be in range [ -18 , +13 ] dBm
+        if( power < LR11XX_MIN_PWR_PA_HF )
+        {
+            power = LR11XX_MIN_PWR_PA_HF;
+        }
+        else if( power > LR11XX_MAX_PWR_PA_HF )
+        {
+            power = LR11XX_MAX_PWR_PA_HF;
+        }
+        output_params->pa_cfg.pa_sel                     = LR11XX_RADIO_PA_SEL_HF;
+        output_params->pa_cfg.pa_reg_supply              = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
+        output_params->pa_cfg.pa_duty_cycle              = pa_hf_cfg_table[power - LR11XX_MIN_PWR_PA_HF].pa_duty_cycle;
+        output_params->pa_cfg.pa_hp_sel                  = pa_hf_cfg_table[power - LR11XX_MIN_PWR_PA_HF].pa_hp_sel;
+        output_params->chip_output_pwr_in_dbm_configured = pa_hf_cfg_table[power - LR11XX_MIN_PWR_PA_HF].power;
+        output_params->chip_output_pwr_in_dbm_expected   = power;
+        break;
+    }
     }
 }
 

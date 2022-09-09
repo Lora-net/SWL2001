@@ -105,7 +105,7 @@ void clock_sync_init( clock_sync_ctx_t* ctx, alc_sync_ctx_t* alc_ctx )
 
     ctx->alc_ctx = alc_ctx;
 
-    lorawan_api_set_device_time_callback( ( void ( * )( void*, uint32_t ) ) clock_sync_callback, ctx, 0 );
+    // lorawan_api_set_device_time_callback( ( void ( * )( void*, uint32_t ) ) clock_sync_callback, ctx, 0 );
 }
 
 void clock_sync_set_enabled( clock_sync_ctx_t* ctx, bool enable, clock_sync_service_t sync_service )
@@ -147,7 +147,7 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s )
 
     if( ctx->sync_service_type == CLOCK_SYNC_MAC )
     {
-        ctx->timestamp_last_correction_s = rx_timestamp_s;
+        ctx->timestamp_last_correction_s = lorawan_api_get_timestamp_last_device_time_ans_s( );
         ctx->sync_status                 = CLOCK_SYNC_NETWORK_SYNC_DONE;
     }
 
@@ -186,6 +186,19 @@ void clock_sync_callback( clock_sync_ctx_t* ctx, uint32_t rx_timestamp_s )
                 {
                     increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, SMTC_MODEM_EVENT_TIME_VALID_BUT_NOT_SYNC );
                 }
+                else
+                {
+                    increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, SMTC_MODEM_EVENT_TIME_VALID );
+                }
+            }
+            else
+            {
+                smtc_modem_event_time_status_t time_updated_status = SMTC_MODEM_EVENT_TIME_VALID_BUT_NOT_SYNC;
+                if( lorawan_api_get_device_time_req_status( ) == OKLORAWAN )
+                {
+                    time_updated_status = SMTC_MODEM_EVENT_TIME_VALID;
+                }
+                increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TIME, time_updated_status );
             }
 
             if( clock_sync_get_interval_second( ctx ) > 0 )
@@ -297,7 +310,22 @@ bool clock_sync_is_time_valid( clock_sync_ctx_t* ctx )
 
     if( ctx->sync_service_type == CLOCK_SYNC_MAC )
     {
-        b_ret = lorawan_api_is_time_valid( );
+        if( ctx->sync_status == CLOCK_SYNC_MANUAL_SYNC )
+        {
+            uint32_t rtc_s = smtc_modem_hal_get_time_in_s( );
+
+            if( ( ctx->timestamp_last_correction_s != 0 ) &&
+                ( ( int32_t )( rtc_s - ctx->timestamp_last_correction_s -
+                               lorawan_api_get_device_time_invalid_delay_s( ) ) < 0 ) )
+            {
+                b_ret = true;
+            }
+            b_ret = false;
+        }
+        else
+        {
+            b_ret = lorawan_api_is_time_valid( );
+        }
     }
     else
     {

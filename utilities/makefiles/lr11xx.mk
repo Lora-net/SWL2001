@@ -19,8 +19,7 @@ endif
 
 RADIO_HAL_C_SOURCES += \
 	user_app/radio_hal/lr11xx_hal.c\
-	user_app/radio_hal/ral_lr11xx_bsp.c\
-	user_app/radio_hal/lr11xx_pa_pwr_cfg.c
+	user_app/radio_hal/ral_lr11xx_bsp.c
 
 #-----------------------------------------------------------------------------
 # Includes

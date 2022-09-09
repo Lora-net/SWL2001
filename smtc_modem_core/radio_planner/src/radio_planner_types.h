@@ -83,9 +83,7 @@ extern "C" {
 #define RP_SOMETHING_TO_DO                          1
 
 /*!
- *
- * for 8 ms : 5MS FOR WAKE UP (2MS) + CONFIG TIMER (3MS FIX !) + 3 ms interrupt
- * routine
+ * for 8 ms : 5MS FOR WAKE UP (2MS) + CONFIG TIMER (3MS FIX !) + 3 ms interrupt routine
  */
 #ifndef RP_MARGIN_DELAY
 #define RP_MARGIN_DELAY                             8
@@ -154,6 +152,8 @@ typedef enum rp_task_types_e
     RP_TASK_TYPE_TX_FSK,
     RP_TASK_TYPE_TX_LR_FHSS,
     RP_TASK_TYPE_CAD,
+    RP_TASK_TYPE_CAD_TO_TX,
+    RP_TASK_TYPE_CAD_TO_RX,
     RP_TASK_TYPE_GNSS_SNIFF,
     RP_TASK_TYPE_WIFI_SNIFF,
     RP_TASK_TYPE_GNSS_RSSI,
@@ -235,7 +235,6 @@ typedef enum rp_hook_status_e
 /*!
  *
  */
-
 
 #ifdef __cplusplus
 }

@@ -69,12 +69,11 @@ typedef struct lr1_stack_mac_s
     /*******************************************/
     /*      Update by Link ADR command         */
     /*******************************************/
-    uint8_t  tx_data_rate;
-    uint8_t  tx_data_rate_adr;
-    int8_t   tx_power;
-    uint16_t channel_mask;
-    uint8_t  nb_trans;
-    uint8_t  nb_trans_cpt;
+    uint8_t tx_data_rate;
+    uint8_t tx_data_rate_adr;
+    int8_t  tx_power;
+    uint8_t nb_trans;
+    uint8_t nb_trans_cpt;
     /********************************************/
     /*     Update by RxParamaSetupRequest       */
     /********************************************/
@@ -109,24 +108,24 @@ typedef struct lr1_stack_mac_s
     lr1mac_activation_mode_t activation_mode;
 
     // LoRaWan Mac Data for uplink
-    uint8_t tx_fport;
-    bool    tx_fport_present;
-    uint8_t tx_mtype;
-    uint8_t tx_major_bits;
-    uint8_t tx_fctrl;
-    uint8_t tx_ack_bit;
-    uint8_t tx_class_b_bit;
-    uint8_t app_payload_size;
-    uint8_t tx_payload_size;
-    uint8_t tx_payload[255];
-    uint8_t tx_fopts_length;
-    uint8_t tx_fopts_data[DEVICE_MAC_PAYLOAD_MAX_SIZE];
-    uint8_t tx_fopts_lengthsticky;
-    uint8_t tx_fopts_datasticky[15];
-    uint8_t tx_fopts_current_length;
-    uint8_t tx_fopts_current_data[15];
+    uint8_t              tx_fport;
+    bool                 tx_fport_present;
+    lr1mac_layer_param_t tx_mtype;
+    uint8_t              tx_major_bits;
+    uint8_t              tx_fctrl;
+    uint8_t              tx_ack_bit;
+    uint8_t              tx_class_b_bit;
+    uint8_t              app_payload_size;
+    uint8_t              tx_payload_size;
+    uint8_t              tx_payload[255];
+    uint8_t              tx_fopts_length;
+    uint8_t              tx_fopts_data[DEVICE_MAC_PAYLOAD_MAX_SIZE];
+    uint8_t              tx_fopts_lengthsticky;
+    uint8_t              tx_fopts_datasticky[15];
+    uint8_t              tx_fopts_current_length;
+    uint8_t              tx_fopts_current_data[15];
     // LoRaWan Mac Data for downlink
-    uint8_t               rx_ftype;
+    lr1mac_layer_param_t  rx_ftype;
     uint8_t               rx_major;
     uint8_t               rx_fctrl;
     uint8_t               rx_ack_bit;
@@ -196,7 +195,6 @@ typedef struct lr1_stack_mac_s
     int16_t                fine_tune_board_setting_delay_ms[16];
     int32_t                rx_offset_ms;
     uint32_t               timestamp_failsafe;
-    uint32_t               dev_addr_isr;
     uint8_t                type_of_ans_to_send;
     uint8_t                nwk_payload_index;
     lr1mac_states_t        lr1mac_state;
@@ -214,6 +212,7 @@ typedef struct lr1_stack_mac_s
     uint32_t seconds_since_epoch;
     uint32_t fractional_second;
     uint32_t timestamp_tx_done_device_time_req_ms;
+    uint32_t timestamp_tx_done_device_time_req_ms_tmp;
     uint32_t timestamp_last_device_time_ans_s;
     void ( *device_time_callback )( void*, uint32_t );
     void*    device_time_callback_context;

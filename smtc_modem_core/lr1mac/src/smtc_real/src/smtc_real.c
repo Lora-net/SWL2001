@@ -1525,11 +1525,11 @@ status_lorawan_t smtc_real_is_payload_size_valid( lr1_stack_mac_t* lr1_mac, uint
 #endif
 
     status_lorawan_t status =
-        ( ( size + lr1_mac->tx_fopts_current_length ) > const_max_payload_n[index] ) ? ERRORLORAWAN : OKLORAWAN;
+        ( ( size + lr1_mac->tx_fopts_current_length ) > ( const_max_payload_m[index] - 8 ) ) ? ERRORLORAWAN : OKLORAWAN;
     if( status == ERRORLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "Invalid size (data:%d + FOpts:%d) > %d for dr: %d\n", size,
-                                     lr1_mac->tx_fopts_current_length, const_max_payload_n[index], dr );
+                                     lr1_mac->tx_fopts_current_length, ( const_max_payload_m[index] - 8 ), dr );
     }
     return ( status );
 }
@@ -2069,7 +2069,7 @@ status_lorawan_t smtc_real_is_channel_mask_for_mobile_mode( const lr1_stack_mac_
     {
         if( SMTC_GET_BIT8( unwrapped_channel_mask_ctx, i ) == CHANNEL_ENABLED )
         {
-            for( uint8_t dr = const_min_tx_dr; dr < const_max_tx_dr; dr++ )
+            for( uint8_t dr = const_min_tx_dr; dr <= const_max_tx_dr; dr++ )
             {
                 if( SMTC_GET_BIT16( &dr_bitfield_tx_channel_ctx[i], dr ) == 1 )
                 {
@@ -2845,10 +2845,9 @@ void smtc_real_get_rx_window_parameters( lr1_stack_mac_t* lr1_mac, uint8_t datar
         min_rx_symb_duration_ms += 2;
     }
 
-    *rx_timeout_symb_in_ms = MAX( ( ( ( ( rx_delay_ms * 2 * lr1_mac->crystal_error ) / 1000 ) +
-                                      ( MIN_RX_WINDOW_SYMB * tsymbol_us ) ) /
-                                    1000 ),
-                                  min_rx_symb_duration_ms );
+    *rx_timeout_symb_in_ms = MAX(
+        ( ( ( ( rx_delay_ms * 2 * lr1_mac->crystal_error ) / 1000 ) + ( MIN_RX_WINDOW_SYMB * tsymbol_us ) ) / 1000 ),
+        min_rx_symb_duration_ms );
 
     *rx_window_symb =
         MIN( MAX( ( ( *rx_timeout_symb_in_ms * 1000 ) / tsymbol_us ), MIN_RX_WINDOW_SYMB ), MAX_RX_WINDOW_SYMB );

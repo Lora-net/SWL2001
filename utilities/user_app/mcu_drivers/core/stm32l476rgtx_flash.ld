@@ -106,8 +106,8 @@ SECTIONS
     . = ALIGN(8);
   } >FLASH
 
-  .ARM.extab   : 
-  { 
+  .ARM.extab   :
+  {
   . = ALIGN(8);
   *(.ARM.extab* .gnu.linkonce.armextab.*)
   . = ALIGN(8);
@@ -128,7 +128,7 @@ SECTIONS
     PROVIDE_HIDDEN (__preinit_array_end = .);
 	. = ALIGN(8);
   } >FLASH
-  
+
   .init_array :
   {
 	. = ALIGN(8);
@@ -152,7 +152,7 @@ SECTIONS
   _sidata = LOADADDR(.data);
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data : 
+  .data :
   {
     . = ALIGN(8);
     _sdata = .;        /* create a global symbol at data start */
@@ -179,7 +179,7 @@ SECTIONS
     _egcov = . ;
   } >RAM
   */
-  
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
@@ -224,13 +224,13 @@ SECTIONS
 
   .stack :
   {
-      . = ALIGN(8);
-      _estack = . ;
-      __stack_end__ = _estack;
-      . = . + _Min_Stack_Size;
-      . = ALIGN(8);
-      _sstack = . ;
-      __stack_start__ = _sstack;
+    . = ALIGN(8);
+    _sstack = .;
+    __stack_start__ = _sstack;
+    stack_size = _estack - ABSOLUTE(_sstack);
+    . = . + MAX(_Min_Stack_Size, stack_size);
+    . = ALIGN(8);
+    __stack_end__ = .;
   } >RAM2
 
   /* User_heap_stack section, used to check that there is enough RAM left */
@@ -246,7 +246,7 @@ SECTIONS
   } >RAM
   */
 
-  
+
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

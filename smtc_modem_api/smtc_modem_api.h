@@ -269,6 +269,7 @@ typedef enum smtc_modem_region_e
     SMTC_MODEM_REGION_KR_920        = 10,
     SMTC_MODEM_REGION_RU_864        = 11,
     SMTC_MODEM_REGION_CN_470_RP_1_0 = 12,
+    SMTC_MODEM_REGION_AS_923_GRP4   = 13,
 } smtc_modem_region_t;
 
 /**
@@ -1456,7 +1457,7 @@ smtc_modem_return_code_t smtc_modem_request_empty_uplink( uint8_t stack_id, bool
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK                Command executed without errors
- * @retval SMTC_MODEM_RC_INVALID           \p file_length is equal to 0 or greater than 8192 bytes, or \p file is NULL
+ * @retval SMTC_MODEM_RC_INVALID           \p file_length is equal to 0 or greater than 8180 bytes, or \p file is NULL
  * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode, or a file upload is already ongoing
  * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
  */

@@ -133,7 +133,6 @@ void region_us_915_config( lr1_stack_mac_t* lr1_mac )
     const_dtc_supported                = DTC_SUPPORTED_US_915;
     const_lbt_supported                = LBT_SUPPORTED_US_915;
     const_max_payload_m                = &M_us_915[0];
-    const_max_payload_n                = &N_us_915[0];
     const_coding_rate                  = RAL_LORA_CR_4_5;
     const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_US_915[0];
     const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_US_915[0];

@@ -84,9 +84,9 @@
 // Length of filedone frame
 #define FILE_UPLOAD_FILEDONE_FRAME_LENGTH ( 1 )
 
-// File upload maximum size - Can be modified to enlarge file upload max accepted size
+// File upload maximum size
 #ifndef FILE_UPLOAD_MAX_SIZE
-#define FILE_UPLOAD_MAX_SIZE ( 8 * 1024 )
+#define FILE_UPLOAD_MAX_SIZE ( ( 8 * 1024 ) - FILE_UPLOAD_HEADER_SIZE )
 #endif
 
 // number of words per chunk
@@ -132,10 +132,7 @@ file_upload_return_code_t file_upload_init( file_upload_t* file_upload, uint32_t
 {
     if( file_len > FILE_UPLOAD_MAX_SIZE )
     {
-        LOG_ERROR(
-            "FileUpload is too large (%d > %d ) - Modify FILE_UPLOAD_MAX_SIZE  to enlarge file upload buffer in case "
-            "you have enough ram \n",
-            file_len, FILE_UPLOAD_MAX_SIZE );
+        LOG_ERROR( "FileUpload is too large (%d > %d )\n", file_len, FILE_UPLOAD_MAX_SIZE );
         return FILE_UPLOAD_ERROR;
     }
     uint16_t sz_tmp = file_len + FILE_UPLOAD_HEADER_SIZE;

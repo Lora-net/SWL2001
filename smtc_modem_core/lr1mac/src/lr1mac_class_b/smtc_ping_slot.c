@@ -170,10 +170,14 @@ void smtc_ping_slot_init( smtc_ping_slot_t* ping_slot_obj, lr1_stack_mac_t* lr1_
 
     ping_slot_obj->rx_session_param[RX_SESSION_UNICAST] = &ping_slot_obj->rx_session_param_unicast;
     ping_slot_obj->d2d_callback                         = NULL;
-    // start to 1 because index 0 is set with lorawan class A value
-    for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
+
+    if( multicast_obj != NULL )
     {
-        ping_slot_obj->rx_session_param[i + 1] = &multicast_obj->rx_session_param[i];
+        // start to 1 because index 0 is set with lorawan class A value
+        for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
+        {
+            ping_slot_obj->rx_session_param[i + 1] = &multicast_obj->rx_session_param[i];
+        }
     }
 }
 
@@ -184,7 +188,9 @@ void smtc_ping_slot_stop( smtc_ping_slot_t* ping_slot_obj )
         return;
     }
     ping_slot_obj->enabled = false;
+#if defined( SMTC_MULTICAST )
     smtc_ping_slot_multicast_b_stop_all_sessions( ping_slot_obj );
+#endif
     rp_task_abort( ping_slot_obj->rp, ping_slot_obj->ping_slot_id4rp );
 
     // Sent empty uplink at the upper layer to inform Network that class B is disabled
@@ -267,7 +273,6 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
     uint32_t          rx_timeout_symb_locked_in_ms_tmp;
     rp_task_t         rp_task = { 0 };
     int32_t           rx_offset_ms_tmp;
-    int8_t            board_delay_ms;
     rp_hook_status_t  rp_status;
 
     do
@@ -405,7 +410,8 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
         rp_task.hook_id                    = ping_slot_obj->ping_slot_id4rp;
         rp_task.state                      = RP_TASK_STATE_SCHEDULE;
         rp_task.schedule_task_low_priority = true;
-        board_delay_ms = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) + smtc_modem_hal_get_board_delay_ms( );
+        int8_t board_delay_ms =
+            smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) + smtc_modem_hal_get_board_delay_ms( );
         smtc_real_get_rx_start_time_offset_ms( ping_slot_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate,
                                                board_delay_ms, RX_SESSION_PARAM_CURRENT->rx_window_symb,
                                                &rx_offset_ms_tmp );
@@ -573,6 +579,7 @@ uint32_t smtc_ping_slot_compute_first_slot( uint32_t beacon_time_received_100us,
     return ret;
 }
 
+#if defined( SMTC_MULTICAST )
 smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_start_session( smtc_ping_slot_t* ping_slot_obj,
                                                                      uint8_t mc_group_id, uint32_t freq, uint8_t dr,
                                                                      uint8_t ping_slot_periodicity )
@@ -671,6 +678,7 @@ smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_get_session_status( smtc_p
 
     return SMTC_MC_RC_OK;
 }
+#endif
 
 /*
  * -----------------------------------------------------------------------------

@@ -91,8 +91,8 @@ STATIC const uint8_t lr_fhss_viterbi_1_3_table[64][2] = {
 
 /** @brief used for 1/2 rate viterbi encoding */
 STATIC const uint8_t lr_fhss_viterbi_1_2_table[16][2] = { { 0, 3 }, { 1, 2 }, { 2, 1 }, { 3, 0 }, { 2, 1 }, { 3, 0 },
-                                                        { 0, 3 }, { 1, 2 }, { 3, 0 }, { 2, 1 }, { 1, 2 }, { 0, 3 },
-                                                        { 1, 2 }, { 0, 3 }, { 3, 0 }, { 2, 1 } };
+                                                          { 0, 3 }, { 1, 2 }, { 3, 0 }, { 2, 1 }, { 1, 2 }, { 0, 3 },
+                                                          { 1, 2 }, { 0, 3 }, { 3, 0 }, { 2, 1 } };
 
 /** @brief used header interleaving */
 STATIC const uint8_t lr_fhss_header_interleaver_minus_one[80] = {
@@ -329,11 +329,7 @@ void lr_fhss_process_parameters( const lr_fhss_v1_params_t* params, uint16_t pay
     digest->nb_bits = lr_fhss_get_bit_and_hop_count( params, payload_length, &digest->nb_hops );
 
     digest->nb_bytes = ( digest->nb_bits + 8 - 1 ) / 8;
-    if( params->enable_hopping )
-    {
-        digest->nb_hops = digest->nb_hops;
-    }
-    else
+    if( params->enable_hopping == false )
     {
         digest->nb_hops = 1;
     }
@@ -774,7 +770,7 @@ STATIC uint16_t lr_fhss_payload_interleaving( const uint8_t* data_in, uint16_t d
 
         lr_fhss_set_bit_in_byte_vector( data_out, 0 + out_row_index, 0 );  // guard bits
         lr_fhss_set_bit_in_byte_vector( data_out, 1 + out_row_index, 0 );  // guard bits
-        for( uint32_t j = 0; j < in_row_width; j++ )
+        for( int32_t j = 0; j < in_row_width; j++ )
         {
             lr_fhss_set_bit_in_byte_vector( data_out, j + 2 + out_row_index,
                                             lr_fhss_extract_bit_in_byte_vector( data_in, pos ) );  // guard bit

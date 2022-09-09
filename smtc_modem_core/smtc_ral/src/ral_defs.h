@@ -242,17 +242,14 @@ enum ral_rx_status_gfsk_e
 };
 
 /*!
- * \brief GFSK Header Type configurations
+ * @brief GFSK Header Type configurations
  *
- * This parameter indicates whether or not the payload length is sent and read
- * over the air.
+ * This parameter indicates whether or not the payload length is sent and read over the air.
  *
- * If the payload length is known beforehand by both transmitter and receiver,
- * therefore there is no need to send it over the air. Otherwise, setting this
- * parameter to LR1110_RADIO_GFSK_PKT_VAR_LEN will make the modem to
- * automatically prepand a byte containing the payload length to the the payload
- * on transmitter side. On receiver side, this first byte is read to set the
- * payload length to read.
+ * If the payload length is known beforehand by both transmitter and receiver, therefore there is no need to send it
+ * over the air and the parameter can be set to RAL_GFSK_PKT_FIX_LEN. Otherwise, setting this parameter to
+ * RAL_GFSK_PKT_VAR_LEN will make the modem to automatically prepend a byte containing the payload length to the payload
+ * on transmitter side. On receiver side, this first byte is read to set the payload length to read.
  *
  * This configuration is only available for GFSK packet types.
  */

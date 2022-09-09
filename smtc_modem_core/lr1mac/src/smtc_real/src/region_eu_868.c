@@ -125,7 +125,6 @@ void region_eu_868_config( lr1_stack_mac_t* lr1_mac )
     const_lbt_threshold_dbm            = LBT_THRESHOLD_DBM_EU_868;
     const_lbt_bw_hz                    = LBT_BW_HZ_EU_868;
     const_max_payload_m                = &M_eu_868[0];
-    const_max_payload_n                = &N_eu_868[0];
     const_coding_rate                  = RAL_LORA_CR_4_5;
     const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_EU_868[0];
     const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_EU_868[0];
