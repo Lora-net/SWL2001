@@ -375,10 +375,10 @@ ral_status_t ral_lr11xx_init( const void* context )
     ral_status_t                        status = RAL_STATUS_ERROR;
     lr11xx_system_tcxo_supply_voltage_t tcxo_supply_voltage;
     lr11xx_system_reg_mode_t            reg_mode;
-    lr11xx_system_rfswitch_cfg_t        system_rf_switch_cfg     = { 0 };
-    bool                                tcxo_is_radio_controlled = false;
-    bool                                crc_is_activated         = false;
-    uint32_t                            startup_time_in_tick     = 0;
+    lr11xx_system_rfswitch_cfg_t        system_rf_switch_cfg = { 0 };
+    ral_xosc_cfg_t                      xosc_cfg;
+    bool                                crc_is_activated     = false;
+    uint32_t                            startup_time_in_tick = 0;
 
     ral_lr11xx_bsp_get_crc_state( context, &crc_is_activated );
     if( crc_is_activated == true )
@@ -404,8 +404,8 @@ ral_status_t ral_lr11xx_init( const void* context )
         return status;
     }
 
-    ral_lr11xx_bsp_get_xosc_cfg( context, &tcxo_is_radio_controlled, &tcxo_supply_voltage, &startup_time_in_tick );
-    if( tcxo_is_radio_controlled == true )
+    ral_lr11xx_bsp_get_xosc_cfg( context, &xosc_cfg, &tcxo_supply_voltage, &startup_time_in_tick );
+    if( xosc_cfg == RAL_XOSC_CFG_TCXO_RADIO_CTRL )
     {
         status = ( ral_status_t ) lr11xx_system_set_tcxo_mode( context, tcxo_supply_voltage, startup_time_in_tick );
         if( status != RAL_STATUS_OK )
@@ -828,7 +828,7 @@ ral_status_t ral_lr11xx_set_lora_cad_params( const void* context, const ral_lora
     return ( ral_status_t ) lr11xx_radio_set_cad_params( context, &radio_lora_cad_params );
 }
 
-ral_status_t ral_lr11xx_set_lora_symb_nb_timeout( const void* context, const uint8_t nb_of_symbs )
+ral_status_t ral_lr11xx_set_lora_symb_nb_timeout( const void* context, const uint16_t nb_of_symbs )
 {
     return ( ral_status_t ) lr11xx_radio_set_lora_sync_timeout( context, nb_of_symbs );
 }
@@ -1046,6 +1046,16 @@ ral_status_t ral_lr11xx_lr_fhss_get_hop_sequence_count( const void*             
     return ( ral_status_t ) lr11xx_lr_fhss_get_hop_sequence_count( &lr11xx_params );
 }
 
+uint16_t ral_lr11xx_lr_fhss_get_bit_delay_in_us( const void* context, const ral_lr_fhss_params_t* params,
+                                                 uint16_t payload_length )
+{
+    lr11xx_lr_fhss_params_t lr11xx_params;
+
+    ral_lr11xx_convert_lr_fhss_params_from_ral( params, &lr11xx_params );
+
+    return lr11xx_lr_fhss_get_bit_delay_in_us( &lr11xx_params, payload_length );
+}
+
 ral_status_t ral_lr11xx_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
@@ -1232,6 +1242,16 @@ ral_status_t ral_lr11xx_get_random_numbers( const void* context, uint32_t* numbe
     }
 
     return status;
+}
+
+ral_status_t ral_lr11xx_handle_rx_done( const void* context )
+{
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_lr11xx_handle_tx_done( const void* context )
+{
+    return RAL_STATUS_OK;
 }
 
 /*

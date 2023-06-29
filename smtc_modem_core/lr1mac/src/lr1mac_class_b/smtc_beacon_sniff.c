@@ -167,12 +167,13 @@ static bool is_valid_beacon( smtc_lr1_beacon_t* lr1_beacon_obj, uint32_t timesta
 /**
  * @brief Compute the beacon datarate
  */
-#define BEACON_DATA_RATE( ) smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac )
+#define BEACON_DATA_RATE( ) smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac->real )
 
 /**
  * @brief Compute the beacon duration in us
  */
-#define BEACON_SYMB_DURATION_US( ) smtc_real_get_symbol_duration_us( lr1_beacon_obj->lr1_mac, BEACON_DATA_RATE( ) )
+#define BEACON_SYMB_DURATION_US( ) \
+    smtc_real_get_symbol_duration_us( lr1_beacon_obj->lr1_mac->real, BEACON_DATA_RATE( ) )
 /**
  * @brief Compute the beacon duration in ms
  */
@@ -182,27 +183,28 @@ static bool is_valid_beacon( smtc_lr1_beacon_t* lr1_beacon_obj, uint32_t timesta
  * @brief Compute the beacon spreading factor
  */
 #define GET_BEACON_SF( ) \
-    ( ral_lora_sf_t ) get_beacon_sf( lr1_beacon_obj->lr1_mac, smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac ) )
+    ( ral_lora_sf_t ) get_beacon_sf( lr1_beacon_obj->lr1_mac, smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac->real ) )
 /**
  * @brief Compute the beacon bandwith
  */
 #define GET_BEACON_BW( ) \
-    ( ral_lora_bw_t ) get_beacon_bw( lr1_beacon_obj->lr1_mac, smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac ) )
+    ( ral_lora_bw_t ) get_beacon_bw( lr1_beacon_obj->lr1_mac, smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac->real ) )
 /**
  * @brief Compute the beacon payload length in bytes
  */
 #define GET_BEACON_LENGTH_BYTES( ) \
-    get_beacon_length( get_beacon_sf( lr1_beacon_obj->lr1_mac, smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac ) ) )
+    get_beacon_length(             \
+        get_beacon_sf( lr1_beacon_obj->lr1_mac, smtc_real_get_beacon_dr( lr1_beacon_obj->lr1_mac->real ) ) )
 /**
  * @brief Compute the beacon frequency in hertz
  */
 #define GET_BEACON_FREQUENCY( ) \
-    smtc_real_get_beacon_frequency( lr1_beacon_obj->lr1_mac, lr1_beacon_obj->beacon_epoch_time )
+    smtc_real_get_beacon_frequency( lr1_beacon_obj->lr1_mac->real, lr1_beacon_obj->beacon_epoch_time )
 /**
- * @brief use to compute the rx windows size of a beacon defined in ms , this value is clamp at 255 symbols which is the
- * maximum allowed value in the semtech radio
+ * @brief use to compute the rx windows size of a beacon defined in ms , this value is clamp at MAX_RX_WINDOW_SYMB
+ * symbols which is the maximum allowed value in the Semtech radio
  */
-#define MAX_BEACON_WINDOW_SYMB( ) MIN( MAX_BEACON_WINDOW_MS / BEACON_SYMB_DURATION_MS( ), 255 )
+#define MAX_BEACON_WINDOW_SYMB( ) MIN( MAX_BEACON_WINDOW_MS / BEACON_SYMB_DURATION_MS( ), MAX_RX_WINDOW_SYMB )
 /**
  * @brief return the duration in ms of a beacon duration initally defined in number of symbols
  */
@@ -330,8 +332,8 @@ void beacon_rp_request( smtc_lr1_beacon_t* lr1_beacon_obj )
     rp_radio_params_t rp_radio_params      = { 0 };
     rp_radio_params.pkt_type               = RAL_PKT_TYPE_LORA;
     lora_param.symb_nb_timeout             = lr1_beacon_obj->beacon_open_rx_nb_symb;
-    lora_param.sync_word                   = smtc_real_get_sync_word( lr1_beacon_obj->lr1_mac );
-    lora_param.mod_params.cr               = smtc_real_get_coding_rate( lr1_beacon_obj->lr1_mac );
+    lora_param.sync_word                   = smtc_real_get_sync_word( lr1_beacon_obj->lr1_mac->real );
+    lora_param.mod_params.cr               = smtc_real_get_coding_rate( lr1_beacon_obj->lr1_mac->real );
     lora_param.pkt_params.header_type      = RAL_LORA_PKT_IMPLICIT;
     lora_param.pkt_params.pld_len_in_bytes = GET_BEACON_LENGTH_BYTES( );
     lora_param.pkt_params.crc_is_on        = false;
@@ -361,7 +363,6 @@ void smtc_beacon_sniff_launch_callback_for_rp( void* rp_void )
         rp_task_abort( rp, id );
         return;
     }
-    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ralf_setup_lora( rp->radio, &rp->radio_params[id].rx.lora ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT |
                                                                             RAL_IRQ_RX_HDR_ERROR |
@@ -370,6 +371,8 @@ void smtc_beacon_sniff_launch_callback_for_rp( void* rp_void )
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
+    smtc_modem_hal_start_radio_tcxo( );
+
     smtc_modem_hal_assert( ral_set_rx( &( rp->radio->ral ), rp->radio_params[id].rx.timeout_in_ms ) == RAL_STATUS_OK );
     rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
@@ -516,14 +519,14 @@ static uint8_t get_beacon_sf( lr1_stack_mac_t* lr1_mac, uint8_t beacon_datarate 
 {
     uint8_t            sf;
     lr1mac_bandwidth_t bw;
-    smtc_real_lora_dr_to_sf_bw( lr1_mac, beacon_datarate, &sf, &bw );
+    smtc_real_lora_dr_to_sf_bw( lr1_mac->real, beacon_datarate, &sf, &bw );
     return sf;
 }
 static lr1mac_bandwidth_t get_beacon_bw( lr1_stack_mac_t* lr1_mac, uint8_t beacon_datarate )
 {
     uint8_t            sf;
     lr1mac_bandwidth_t bw;
-    smtc_real_lora_dr_to_sf_bw( lr1_mac, beacon_datarate, &sf, &bw );
+    smtc_real_lora_dr_to_sf_bw( lr1_mac->real, beacon_datarate, &sf, &bw );
     return bw;
 }
 
@@ -705,9 +708,10 @@ static void update_beacon_rx_nb_symb( smtc_lr1_beacon_t* lr1_beacon_obj, uint32_
         SMTC_MODEM_HAL_TRACE_PRINTF( "rx delay = %d ms\n",
                                      target_time - lr1_beacon_obj->beacon_metadata.last_beacon_received_timestamp );
         smtc_real_get_rx_window_parameters(
-            lr1_beacon_obj->lr1_mac, BEACON_DATA_RATE( ),
+            lr1_beacon_obj->lr1_mac->real, BEACON_DATA_RATE( ),
             ( target_time - lr1_beacon_obj->beacon_metadata.last_beacon_received_timestamp ),
-            &lr1_beacon_obj->beacon_open_rx_nb_symb, &rx_timeout_symb_in_ms_tmp, &rx_timeout_symb_locked_in_ms_tmp, 0 );
+            &lr1_beacon_obj->beacon_open_rx_nb_symb, &rx_timeout_symb_in_ms_tmp, &rx_timeout_symb_locked_in_ms_tmp, 0,
+            lr1_beacon_obj->lr1_mac->crystal_error );
         // in case of beacon has not been YET received 4 times consecutively it enlarge the rx windows.
         if( lr1_beacon_obj->beacon_metadata.last_beacon_lost_consecutively == 0 )
         {
@@ -723,7 +727,7 @@ static uint32_t compute_start_time( smtc_lr1_beacon_t* lr1_beacon_obj )
 {
     int8_t  board_delay_ms = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) + smtc_modem_hal_get_board_delay_ms( );
     int32_t rx_offset_ms;
-    smtc_real_get_rx_start_time_offset_ms( lr1_beacon_obj->lr1_mac, BEACON_DATA_RATE( ), board_delay_ms,
+    smtc_real_get_rx_start_time_offset_ms( lr1_beacon_obj->lr1_mac->real, BEACON_DATA_RATE( ), board_delay_ms,
                                            lr1_beacon_obj->beacon_open_rx_nb_symb, &rx_offset_ms );
     return ( DPLL_PHASE_MS( ) + rx_offset_ms );
 }

@@ -104,8 +104,6 @@ void clock_sync_init( clock_sync_ctx_t* ctx, alc_sync_ctx_t* alc_ctx )
     ctx->fractional_second   = 0;
 
     ctx->alc_ctx = alc_ctx;
-
-    // lorawan_api_set_device_time_callback( ( void ( * )( void*, uint32_t ) ) clock_sync_callback, ctx, 0 );
 }
 
 void clock_sync_set_enabled( clock_sync_ctx_t* ctx, bool enable, clock_sync_service_t sync_service )
@@ -320,7 +318,10 @@ bool clock_sync_is_time_valid( clock_sync_ctx_t* ctx )
             {
                 b_ret = true;
             }
-            b_ret = false;
+            else
+            {
+                b_ret = false;
+            }
         }
         else
         {

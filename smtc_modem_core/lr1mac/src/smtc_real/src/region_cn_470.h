@@ -77,70 +77,59 @@ extern "C" {
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_cn_470_config( lr1_stack_mac_t* lr1_mac );
+void region_cn_470_init( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_cn_470_init( lr1_stack_mac_t* lr1_mac );
+void region_cn_470_config( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_cn_470_init_session( lr1_stack_mac_t* lr1_mac );
+void region_cn_470_config_session( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t region_cn_470_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac );
+uint8_t region_cn_470_get_number_of_chmask_in_cflist( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_cn_470_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_cn_470_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate, uint32_t* out_tx_frequency,
+                                                 uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_cn_470_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_cn_470_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency,
+                                                      uint32_t* out_rx2_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_cn_470_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+status_channel_t region_cn_470_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_cn_470_set_channel_mask( lr1_stack_mac_t* lr1_mac );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_channel_t region_cn_470_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_cn_470_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
+void region_cn_470_enable_all_channels_with_valid_freq( smtc_real_t* real );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate
@@ -173,44 +162,42 @@ void region_cn_470_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t region_cn_470_get_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8_t index );
+uint32_t region_cn_470_get_tx_frequency_channel( smtc_real_t* real, uint8_t index );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t region_cn_470_get_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8_t index );
+uint32_t region_cn_470_get_rx1_frequency_channel( smtc_real_t* real, uint8_t index );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @param common_join_channel_index
  * @return channel_plan_type_cn470_t
  */
-channel_plan_type_cn470_t region_cn_470_get_corresponding_plan( lr1_stack_mac_t* lr1_mac,
-                                                                uint8_t          common_join_channel_index );
+channel_plan_type_cn470_t region_cn_470_get_corresponding_plan( smtc_real_t* real, uint8_t common_join_channel_index );
 
 /**
  * @brief Get the beacon frequency
  *
- * @param lr1_mac
+ * @param real
  * @param gps_time_s
  * @return uint32_t
  */
-uint32_t region_cn_470_get_rx_beacon_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s );
+uint32_t region_cn_470_get_rx_beacon_frequency_channel( smtc_real_t* real, uint32_t gps_time_s );
 
 /**
  * @brief Get the ping slot frequency
  *
- * @param lr1_mac
+ * @param real
  * @param gps_time_s
  * @param dev_addr
  * @return uint32_t
  */
-uint32_t region_cn_470_get_rx_ping_slot_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s,
-                                                           uint32_t dev_addr );
+uint32_t region_cn_470_get_rx_ping_slot_frequency_channel( smtc_real_t* real, uint32_t gps_time_s, uint32_t dev_addr );
 #ifdef __cplusplus
 }
 #endif

@@ -239,7 +239,7 @@ smtc_modem_return_code_t smtc_modem_test_radio_reset( void );
 
 /**
  * @brief Enable / disable the applicative dutycycle
- * @remark
+ * @remark This function can be called regardless of test mode state
  *
  * @param [in] status  0: disable, 1: enable
  *

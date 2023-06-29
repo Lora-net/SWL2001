@@ -34,15 +34,15 @@ MODEM_C_INCLUDES =  \
 #-----------------------------------------------------------------------------
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
-MODEM_C_DEFS += \
+COMMON_C_DEFS += \
 	-DSX126X 
 
 ifeq ($(RADIO),sx1262)
-MODEM_C_DEFS += \
+COMMON_C_DEFS += \
     -DSX1262
 endif
 
 ifeq ($(RADIO),sx1268)
-MODEM_C_DEFS += \
+COMMON_C_DEFS += \
     -DSX1268
 endif

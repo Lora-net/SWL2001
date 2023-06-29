@@ -46,9 +46,16 @@ extern "C" {
 #include "radio_planner.h"
 #include "smtc_duty_cycle.h"
 #include "smtc_lbt.h"
-#define MIN_RX_WINDOW_SYMB 6         // open rx window at least 6 symbols
-#define MAX_RX_WINDOW_SYMB 255       // open rx window at max 225 symbol hardware limitation
-#define MIN_RX_WINDOW_DURATION_MS 6  // open rx window at least 6ms
+
+#ifndef MIN_RX_WINDOW_SYMB
+#define MIN_RX_WINDOW_SYMB 6  // open rx window at least 6 symbols
+#endif
+
+#define MAX_RX_WINDOW_SYMB 248  // open rx window at max 248 symbol hardware limitation
+
+#ifndef MIN_RX_WINDOW_DURATION_MS
+#define MIN_RX_WINDOW_DURATION_MS 16  // open rx window at least 6ms
+#endif
 /*
  *-----------------------------------------------------------------------------------
  * --- PUBLIC TYPES -----------------------------------------------------------------
@@ -93,8 +100,6 @@ typedef struct lr1_stack_mac_s
     /*   Update by TxParamSetupReq command      */
     /********************************************/
     uint8_t max_erp_dbm;
-    bool    uplink_dwell_time;
-    bool    downlink_dwell_time;
     /********************************************/
     /*   Update by DutyCycleReq command         */
     /********************************************/
@@ -162,7 +167,7 @@ typedef struct lr1_stack_mac_s
     uint8_t       adr_ack_limit;
     uint8_t       adr_ack_delay;
     uint8_t       adr_ack_req;
-    uint8_t       adr_enable;
+    bool          adr_enable;
     dr_strategy_t adr_mode_select;
     dr_strategy_t adr_mode_select_tmp;
     uint32_t      adr_custom[2];
@@ -178,7 +183,7 @@ typedef struct lr1_stack_mac_s
     uint32_t      tx_frequency;
     uint32_t      rx1_frequency;
     uint8_t       rx_data_rate;
-    uint8_t       sync_word;
+    uint8_t       sync_word;  // TODO does it useful , it's on the real
     rx_win_type_t current_win;
 
     // initially implemented in phy layer
@@ -214,8 +219,6 @@ typedef struct lr1_stack_mac_s
     uint32_t timestamp_tx_done_device_time_req_ms;
     uint32_t timestamp_tx_done_device_time_req_ms_tmp;
     uint32_t timestamp_last_device_time_ans_s;
-    void ( *device_time_callback )( void*, uint32_t );
-    void*    device_time_callback_context;
     uint32_t device_time_invalid_delay_s;
 
     // MAC command requested by user
@@ -246,15 +249,35 @@ typedef struct lr1_stack_mac_s
  * @param [in] activation_mode Type of activation used (ABP or OTAA)
  * @param [in] region          Chosen region
  */
-void lr1_stack_mac_init( lr1_stack_mac_t* lr1_mac, lr1mac_activation_mode_t activation_mode,
-                         smtc_real_region_types_t region );
+void lr1_stack_mac_init( lr1_stack_mac_t* lr1_mac, lr1mac_activation_mode_t activation_mode );
 /*!
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
+
+/**
+ * @brief
+ *
+ * @param lr1_mac
+ */
 void lr1_stack_mac_session_init( lr1_stack_mac_t* lr1_mac );
+
+/**
+ * @brief
+ *
+ * @param lr1_mac
+ */
+void lr1_stack_mac_region_init( lr1_stack_mac_t* lr1_mac, smtc_real_region_types_t region_type );
+
+/**
+ * @brief
+ *
+ * @param lr1_mac
+ */
+void lr1_stack_mac_region_config( lr1_stack_mac_t* lr1_mac );
+
 /*!
  * \brief
  * \remark

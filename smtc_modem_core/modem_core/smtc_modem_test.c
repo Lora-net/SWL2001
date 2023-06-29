@@ -273,7 +273,7 @@ smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_l
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj->real, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %d\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
@@ -305,15 +305,15 @@ smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_l
         ralf_params_gfsk_t gfsk_param;
         memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-        gfsk_param.rf_freq_in_hz                    = frequency_hz;
-        gfsk_param.output_pwr_in_dbm                = tx_power_dbm;
-        gfsk_param.sync_word                        = smtc_real_get_gfsk_sync_word( modem_test_context.lr1_mac_obj );
-        gfsk_param.dc_free_is_on                    = true;
-        gfsk_param.whitening_seed                   = GFSK_WHITENING_SEED;
-        gfsk_param.crc_seed                         = GFSK_CRC_SEED;
-        gfsk_param.crc_polynomial                   = GFSK_CRC_POLYNOMIAL;
-        gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
-        gfsk_param.pkt_params.pld_len_in_bytes      = payload_length;
+        gfsk_param.rf_freq_in_hz               = frequency_hz;
+        gfsk_param.output_pwr_in_dbm           = tx_power_dbm;
+        gfsk_param.sync_word                   = smtc_real_get_gfsk_sync_word( modem_test_context.lr1_mac_obj->real );
+        gfsk_param.dc_free_is_on               = true;
+        gfsk_param.whitening_seed              = GFSK_WHITENING_SEED;
+        gfsk_param.crc_seed                    = GFSK_CRC_SEED;
+        gfsk_param.crc_polynomial              = GFSK_CRC_POLYNOMIAL;
+        gfsk_param.pkt_params.header_type      = RAL_GFSK_PKT_VAR_LEN;
+        gfsk_param.pkt_params.pld_len_in_bytes = payload_length;
         gfsk_param.pkt_params.preamble_len_in_bits  = 40;
         gfsk_param.pkt_params.sync_word_len_in_bits = 24;
         gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
@@ -342,7 +342,7 @@ smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_l
 
         lora_param.rf_freq_in_hz     = frequency_hz;
         lora_param.output_pwr_in_dbm = tx_power_dbm;
-        lora_param.sync_word         = smtc_real_get_sync_word( modem_test_context.lr1_mac_obj );
+        lora_param.sync_word         = smtc_real_get_sync_word( modem_test_context.lr1_mac_obj->real );
 
         lora_param.pkt_params.preamble_len_in_symb = preamble_size;
         lora_param.pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
@@ -419,7 +419,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj->real, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %d\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
@@ -436,10 +436,17 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
 #elif defined( SX126X )
     lora_param.mod_params.bw = RAL_LORA_BW_125_KHZ;
 #elif defined( LR11XX )
-    lora_param.mod_params.bw = RAL_LORA_BW_125_KHZ;
+    if( frequency_hz >= 2400000000 )
+    {
+        lora_param.mod_params.bw = RAL_LORA_BW_800_KHZ;
+    }
+    else
+    {
+        lora_param.mod_params.bw = RAL_LORA_BW_125_KHZ;
+    }
 #endif
-    lora_param.mod_params.cr = smtc_real_get_coding_rate( modem_test_context.lr1_mac_obj );
-    lora_param.sync_word     = smtc_real_get_sync_word( modem_test_context.lr1_mac_obj );
+    lora_param.mod_params.cr = smtc_real_get_coding_rate( modem_test_context.lr1_mac_obj->real );
+    lora_param.sync_word     = smtc_real_get_sync_word( modem_test_context.lr1_mac_obj->real );
 
     rp_radio_params_t radio_params = { 0 };
     radio_params.pkt_type          = RAL_PKT_TYPE_LORA;
@@ -450,7 +457,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
     rp_task.state                 = RP_TASK_STATE_ASAP;
     rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 2;
     rp_task.duration_time_ms      = 2000;  // toa;
-    rp_task.type                  = RP_TASK_TYPE_RX_LORA;
+    rp_task.type                  = RP_TASK_TYPE_TX_LORA;
     rp_task.launch_task_callbacks = test_mode_cw_callback_for_rp;
 
     if( rp_task_enqueue( modem_test_context.rp, &rp_task, NULL, 0, &radio_params ) != RP_HOOK_STATUS_OK )
@@ -470,7 +477,7 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj->real, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid Frequency %u\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;
@@ -507,14 +514,14 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
         ralf_params_gfsk_t gfsk_param;
         memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-        gfsk_param.rf_freq_in_hz                    = frequency_hz;
-        gfsk_param.sync_word                        = smtc_real_get_gfsk_sync_word( modem_test_context.lr1_mac_obj );
-        gfsk_param.dc_free_is_on                    = true;
-        gfsk_param.whitening_seed                   = GFSK_WHITENING_SEED;
-        gfsk_param.crc_seed                         = GFSK_CRC_SEED;
-        gfsk_param.crc_polynomial                   = GFSK_CRC_POLYNOMIAL;
-        gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
-        gfsk_param.pkt_params.pld_len_in_bytes      = 255;
+        gfsk_param.rf_freq_in_hz               = frequency_hz;
+        gfsk_param.sync_word                   = smtc_real_get_gfsk_sync_word( modem_test_context.lr1_mac_obj->real );
+        gfsk_param.dc_free_is_on               = true;
+        gfsk_param.whitening_seed              = GFSK_WHITENING_SEED;
+        gfsk_param.crc_seed                    = GFSK_CRC_SEED;
+        gfsk_param.crc_polynomial              = GFSK_CRC_POLYNOMIAL;
+        gfsk_param.pkt_params.header_type      = RAL_GFSK_PKT_VAR_LEN;
+        gfsk_param.pkt_params.pld_len_in_bytes = 255;
         gfsk_param.pkt_params.preamble_len_in_bits  = 40;
         gfsk_param.pkt_params.sync_word_len_in_bits = 24;
         gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
@@ -540,11 +547,11 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
         memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
         lora_param.rf_freq_in_hz   = frequency_hz;
-        lora_param.sync_word       = smtc_real_get_sync_word( modem_test_context.lr1_mac_obj );
+        lora_param.sync_word       = smtc_real_get_sync_word( modem_test_context.lr1_mac_obj->real );
         lora_param.symb_nb_timeout = 0;
 
         lora_param.pkt_params.preamble_len_in_symb =
-            smtc_real_get_preamble_len( modem_test_context.lr1_mac_obj, modem_test_sf_convert[sf] );
+            smtc_real_get_preamble_len( modem_test_context.lr1_mac_obj->real, modem_test_sf_convert[sf] );
         lora_param.pkt_params.header_type      = RAL_LORA_PKT_EXPLICIT;
         lora_param.pkt_params.pld_len_in_bytes = 255;
         lora_param.pkt_params.crc_is_on        = false;
@@ -601,7 +608,7 @@ smtc_modem_return_code_t smtc_modem_test_rssi( uint32_t frequency_hz, smtc_modem
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj, frequency_hz ) != OKLORAWAN )
+    if( smtc_real_is_frequency_valid( modem_test_context.lr1_mac_obj->real, frequency_hz ) != OKLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( " Invalid Frequency %d\n", frequency_hz );
         return SMTC_MODEM_RC_INVALID;

@@ -97,6 +97,7 @@ extern "C" {
 #define LBT_THRESHOLD_DBM_AS_923            (int16_t)(-80)
 #define LBT_BW_HZ_AS_923                    (200000)
 #define CF_LIST_SUPPORTED_AS_923            (CF_LIST_FREQ)
+#define UPLINK_DWELL_TIME_AS_923            (true)
 
 // Class B
 #define BEACON_FREQ_AS_923                  (923400000)     // Hz
@@ -144,34 +145,32 @@ static const uint32_t default_freq_as_923[] = { 923200000, 923400000 };
 
 /**
  * Up/Down link data rates offset definition when no dwell time limitation
+ * [dwell time][dr][dr_offset]
  */
-static const uint8_t datarate_offsets_dwell_time_0_as_923[8][8] = {
-    { 0, 0, 0, 0, 0, 0, 1, 2 },  // DR 0
-    { 1, 0, 0, 0, 0, 0, 2, 3 },  // DR 1
-    { 2, 1, 0, 0, 0, 0, 3, 4 },  // DR 2
-    { 3, 2, 1, 0, 0, 0, 4, 5 },  // DR 3
-    { 4, 3, 2, 1, 0, 0, 5, 6 },  // DR 4
-    { 5, 4, 3, 2, 1, 0, 6, 7 },  // DR 5
-    { 6, 5, 4, 3, 2, 1, 7, 7 },  // DR 6
-    { 7, 6, 5, 4, 3, 2, 7, 7 },  // DR 7
-};
+static const uint8_t datarate_offsets_as_923[2][8][8] = { {                                // dwell time Off
+                                                            { 0, 0, 0, 0, 0, 0, 1, 2 },    // DR 0
+                                                            { 1, 0, 0, 0, 0, 0, 2, 3 },    // DR 1
+                                                            { 2, 1, 0, 0, 0, 0, 3, 4 },    // DR 2
+                                                            { 3, 2, 1, 0, 0, 0, 4, 5 },    // DR 3
+                                                            { 4, 3, 2, 1, 0, 0, 5, 6 },    // DR 4
+                                                            { 5, 4, 3, 2, 1, 0, 6, 7 },    // DR 5
+                                                            { 6, 5, 4, 3, 2, 1, 7, 7 },    // DR 6
+                                                            { 7, 6, 5, 4, 3, 2, 7, 7 } },  // DR 7
+
+                                                          {
+                                                              // dwell time On
+                                                              { 2, 2, 2, 2, 2, 2, 2, 2 },  // DR 0
+                                                              { 2, 2, 2, 2, 2, 2, 2, 3 },  // DR 1
+                                                              { 2, 2, 2, 2, 2, 2, 3, 4 },  // DR 2
+                                                              { 3, 2, 2, 2, 2, 2, 4, 5 },  // DR 3
+                                                              { 4, 3, 2, 2, 2, 2, 5, 6 },  // DR 4
+                                                              { 5, 4, 3, 2, 2, 2, 6, 7 },  // DR 5
+                                                              { 6, 5, 4, 3, 2, 2, 7, 7 },  // DR 6
+                                                              { 7, 6, 5, 4, 3, 2, 7, 7 },  // DR 7}
+                                                          } };
 
 /**
- * Up/Down link data rates offset definition when dwell time limitation
- */
-static const uint8_t datarate_offsets_dwell_time_1_as_923[8][8] = {
-    { 2, 2, 2, 2, 2, 2, 2, 2 },  // DR 0
-    { 2, 2, 2, 2, 2, 2, 2, 3 },  // DR 1
-    { 2, 2, 2, 2, 2, 2, 3, 4 },  // DR 2
-    { 3, 2, 2, 2, 2, 2, 4, 5 },  // DR 3
-    { 4, 3, 2, 2, 2, 2, 5, 6 },  // DR 4
-    { 5, 4, 3, 2, 2, 2, 6, 7 },  // DR 5
-    { 6, 5, 4, 3, 2, 2, 7, 7 },  // DR 6
-    { 7, 6, 5, 4, 3, 2, 7, 7 },  // DR 7
-};
-
-/**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_as_923[2][8] = { {
@@ -197,8 +196,10 @@ static const uint8_t datarate_backoff_as_923[2][8] = { {
                                                            6   // DR7 -> DR6
                                                        } };
 
-static const uint8_t NUMBER_RX1_DR_OFFSET_AS_923 =
-    sizeof( datarate_offsets_dwell_time_1_as_923[0] ) / sizeof( datarate_offsets_dwell_time_1_as_923[0][0] );
+static const uint8_t NUMBER_RX1_DR_OFFSET_AS_923 = sizeof( datarate_offsets_as_923[0] ) /
+                                                   sizeof( datarate_offsets_as_923[0][0] ) /
+                                                   sizeof( datarate_offsets_as_923[0][0][0] );
+
 /**
  * Data rates table definition
  */

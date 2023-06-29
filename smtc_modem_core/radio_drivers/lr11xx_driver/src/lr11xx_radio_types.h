@@ -52,6 +52,16 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
+/*!
+ * @brief Bit mask to set to indicate a LR-FHSS bitrate is defined in steps of 1/256 bit per seconds
+ */
+#define LR11XX_RADIO_LR_FHSS_BITRATE_DIVIDE_BY_256 ( 0x80000000 )
+
+/*!
+ * @brief LR-FHSS bitrate value at 488.28125 bps defined as steps of 1/256 bitrate per seconds
+ */
+#define LR11XX_RADIO_LR_FHSS_BITRATE_IN_256_BPS_STEPS ( 125000 )
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
@@ -293,9 +303,12 @@ typedef enum
  */
 typedef enum
 {
-    LR11XX_RADIO_PKT_NONE      = 0x00,  //!< State after cold start, Wi-Fi or GNSS capture
-    LR11XX_RADIO_PKT_TYPE_GFSK = 0x01,  //!< GFSK modulation
-    LR11XX_RADIO_PKT_TYPE_LORA = 0x02,  //!< LoRa modulation
+    LR11XX_RADIO_PKT_NONE         = 0x00,  //!< State after cold start, Wi-Fi or GNSS capture
+    LR11XX_RADIO_PKT_TYPE_GFSK    = 0x01,  //!< GFSK modulation
+    LR11XX_RADIO_PKT_TYPE_LORA    = 0x02,  //!< LoRa modulation
+    LR11XX_RADIO_PKT_TYPE_BPSK    = 0x03,  //!< BPSK modulation
+    LR11XX_RADIO_PKT_TYPE_LR_FHSS = 0x04,  //!< LR-FHSS modulation
+    LR11XX_RADIO_PKT_TYPE_RANGING = 0x05,  //!< Ranging packet
 } lr11xx_radio_pkt_type_t;
 
 /*!
@@ -375,6 +388,32 @@ typedef enum
     LR11XX_RADIO_GFSK_PULSE_SHAPE_BT_07 = 0x0A,  //!< Gaussian BT 0.7
     LR11XX_RADIO_GFSK_PULSE_SHAPE_BT_1  = 0x0B   //!< Gaussian BT 1.0
 } lr11xx_radio_gfsk_pulse_shape_t;
+
+/*!
+ * @brief BPSK pulse shape configurations
+ */
+typedef enum
+{
+    LR11XX_RADIO_DBPSK_PULSE_SHAPE = 0x16,  //!< Double OSR / RRC / BT 0.7
+} lr11xx_radio_bpsk_pulse_shape_t;
+
+/*!
+ * @brief LR-FHSS bitrate configurations
+ */
+typedef enum
+{
+    LR11XX_RADIO_LR_FHSS_BITRATE_488_BPS =
+        ( int ) ( LR11XX_RADIO_LR_FHSS_BITRATE_DIVIDE_BY_256 +
+                  LR11XX_RADIO_LR_FHSS_BITRATE_IN_256_BPS_STEPS ),  //!< 488.28215 bps
+} lr11xx_radio_lr_fhss_bitrate_t;
+
+/*!
+ * @brief LR-FHSS pulse shape configurations
+ */
+typedef enum
+{
+    LR11XX_RADIO_LR_FHSS_PULSE_SHAPE_BT_1 = 0x0B  //!< Gaussian BT 1.0
+} lr11xx_radio_lr_fhss_pulse_shape_t;
 
 /*!
  * @brief Channel Activity Detection parameters
@@ -470,6 +509,15 @@ typedef struct lr11xx_radio_mod_params_gfsk_s
 } lr11xx_radio_mod_params_gfsk_t;
 
 /*!
+ * @brief Modulation configuration for BPSK packet
+ */
+typedef struct lr11xx_radio_mod_params_bpsk_s
+{
+    uint32_t                        br_in_bps;    //!< BPSK bitrate [bit/s]
+    lr11xx_radio_bpsk_pulse_shape_t pulse_shape;  //!< BPSK pulse shape
+} lr11xx_radio_mod_params_bpsk_t;
+
+/*!
  * @brief Modulation configuration for LoRa packet
  */
 typedef struct lr11xx_radio_mod_params_lora_s
@@ -479,6 +527,15 @@ typedef struct lr11xx_radio_mod_params_lora_s
     lr11xx_radio_lora_cr_t cr;    //!< LoRa coding rate
     uint8_t                ldro;  //!< LoRa LDRO
 } lr11xx_radio_mod_params_lora_t;
+
+/*!
+ * @brief Modulation configuration for LR-FHSS packets
+ */
+typedef struct lr11xx_radio_mod_params_lr_fhss_s
+{
+    lr11xx_radio_lr_fhss_bitrate_t     br_in_bps;    //!< LR-FHSS bitrate
+    lr11xx_radio_lr_fhss_pulse_shape_t pulse_shape;  //!< LR-FHSS pulse shape
+} lr11xx_radio_mod_params_lr_fhss_t;
 
 /*!
  * @brief Packet parameter configuration for GFSK packets
@@ -494,6 +551,18 @@ typedef struct lr11xx_radio_pkt_params_gfsk_s
     lr11xx_radio_gfsk_crc_type_t          crc_type;               //!< GFSK CRC configuration
     lr11xx_radio_gfsk_dc_free_t           dc_free;                //!< GFSK Whitening configuration
 } lr11xx_radio_pkt_params_gfsk_t;
+
+/*!
+ * @brief Packet parameter configuration for BPSK packets
+ */
+typedef struct lr11xx_radio_pkt_params_bpsk_s
+{
+    uint8_t  pld_len_in_bytes;  //!< Payload length [bytes]
+    uint16_t ramp_up_delay;     //!< Delay to fine tune ramp-up time, if non-zero
+    uint16_t ramp_down_delay;   //!< Delay to fine tune ramp-down time, if non-zero
+    uint16_t pld_len_in_bits;   //!< If non-zero, used to ramp down PA before end of a payload with length that is not a
+                                //!< multiple of 8. pld_len_in_bits <= pld_len_in_bytes * 8
+} lr11xx_radio_pkt_params_bpsk_t;
 
 /*!
  * @brief Packet parameter configuration for LoRa packets

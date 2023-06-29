@@ -124,9 +124,7 @@ extern "C" {
 // if there were no rx packet before the last LR1MAC_NO_RX_PACKET_RESET_THRESHOLD tx packets the lr1mac goes in panic
 #define LR1MAC_NO_RX_PACKET_RESET_THRESHOLD                (2400)
 
-// Frame direction definition for up/down link communications
-#define UP_LINK     0
-#define DOWN_LINK   1
+
 
 // #define MAX_FCNT_GAP 16384
 
@@ -141,6 +139,13 @@ extern "C" {
  *-----------------------------------------------------------------------------------
  * --- PUBLIC TYPES ----------------------------------------------------------------
  */
+
+// Frame direction definition for up/down link communications
+typedef enum direction_frame_e
+{
+    UP_LINK   = 0,
+    DOWN_LINK = 1
+} direction_frame_t;
 
 typedef enum lr1mac_states_e
 {

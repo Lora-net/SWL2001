@@ -110,8 +110,14 @@ uint16_t hal_adc_get_vref_int( void )
 {
     // 6.5 cycle == 1µs (6.5 x 12 / 80)
     uint16_t adc_val = adc_read( ADC_CHANNEL_VREFINT, ADC_SAMPLETIME_6CYCLES_5 );
-
-    return ( uint16_t ) __HAL_ADC_CALC_VREFANALOG_VOLTAGE( adc_val, ADC_RESOLUTION_12B );
+    if( adc_val > 0 )
+    {
+        return ( uint16_t ) __HAL_ADC_CALC_VREFANALOG_VOLTAGE( adc_val, ADC_RESOLUTION_12B );
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 int8_t hal_adc_get_vbat( void )

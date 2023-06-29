@@ -48,39 +48,38 @@ extern "C" {
 #include <stdbool.h>  // bool type
 
 #include "smtc_modem_api.h"
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC MACROS -----------------------------------------------------------
- */
 
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-// clang-format off
-
 /**
  * @brief LoRaWAN User credentials
  */
-#define USER_LORAWAN_DEVICE_EUI     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
-#define USER_LORAWAN_JOIN_EUI       { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
-#define USER_LORAWAN_APP_KEY        { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
-                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
-                                      
-#define MODEM_EXAMPLE_REGION    SMTC_MODEM_REGION_EU_868
+#define USER_LORAWAN_DEVICE_EUI                        \
+    {                                                  \
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
+    }
+#define USER_LORAWAN_JOIN_EUI                          \
+    {                                                  \
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
+    }
+#define USER_LORAWAN_APP_KEY                                                                           \
+    {                                                                                                  \
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
+    }
+
+/**
+ * @brief Modem Region define
+ */
+#if !defined( SX128X )
+#define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_EU_868
+#else
+#define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_WW2G4
+#endif
 
 // clang-format on
-
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC TYPES ------------------------------------------------------------
- */
-
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
- */
 
 #ifdef __cplusplus
 }

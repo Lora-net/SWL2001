@@ -65,7 +65,7 @@ smtc_real_status_t smtc_real_is_supported_region( smtc_real_region_types_t regio
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_config( lr1_stack_mac_t* lr1_mac );
+void smtc_real_init( smtc_real_t* real, smtc_real_region_types_t region_type );
 
 /**
  * \brief
@@ -73,7 +73,7 @@ void smtc_real_config( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_init( lr1_stack_mac_t* lr1_mac );
+void smtc_real_config( smtc_real_t* real );
 
 /**
  * \brief
@@ -81,7 +81,7 @@ void smtc_real_init( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_init_session( lr1_stack_mac_t* lr1_mac );
+void smtc_real_config_session( smtc_real_t* real );
 
 /**
  * \brief
@@ -89,7 +89,7 @@ void smtc_real_init_session( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_dr_distribution( lr1_stack_mac_t* lr1_mac, uint8_t adr_mode );
+void smtc_real_set_dr_distribution( smtc_real_t* real, uint8_t adr_mode, uint8_t* out_nb_trans, uint32_t* adr_custom );
 
 /**
  * \brief
@@ -97,7 +97,8 @@ void smtc_real_set_dr_distribution( lr1_stack_mac_t* lr1_mac, uint8_t adr_mode )
  * \param [IN]  none
  * \param [OUT] status_lorawan_t
  */
-status_lorawan_t smtc_real_get_next_dr( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t smtc_real_get_next_tx_dr( smtc_real_t* real, join_status_t join_status, dr_strategy_t* adr_mode_select,
+                                           uint8_t* tx_data_rate, uint8_t tx_data_rate_adr, bool* adr_enable );
 
 /**
  * \brief
@@ -105,7 +106,7 @@ status_lorawan_t smtc_real_get_next_dr( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] status_lorawan_t
  */
-uint16_t smtc_real_mask_tx_dr_channel( lr1_stack_mac_t* lr1_mac );
+uint16_t smtc_real_mask_tx_dr_channel( smtc_real_t* real );
 
 /**
  * \brief
@@ -113,15 +114,15 @@ uint16_t smtc_real_mask_tx_dr_channel( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] status_lorawan_t
  */
-uint16_t smtc_real_mask_tx_dr_channel_up_dwell_time_check( lr1_stack_mac_t* lr1_mac );
+uint16_t smtc_real_mask_tx_dr_channel_up_dwell_time_check( smtc_real_t* real );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @return cf_list_type_t
  */
-cf_list_type_t smtc_real_cf_list_type_supported( lr1_stack_mac_t* lr1_mac );
+cf_list_type_t smtc_real_cf_list_type_supported( smtc_real_t* real );
 
 /**
  * \brief
@@ -129,7 +130,7 @@ cf_list_type_t smtc_real_cf_list_type_supported( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_update_cflist( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t smtc_real_update_cflist( smtc_real_t* real, uint8_t* cf_list );
 
 /**
  * \brief
@@ -137,7 +138,7 @@ status_lorawan_t smtc_real_update_cflist( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_number_of_chmask_in_cflist( smtc_real_t* real );
 
 /**
  * \brief
@@ -145,7 +146,8 @@ uint8_t smtc_real_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t smtc_real_get_next_channel( smtc_real_t* real, smtc_dtc_t* dtc_obj, uint8_t tx_data_rate,
+                                             uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 
 /**
  * \brief
@@ -153,7 +155,9 @@ status_lorawan_t smtc_real_get_next_channel( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t smtc_real_get_join_next_channel( smtc_real_t* real, smtc_dtc_t* dtc_obj, uint8_t* tx_data_rate,
+                                                  uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency,
+                                                  uint32_t* out_rx2_frequency );
 
 /**
  * \brief
@@ -161,7 +165,7 @@ status_lorawan_t smtc_real_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+uint8_t smtc_real_get_rx1_datarate_config( smtc_real_t* real, uint8_t tx_data_rate, uint8_t rx1_dr_offset );
 
 /**
  * \brief
@@ -169,7 +173,7 @@ void smtc_real_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_power( lr1_stack_mac_t* lr1_mac, uint8_t power_cmd );
+int8_t smtc_real_convert_power_cmd( smtc_real_t* real, uint8_t power_cmd, uint8_t max_erp_dbm );
 
 /**
  * \brief
@@ -177,7 +181,7 @@ void smtc_real_set_power( lr1_stack_mac_t* lr1_mac, uint8_t power_cmd );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_channel_mask( lr1_stack_mac_t* lr1_mac );
+void smtc_real_set_channel_mask( smtc_real_t* real );
 
 /**
  * \brief
@@ -185,7 +189,7 @@ void smtc_real_set_channel_mask( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_init_channel_mask( lr1_stack_mac_t* lr1_mac );
+void smtc_real_init_channel_mask( smtc_real_t* real );
 
 /**
  * \brief
@@ -193,7 +197,7 @@ void smtc_real_init_channel_mask( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_init_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac );
+void smtc_real_init_join_snapshot_channel_mask( smtc_real_t* real );
 
 /**
  * \brief
@@ -201,7 +205,7 @@ void smtc_real_init_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_init_after_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac );
+void smtc_real_init_after_join_snapshot_channel_mask( smtc_real_t* real, uint8_t tx_data_rate, uint32_t tx_frequency );
 
 /**
  * \brief
@@ -209,7 +213,7 @@ void smtc_real_init_after_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac )
  * \param [IN]  none
  * \param [OUT] return
  */
-status_channel_t smtc_real_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ch_mask_cntl, uint16_t ch_mask );
+status_channel_t smtc_real_build_channel_mask( smtc_real_t* real, uint8_t ch_mask_cntl, uint16_t ch_mask );
 
 /**
  * \brief
@@ -217,7 +221,7 @@ status_channel_t smtc_real_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_decrement_dr_simulation( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_decrement_dr_simulation( smtc_real_t* real, uint8_t tx_data_rate_adr );
 
 /**
  * \brief
@@ -225,7 +229,8 @@ uint8_t smtc_real_decrement_dr_simulation( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_decrement_dr( lr1_stack_mac_t* lr1_mac );
+void smtc_real_decrement_dr( smtc_real_t* real, dr_strategy_t adr_mode_select, uint8_t* tx_data_rate_adr,
+                             int8_t* tx_power, uint8_t* nb_trans );
 
 /**
  * \brief
@@ -233,7 +238,7 @@ void smtc_real_decrement_dr( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
+void smtc_real_enable_all_channels_with_valid_freq( smtc_real_t* real );
 
 /**
  * \brief
@@ -241,7 +246,7 @@ void smtc_real_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_rx1_dr_offset_valid( lr1_stack_mac_t* lr1_mac, uint8_t rx1_dr_offset );
+status_lorawan_t smtc_real_is_rx1_dr_offset_valid( smtc_real_t* real, uint8_t rx1_dr_offset );
 
 /**
  * \brief
@@ -249,7 +254,7 @@ status_lorawan_t smtc_real_is_rx1_dr_offset_valid( lr1_stack_mac_t* lr1_mac, uin
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_rx_dr_valid( lr1_stack_mac_t* lr1_mac, uint8_t dr );
+status_lorawan_t smtc_real_is_rx_dr_valid( smtc_real_t* real, uint8_t dr );
 
 /**
  * \brief
@@ -257,7 +262,7 @@ status_lorawan_t smtc_real_is_rx_dr_valid( lr1_stack_mac_t* lr1_mac, uint8_t dr 
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_tx_dr_valid( lr1_stack_mac_t* lr1_mac, uint8_t dr );
+status_lorawan_t smtc_real_is_tx_dr_valid( smtc_real_t* real, uint8_t dr );
 
 /**
  * \brief
@@ -265,7 +270,7 @@ status_lorawan_t smtc_real_is_tx_dr_valid( lr1_stack_mac_t* lr1_mac, uint8_t dr 
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_t dr, bool is_ch_mask_from_link_adr );
+status_lorawan_t smtc_real_is_tx_dr_acceptable( smtc_real_t* real, uint8_t dr, bool is_ch_mask_from_link_adr );
 
 /**
  * \brief
@@ -273,7 +278,7 @@ status_lorawan_t smtc_real_is_tx_dr_acceptable( lr1_stack_mac_t* lr1_mac, uint8_
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_nwk_received_tx_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency );
+status_lorawan_t smtc_real_is_nwk_received_tx_frequency_valid( smtc_real_t* real, uint32_t frequency );
 
 /**
  * \brief
@@ -281,7 +286,7 @@ status_lorawan_t smtc_real_is_nwk_received_tx_frequency_valid( lr1_stack_mac_t* 
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_channel_index_valid( lr1_stack_mac_t* lr1_mac, uint8_t channel_index );
+status_lorawan_t smtc_real_is_channel_index_valid( smtc_real_t* real, uint8_t channel_index );
 
 /**
  * \brief
@@ -289,8 +294,8 @@ status_lorawan_t smtc_real_is_channel_index_valid( lr1_stack_mac_t* lr1_mac, uin
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_payload_size_valid( lr1_stack_mac_t* lr1_mac, uint8_t dr, uint8_t size,
-                                                  uint8_t dwell_time_enabled );
+status_lorawan_t smtc_real_is_payload_size_valid( smtc_real_t* real, uint8_t dr, uint8_t size,
+                                                  direction_frame_t direction_frame, uint8_t tx_fopts_current_length );
 
 /**
  * \brief
@@ -298,7 +303,7 @@ status_lorawan_t smtc_real_is_payload_size_valid( lr1_stack_mac_t* lr1_mac, uint
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t tx_freq, uint8_t index );
+void smtc_real_set_tx_frequency_channel( smtc_real_t* real, uint32_t tx_freq, uint8_t index );
 
 /**
  * \brief
@@ -306,7 +311,7 @@ void smtc_real_set_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t tx_f
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_set_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t rx_freq, uint8_t index );
+status_lorawan_t smtc_real_set_rx1_frequency_channel( smtc_real_t* real, uint32_t rx_freq, uint8_t index );
 
 /**
  * \brief
@@ -314,7 +319,7 @@ status_lorawan_t smtc_real_set_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, 
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_channel_dr( lr1_stack_mac_t* lr1_mac, uint8_t channel_index, uint8_t dr_min, uint8_t dr_max );
+void smtc_real_set_channel_dr( smtc_real_t* real, uint8_t channel_index, uint8_t dr_min, uint8_t dr_max );
 
 /**
  * \brief
@@ -322,7 +327,7 @@ void smtc_real_set_channel_dr( lr1_stack_mac_t* lr1_mac, uint8_t channel_index, 
  * \param [IN]  none
  * \param [OUT] return
  */
-void smtc_real_set_channel_enabled( lr1_stack_mac_t* lr1_mac, uint8_t enable, uint8_t channel_index );
+void smtc_real_set_channel_enabled( smtc_real_t* real, uint8_t enable, uint8_t channel_index );
 
 /**
  * \brief
@@ -330,7 +335,7 @@ void smtc_real_set_channel_enabled( lr1_stack_mac_t* lr1_mac, uint8_t enable, ui
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t smtc_real_get_tx_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t index );
+uint32_t smtc_real_get_tx_channel_frequency( smtc_real_t* real, uint8_t index );
 
 /**
  * \brief
@@ -338,7 +343,7 @@ uint32_t smtc_real_get_tx_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t i
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t smtc_real_get_rx1_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t index );
+uint32_t smtc_real_get_rx1_channel_frequency( smtc_real_t* real, uint8_t index );
 
 /**
  * \brief
@@ -346,7 +351,7 @@ uint32_t smtc_real_get_rx1_channel_frequency( lr1_stack_mac_t* lr1_mac, uint8_t 
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_min_tx_channel_dr( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_min_tx_channel_dr( smtc_real_t* real );
 
 /**
  * \brief
@@ -354,7 +359,7 @@ uint8_t smtc_real_get_min_tx_channel_dr( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_max_tx_channel_dr( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_max_tx_channel_dr( smtc_real_t* real );
 
 /**
  * \brief
@@ -363,7 +368,7 @@ uint8_t smtc_real_get_max_tx_channel_dr( lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-uint8_t smtc_real_get_preamble_len( const lr1_stack_mac_t* lr1_mac, uint8_t sf );
+uint8_t smtc_real_get_preamble_len( const smtc_real_t* real, uint8_t sf );
 
 /**
  * \brief
@@ -372,7 +377,7 @@ uint8_t smtc_real_get_preamble_len( const lr1_stack_mac_t* lr1_mac, uint8_t sf )
  * \param [OUT] return
  *
  */
-status_lorawan_t smtc_real_is_channel_mask_for_mobile_mode( const lr1_stack_mac_t* lr1_mac );
+status_lorawan_t smtc_real_is_channel_mask_for_mobile_mode( const smtc_real_t* real );
 
 /*************************************************************************/
 /*                      Const init in region                             */
@@ -385,7 +390,7 @@ status_lorawan_t smtc_real_is_channel_mask_for_mobile_mode( const lr1_stack_mac_
  * \param [OUT] return
  *
  */
-bool smtc_real_is_tx_param_setup_req_supported( lr1_stack_mac_t* lr1_mac );
+bool smtc_real_is_tx_param_setup_req_supported( smtc_real_t* real );
 
 /**
  * \brief
@@ -394,7 +399,7 @@ bool smtc_real_is_tx_param_setup_req_supported( lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-bool smtc_real_is_new_channel_req_supported( lr1_stack_mac_t* lr1_mac );
+bool smtc_real_is_new_channel_req_supported( smtc_real_t* real );
 
 /**
  * \brief
@@ -402,7 +407,7 @@ bool smtc_real_is_new_channel_req_supported( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_rx1_join_delay( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_rx1_join_delay( smtc_real_t* real );
 
 /**
  * \brief
@@ -410,7 +415,7 @@ uint8_t smtc_real_get_rx1_join_delay( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_rx2_join_dr( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_rx2_join_dr( smtc_real_t* real );
 
 /**
  * \brief
@@ -418,7 +423,7 @@ uint8_t smtc_real_get_rx2_join_dr( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_frequency_factor( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_frequency_factor( smtc_real_t* real );
 
 /**
  * \brief
@@ -427,7 +432,7 @@ uint8_t smtc_real_get_frequency_factor( lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-ral_lora_cr_t smtc_real_get_coding_rate( lr1_stack_mac_t* lr1_mac );
+ral_lora_cr_t smtc_real_get_coding_rate( smtc_real_t* real );
 
 /**
  * \brief
@@ -435,7 +440,7 @@ ral_lora_cr_t smtc_real_get_coding_rate( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_adr_ack_delay( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_adr_ack_delay( smtc_real_t* real );
 
 /**
  * \brief
@@ -443,23 +448,23 @@ uint8_t smtc_real_get_adr_ack_delay( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_adr_ack_limit( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_adr_ack_limit( smtc_real_t* real );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @return uint8_t
  */
-uint8_t smtc_real_get_public_sync_word( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_public_sync_word( smtc_real_t* real );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @return uint8_t
  */
-uint8_t smtc_real_get_private_sync_word( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_private_sync_word( smtc_real_t* real );
 
 /**
  * \brief
@@ -467,15 +472,15 @@ uint8_t smtc_real_get_private_sync_word( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_sync_word( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_sync_word( smtc_real_t* real );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @param sync_word
  */
-void smtc_real_set_sync_word( lr1_stack_mac_t* lr1_mac, uint8_t sync_word );
+void smtc_real_set_sync_word( smtc_real_t* real, uint8_t sync_word );
 
 /**
  * \brief
@@ -483,7 +488,7 @@ void smtc_real_set_sync_word( lr1_stack_mac_t* lr1_mac, uint8_t sync_word );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t* smtc_real_get_gfsk_sync_word( lr1_stack_mac_t* lr1_mac );
+uint8_t* smtc_real_get_gfsk_sync_word( smtc_real_t* real );
 
 /**
  * \brief
@@ -491,7 +496,7 @@ uint8_t* smtc_real_get_gfsk_sync_word( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t* smtc_real_get_lr_fhss_sync_word( lr1_stack_mac_t* lr1_mac );
+uint8_t* smtc_real_get_lr_fhss_sync_word( smtc_real_t* real );
 
 /**
  * \brief
@@ -499,7 +504,7 @@ uint8_t* smtc_real_get_lr_fhss_sync_word( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_max_payload_size( lr1_stack_mac_t* lr1_mac, uint8_t dr, uint8_t dwell_time_enabled );
+uint8_t smtc_real_get_max_payload_size( smtc_real_t* real, uint8_t dr, direction_frame_t direction_frame );
 
 /**
  * \brief
@@ -507,7 +512,7 @@ uint8_t smtc_real_get_max_payload_size( lr1_stack_mac_t* lr1_mac, uint8_t dr, ui
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_default_max_eirp( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_default_max_eirp( smtc_real_t* real );
 
 /**
  * \brief
@@ -515,7 +520,17 @@ uint8_t smtc_real_get_default_max_eirp( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint8_t smtc_real_get_beacon_dr( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_beacon_dr( smtc_real_t* real );
+
+/**
+ * @brief Check if in current region beacon hops in frequency
+ * @remark use to check validity of freq 0 in class B multicast session
+ *
+ * @param [in] real
+ * @return true
+ * @return false
+ */
+bool smtc_real_is_beacon_hopping( smtc_real_t* real );
 
 /**
  * \brief
@@ -523,7 +538,7 @@ uint8_t smtc_real_get_beacon_dr( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t smtc_real_get_beacon_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s );
+uint32_t smtc_real_get_beacon_frequency( smtc_real_t* real, uint32_t gps_time_s );
 
 /**
  * \brief
@@ -531,15 +546,31 @@ uint32_t smtc_real_get_beacon_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t smtc_real_get_ping_slot_frequency( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s, uint32_t dev_addr );
+uint32_t smtc_real_get_ping_slot_frequency( smtc_real_t* real, uint32_t gps_time_s, uint32_t dev_addr );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @return uint8_t
  */
-uint8_t smtc_real_get_ping_slot_datarate( lr1_stack_mac_t* lr1_mac );
+uint8_t smtc_real_get_ping_slot_datarate( smtc_real_t* real );
+
+/**
+ * @brief
+ *
+ * @param real
+ * @param dwell_time
+ */
+void smtc_real_set_uplink_dwell_time( smtc_real_t* real, bool dwell_time );
+
+/**
+ * @brief
+ *
+ * @param real
+ * @param dwell_time
+ */
+void smtc_real_set_downlink_dwell_time( smtc_real_t* real, bool dwell_time );
 
 /**
  * \brief
@@ -547,7 +578,7 @@ uint8_t smtc_real_get_ping_slot_datarate( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-uint32_t smtc_real_decode_freq_from_buf( lr1_stack_mac_t* lr1_mac, uint8_t freq_buf[3] );
+uint32_t smtc_real_decode_freq_from_buf( smtc_real_t* real, uint8_t freq_buf[3] );
 
 /**
  * \brief
@@ -555,7 +586,7 @@ uint32_t smtc_real_decode_freq_from_buf( lr1_stack_mac_t* lr1_mac, uint8_t freq_
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_t frequency );
+status_lorawan_t smtc_real_is_frequency_valid( smtc_real_t* real, uint32_t frequency );
 
 /**
  * \brief
@@ -563,7 +594,7 @@ status_lorawan_t smtc_real_is_frequency_valid( lr1_stack_mac_t* lr1_mac, uint32_
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t smtc_real_is_tx_power_valid( lr1_stack_mac_t* lr1_mac, uint8_t power );
+status_lorawan_t smtc_real_is_tx_power_valid( smtc_real_t* real, uint8_t power );
 
 /**
  * \brief
@@ -572,7 +603,7 @@ status_lorawan_t smtc_real_is_tx_power_valid( lr1_stack_mac_t* lr1_mac, uint8_t 
  * \param [OUT] return
  *
  */
-bool smtc_real_is_dtc_supported( const lr1_stack_mac_t* lr1_mac );
+bool smtc_real_is_dtc_supported( const smtc_real_t* real );
 
 /**
  * \brief
@@ -581,7 +612,7 @@ bool smtc_real_is_dtc_supported( const lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-bool smtc_real_is_lbt_supported( const lr1_stack_mac_t* lr1_mac );
+bool smtc_real_is_lbt_supported( const smtc_real_t* real );
 
 /**
  * \brief
@@ -590,7 +621,7 @@ bool smtc_real_is_lbt_supported( const lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-uint32_t smtc_real_get_lbt_duration_ms( const lr1_stack_mac_t* lr1_mac );
+uint32_t smtc_real_get_lbt_duration_ms( const smtc_real_t* real );
 
 /**
  * \brief
@@ -599,7 +630,7 @@ uint32_t smtc_real_get_lbt_duration_ms( const lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-int16_t smtc_real_get_lbt_threshold_dbm( const lr1_stack_mac_t* lr1_mac );
+int16_t smtc_real_get_lbt_threshold_dbm( const smtc_real_t* real );
 
 /**
  * \brief
@@ -608,51 +639,51 @@ int16_t smtc_real_get_lbt_threshold_dbm( const lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-uint32_t smtc_real_get_lbt_bw_hz( const lr1_stack_mac_t* lr1_mac );
+uint32_t smtc_real_get_lbt_bw_hz( const smtc_real_t* real );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate
  *
- * @param lr1_mac
+ * @param real
  * @param datarate
  * @return modulation_type_t
  */
-modulation_type_t smtc_real_get_modulation_type_from_datarate( lr1_stack_mac_t* lr1_mac, uint8_t datarate );
+modulation_type_t smtc_real_get_modulation_type_from_datarate( smtc_real_t* real, uint8_t datarate );
 
 /**
  * @brief Convert LoRaWAN Datarate to LoRa SF and BW
  *
- * @param lr1_mac
+ * @param real
  * @param in_dr
  * @param out_sf
  * @param out_bw
  */
-void smtc_real_lora_dr_to_sf_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw );
+void smtc_real_lora_dr_to_sf_bw( smtc_real_t* real, uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw );
 
 /**
  * @brief Convert LoRaWAN Datarate to FSK bitrate
  *
- * @param lr1_mac
+ * @param real
  * @param in_dr
  * @param out_bitrate
  */
-void smtc_real_fsk_dr_to_bitrate( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, uint8_t* out_bitrate );
+void smtc_real_fsk_dr_to_bitrate( smtc_real_t* real, uint8_t in_dr, uint8_t* out_bitrate );
 
 /**
  * @brief Convert LoRaWAN Datarate to LR-FHSS CR and BW
  *
- * @param lr1_mac
+ * @param real
  * @param in_dr
  * @param out_cr
  * @param out_bw
  */
-void smtc_real_lr_fhss_dr_to_cr_bw( lr1_stack_mac_t* lr1_mac, uint8_t in_dr, lr_fhss_v1_cr_t* out_cr,
+void smtc_real_lr_fhss_dr_to_cr_bw( smtc_real_t* real, uint8_t in_dr, lr_fhss_v1_cr_t* out_cr,
                                     lr_fhss_v1_bw_t* out_bw );
 
 /**
  * @brief Get LR-FHSS header count from LR-FHSS CR
  *
- * @param lr1_mac
+ * @param real
  * @param in_cr
  * @return lr_fhss_hc_t
  */
@@ -661,11 +692,11 @@ lr_fhss_hc_t smtc_real_lr_fhss_get_header_count( lr_fhss_v1_cr_t in_cr );
 /**
  * @brief Get LR-FHSS grid
  *
- * @param  lr1_mac
+ * @param  real
  * @return lr_fhss_v1_grid_t
  *
  */
-lr_fhss_v1_grid_t smtc_real_lr_fhss_get_grid( lr1_stack_mac_t* lr1_mac );
+lr_fhss_v1_grid_t smtc_real_lr_fhss_get_grid( smtc_real_t* real );
 
 /*!
  * \brief
@@ -674,25 +705,25 @@ lr_fhss_v1_grid_t smtc_real_lr_fhss_get_grid( lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  *
  */
-int8_t smtc_real_clamp_output_power_eirp_vs_freq_and_dr( lr1_stack_mac_t* lr1_mac, int8_t tx_power,
-                                                         uint32_t tx_frequency, uint8_t datarate );
+int8_t smtc_real_clamp_output_power_eirp_vs_freq_and_dr( smtc_real_t* real, int8_t tx_power, uint32_t tx_frequency,
+                                                         uint8_t datarate );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @param number_of_freq
  * @param freq_list
  * @param max_size
  * @return uint8_t
  */
-uint8_t smtc_real_get_current_enabled_frequency_list( lr1_stack_mac_t* lr1_mac, uint8_t* number_of_freq,
-                                                      uint32_t* freq_list, uint8_t max_size );
+uint8_t smtc_real_get_current_enabled_frequency_list( smtc_real_t* real, uint8_t* number_of_freq, uint32_t* freq_list,
+                                                      uint8_t max_size );
 
 /**
  * @brief
  *
- * @param lr1_mac
+ * @param real
  * @return lr1mac_version_t
  */
 lr1mac_version_t smtc_real_get_regional_parameters_version( void );
@@ -703,7 +734,7 @@ lr1mac_version_t smtc_real_get_regional_parameters_version( void );
  * @param
  * @return
  */
-uint32_t smtc_real_get_symbol_duration_us( lr1_stack_mac_t* lr1_mac, uint8_t datarate );
+uint32_t smtc_real_get_symbol_duration_us( smtc_real_t* real, uint8_t datarate );
 
 /**
  * @brief
@@ -711,9 +742,10 @@ uint32_t smtc_real_get_symbol_duration_us( lr1_stack_mac_t* lr1_mac, uint8_t dat
  * @param
  * @return
  */
-void smtc_real_get_rx_window_parameters( lr1_stack_mac_t* lr1_mac, uint8_t datarate, uint32_t rx_delay_ms,
+void smtc_real_get_rx_window_parameters( smtc_real_t* real, uint8_t datarate, uint32_t rx_delay_ms,
                                          uint16_t* rx_window_symb, uint32_t* rx_timeout_symb_in_ms,
-                                         uint32_t* rx_timeout_preamble_locked_in_ms, uint8_t rx_done_incertitude );
+                                         uint32_t* rx_timeout_preamble_locked_in_ms, uint8_t rx_done_incertitude,
+                                         uint32_t crystal_error );
 /**
  * @brief
  *
@@ -721,7 +753,7 @@ void smtc_real_get_rx_window_parameters( lr1_stack_mac_t* lr1_mac, uint8_t datar
  * @return
  */
 
-void smtc_real_get_rx_start_time_offset_ms( lr1_stack_mac_t* lr1_mac, uint8_t datarate, int8_t board_delay_ms,
+void smtc_real_get_rx_start_time_offset_ms( smtc_real_t* real, uint8_t datarate, int8_t board_delay_ms,
                                             uint16_t rx_window_symb, int32_t* rx_offset_ms );
 
 #ifdef __cplusplus

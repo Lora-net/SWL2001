@@ -43,8 +43,6 @@
 #include "smtc_modem_hal.h"
 #include "smtc_hal_dbg_trace.h"
 
-#include "smtc_hal_adc.h"
-#include "smtc_hal_flash.h"
 #include "smtc_hal_gpio.h"
 #include "smtc_hal_lp_timer.h"
 #include "smtc_hal_mcu.h"
@@ -53,6 +51,14 @@
 #include "smtc_hal_trace.h"
 #include "smtc_hal_uart.h"
 #include "smtc_hal_watchdog.h"
+
+#if defined( STM32L073xx )
+#include "smtc_hal_eeprom.h"
+#endif
+#if defined( STM32L476xx )
+#include "smtc_hal_flash.h"
+#include "smtc_hal_adc.h"
+#endif
 
 #include "modem_pinout.h"
 
@@ -72,11 +78,22 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-
+#if defined( STM32L476xx )
 #define ADDR_FLASH_LORAWAN_CONTEXT ADDR_FLASH_PAGE_254
 #define ADDR_FLASH_MODEM_CONTEXT ADDR_FLASH_PAGE_255
 #define ADDR_FLASH_DEVNONCE_CONTEXT ADDR_FLASH_PAGE_253
 #define ADDR_FLASH_SECURE_ELEMENT_CONTEXT ADDR_FLASH_PAGE_252
+#endif
+
+#if defined( STM32L073xx )
+// Data eeprom base address is 0x08080000
+#define ADDR_EEPROM_LORAWAN_CONTEXT_OFFSET 0
+#define ADDR_EEPROM_MODEM_CONTEXT_OFFSET 100
+#define ADDR_EEPROM_DEVNONCE_CONTEXT_OFFSET 200
+#define ADDR_EEPROM_CRASHLOG_OFFSET 280
+#define ADDR_EEPROM_SECURE_ELEMENT_CONTEXT_OFFSET 300
+
+#endif
 
 /*
  * -----------------------------------------------------------------------------
@@ -89,8 +106,11 @@
  */
 
 static hal_gpio_irq_t radio_dio_irq;
+
+#if defined( STM32L476xx )
 uint8_t __attribute__( ( section( ".noinit" ) ) ) saved_crashlog[CRASH_LOG_SIZE];
 volatile bool __attribute__( ( section( ".noinit" ) ) ) crashlog_available;
+#endif
 
 /*
  * -----------------------------------------------------------------------------
@@ -112,7 +132,7 @@ void smtc_modem_hal_reset_mcu( void )
 
 void smtc_modem_hal_reload_wdog( void )
 {
-    watchdog_reload( );
+    hal_watchdog_reload( );
 }
 
 /* ------------ Time management ------------*/
@@ -181,6 +201,20 @@ void smtc_modem_hal_context_restore( const modem_context_type_t ctx_type, uint8_
 {
     switch( ctx_type )
     {
+#if defined( STM32L073xx )
+    case CONTEXT_MODEM:
+        hal_eeprom_read_buffer( ADDR_EEPROM_MODEM_CONTEXT_OFFSET, buffer, size );
+        break;
+    case CONTEXT_LR1MAC:
+        hal_eeprom_read_buffer( ADDR_EEPROM_LORAWAN_CONTEXT_OFFSET, buffer, size );
+        break;
+    case CONTEXT_DEVNONCE:
+        hal_eeprom_read_buffer( ADDR_EEPROM_DEVNONCE_CONTEXT_OFFSET, buffer, size );
+        break;
+    case CONTEXT_SECURE_ELEMENT:
+        hal_eeprom_read_buffer( ADDR_EEPROM_SECURE_ELEMENT_CONTEXT_OFFSET, buffer, size );
+        break;
+#elif defined( STM32L476xx )
     case CONTEXT_MODEM:
         hal_flash_read_buffer( ADDR_FLASH_MODEM_CONTEXT, buffer, size );
         break;
@@ -193,6 +227,7 @@ void smtc_modem_hal_context_restore( const modem_context_type_t ctx_type, uint8_
     case CONTEXT_SECURE_ELEMENT:
         hal_flash_read_buffer( ADDR_FLASH_SECURE_ELEMENT_CONTEXT, buffer, size );
         break;
+#endif
     default:
         mcu_panic( );
         break;
@@ -203,6 +238,20 @@ void smtc_modem_hal_context_store( const modem_context_type_t ctx_type, const ui
 {
     switch( ctx_type )
     {
+#if defined( STM32L073xx )
+    case CONTEXT_MODEM:
+        hal_eeprom_write_buffer( ADDR_EEPROM_MODEM_CONTEXT_OFFSET, buffer, size );
+        break;
+    case CONTEXT_LR1MAC:
+        hal_eeprom_write_buffer( ADDR_EEPROM_LORAWAN_CONTEXT_OFFSET, buffer, size );
+        break;
+    case CONTEXT_DEVNONCE:
+        hal_eeprom_write_buffer( ADDR_EEPROM_DEVNONCE_CONTEXT_OFFSET, buffer, size );
+        break;
+    case CONTEXT_SECURE_ELEMENT:
+        hal_eeprom_write_buffer( ADDR_EEPROM_SECURE_ELEMENT_CONTEXT_OFFSET, buffer, size );
+        break;
+#elif defined( STM32L476xx )
     case CONTEXT_MODEM:
         hal_flash_erase_page( ADDR_FLASH_MODEM_CONTEXT, 1 );
         hal_flash_write_buffer( ADDR_FLASH_MODEM_CONTEXT, buffer, size );
@@ -219,6 +268,7 @@ void smtc_modem_hal_context_store( const modem_context_type_t ctx_type, const ui
         hal_flash_erase_page( ADDR_FLASH_SECURE_ELEMENT_CONTEXT, 1 );
         hal_flash_write_buffer( ADDR_FLASH_SECURE_ELEMENT_CONTEXT, buffer, size );
         break;
+#endif
     default:
         mcu_panic( );
         break;
@@ -229,22 +279,41 @@ void smtc_modem_hal_context_store( const modem_context_type_t ctx_type, const ui
 
 void smtc_modem_hal_store_crashlog( uint8_t crashlog[CRASH_LOG_SIZE] )
 {
-    memcpy( &saved_crashlog, crashlog, CRASH_LOG_SIZE );
+#if defined( STM32L073xx )
+    hal_eeprom_write_buffer( ADDR_EEPROM_CRASHLOG_OFFSET + 4, crashlog, CRASH_LOG_SIZE );
+#elif defined( STM32L476xx )
+    strncpy( ( char* ) saved_crashlog, ( char* ) crashlog, CRASH_LOG_SIZE );
+#endif
 }
 
 void smtc_modem_hal_restore_crashlog( uint8_t crashlog[CRASH_LOG_SIZE] )
 {
+#if defined( STM32L073xx )
+    hal_eeprom_read_buffer( ADDR_EEPROM_CRASHLOG_OFFSET + 4, crashlog, CRASH_LOG_SIZE );
+#elif defined( STM32L476xx )
     memcpy( crashlog, &saved_crashlog, CRASH_LOG_SIZE );
+#endif
 }
 
 void smtc_modem_hal_set_crashlog_status( bool available )
 {
+#if defined( STM32L073xx )
+    uint8_t status = ( uint8_t ) available;
+    hal_eeprom_write_buffer( ADDR_EEPROM_CRASHLOG_OFFSET, &status, 1 );
+#elif defined( STM32L476xx )
     crashlog_available = available;
+#endif
 }
 
 bool smtc_modem_hal_get_crashlog_status( void )
 {
+#if defined( STM32L073xx )
+    uint8_t crashlog_available;
+    hal_eeprom_read_buffer( ADDR_EEPROM_CRASHLOG_OFFSET, &crashlog_available, 1 );
+    return ( bool ) crashlog_available;
+#elif defined( STM32L476xx )
     return crashlog_available;
+#endif
 }
 
 /* ------------ assert management ------------*/
@@ -306,7 +375,8 @@ void smtc_modem_hal_stop_radio_tcxo( void )
 
 uint32_t smtc_modem_hal_get_radio_tcxo_startup_delay_ms( void )
 {
-#if defined( LR11XX )
+#if defined( LR11XX ) && !defined( LR1121 )
+    // lr1121 ref board does not have tcxo but only 32MHz xtal
     return 5;
 #else
     return 0;
@@ -317,32 +387,50 @@ uint32_t smtc_modem_hal_get_radio_tcxo_startup_delay_ms( void )
 
 uint8_t smtc_modem_hal_get_battery_level( void )
 {
-    return 254;
+    // Please implement according to used board
+    // According to LoRaWan 1.0.4 spec:
+    // 0: The end-device is connected to an external power source.
+    // 1..254: Battery level, where 1 is the minimum and 254 is the maximum.
+    // 255: The end-device was not able to measure the battery level.
+    return 255;
 }
 
 int8_t smtc_modem_hal_get_temperature( void )
 {
+#if defined( STM32L073xx )
+    // Please implement according to used board
+    return 25;
+#elif defined( STM32L476xx )
     int8_t temperature;
     hal_adc_init( );
     temperature = hal_adc_get_temp( );
     hal_adc_deinit( );
     return temperature;
+#endif
 }
 
 uint8_t smtc_modem_hal_get_voltage( void )
 {
+#if defined( STM32L073xx )
+    // Please implement according to used board
+    return 165;  // 3300 mv/20
+#elif defined( STM32L476xx )
     uint16_t measure_vref_mv = 0;
     hal_adc_init( );
     measure_vref_mv = hal_adc_get_vref_int( );
     hal_adc_deinit( );
-
     // convert voltage from mv to cloud readable (1/50V = 20mv)
     return ( uint8_t )( measure_vref_mv / 20 );
+#endif
 }
 
 int8_t smtc_modem_hal_get_board_delay_ms( void )
 {
+#if defined( LR1121 )
+    return 2;
+#else
     return 1;
+#endif  // LR1121
 }
 
 /* ------------ Trace management ------------*/

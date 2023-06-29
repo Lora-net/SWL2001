@@ -14,30 +14,36 @@ CPP = $(GCC_PATH)/$(PREFIX)g++
 AS  = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP  = $(GCC_PATH)/$(PREFIX)objcopy
 SZ  = $(GCC_PATH)/$(PREFIX)size
-GCOV = $(GCC_PATH)/$(PREFIX)gcov
 else
 CC = $(PREFIX)gcc
 CPP = $(PREFIX)g++
 AS = $(PREFIX)g++ -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
-GCOV = $(PREFIX)gcov
 endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
-GCOVR = gcovr
 
 #-----------------------------------------------------------------------------
 # Board selection
 #-----------------------------------------------------------------------------
 
-include makefiles/board_L476.mk
+ifeq ($(BOARD),NUCLEO_L476)
+-include makefiles/board_L476.mk
+BOARD_TARGET=l4
+endif
+
+ifeq ($(BOARD),NUCLEO_L073)
+-include makefiles/board_L073.mk
+BOARD_TARGET=l0
+endif
+
 
 #-----------------------------------------------------------------------------
 # Define target build directory
 #-----------------------------------------------------------------------------
-TARGET_MODEM = $(APPTARGET_ROOT)_$(TARGET)
-BUILD_DIR_MODEM = $(APPBUILD_ROOT)_$(TARGET)
+BUILD_TARGET = $(APPTARGET_ROOT)_$(TARGET)
+BUILD_DIR = $(APPBUILD_ROOT)_$(TARGET)_$(BOARD_TARGET)
 
 BASIC_MODEM_BUILD = $(LORA_BASICS_MODEM)/build
 BASIC_MODEM_LIB = $(BASIC_MODEM_BUILD)/basic_modem.a
@@ -64,53 +70,63 @@ include $(LORA_BASICS_MODEM)/makefiles/regions.mk
 # Update target name wrt. compilation options
 #-----------------------------------------------------------------------------
 ifdef REGION
-TARGET_MODEM := $(TARGET_MODEM)_$(REGION)
-endif
-
-ifeq ($(COVERAGE), RADIO)
-TARGET_MODEM := $(TARGET_MODEM)_cov_radio
-endif
-ifeq ($(COVERAGE), MODEM)
-TARGET_MODEM := $(TARGET_MODEM)_cov_modem
+BUILD_TARGET := $(BUILD_TARGET)_$(REGION)
 endif
 
 ifeq ($(RADIO),lr1110)
 ifeq ($(CRYPTO),LR11XX)
-TARGET_MODEM := $(TARGET_MODEM)_hw_crypto
-BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_hw_crypto
+BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto
+BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto
 endif # LR11XX
 ifeq ($(CRYPTO),LR11XX_WITH_CREDENTIALS)
-TARGET_MODEM := $(TARGET_MODEM)_hw_crypto
-BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_hw_crypto
+BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto_with_cred
+BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto_with_cred
 endif # LR11XX_WITH_CREDENTIALS
 ifeq ($(USE_LR11XX_CRC_SPI), yes)
-TARGET_MODEM := $(TARGET_MODEM)_crc_spi
-BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_crc_spi
+BUILD_TARGET := $(BUILD_TARGET)_crc_spi
+BUILD_DIR := $(BUILD_DIR)_crc_spi
 endif
 endif # lr1110
 
 ifeq ($(RADIO),lr1120)
 ifeq ($(CRYPTO),LR11XX)
-TARGET_MODEM := $(TARGET_MODEM)_hw_crypto
-BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_hw_crypto
+BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto
+BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto
 endif # LR11XX
 ifeq ($(CRYPTO),LR11XX_WITH_CREDENTIALS)
-TARGET_MODEM := $(TARGET_MODEM)_hw_crypto
-BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_hw_crypto
+BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto_with_cred
+BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto_with_cred
 endif # LR11XX_WITH_CREDENTIALS
 ifeq ($(USE_LR11XX_CRC_SPI), yes)
-TARGET_MODEM := $(TARGET_MODEM)_crc_spi
-BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_crc_spi
+BUILD_TARGET := $(BUILD_TARGET)_crc_spi
+BUILD_DIR := $(BUILD_DIR)_crc_spi
 endif
 endif # lr1120
 
+ifeq ($(RADIO),lr1121)
+ifeq ($(CRYPTO),LR11XX)
+BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto
+BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto
+endif # LR11XX
+ifeq ($(CRYPTO),LR11XX_WITH_CREDENTIALS)
+BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto_with_cred
+BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto_with_cred
+endif # LR11XX_WITH_CREDENTIALS
+ifeq ($(USE_LR11XX_CRC_SPI), yes)
+BUILD_TARGET := $(BUILD_TARGET)_crc_spi
+BUILD_DIR := $(BUILD_DIR)_crc_spi
+endif
+endif # lr1121
+
+
 ifeq ($(DEBUG),yes)
-TARGET_MODEM := $(TARGET_MODEM)_debug
+BUILD_TARGET := $(BUILD_TARGET)_debug
 endif
 
 # Clean up commas
 COMMA := ,
-TARGET_MODEM := $(subst $(COMMA),_,$(TARGET_MODEM))
+BUILD_TARGET := $(subst $(COMMA),_,$(BUILD_TARGET))
+
 
 #-----------------------------------------------------------------------------
 # Debug
@@ -127,10 +143,10 @@ export DEBUG
 # Dump memory usage to a log file
 #-----------------------------------------------------------------------------
 ifeq ($(LOG_MEM), yes)
-MEMLOG_FILE := $(BUILD_DIR_MODEM)/mem_usage.log
+MEMLOG_FILE := $(BUILD_DIR)/mem_usage.log
 MEMLOG = | tee $(MEMLOG_FILE)
 else
-MEMLOG = 
+MEMLOG =
 endif
 
 #-----------------------------------------------------------------------------
@@ -144,8 +160,6 @@ GIT_DATE    := $(firstword $(shell git --no-pager show --date=iso-strict --forma
 BUILD_DATE  := $(shell date --iso=seconds)
 SHORT_DATE  := $(shell date +%Y-%m-%d-%H-%M)
 
-FULL_PATH   :=$(RELEASE_PATH)/${SHORT_DATE}-${GIT_COMMIT}
-
 # If working tree is dirty, append dirty flag
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 GIT_VERSION := $(GIT_VERSION)--dirty
@@ -155,6 +169,10 @@ endif # git
 #-----------------------------------------------------------------------------
 # Compilation flags
 #-----------------------------------------------------------------------------
+
+# Lora Basics Modem user specific added flags
+LBM_FLAGS?= 
+
 # Basic compilation flags
 WFLAG += \
 	-Wall \
@@ -162,21 +180,21 @@ WFLAG += \
 	-Wno-unused-parameter \
 	-Wpedantic \
 	-fomit-frame-pointer \
-	-mabi=aapcs \
 	-fno-unroll-loops \
 	-ffast-math \
-	-ftree-vectorize
+	-ftree-vectorize \
+	$(BYPASS_FLAGS)
 
 # Allow linker to not link unused functions
 WFLAG += \
 	-ffunction-sections \
-	-fdata-sections 
+	-fdata-sections
 
 # Generate .su files for stack use analysis
-WFLAG += -fstack-usage 
+WFLAG += -fstack-usage
 
 #Link-time optimization
-#WFLAG += --lto 
+#WFLAG += --lto
 
 # AS defines
 AS_DEFS =
@@ -195,28 +213,25 @@ COMMON_C_DEFS += \
 	-DMAKEFILE_APP=${MODEM_APP}
 endif
 
-ifeq ($(MODEM_APP),HW_MODEM)
-COMMON_C_DEFS += \
-	-DHW_MODEM_ENABLED
-endif
-
 ifeq ($(APP_TRACE),yes)
 COMMON_C_DEFS += \
 	-DHAL_DBG_TRACE=1
 endif
-
 ifeq ($(APP_TRACE),no)
 COMMON_C_DEFS += \
 	-DHAL_DBG_TRACE=0
 endif
-
 
 ifeq ($(PERF_TEST),yes)
 COMMON_C_DEFS += \
 	-DPERF_TEST_ENABLED
 endif
 
-CFLAGS += -fno-builtin $(MCU_FLAGS) $(BOARD_C_DEFS) $(COMMON_C_DEFS) $(MODEM_C_DEFS) $(BOARD_C_INCLUDES) $(COMMON_C_INCLUDES) $(MODEM_C_INCLUDES) $(OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
+LFS_C_DEFS += -DLFS_CONFIG=lfs_config.h
+LFS_C_DEFS += -DLFS_NO_MALLOC
+#LFS_C_DEFS += -DLFS_YES_TRACE 		# WARNING there are BIG printf strings that generate HardFaults
+
+CFLAGS += -fno-builtin $(MCU_FLAGS) $(BOARD_C_DEFS) $(COMMON_C_DEFS) $(BOARD_C_INCLUDES) $(COMMON_C_INCLUDES) $(MODEM_C_INCLUDES) $(OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
 CFLAGS += -falign-functions=4
 CFLAGS += -std=c17
 
@@ -228,8 +243,8 @@ LIBS += -lstdc++ -lsupc++ -lm -lc -lnosys
 
 LIBDIR =
 
-LDFLAGS += $(MCU_FLAGS) 
-LDFLAGS += --specs=nano.specs 
+LDFLAGS += $(MCU_FLAGS)
+LDFLAGS += --specs=nano.specs
 LDFLAGS += --specs=nosys.specs
 LDFLAGS += -T$(BOARD_LDSCRIPT) $(LIBDIR) $(LIBS) $(COVERAGE_LDFLAGS)
 LDFLAGS += -Wl,--cref # Cross-reference table
@@ -254,25 +269,10 @@ USER_APP_C_SOURCES += \
 	user_app/main_examples/main_exti.c
 endif
 
-ifeq ($(MODEM_APP),EXAMPLE_TX_BEACON)
+ifeq ($(MODEM_APP),EXAMPLE_PORTING_TESTS)
 USER_APP_C_SOURCES += \
-	user_app/main_examples/main_tx_beacon.c
+	user_app/main_examples/main_porting_tests.c
 endif
-
-ifeq ($(MODEM_APP),EXAMPLE_LR_FHSS)
-USER_APP_C_SOURCES += \
-	user_app/main_examples/main_lr_fhss.c
-endif
-
-COMMON_C_INCLUDES += \
-	-Iuser_app/main_examples
-
-#-----------------------------------------------------------------------------
-# LittleFS, used by coverage
-#-----------------------------------------------------------------------------
-LITTLEFS_C_SOURCES += \
-	user_app/littlefs/lfs.c \
-	user_app/littlefs/lfs_util.c
 
 #-----------------------------------------------------------------------------
 # Common sources
@@ -280,12 +280,9 @@ LITTLEFS_C_SOURCES += \
 COMMON_C_INCLUDES +=  \
 	-Iuser_app\
 	-Iuser_app/radio_hal\
+	-Iuser_app/smtc_modem_hal\
 	-I$(LORA_BASICS_MODEM)/smtc_modem_api\
 	-I$(LORA_BASICS_MODEM)/smtc_modem_hal
-
-#-----------------------------------------------------------------------------
-# Region sources and defines
-#-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Gather everything
@@ -294,11 +291,14 @@ C_SOURCES = \
 	$(USER_APP_C_SOURCES) \
 	$(BOARD_C_SOURCES) \
 	$(RADIO_DRIVER_C_SOURCES) \
-	$(RADIO_HAL_C_SOURCES) 
+	$(LITTLEFS_C_SOURCES) \
+	$(RADIO_HAL_C_SOURCES)
 
 ASM_SOURCES = $(BOARD_ASM_SOURCES)
 
+vpath %.c $(sort $(dir $(C_SOURCES_COVERAGE)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
+vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 
 #-----------------------------------------------------------------------------
 example:
@@ -306,44 +306,31 @@ ifeq ($(RADIO),nc)
 	$(call echo_error,"No radio selected! Please specified the target radio using RADIO=radio_name option")
 else
 	$(MAKE) example_build
-endif 
+endif
 
-
-example_build: $(BUILD_DIR_MODEM)/$(TARGET_MODEM).elf $(BUILD_DIR_MODEM)/$(TARGET_MODEM).hex $(BUILD_DIR_MODEM)/$(TARGET_MODEM).bin
+example_build: $(BUILD_DIR)/$(BUILD_TARGET).elf $(BUILD_DIR)/$(BUILD_TARGET).hex $(BUILD_DIR)/$(BUILD_TARGET).bin
 	$(call success,$@)
 
-
 #-----------------------------------------------------------------------------
-OBJECTS = $(addprefix $(BUILD_DIR_MODEM)/,$(notdir $(C_SOURCES:.c=.o)))
+# list of C objects
+
+OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
 
 # list of ASM program objects
-OBJECTS += $(addprefix $(BUILD_DIR_MODEM)/,$(notdir $(ASM_SOURCES:.s=.o)))
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-# For debug build, Basic modem objects
-#ifneq ($(DEBUG),no)
-#BASIC_MODEM_OBJECTS = $(shell find -L $(BASIC_MODEM_BUILD)/latest -name '*.o')
-#else
 BASIC_MODEM_OBJECTS = $(BASIC_MODEM_LIB)
-#endif
 
-
-$(BUILD_DIR_MODEM)/gcov/%.o: %.c Makefile | $(BUILD_DIR_MODEM)/gcov
-	$(call build,'CC-GCOV',$<)
-	$(SILENT)$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR_MODEM)/$(notdir $(<:.c=.lst)) $< -o $@
-ifeq ($(SIZE),yes)
-	$(SZ) $@
-endif
-
-$(BUILD_DIR_MODEM)/%.o: %.c Makefile | $(BUILD_DIR_MODEM)
+$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(call build,'CC',$<)
-	$(SILENT)$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR_MODEM)/$(notdir $(<:.c=.lst)) $< -o $@
+	$(SILENT)$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 ifeq ($(SIZE),yes)
 	$(SZ) $@
 endif
 
-$(BUILD_DIR_MODEM)/%.o: %.s Makefile | $(BUILD_DIR_MODEM)
+$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(call build,'AS',$<)
 	$(SILENT)$(AS) -c $(ASFLAGS) $< -o $@
 ifeq ($(SIZE),yes)
@@ -352,101 +339,37 @@ endif
 
 .PHONY: $(BASIC_MODEM_LIB)
 $(BASIC_MODEM_LIB):
-	$(MAKE) -C $(LORA_BASICS_MODEM) basic_modem  MCU_FLAGS="$(MCU_FLAGS)" $(MTHREAD_FLAG)
+	$(MAKE) -C $(LORA_BASICS_MODEM) basic_modem MCU_FLAGS="$(MCU_FLAGS)" EXTRAFLAGS=$(LBM_FLAGS) CRYPTO=$(CRYPTO) $(MTHREAD_FLAG)
 
-$(BUILD_DIR_MODEM)/$(TARGET_MODEM).elf: $(OBJECTS) Makefile $(BASIC_MODEM_LIB)
+$(BUILD_DIR)/$(BUILD_TARGET).elf: $(OBJECTS) Makefile $(BASIC_MODEM_LIB)
 	$(call build,'CC',$@)
-	$(SILENT)$(CC) $(OBJECTS) $(BASIC_MODEM_OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR_MODEM)/$(TARGET_MODEM).map -o $@ $(MEMLOG)
+	$(SILENT)$(CC) $(OBJECTS) $(BASIC_MODEM_OBJECTS) $(LDFLAGS) -Wl,-Map=$(BUILD_DIR)/$(BUILD_TARGET).map -o $@ $(MEMLOG)
 	$(SZ) $@
 
-$(BUILD_DIR_MODEM)/%.hex: $(BUILD_DIR_MODEM)/%.elf | $(BUILD_DIR_MODEM)
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(call build,'HEX',$@)
 	$(SILENT)$(HEX) $< $@
 
-$(BUILD_DIR_MODEM)/%.bin: $(BUILD_DIR_MODEM)/%.elf | $(BUILD_DIR_MODEM)
+$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(call build,'BIN',$@)
 	$(SILENT)$(BIN) $< $@
 
-$(BUILD_DIR_MODEM)/gcov:
-	$(SILENT)mkdir -p $@
-
-$(BUILD_DIR_MODEM):
+$(BUILD_DIR):
 	$(SILENT)mkdir $@
-
-$(COVERAGE_OUTPUT_DIR):
-	$(SILENT)mkdir $@
-
-#-----------------------------------------------------------------------------
-# Debug print rules
-#-----------------------------------------------------------------------------
-debug_region:
-	$(call echo,"Region $(REGION)")
-	$(call echo,"	REGION_AS_923 	$(REGION_AS_923)")
-	$(call echo,"	REGION_AU_915 	$(REGION_AU_915)")
-	$(call echo,"	REGION_CN_470 	$(REGION_CN_470)")
-	$(call echo,"	REGION_CN_470_RP_1_0 	$(REGION_CN_470_RP_1_0)")
-	$(call echo,"	REGION_EU_868 	$(REGION_EU_868)")
-	$(call echo,"	REGION_IN_865 	$(REGION_IN_865)")
-	$(call echo,"	REGION_KR_920 	$(REGION_KR_920)")
-	$(call echo,"	REGION_RU_864 	$(REGION_RU_864)")
-	$(call echo,"	REGION_US_915 	$(REGION_US_915)")
-
-debug_target:
-	$(call echo,"Target $(TARGET)")
-	$(call echo,"Build directory $(BUILD_DIR_MODEM)")
-	$(call echo,"Binary $(TARGET_MODEM)")
-	$(call echo,"Basic modem build $(BASIC_MODEM_BUILD)")
-	$(call echo,"Basic modem lib $(BASIC_MODEM_LIB)")
-	$(call echo,"Coverage Prefix Strip $(COVERAGE_PREFIX_STRIP)")
-
-debug_sources:
-	$(call echo,"USER_APP_C_SOURCES	$(USER_APP_C_SOURCES)")
-	$(call echo,"BOARD_C_SOURCES	$(BOARD_C_SOURCES)")
-	$(call echo,"RADIO_DRIVER_C_SOURCES	$(RADIO_DRIVER_C_SOURCES)")
-	$(call echo,"SMTC_RAL_C_SOURCES	$(SMTC_RAL_C_SOURCES)")
-	$(call echo,"SMTC_RALF_C_SOURCES	$(SMTC_RALF_C_SOURCES)")
-	$(call echo,"LITTLEFS_C_SOURCES	$(LITTLEFS_C_SOURCES)")
-	$(call echo,"RADIO_HAL_C_SOURCES	$(RADIO_HAL_C_SOURCES)")
-	$(call echo,"RADIO_PLANNER_C_SOURCES	$(RADIO_PLANNER_C_SOURCES)")
-	$(call echo,"SMTC_MODEM_CORE_C_SOURCES	$(SMTC_MODEM_CORE_C_SOURCES)")
-	$(call echo,"SMTC_MODEM_SERVICES_C_SOURCES	$(SMTC_MODEM_SERVICES_C_SOURCES)")
-	$(call echo,"SMTC_MODEM_CRYPTO_C_SOURCES	$(SMTC_MODEM_CRYPTO_C_SOURCES)")
-	$(call echo,"LR1MAC_C_SOURCES	$(LR1MAC_C_SOURCES)")
-	$(call echo,"COMMON_C_INCLUDES	$(COMMON_C_INCLUDES)")
-
-debug_flags:
-	$(call echo,"MODEM_C_DEFS	$(MODEM_C_DEFS)")
-
-debug_params:
-	$(call echo,"TARGET	$(TARGET)")
-	$(call echo,"DEBUG	$(DEBUG)")
-	$(call echo,"COVERAGE	$(COVERAGE)")
-	$(call echo,"DRIVE	$(DRIVE)")
-	$(call echo,"RADIO	$(RADIO)")
-	$(call echo,"MODEM_APP	$(MODEM_APP)")
-	$(call echo,"MODEM_TRACE	$(MODEM_TRACE)")
-	$(call echo,"APP_TRACE	$(APP_TRACE)")
-	$(call echo,"OPT	$(OPT)")
-
-debug_objects:
-	$(call echo,"OBJECTS	$(OBJECTS)")
-	$(call echo,"BASIC_MODEM_OBJECTS	$(BASIC_MODEM_OBJECTS)")
-
-debug: debug_target debug_region debug_sources debug_flags debug_params debug_objects
 
 #-----------------------------------------------------------------------------
 # Flash by copying on ST-Link mounted on WSL
 #-----------------------------------------------------------------------------
-flash: 
-ifneq ($(DRIVE),nc) 
+flash:
+ifneq ($(DRIVE),nc)
 ifneq ($(RADIO),nc)
 ifneq ($(shell cd /mnt/${DRIVE} && echo -n yes),yes)
 	sudo mkdir -p /mnt/${DRIVE}
 endif
 	$(${DRIVE}/DETAILS.TXT):
 		sudo mount -t drvfs ${DRIVE}: /mnt/${DRIVE}
-	cp $(BUILD_DIR_MODEM)/$(TARGET_MODEM).bin  /mnt/${DRIVE}/ ; sudo umount /mnt/${DRIVE}
-else	
+	cp $(BUILD_DIR)/$(BUILD_TARGET).bin  /mnt/${DRIVE}/ ; sudo umount /mnt/${DRIVE}
+else
 	$(call warn,"No radio selected! Please specified the target radio using RADIO=radio_name option")
 endif
 else
@@ -459,4 +382,7 @@ endif
 # Clean
 #-----------------------------------------------------------------------------
 clean_target:
-	-rm -fR $(BUILD_DIR_MODEM)*
+	-rm -fR $(BUILD_DIR)*
+
+clean_modem:
+	$(MAKE) -C $(LORA_BASICS_MODEM) clean_$(RADIO) CRYPTO=$(CRYPTO)

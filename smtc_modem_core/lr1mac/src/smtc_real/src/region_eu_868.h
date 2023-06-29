@@ -72,60 +72,47 @@ extern "C" {
  */
 
 /**
- * @brief Congigure the region with default value and pointers
+ * @brief Initialize the region with default value and pointers
  *
- * @param lr1_mac
+ * @param real
  */
-void region_eu_868_config( lr1_stack_mac_t* lr1_mac );
+void region_eu_868_init( smtc_real_t* real );
 
 /**
- * @brief Initialize the regional boot parameter
+ * @brief Configure the regional boot parameter
  * @remark must be called before each join request
  *
- * @param lr1_mac
+ * @param real
  */
-void region_eu_868_init( lr1_stack_mac_t* lr1_mac );
+void region_eu_868_config( smtc_real_t* real );
 
 /**
  * @brief Get the next channel for the future uplink
  *
- * @param lr1_mac
+ * @param real
  * @return status_lorawan_t
  */
-status_lorawan_t region_eu_868_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_eu_868_get_next_channel( smtc_real_t* real, smtc_dtc_t* dtc_obj, uint8_t tx_data_rate,
+                                                 uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 
 /**
  * @brief Get the next channel for the future join request
  *
- * @param lr1_mac
+ * @param real
  * @return status_lorawan_t
  */
-status_lorawan_t region_eu_868_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
-
-/**
- * @brief Set the datarate for Rx1 and Rx2
- *
- * @param lr1_mac
- * @param type
- */
-void region_eu_868_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
-
-/**
- * @brief Set the channel mask received by the LinkADRReq
- *
- * @param lr1_mac
- */
-void region_eu_868_set_channel_mask( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_eu_868_get_join_next_channel( smtc_real_t* real, smtc_dtc_t* dtc_obj, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 
 /**
  * @brief Decrypt and build the Channel Mask from multiple atomic LinkADRReq
  *
- * @param lr1_mac
+ * @param real
  * @param ChMaskCntl
  * @param ChMask
  * @return status_channel_t
  */
-status_channel_t region_eu_868_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
+status_channel_t region_eu_868_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate
@@ -147,7 +134,7 @@ void region_eu_868_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_band
 /**
  * @brief Convert LoRaWAN Datarate to FSK bitrate
  *
- * @param lr1_mac
+ * @param real
  * @param in_dr
  * @param out_bitrate
  */

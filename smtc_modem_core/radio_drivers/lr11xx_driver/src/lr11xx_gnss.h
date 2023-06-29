@@ -137,6 +137,28 @@ lr11xx_status_t lr11xx_gnss_read_almanac( const void*                           
                                           lr11xx_gnss_almanac_full_read_bytestream_t almanac_bytestream );
 
 /*!
+ * @brief Function to read the frequency search space around the Doppler frequency
+ *
+ * @param [in] radio Radio abstraction
+ * @param [out] freq_search_space Frequency search space configuration read from the chip
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_gnss_read_freq_search_space( const void*                      radio,
+                                                    lr11xx_gnss_freq_search_space_t* freq_search_space );
+
+/*!
+ * @brief Function to set the frequency search space around the Doppler frequency
+ *
+ * @param [in] radio Radio abstraction
+ * @param [in] freq_search_space Frequency search space configuration to be applied
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_gnss_set_freq_search_space( const void*                           radio,
+                                                   const lr11xx_gnss_freq_search_space_t freq_search_space );
+
+/*!
  * @brief Get almanac age for a satellite
  *
  * @param [in] context Chip implementation context
@@ -159,12 +181,44 @@ lr11xx_status_t lr11xx_gnss_get_almanac_age_for_satellite( const void* context, 
  */
 lr11xx_status_t lr11xx_gnss_push_solver_msg( const void* context, const uint8_t* payload, const uint16_t payload_size );
 
+/**
+ * @brief Return the theoretical number of visible satellites based on the given parameters.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] date The actual date of scan. Its format is the number of seconds elapsed since January the 6th 1980
+ * 00:00:00 with leap seconds included.
+ * @param [in] assistance_position, latitude 12 bits and longitude 12 bits
+ * @param [in] constellation Bit mask of the constellations to use. See @ref lr11xx_gnss_constellation_t for
+ * the possible values
+ * @param [out] nb_visible_sv theoretical number of visible satellites
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_gnss_get_nb_visible_satellites(
+    const void* context, const lr11xx_gnss_date_t date,
+    const lr11xx_gnss_solver_assistance_position_t* assistance_position,
+    const lr11xx_gnss_constellation_t constellation, uint8_t* nb_visible_sv );
+
+/**
+ * @brief Return the theoretical doppler information of theoretical visible satellites, this function shall be called
+ * after lr11xx_gnss_get_nb_visible_satellites function.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] nb_visible_satellites number of visible satellites returned by lr11xx_gnss_get_nb_visible_satellites
+ * function,
+ * @param [out] visible_satellite_id_doppler Doppler information of each satellite.
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_gnss_get_visible_satellites( const void* context, const uint8_t nb_visible_satellites,
+                                                    lr11xx_gnss_visible_satellite_t* visible_satellite_id_doppler );
+
 /*!
  * @brief Activate the GNSS scan constellation
  *
  * @param [in] context Chip implementation context
- * @param [in] constellation_mask Bit mask of the constellations to use. See @ref lr11xx_gnss_constellation_t for the
- * possible values
+ * @param [in] constellation_mask Bit mask of the constellations to use. See @ref lr11xx_gnss_constellation_t for
+ * the possible values
  *
  * @returns Operation status
  *
@@ -241,7 +295,7 @@ lr11xx_status_t lr11xx_gnss_read_supported_constellations( const void*          
  *
  * @returns Operation status
  *
- * @ref lr11xx_gnss_scan_mode_t
+ * @see lr11xx_gnss_scan_mode_t
  */
 lr11xx_status_t lr11xx_gnss_set_scan_mode( const void* context, const lr11xx_gnss_scan_mode_t scan_mode );
 
@@ -285,9 +339,9 @@ lr11xx_status_t lr11xx_gnss_scan_assisted( const void* context, const lr11xx_gns
  * @param [in] context Chip implementation context
  * @param [in] assistance_position, latitude 12 bits and longitude 12 bits
  *
- * @ref See lr11xx_gnss_solver_assistance_position_t
- *
  * @returns Operation status
+ *
+ * @see lr11xx_gnss_solver_assistance_position_t
  */
 lr11xx_status_t lr11xx_gnss_set_assistance_position(
     const void* context, const lr11xx_gnss_solver_assistance_position_t* assistance_position );
@@ -301,9 +355,9 @@ lr11xx_status_t lr11xx_gnss_set_assistance_position(
  * @param [in] context Chip implementation context
  * @param [in] assistance_position, latitude 12 bits and longitude 12 bits
  *
- * @ref See lr11xx_gnss_solver_assistance_position_t
- *
  * @returns Operation status
+ *
+ * @see lr11xx_gnss_solver_assistance_position_t
  */
 lr11xx_status_t lr11xx_gnss_read_assistance_position( const void*                               context,
                                                       lr11xx_gnss_solver_assistance_position_t* assistance_position );
@@ -362,6 +416,18 @@ lr11xx_status_t lr11xx_gnss_get_nb_detected_satellites( const void* context, uin
 lr11xx_status_t lr11xx_gnss_get_detected_satellites(
     const void* context, const uint8_t nb_detected_satellites,
     lr11xx_gnss_detected_satellite_t* detected_satellite_id_snr_doppler );
+
+/*!
+ * @brief Read RSSI on GNSS path
+ *
+ * This is a test function to read RSSI on GNSS path.
+ *
+ * @param [in] context Chip implementation context
+ * @param [out] rssi_gnss_dbm RSSI read on GNSS path in dbm
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_gnss_read_gnss_rssi_test( const void* context, int8_t* rssi_gnss_dbm );
 
 /**
  * @brief Parse a raw buffer of context status
@@ -427,6 +493,18 @@ uint16_t lr11xx_gnss_compute_almanac_age( uint16_t almanac_date,
  */
 uint32_t lr11xx_gnss_get_consumption( lr11xx_system_reg_mode_t regulator, lr11xx_gnss_timings_t timings,
                                       lr11xx_gnss_constellation_mask_t constellations_used );
+
+/*!
+ * @brief Apply the workaround for the mixer configuration issue - only LR1120 chip is impacted
+ *
+ * @remark This function is always called when calling @ref lr11xx_gnss_scan_autonomous or @ref
+ * lr11xx_gnss_scan_assisted unless the macro LR11XX_DISABLE_MIXER_CFG_WORKAROUND is defined.
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_gnss_apply_mixer_cfg_workaround( const void* context );
 
 #ifdef __cplusplus
 }

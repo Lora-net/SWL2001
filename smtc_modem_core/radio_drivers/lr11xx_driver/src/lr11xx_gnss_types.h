@@ -298,6 +298,16 @@ typedef struct lr11xx_gnss_context_status_s
     lr11xx_gnss_freq_search_space_t freq_search_space;
 } lr11xx_gnss_context_status_t;
 
+/*!
+ * @brief Structure for information about visible SV
+ */
+typedef struct lr11xx_gnss_visible_satellite_s
+{
+    lr11xx_gnss_satellite_id_t satellite_id;   //!< SV ID
+    int16_t                    doppler;        //!< SV doppler in Hz
+    int16_t                    doppler_error;  //!< SV doppler error - step of 125Hz
+} lr11xx_gnss_visible_satellite_t;
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------

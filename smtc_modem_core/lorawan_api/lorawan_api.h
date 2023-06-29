@@ -844,16 +844,6 @@ uint32_t lorawan_api_get_timestamp_last_device_time_ans_s( void );
 uint32_t lorawan_api_get_time_left_connection_lost( void );
 
 /**
- * @brief Configure the callback for the stack when will received the network time sync
- *
- * @param [in] device_time_callback callback that will be called in case a device time answer happened
- * @param [in] context              context of the callback
- * @param [in] rx_timestamp_s
- */
-void lorawan_api_set_device_time_callback( void ( *device_time_callback )( void* context, uint32_t rx_timestamp_s ),
-                                           void* context, uint32_t rx_timestamp_s );
-
-/**
  * @brief Set delay in seconds to concider time no more valid if no time sync received
  *
  * @param [in] delay_s

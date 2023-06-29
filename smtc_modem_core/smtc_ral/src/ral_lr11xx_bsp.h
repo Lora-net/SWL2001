@@ -116,11 +116,11 @@ void ral_lr11xx_bsp_get_reg_mode( const void* context, lr11xx_system_reg_mode_t*
  * @remark If no TCXO is present, this function should set tcxo_is_radio_controlled to false, and return.
  *
  * @param [in] context Chip implementation context
- * @param [out] tcxo_is_radio_controlled Let the caller know if there is a radio-controlled TCXO
+ * @param [out] xosc_cfg Let the caller know what kind of XOSC is used
  * @param [out] supply_voltage TCXO supply voltage parameter
  * @param [out] startup_time_in_tick TCXO setup time in clock tick
  */
-void ral_lr11xx_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_lr11xx_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   lr11xx_system_tcxo_supply_voltage_t* supply_voltage, uint32_t* startup_time_in_tick );
 
 /**

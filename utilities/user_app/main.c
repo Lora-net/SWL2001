@@ -85,6 +85,9 @@ int main( void )
 #if MAKEFILE_APP == EXAMPLE_EXTI
     // This example show how to send data on an external event.
     main_exti( );
+#elif MAKEFILE_APP == EXAMPLE_PORTING_TESTS
+    // This example will execute some tests to check if porting is ok
+    main_porting_tests( );
 #else
 #error "Unknown application" ## MAKEFILE_APP
 #endif

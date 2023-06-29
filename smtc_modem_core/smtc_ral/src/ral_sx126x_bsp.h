@@ -115,11 +115,11 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
  * @remark If no TCXO is present, this function should set tcxo_is_radio_controlled to false, and return.
  *
  * @param [in] context Chip implementation context
- * @param [out] tcxo_is_radio_controlled Let the caller know if there is a radio-controlled TCXO
+ * @param [out] xosc_cfg Let the caller know what kind of XOSC is used
  * @param [out] supply_voltage TCXO supply voltage parameter
  * @param [out] startup_time_in_tick TCXO setup time in clock tick
  */
-void ral_sx126x_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_sx126x_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   sx126x_tcxo_ctrl_voltages_t* supply_voltage, uint32_t* startup_time_in_tick );
 
 /**

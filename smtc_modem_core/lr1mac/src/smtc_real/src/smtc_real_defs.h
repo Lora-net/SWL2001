@@ -232,6 +232,8 @@ typedef struct smtc_real_ctx_s
     uint8_t*  dr_distribution_init_ctx;
     uint8_t*  dr_distribution_ctx;
     uint8_t   sync_word_ctx;
+    bool      uplink_dwell_time_ctx;
+    bool      downlink_dwell_time_ctx;
 } smtc_real_ctx_t;
 
 typedef struct smtc_real_const_s
@@ -246,6 +248,7 @@ typedef struct smtc_real_const_s
     uint8_t         const_max_tx_power_idx;
     uint8_t         const_adr_ack_limit;
     uint8_t         const_adr_ack_delay;
+    const uint8_t*  const_datarate_offsets;
     const uint8_t*  const_datarate_backoff;
     uint8_t         const_ack_timeout;
     uint32_t        const_freq_min;
@@ -278,6 +281,7 @@ typedef struct smtc_real_const_s
     ral_lora_cr_t   const_coding_rate;
     uint8_t         const_dtc_number_of_band;
     const uint16_t* const_dtc_by_band;
+    const uint32_t* const_dtc_frequency_range_by_band;
     const uint8_t*  const_mobile_longrange_dr_distri;
     const uint8_t*  const_mobile_lowpower_dr_distri;
     const uint8_t*  const_join_dr_distri;
@@ -286,58 +290,8 @@ typedef struct smtc_real_const_s
     uint8_t         const_beacon_dr;
     uint32_t        const_beacon_frequency;
     uint32_t        const_ping_slot_frequency;
+    bool            const_uplink_dwell_time;
 } smtc_real_const_t;
-
-#define const_number_of_tx_channel lr1_mac->real->real_const.const_number_of_tx_channel
-#define const_number_of_rx_channel lr1_mac->real->real_const.const_number_of_rx_channel
-#define const_number_of_boot_tx_channel lr1_mac->real->real_const.const_number_of_boot_tx_channel
-#define const_number_of_channel_bank lr1_mac->real->real_const.const_number_of_channel_bank
-#define const_join_accept_delay1 lr1_mac->real->real_const.const_join_accept_delay1
-#define const_received_delay1 lr1_mac->real->real_const.const_received_delay1
-#define const_tx_power_dbm lr1_mac->real->real_const.const_tx_power_dbm
-#define const_max_tx_power_idx lr1_mac->real->real_const.const_max_tx_power_idx
-#define const_adr_ack_limit lr1_mac->real->real_const.const_adr_ack_limit
-#define const_adr_ack_delay lr1_mac->real->real_const.const_adr_ack_delay
-#define const_datarate_backoff lr1_mac->real->real_const.const_datarate_backoff
-#define const_ack_timeout lr1_mac->real->real_const.const_ack_timeout
-#define const_freq_min lr1_mac->real->real_const.const_freq_min
-#define const_freq_max lr1_mac->real->real_const.const_freq_max
-#define const_rx2_freq lr1_mac->real->real_const.const_rx2_freq
-#define const_frequency_factor lr1_mac->real->real_const.const_frequency_factor
-#define const_frequency_offset_hz lr1_mac->real->real_const.const_frequency_offset_hz
-#define const_rx2_dr_init lr1_mac->real->real_const.const_rx2_dr_init
-#define const_sync_word_public lr1_mac->real->real_const.const_sync_word_public
-#define const_sync_word_private lr1_mac->real->real_const.const_sync_word_private
-#define const_sync_word_gfsk lr1_mac->real->real_const.const_sync_word_gfsk
-#define const_sync_word_lr_fhss lr1_mac->real->real_const.const_sync_word_lr_fhss
-#define const_min_tx_dr lr1_mac->real->real_const.const_min_tx_dr
-#define const_min_tx_dr_limit lr1_mac->real->real_const.const_min_tx_dr_limit
-#define const_min_rx_dr lr1_mac->real->real_const.const_min_rx_dr
-#define const_max_tx_dr lr1_mac->real->real_const.const_max_tx_dr
-#define const_max_rx_dr lr1_mac->real->real_const.const_max_rx_dr
-#define const_dr_bitfield lr1_mac->real->real_const.const_dr_bitfield
-#define const_default_tx_dr_bit_field lr1_mac->real->real_const.const_default_tx_dr_bit_field
-#define const_number_of_tx_dr lr1_mac->real->real_const.const_number_of_tx_dr
-#define const_number_rx1_dr_offset lr1_mac->real->real_const.const_number_rx1_dr_offset
-#define const_tx_param_setup_req_supported lr1_mac->real->real_const.const_tx_param_setup_req_supported
-#define const_new_channel_req_supported lr1_mac->real->real_const.const_new_channel_req_supported
-#define const_dtc_supported lr1_mac->real->real_const.const_dtc_supported
-#define const_lbt_supported lr1_mac->real->real_const.const_lbt_supported
-#define const_lbt_sniff_duration_ms lr1_mac->real->real_const.const_lbt_sniff_duration_ms
-#define const_lbt_threshold_dbm lr1_mac->real->real_const.const_lbt_threshold_dbm
-#define const_lbt_bw_hz lr1_mac->real->real_const.const_lbt_bw_hz
-#define const_max_payload_m lr1_mac->real->real_const.const_max_payload_m
-#define const_coding_rate lr1_mac->real->real_const.const_coding_rate
-#define const_dtc_number_of_band lr1_mac->real->real_const.const_dtc_number_of_band
-#define const_dtc_by_band lr1_mac->real->real_const.const_dtc_by_band
-#define const_mobile_longrange_dr_distri lr1_mac->real->real_const.const_mobile_longrange_dr_distri
-#define const_mobile_lowpower_dr_distri lr1_mac->real->real_const.const_mobile_lowpower_dr_distri
-#define const_join_dr_distri lr1_mac->real->real_const.const_join_dr_distri
-#define const_default_dr_distri lr1_mac->real->real_const.const_default_dr_distri
-#define const_cf_list_type_supported lr1_mac->real->real_const.const_cf_list_type_supported
-#define const_beacon_dr lr1_mac->real->real_const.const_beacon_dr
-#define const_beacon_frequency lr1_mac->real->real_const.const_beacon_frequency
-#define const_ping_slot_frequency lr1_mac->real->real_const.const_ping_slot_frequency
 
 typedef struct smtc_real_s
 {

@@ -71,7 +71,7 @@ extern "C" {
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
-void region_kr_920_config( lr1_stack_mac_t* lr1_mac );
+void region_kr_920_init( smtc_real_t* real );
 
 /**
  * \brief
@@ -79,63 +79,51 @@ void region_kr_920_config( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_kr_920_init( lr1_stack_mac_t* lr1_mac );
+void region_kr_920_config( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_kr_920_init_session( lr1_stack_mac_t* lr1_mac );
+void region_kr_920_init_session( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_kr_920_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_kr_920_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate, uint32_t* out_tx_frequency,
+                                                 uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_kr_920_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_kr_920_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_kr_920_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+void region_kr_920_init_join_snapshot_channel_mask( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_kr_920_set_channel_mask( lr1_stack_mac_t* lr1_mac );
+void region_kr_920_init_after_join_snapshot_channel_mask( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_kr_920_init_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_kr_920_init_after_join_snapshot_channel_mask( lr1_stack_mac_t* lr1_mac );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_channel_t region_kr_920_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
+status_channel_t region_kr_920_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate

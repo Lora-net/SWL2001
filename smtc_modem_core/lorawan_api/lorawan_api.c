@@ -65,7 +65,7 @@
 static struct
 {
     lr1_stack_mac_t   lr1_mac_obj;
-    smtc_real_t       real;
+    smtc_real_t       real_obj;
     smtc_lbt_t        lbt_obj;
     smtc_dtc_t        duty_cycle_obj;
     lr1mac_class_c_t  class_c_obj;
@@ -86,7 +86,7 @@ uint8_t fifo_buffer[FIFO_LORAWAN_SIZE];
 
 #define lr1_mac_obj lr1mac_core_context.lr1_mac_obj
 #define lbt_obj lr1mac_core_context.lbt_obj
-#define real lr1mac_core_context.real
+#define real_obj lr1mac_core_context.real_obj
 #define duty_cycle_obj lr1mac_core_context.duty_cycle_obj
 #define class_c_obj lr1mac_core_context.class_c_obj
 #define fifo_ctrl_obj lr1mac_core_context.fifo_ctrl_obj
@@ -106,34 +106,8 @@ static void lorawan_api_class_b_d2d_tx_event_callback( smtc_class_b_d2d_t* class
 
 void lorawan_api_init( radio_planner_t* rp )
 {
-    smtc_real_region_types_t smtc_real_region_types = SMTC_REAL_REGION_UNKNOWN;
-
-#if defined( REGION_EU_868 )
-    smtc_real_region_types = SMTC_REAL_REGION_EU_868;
-#elif defined( REGION_US_915 )
-    smtc_real_region_types = SMTC_REAL_REGION_US_915;
-#elif defined( REGION_AU_915 )
-    smtc_real_region_types = SMTC_REAL_REGION_AU_915;
-#elif defined( REGION_CN_470 )
-    smtc_real_region_types = SMTC_REAL_REGION_CN_470;
-#elif defined( REGION_CN_470_RP_1_0 )
-    smtc_real_region_types = SMTC_REAL_REGION_CN_470_RP_1_0;
-#elif defined( REGION_AS_923 )
-    smtc_real_region_types = SMTC_REAL_REGION_AS_923;
-#elif defined( REGION_IN_865 )
-    smtc_real_region_types = SMTC_REAL_REGION_IN_865;
-#elif defined( REGION_KR_920 )
-    smtc_real_region_types = SMTC_REAL_REGION_KR_920;
-#elif defined( REGION_RU_864 )
-    smtc_real_region_types = SMTC_REAL_REGION_RU_864;
-#elif defined( REGION_WW2G4 )
-    smtc_real_region_types = SMTC_REAL_REGION_WW2G4;
-#else
-#error "Please select supported region"
-#endif
-
     // init lr1mac core
-    lr1mac_core_init( &lr1_mac_obj, &real, &lbt_obj, &duty_cycle_obj, rp, ACTIVATION_MODE_OTAA, smtc_real_region_types,
+    lr1mac_core_init( &lr1_mac_obj, &real_obj, &lbt_obj, &duty_cycle_obj, rp, ACTIVATION_MODE_OTAA,
                       ( void ( * )( void* ) ) lorawan_api_class_a_downlink_callback, &lr1_mac_obj );
 
     fifo_ctrl_init( &fifo_ctrl_obj, fifo_buffer, FIFO_LORAWAN_SIZE );
@@ -434,17 +408,17 @@ uint32_t lorawan_api_next_frequency_get( void )
 
 uint8_t lorawan_api_max_tx_dr_get( void )
 {
-    return smtc_real_get_max_tx_channel_dr( &lr1_mac_obj );
+    return smtc_real_get_max_tx_channel_dr( lr1_mac_obj.real );
 }
 
 uint16_t lorawan_api_mask_tx_dr_channel_up_dwell_time_check( void )
 {
-    return smtc_real_mask_tx_dr_channel_up_dwell_time_check( &lr1_mac_obj );
+    return smtc_real_mask_tx_dr_channel_up_dwell_time_check( lr1_mac_obj.real );
 }
 
 uint8_t lorawan_api_min_tx_dr_get( void )
 {
-    return smtc_real_get_min_tx_channel_dr( &lr1_mac_obj );
+    return smtc_real_get_min_tx_channel_dr( lr1_mac_obj.real );
 }
 
 lr1mac_states_t lorawan_api_state_get( void )
@@ -770,15 +744,15 @@ fifo_ctrl_t* lorawan_api_get_fifo_obj( void )
 
 void lorawan_api_set_network_type( bool network_type )
 {
-    uint8_t sync_word = ( network_type == true ) ? smtc_real_get_public_sync_word( &lr1_mac_obj )
-                                                 : smtc_real_get_private_sync_word( &lr1_mac_obj );
+    uint8_t sync_word = ( network_type == true ) ? smtc_real_get_public_sync_word( lr1_mac_obj.real )
+                                                 : smtc_real_get_private_sync_word( lr1_mac_obj.real );
 
-    smtc_real_set_sync_word( &lr1_mac_obj, sync_word );
+    smtc_real_set_sync_word( lr1_mac_obj.real, sync_word );
 }
 bool lorawan_api_get_network_type( void )
 {
-    uint8_t sync_word = smtc_real_get_sync_word( &lr1_mac_obj );
-    return ( ( sync_word == smtc_real_get_public_sync_word( &lr1_mac_obj ) ) ? true : false );
+    uint8_t sync_word = smtc_real_get_sync_word( lr1_mac_obj.real );
+    return ( ( sync_word == smtc_real_get_public_sync_word( lr1_mac_obj.real ) ) ? true : false );
 }
 
 uint8_t lorawan_api_nb_trans_get( void )
@@ -830,13 +804,6 @@ uint32_t lorawan_api_get_timestamp_last_device_time_ans_s( void )
 uint32_t lorawan_api_get_time_left_connection_lost( void )
 {
     return lr1mac_core_get_time_left_connection_lost( &lr1_mac_obj );
-}
-
-void lorawan_api_set_device_time_callback( void ( *device_time_callback )( void* context, uint32_t rx_timestamp_s ),
-                                           void* context, uint32_t rx_timestamp_s )
-{
-    lr1mac_core_set_device_time_callback( &lr1_mac_obj, ( void ( * )( void*, uint32_t ) ) device_time_callback, context,
-                                          rx_timestamp_s );
 }
 
 status_lorawan_t lorawan_api_set_device_time_invalid_delay_s( uint32_t delay_s )
@@ -926,12 +893,12 @@ bool lorawan_api_get_class_b_status( void )
 
 void lorawan_api_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    smtc_real_lora_dr_to_sf_bw( &lr1_mac_obj, in_dr, out_sf, out_bw );
+    smtc_real_lora_dr_to_sf_bw( lr1_mac_obj.real, in_dr, out_sf, out_bw );
 }
 
 uint8_t lorawan_api_get_frequency_factor( void )
 {
-    return smtc_real_get_frequency_factor( &lr1_mac_obj );
+    return smtc_real_get_frequency_factor( lr1_mac_obj.real );
 }
 
 bool lorawan_api_get_status_push_network_downlink_to_user( void )

@@ -130,6 +130,12 @@
 #define MODEM_FW_VERSION_PATCH 8
 #endif
 
+#define MODEM_MAX_ALARM_VALUE_S ( 864000 )  // 10 days in seconds
+
+/**
+ * @brief Maximum payload size in byte of LoRaWAN payload
+ */
+#define SMTC_MODEM_MAX_LORAWAN_PAYLOAD_LENGTH 242
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -432,7 +438,7 @@ smtc_modem_return_code_t smtc_modem_get_event( smtc_modem_event_t* event, uint8_
             event->event_data.class_b_status.status =
                 ( smtc_modem_event_class_b_status_t ) get_modem_event_status( event->event_type );
             break;
-#if defined( ADD_D2D )
+#if defined( SMTC_D2D )
         case SMTC_MODEM_EVENT_D2D_CLASS_B_TX_DONE: {
             modem_context_class_b_d2d_t class_b_d2d;
             modem_context_get_class_b_d2d_last_metadata( &class_b_d2d );
@@ -442,7 +448,7 @@ smtc_modem_return_code_t smtc_modem_get_event( smtc_modem_event_t* event, uint8_
                 ( smtc_modem_d2d_class_b_tx_done_status_t ) get_modem_event_status( event->event_type );
             break;
         }
-#endif  // ADD_D2D
+#endif  // SMTC_D2D
         case SMTC_MODEM_EVENT_MIDDLEWARE_1:
         case SMTC_MODEM_EVENT_MIDDLEWARE_2:
         case SMTC_MODEM_EVENT_MIDDLEWARE_3:
@@ -829,10 +835,13 @@ smtc_modem_return_code_t smtc_modem_get_status( uint8_t stack_id, smtc_modem_sta
 smtc_modem_return_code_t smtc_modem_alarm_start_timer( uint32_t alarm_s )
 {
     RETURN_BUSY_IF_TEST_MODE( );
+    if( alarm_s > MODEM_MAX_ALARM_VALUE_S )
+    {
+        return SMTC_MODEM_RC_INVALID;
+    }
 
-    smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
     modem_set_user_alarm( ( alarm_s > 0 ) ? ( smtc_modem_hal_get_time_in_s( ) + alarm_s ) : 0 );
-    return return_code;
+    return SMTC_MODEM_RC_OK;
 }
 
 smtc_modem_return_code_t smtc_modem_alarm_clear_timer( void )
@@ -1549,10 +1558,6 @@ smtc_modem_return_code_t smtc_modem_dm_request_single_uplink( const uint8_t* dm_
     else
     {
         return_code = smtc_modem_set_dm_status_with_rate( dm_fields_payload, dm_field_length, DM_INFO_NOW );
-        if( return_code == SMTC_MODEM_RC_OK )
-        {
-            modem_supervisor_add_task_dm_status_now( );
-        }
     }
     return return_code;
 }
@@ -2941,7 +2946,7 @@ static bool is_modem_connected( )
 static smtc_modem_return_code_t smtc_modem_send_empty_tx( uint8_t f_port, bool f_port_present, bool confirmed )
 {
     smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
-    smodem_task              task_send;
+    smodem_task              task_send   = { 0 };
 
     if( is_modem_connected( ) == false )
     {
@@ -2976,13 +2981,16 @@ static smtc_modem_return_code_t smtc_modem_send_tx( uint8_t f_port, bool confirm
                                                     uint8_t payload_length, bool emergency, uint8_t tx_buffer_id )
 {
     smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
-    smodem_task              task_send;
+    smodem_task              task_send   = { 0 };
 
     if( is_modem_connected( ) == false )
     {
         return_code = SMTC_MODEM_RC_FAIL;
     }
-
+    else if( payload_length > SMTC_MODEM_MAX_LORAWAN_PAYLOAD_LENGTH )
+    {
+        return_code = SMTC_MODEM_RC_INVALID;
+    }
     else if( ( ( ( f_port == 0 ) || ( f_port >= 224 ) ) && !lorawan_api_modem_certification_is_enabled( ) ) ||
              ( f_port == get_modem_dm_port( ) ) )
     {

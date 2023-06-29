@@ -3,6 +3,7 @@
 ##############################################################################
 TARGET = sx128x
 
+
 RADIO_HAL_C_SOURCES += \
 	user_app/radio_hal/sx128x_hal.c\
 	user_app/radio_hal/ral_sx128x_bsp.c
@@ -18,5 +19,5 @@ MODEM_C_INCLUDES =  \
 #-----------------------------------------------------------------------------
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
-MODEM_C_DEFS += \
+COMMON_C_DEFS += \
 	-DSX128X 

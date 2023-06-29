@@ -72,7 +72,7 @@ extern "C" {
 // The Lorawan context is stored in memory with a period equal to FLASH_UPDATE_PERIOD packets transmitted
 #define BSP_USER_NUMBER_OF_RETRANSMISSION 1
 
-// Only used in case of user defined darate distribution strategy refereed to doc that explain this value
+// Only used in case of user defined datarate distribution strategy refereed to doc that explain this value
 #define BSP_USER_DR_DISTRIBUTION_PARAMETERS 0x10000000
 
 /*

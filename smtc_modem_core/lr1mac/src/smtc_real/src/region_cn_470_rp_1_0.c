@@ -47,15 +47,16 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
-#define real_ctx lr1_mac->real->real_ctx
+#define real_ctx real->real_ctx
+#define real_const real->real_const
 
-#define dr_bitfield_tx_channel lr1_mac->real->region.cn470_rp_1_0.dr_bitfield_tx_channel
-#define channel_index_enabled lr1_mac->real->region.cn470_rp_1_0.channel_index_enabled
-#define dr_distribution_init lr1_mac->real->region.cn470_rp_1_0.dr_distribution_init
-#define dr_distribution lr1_mac->real->region.cn470_rp_1_0.dr_distribution
-#define unwrapped_channel_mask lr1_mac->real->region.cn470_rp_1_0.unwrapped_channel_mask
+#define dr_bitfield_tx_channel real->region.cn470_rp_1_0.dr_bitfield_tx_channel
+#define channel_index_enabled real->region.cn470_rp_1_0.channel_index_enabled
+#define dr_distribution_init real->region.cn470_rp_1_0.dr_distribution_init
+#define dr_distribution real->region.cn470_rp_1_0.dr_distribution
+#define unwrapped_channel_mask real->region.cn470_rp_1_0.unwrapped_channel_mask
 
-#define snapshot_bank_tx_mask lr1_mac->real->region.cn470_rp_1_0.snapshot_bank_tx_mask
+#define snapshot_bank_tx_mask real->region.cn470_rp_1_0.snapshot_bank_tx_mask
 // Private region_cn_470_rp_1_0 utilities declaration
 //
 
@@ -86,51 +87,52 @@ uint32_t freq_tx_cn470_mono_channel_mhz = 471100000;
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
-void region_cn_470_rp_1_0_config( lr1_stack_mac_t* lr1_mac )
+void region_cn_470_rp_1_0_init( smtc_real_t* real )
 {
-    const_number_of_tx_channel         = NUMBER_OF_TX_CHANNEL_CN_470_RP_1_0;
-    const_number_of_rx_channel         = NUMBER_OF_RX_CHANNEL_CN_470_RP_1_0;
-    const_number_of_channel_bank       = BANK_MAX_CN470_RP_1_0;
-    const_join_accept_delay1           = JOIN_ACCEPT_DELAY1_CN_470_RP_1_0;
-    const_received_delay1              = RECEIVE_DELAY1_CN_470_RP_1_0;
-    const_tx_power_dbm                 = TX_POWER_EIRP_CN_470_RP_1_0 - 2;  // EIRP to ERP
-    const_max_tx_power_idx             = MAX_TX_POWER_IDX_CN_470_RP_1_0;
-    const_adr_ack_limit                = ADR_ACK_LIMIT_CN_470_RP_1_0;
-    const_adr_ack_delay                = ADR_ACK_DELAY_CN_470_RP_1_0;
-    const_datarate_backoff             = &datarate_backoff_cn_470_rp_1_0[0];
-    const_ack_timeout                  = ACK_TIMEOUT_CN_470_RP_1_0;
-    const_freq_min                     = FREQMIN_CN_470_RP_1_0;
-    const_freq_max                     = FREQMAX_CN_470_RP_1_0;
-    const_rx2_freq                     = RX2_FREQ_CN_470_RP_1_0;
-    const_frequency_factor             = FREQUENCY_FACTOR_CN_470_RP_1_0;
-    const_rx2_dr_init                  = RX2DR_INIT_CN_470_RP_1_0;
-    const_sync_word_private            = SYNC_WORD_PRIVATE_CN_470_RP_1_0;
-    const_sync_word_public             = SYNC_WORD_PUBLIC_CN_470_RP_1_0;
-    const_sync_word_gfsk               = ( uint8_t* ) SYNC_WORD_GFSK_CN_470_RP_1_0;
-    const_min_tx_dr                    = MIN_TX_DR_CN_470_RP_1_0;
-    const_max_tx_dr                    = MAX_TX_DR_CN_470_RP_1_0;
-    const_min_tx_dr_limit              = MIN_TX_DR_LIMIT_CN_470_RP_1_0;
-    const_number_of_tx_dr              = NUMBER_OF_TX_DR_CN_470_RP_1_0;
-    const_min_rx_dr                    = MIN_RX_DR_CN_470_RP_1_0;
-    const_max_rx_dr                    = MAX_RX_DR_CN_470_RP_1_0;
-    const_number_rx1_dr_offset         = NUMBER_RX1_DR_OFFSET_CN_470_RP_1_0;
-    const_dr_bitfield                  = DR_BITFIELD_SUPPORTED_CN_470_RP_1_0;
-    const_default_tx_dr_bit_field      = DEFAULT_TX_DR_BIT_FIELD_CN_470_RP_1_0;
-    const_tx_param_setup_req_supported = TX_PARAM_SETUP_REQ_SUPPORTED_CN_470_RP_1_0;
-    const_new_channel_req_supported    = NEW_CHANNEL_REQ_SUPPORTED_CN_470_RP_1_0;
-    const_dtc_supported                = DTC_SUPPORTED_CN_470_RP_1_0;
-    const_lbt_supported                = LBT_SUPPORTED_CN_470_RP_1_0;
-    const_lbt_sniff_duration_ms        = LBT_SNIFF_DURATION_MS_CN_470_RP_1_0;
-    const_lbt_threshold_dbm            = LBT_THRESHOLD_DBM_CN_470_RP_1_0;
-    const_lbt_bw_hz                    = LBT_BW_HZ_CN_470_RP_1_0;
-    const_max_payload_m                = &M_cn_470_rp_1_0[0];
-    const_coding_rate                  = RAL_LORA_CR_4_5;
-    const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_CN_470_RP_1_0[0];
-    const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_CN_470_RP_1_0[0];
-    const_join_dr_distri               = &JOIN_DR_DISTRIBUTION_CN_470_RP_1_0[0];
-    const_default_dr_distri            = &DEFAULT_DR_DISTRIBUTION_CN_470_RP_1_0[0];
-    const_cf_list_type_supported       = CF_LIST_SUPPORTED_CN_470_RP_1_0;
-    const_beacon_dr                    = BEACON_DR_CN_470_RP_1_0;
+    real_const.const_number_of_tx_channel         = NUMBER_OF_TX_CHANNEL_CN_470_RP_1_0;
+    real_const.const_number_of_rx_channel         = NUMBER_OF_RX_CHANNEL_CN_470_RP_1_0;
+    real_const.const_number_of_channel_bank       = BANK_MAX_CN470_RP_1_0;
+    real_const.const_join_accept_delay1           = JOIN_ACCEPT_DELAY1_CN_470_RP_1_0;
+    real_const.const_received_delay1              = RECEIVE_DELAY1_CN_470_RP_1_0;
+    real_const.const_tx_power_dbm                 = TX_POWER_EIRP_CN_470_RP_1_0 - 2;  // EIRP to ERP
+    real_const.const_max_tx_power_idx             = MAX_TX_POWER_IDX_CN_470_RP_1_0;
+    real_const.const_adr_ack_limit                = ADR_ACK_LIMIT_CN_470_RP_1_0;
+    real_const.const_adr_ack_delay                = ADR_ACK_DELAY_CN_470_RP_1_0;
+    real_const.const_datarate_offsets             = &datarate_offsets_cn_470_rp_1_0[0][0];
+    real_const.const_datarate_backoff             = &datarate_backoff_cn_470_rp_1_0[0];
+    real_const.const_ack_timeout                  = ACK_TIMEOUT_CN_470_RP_1_0;
+    real_const.const_freq_min                     = FREQMIN_CN_470_RP_1_0;
+    real_const.const_freq_max                     = FREQMAX_CN_470_RP_1_0;
+    real_const.const_rx2_freq                     = RX2_FREQ_CN_470_RP_1_0;
+    real_const.const_frequency_factor             = FREQUENCY_FACTOR_CN_470_RP_1_0;
+    real_const.const_rx2_dr_init                  = RX2DR_INIT_CN_470_RP_1_0;
+    real_const.const_sync_word_private            = SYNC_WORD_PRIVATE_CN_470_RP_1_0;
+    real_const.const_sync_word_public             = SYNC_WORD_PUBLIC_CN_470_RP_1_0;
+    real_const.const_sync_word_gfsk               = ( uint8_t* ) SYNC_WORD_GFSK_CN_470_RP_1_0;
+    real_const.const_min_tx_dr                    = MIN_TX_DR_CN_470_RP_1_0;
+    real_const.const_max_tx_dr                    = MAX_TX_DR_CN_470_RP_1_0;
+    real_const.const_min_tx_dr_limit              = MIN_TX_DR_LIMIT_CN_470_RP_1_0;
+    real_const.const_number_of_tx_dr              = NUMBER_OF_TX_DR_CN_470_RP_1_0;
+    real_const.const_min_rx_dr                    = MIN_RX_DR_CN_470_RP_1_0;
+    real_const.const_max_rx_dr                    = MAX_RX_DR_CN_470_RP_1_0;
+    real_const.const_number_rx1_dr_offset         = NUMBER_RX1_DR_OFFSET_CN_470_RP_1_0;
+    real_const.const_dr_bitfield                  = DR_BITFIELD_SUPPORTED_CN_470_RP_1_0;
+    real_const.const_default_tx_dr_bit_field      = DEFAULT_TX_DR_BIT_FIELD_CN_470_RP_1_0;
+    real_const.const_tx_param_setup_req_supported = TX_PARAM_SETUP_REQ_SUPPORTED_CN_470_RP_1_0;
+    real_const.const_new_channel_req_supported    = NEW_CHANNEL_REQ_SUPPORTED_CN_470_RP_1_0;
+    real_const.const_dtc_supported                = DTC_SUPPORTED_CN_470_RP_1_0;
+    real_const.const_lbt_supported                = LBT_SUPPORTED_CN_470_RP_1_0;
+    real_const.const_lbt_sniff_duration_ms        = LBT_SNIFF_DURATION_MS_CN_470_RP_1_0;
+    real_const.const_lbt_threshold_dbm            = LBT_THRESHOLD_DBM_CN_470_RP_1_0;
+    real_const.const_lbt_bw_hz                    = LBT_BW_HZ_CN_470_RP_1_0;
+    real_const.const_max_payload_m                = &M_cn_470_rp_1_0[0];
+    real_const.const_coding_rate                  = RAL_LORA_CR_4_5;
+    real_const.const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_CN_470_RP_1_0[0];
+    real_const.const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_CN_470_RP_1_0[0];
+    real_const.const_join_dr_distri               = &JOIN_DR_DISTRIBUTION_CN_470_RP_1_0[0];
+    real_const.const_default_dr_distri            = &DEFAULT_DR_DISTRIBUTION_CN_470_RP_1_0[0];
+    real_const.const_cf_list_type_supported       = CF_LIST_SUPPORTED_CN_470_RP_1_0;
+    real_const.const_beacon_dr                    = BEACON_DR_CN_470_RP_1_0;
 
     real_ctx.tx_frequency_channel_ctx   = NULL;
     real_ctx.rx1_frequency_channel_ctx  = NULL;
@@ -140,8 +142,8 @@ void region_cn_470_rp_1_0_config( lr1_stack_mac_t* lr1_mac )
     real_ctx.dr_distribution_init_ctx   = &dr_distribution_init[0];
     real_ctx.dr_distribution_ctx        = &dr_distribution[0];
 
-    memset1( dr_distribution_init, 0, const_number_of_tx_dr );
-    memset1( dr_distribution, 0, const_number_of_tx_dr );
+    memset1( dr_distribution_init, 0, real_const.const_number_of_tx_dr );
+    memset1( dr_distribution, 0, real_const.const_number_of_tx_dr );
 
     // Enable all unwrapped channels
     memset1( &unwrapped_channel_mask[0], 0xFF, BANK_MAX_CN470_RP_1_0 );
@@ -149,41 +151,41 @@ void region_cn_470_rp_1_0_config( lr1_stack_mac_t* lr1_mac )
     snapshot_bank_tx_mask = BANK_0_125_CN470_RP_1_0;
 }
 
-void region_cn_470_rp_1_0_init( lr1_stack_mac_t* lr1_mac )
+void region_cn_470_rp_1_0_config( smtc_real_t* real )
 {
     // Tx 125 kHz channels
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
         // Enable default datarate
-        dr_bitfield_tx_channel[i] = const_default_tx_dr_bit_field;
+        dr_bitfield_tx_channel[i] = real_const.const_default_tx_dr_bit_field;
 
         SMTC_PUT_BIT8( channel_index_enabled, i, CHANNEL_ENABLED );
 
         SMTC_MODEM_HAL_TRACE_PRINTF( "TX - idx:%u, freq: %d, dr: 0x%x,\n%s", i,
-                                     region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, i ),
+                                     region_cn_470_rp_1_0_get_tx_frequency_channel( real, i ),
                                      dr_bitfield_tx_channel[i], ( ( i % 8 ) == 7 ) ? "---\n" : "" );
     }
 #if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
     // Rx 500 kHz channels
-    for( uint8_t i = 0; i < const_number_of_rx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_rx_channel; i++ )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "RX - idx:%u, freq: %d, dr_min: %u, dr_max: %u\n%s", i,
-                                     region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_mac, i ),
-                                     MIN_RX_DR_CN_470_RP_1_0, MAX_RX_DR_CN_470_RP_1_0,
-                                     ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                                     region_cn_470_rp_1_0_get_rx1_frequency_channel( real, i ), MIN_RX_DR_CN_470_RP_1_0,
+                                     MAX_RX_DR_CN_470_RP_1_0, ( ( i % 8 ) == 7 ) ? "---\n" : "" );
     }
 #endif
 }
 
-status_lorawan_t region_cn_470_rp_1_0_get_join_next_channel( lr1_stack_mac_t* lr1_mac )
+status_lorawan_t region_cn_470_rp_1_0_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                             uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency )
 {
 #if defined( HYBRID_CN470_MONO_CHANNEL )
     uint8_t err           = true;
     uint8_t ch_index_mono = 0;
 
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
-        if( freq_tx_cn470_mono_channel_mhz == region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, i ) )
+        if( freq_tx_cn470_mono_channel_mhz == region_cn_470_rp_1_0_get_tx_frequency_channel( real, i ) )
         {
             err           = false;
             ch_index_mono = i;
@@ -194,8 +196,8 @@ status_lorawan_t region_cn_470_rp_1_0_get_join_next_channel( lr1_stack_mac_t* lr
     {
         smtc_modem_hal_lr1mac_panic( );
     }
-    lr1_mac->tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, ch_index_mono );
-    lr1_mac->rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_mac, ch_index_mono );
+    *out_tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( real, ch_index_mono );
+    *out_rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( real, ch_index_mono );
 
     return OKLORAWAN;
 #endif
@@ -214,7 +216,7 @@ status_lorawan_t region_cn_470_rp_1_0_get_join_next_channel( lr1_stack_mac_t* lr
         for( uint8_t i = snapshot_bank_tx_mask * 8; i < ( ( snapshot_bank_tx_mask * 8 ) + 8 ); i++ )
         {
             if( ( SMTC_GET_BIT8( channel_index_enabled, i ) == CHANNEL_ENABLED ) &&
-                ( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], lr1_mac->tx_data_rate ) == 1 ) )
+                ( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], tx_data_rate ) == 1 ) )
             {
                 active_channel_index[active_channel_nb] = i;
                 active_channel_nb++;
@@ -236,28 +238,29 @@ status_lorawan_t region_cn_470_rp_1_0_get_join_next_channel( lr1_stack_mac_t* lr
     temp        = ( smtc_modem_hal_get_random_nb_in_range( 0, ( active_channel_nb - 1 ) ) ) % active_channel_nb;
     channel_idx = active_channel_index[temp];
 
-    if( channel_idx >= const_number_of_tx_channel )
+    if( channel_idx >= real_const.const_number_of_tx_channel )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "INVALID CHANNEL  active channel = %d and random channel = %d \n",
                                      active_channel_nb, temp );
         return ERRORLORAWAN;
     }
 
-    lr1_mac->tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, channel_idx );
-    lr1_mac->rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_mac, channel_idx );
+    *out_tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( real, channel_idx );
+    *out_rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( real, channel_idx );
 
     return OKLORAWAN;
 }
 
-status_lorawan_t region_cn_470_rp_1_0_get_next_channel( lr1_stack_mac_t* lr1_mac )
+status_lorawan_t region_cn_470_rp_1_0_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                        uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency )
 {
 #if defined( HYBRID_CN470_MONO_CHANNEL )
     uint8_t err           = true;
     uint8_t ch_index_mono = 0;
 
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
-        if( freq_tx_cn470_mono_channel_mhz == region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, i ) )
+        if( freq_tx_cn470_mono_channel_mhz == region_cn_470_rp_1_0_get_tx_frequency_channel( real, i ) )
         {
             err           = false;
             ch_index_mono = i;
@@ -268,19 +271,19 @@ status_lorawan_t region_cn_470_rp_1_0_get_next_channel( lr1_stack_mac_t* lr1_mac
     {
         smtc_modem_hal_lr1mac_panic( );
     }
-    lr1_mac->tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, ch_index_mono );
-    lr1_mac->rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_mac, ch_index_mono );
+    *out_tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( real, ch_index_mono );
+    *out_rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( real, ch_index_mono );
 
     return OKLORAWAN;
 #endif
     uint8_t active_channel_nb = 0;
     uint8_t active_channel_index[NUMBER_OF_TX_CHANNEL_CN_470_RP_1_0];
 
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
         if( SMTC_GET_BIT8( channel_index_enabled, i ) == CHANNEL_ENABLED )
         {
-            if( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], lr1_mac->tx_data_rate ) == 1 )
+            if( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], tx_data_rate ) == 1 )
             {
                 active_channel_index[active_channel_nb] = i;
                 active_channel_nb++;
@@ -296,7 +299,7 @@ status_lorawan_t region_cn_470_rp_1_0_get_next_channel( lr1_stack_mac_t* lr1_mac
     uint8_t temp        = ( smtc_modem_hal_get_random_nb_in_range( 0, ( active_channel_nb - 1 ) ) ) % active_channel_nb;
     uint8_t channel_idx = 0;
     channel_idx         = active_channel_index[temp];
-    if( channel_idx >= const_number_of_tx_channel )
+    if( channel_idx >= real_const.const_number_of_tx_channel )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "INVALID CHANNEL  active channel = %d and random channel = %d \n",
                                      active_channel_nb, temp );
@@ -304,47 +307,18 @@ status_lorawan_t region_cn_470_rp_1_0_get_next_channel( lr1_stack_mac_t* lr1_mac
     }
     else
     {
-        lr1_mac->tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, channel_idx );
-        lr1_mac->rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_mac, channel_idx );
+        *out_tx_frequency  = region_cn_470_rp_1_0_get_tx_frequency_channel( real, channel_idx );
+        *out_rx1_frequency = region_cn_470_rp_1_0_get_rx1_frequency_channel( real, channel_idx );
     }
     return OKLORAWAN;
 }
 
-uint8_t region_cn_470_rp_1_0_get_number_of_chmask_in_cflist( lr1_stack_mac_t* lr1_mac )
+uint8_t region_cn_470_rp_1_0_get_number_of_chmask_in_cflist( smtc_real_t* real )
 {
     return 6;
 }
 
-void region_cn_470_rp_1_0_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type )
-{
-    if( type == RX1 )
-    {
-        lr1_mac->rx_data_rate = datarate_offsets_cn_470_rp_1_0[lr1_mac->tx_data_rate][lr1_mac->rx1_dr_offset];
-    }
-    else if( type == RX2 )
-    {
-        lr1_mac->rx_data_rate = lr1_mac->rx2_data_rate;
-    }
-    else
-    {
-        SMTC_MODEM_HAL_TRACE_WARNING( "INVALID RX TYPE \n" );
-    }
-}
-
-void region_cn_470_rp_1_0_set_channel_mask( lr1_stack_mac_t* lr1_mac )
-{
-    // Copy all unwrapped channels in channel enable
-    memcpy1( channel_index_enabled, unwrapped_channel_mask, BANK_MAX_CN470_RP_1_0 );
-
-    SMTC_MODEM_HAL_TRACE_MSG( "Ch Mask\n" );
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
-    {
-        SMTC_MODEM_HAL_TRACE_PRINTF( " %d ", SMTC_GET_BIT8( channel_index_enabled, i ) );
-    }
-    SMTC_MODEM_HAL_TRACE_MSG( " \n" );
-}
-
-status_channel_t region_cn_470_rp_1_0_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t channel_mask_cntl,
+status_channel_t region_cn_470_rp_1_0_build_channel_mask( smtc_real_t* real, uint8_t channel_mask_cntl,
                                                           uint16_t channel_mask )
 {
     status_channel_t status = OKCHANNEL;
@@ -361,10 +335,10 @@ status_channel_t region_cn_470_rp_1_0_build_channel_mask( lr1_stack_mac_t* lr1_m
         memcpy1( unwrapped_channel_mask + ( channel_mask_cntl * 2 ), ( uint8_t* ) &channel_mask, 2 );
 
         // Check if all enabled channels has a valid frequency
-        for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+        for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
         {
             if( ( SMTC_GET_BIT8( unwrapped_channel_mask, i ) == CHANNEL_ENABLED ) &&
-                ( region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_mac, i ) == 0 ) )
+                ( region_cn_470_rp_1_0_get_tx_frequency_channel( real, i ) == 0 ) )
             {
                 status = ERROR_CHANNEL_MASK;  // this status is used only for the last multiple link adr req
                 break;                        // break for loop
@@ -397,9 +371,9 @@ status_channel_t region_cn_470_rp_1_0_build_channel_mask( lr1_stack_mac_t* lr1_m
     return ( status );
 }
 
-void region_cn_470_rp_1_0_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac )
+void region_cn_470_rp_1_0_enable_all_channels_with_valid_freq( smtc_real_t* real )
 {
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
         SMTC_PUT_BIT8( channel_index_enabled, i, CHANNEL_ENABLED );
         dr_bitfield_tx_channel[i] = DEFAULT_TX_DR_BIT_FIELD_CN_470_RP_1_0;
@@ -432,24 +406,24 @@ void region_cn_470_rp_1_0_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1m
     }
 }
 
-uint32_t region_cn_470_rp_1_0_get_tx_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8_t index )
+uint32_t region_cn_470_rp_1_0_get_tx_frequency_channel( smtc_real_t* real, uint8_t index )
 {
     return ( DEFAULT_TX_FREQ_CN_470_RP_1_0 + ( index * DEFAULT_TX_STEP_CN_470_RP_1_0 ) );
 }
 
-uint32_t region_cn_470_rp_1_0_get_rx1_frequency_channel( lr1_stack_mac_t* lr1_mac, uint8_t index )
+uint32_t region_cn_470_rp_1_0_get_rx1_frequency_channel( smtc_real_t* real, uint8_t index )
 {
     return ( DEFAULT_RX_FREQ_CN_470_RP_1_0 +
              ( ( index % NUMBER_OF_RX_CHANNEL_CN_470_RP_1_0 ) * DEFAULT_RX_STEP_CN_470_RP_1_0 ) );
 }
 
-uint32_t region_cn_470_rp_1_0_get_rx_beacon_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s )
+uint32_t region_cn_470_rp_1_0_get_rx_beacon_frequency_channel( smtc_real_t* real, uint32_t gps_time_s )
 {
     uint8_t index = ( uint32_t )( floorf( gps_time_s / 128 ) ) % 8;
     return ( BEACON_FREQ_START_CN_470_RP_1_0 + ( ( index % 8 ) * BEACON_STEP_CN_470_RP_1_0 ) );
 }
 
-uint32_t region_cn_470_rp_1_0_get_rx_ping_slot_frequency_channel( lr1_stack_mac_t* lr1_mac, uint32_t gps_time_s,
+uint32_t region_cn_470_rp_1_0_get_rx_ping_slot_frequency_channel( smtc_real_t* real, uint32_t gps_time_s,
                                                                   uint32_t dev_addr )
 {
     uint8_t index = ( dev_addr + ( uint32_t )( floorf( gps_time_s / 128 ) ) ) % 8;

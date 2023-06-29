@@ -108,47 +108,17 @@
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
 
-/*!
- * RTC timer context
- */
-typedef struct
-{
-    uint32_t        time_ref_in_ticks;  // Reference time
-    RTC_TimeTypeDef calendar_time;      // Reference time in calendar format
-    RTC_DateTypeDef calendar_date;      // Reference date in calendar format
-} rtc_context_t;
-
-typedef struct bsp_rtc_s
-{
-    RTC_HandleTypeDef handle;
-    /*!
-     * Keep the value of the RTC timer when the RTC alarm is set
-     * Set with the \ref bsp_rtc_set_context function
-     * Value is kept as a Reference to calculate alarm
-     */
-    rtc_context_t context;
-} bsp_rtc_t;
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
 
-static bsp_rtc_t bsp_rtc;
-
-static volatile bool wut_timer_irq_happened = false;
+static RTC_HandleTypeDef hal_rtc_handle;
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
-
-/*!
- * Set the RTC time reference in ticks
- *
- * \retval time_ref_in_ticks RTC time reference in ticks
- */
-static uint32_t rtc_set_time_ref_in_ticks( void );
 
 /*!
  * Converts time in ms to time in wake up timer ticks
@@ -181,7 +151,7 @@ static uint32_t rtc_get_calendar_time( uint16_t* milliseconds );
  *
  * \retval timestamp_in_ticks Current timestamp in ticks
  */
-static uint64_t rtc_get_timestamp_in_ticks( RTC_DateTypeDef* date, RTC_TimeTypeDef* time );
+static uint64_t rtc_get_timestamp_in_ticks( void );
 
 /*
  * -----------------------------------------------------------------------------
@@ -193,16 +163,16 @@ void hal_rtc_init( void )
     RTC_TimeTypeDef time;
     RTC_DateTypeDef date;
 
-    bsp_rtc.handle.Instance            = RTC;
-    bsp_rtc.handle.Init.HourFormat     = RTC_HOURFORMAT_24;
-    bsp_rtc.handle.Init.AsynchPrediv   = PREDIV_A;
-    bsp_rtc.handle.Init.SynchPrediv    = PREDIV_S;
-    bsp_rtc.handle.Init.OutPut         = RTC_OUTPUT_DISABLE;
-    bsp_rtc.handle.Init.OutPutRemap    = RTC_OUTPUT_REMAP_NONE;
-    bsp_rtc.handle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-    bsp_rtc.handle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
+    hal_rtc_handle.Instance            = RTC;
+    hal_rtc_handle.Init.HourFormat     = RTC_HOURFORMAT_24;
+    hal_rtc_handle.Init.AsynchPrediv   = PREDIV_A;
+    hal_rtc_handle.Init.SynchPrediv    = PREDIV_S;
+    hal_rtc_handle.Init.OutPut         = RTC_OUTPUT_DISABLE;
+    hal_rtc_handle.Init.OutPutRemap    = RTC_OUTPUT_REMAP_NONE;
+    hal_rtc_handle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+    hal_rtc_handle.Init.OutPutType     = RTC_OUTPUT_TYPE_OPENDRAIN;
 
-    if( HAL_RTC_Init( &bsp_rtc.handle ) != HAL_OK )
+    if( HAL_RTC_Init( &hal_rtc_handle ) != HAL_OK )
     {
         mcu_panic( );
     }
@@ -212,7 +182,7 @@ void hal_rtc_init( void )
     date.Month   = RTC_MONTH_JANUARY;
     date.Date    = 1;
     date.WeekDay = RTC_WEEKDAY_MONDAY;
-    HAL_RTC_SetDate( &bsp_rtc.handle, &date, RTC_FORMAT_BIN );
+    HAL_RTC_SetDate( &hal_rtc_handle, &date, RTC_FORMAT_BIN );
 
     /*at 0:0:0*/
     time.Hours          = 0;
@@ -222,13 +192,11 @@ void hal_rtc_init( void )
     time.TimeFormat     = 0;
     time.StoreOperation = RTC_DAYLIGHTSAVING_NONE;
     time.DayLightSaving = RTC_STOREOPERATION_RESET;
-    HAL_RTC_SetTime( &bsp_rtc.handle, &time, RTC_FORMAT_BIN );
+    HAL_RTC_SetTime( &hal_rtc_handle, &time, RTC_FORMAT_BIN );
 
     // Enable Direct Read of the calendar registers (not through Shadow
     // registers)
-    HAL_RTCEx_EnableBypassShadow( &bsp_rtc.handle );
-
-    rtc_set_time_ref_in_ticks( );
+    HAL_RTCEx_EnableBypassShadow( &hal_rtc_handle );
 }
 
 uint32_t hal_rtc_get_time_s( void )
@@ -260,33 +228,19 @@ void hal_rtc_wakeup_timer_set_ms( const int32_t milliseconds )
 {
     uint32_t delay_ms_2_tick = rtc_ms_2_wakeup_timer_tick( milliseconds );
 
-    HAL_RTCEx_DeactivateWakeUpTimer( &bsp_rtc.handle );
-    // reset irq status
-    wut_timer_irq_happened = false;
-    HAL_RTCEx_SetWakeUpTimer_IT( &bsp_rtc.handle, delay_ms_2_tick, RTC_WAKEUPCLOCK_RTCCLK_DIV16 );
+    HAL_RTCEx_DeactivateWakeUpTimer( &hal_rtc_handle );
+    HAL_RTCEx_SetWakeUpTimer_IT( &hal_rtc_handle, delay_ms_2_tick, RTC_WAKEUPCLOCK_RTCCLK_DIV16 );
 }
 
 void hal_rtc_wakeup_timer_stop( void )
 {
-    HAL_RTCEx_DeactivateWakeUpTimer( &bsp_rtc.handle );
-}
-
-bool hal_rtc_has_wut_irq_happened( void )
-{
-    return wut_timer_irq_happened;
+    HAL_RTCEx_DeactivateWakeUpTimer( &hal_rtc_handle );
 }
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
-
-static uint32_t rtc_set_time_ref_in_ticks( void )
-{
-    bsp_rtc.context.time_ref_in_ticks =
-        ( uint32_t ) rtc_get_timestamp_in_ticks( &bsp_rtc.context.calendar_date, &bsp_rtc.context.calendar_time );
-    return bsp_rtc.context.time_ref_in_ticks;
-}
 
 static uint32_t rtc_tick_2_100us( const uint32_t tick )
 {
@@ -307,11 +261,9 @@ static uint32_t rtc_ms_2_wakeup_timer_tick( const uint32_t milliseconds )
 
 static uint32_t rtc_get_calendar_time( uint16_t* milliseconds_div_10 )
 {
-    RTC_TimeTypeDef time;
-    RTC_DateTypeDef date;
-    uint32_t        ticks;
+    uint32_t ticks;
 
-    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( &date, &time );
+    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( );
 
     uint32_t seconds = ( uint32_t )( timestamp_in_ticks >> N_PREDIV_S );
 
@@ -322,11 +274,14 @@ static uint32_t rtc_get_calendar_time( uint16_t* milliseconds_div_10 )
     return seconds;
 }
 
-static uint64_t rtc_get_timestamp_in_ticks( RTC_DateTypeDef* date, RTC_TimeTypeDef* time )
+static uint64_t rtc_get_timestamp_in_ticks( void )
 {
     uint64_t timestamp_in_ticks = 0;
     uint32_t correction;
     uint32_t seconds;
+
+    RTC_TimeTypeDef time;
+    RTC_DateTypeDef date;
 
     // Make sure it is correct due to asynchronous nature of RTC
     volatile uint32_t ssr;
@@ -334,35 +289,34 @@ static uint64_t rtc_get_timestamp_in_ticks( RTC_DateTypeDef* date, RTC_TimeTypeD
     do
     {
         ssr = RTC->SSR;
-        HAL_RTC_GetDate( &bsp_rtc.handle, date, RTC_FORMAT_BIN );
-        HAL_RTC_GetTime( &bsp_rtc.handle, time, RTC_FORMAT_BIN );
+        HAL_RTC_GetDate( &hal_rtc_handle, &date, RTC_FORMAT_BIN );
+        HAL_RTC_GetTime( &hal_rtc_handle, &time, RTC_FORMAT_BIN );
     } while( ssr != RTC->SSR );
 
     // Calculate amount of elapsed days since 01/01/2000
-    seconds = DIVC( ( DAYS_IN_YEAR * 3 + DAYS_IN_LEAP_YEAR ) * date->Year, 4 );
+    seconds = DIVC( ( DAYS_IN_YEAR * 3 + DAYS_IN_LEAP_YEAR ) * date.Year, 4 );
 
-    correction = ( ( date->Year % 4 ) == 0 ) ? DAYS_IN_MONTH_CORRECTION_LEAP : DAYS_IN_MONTH_CORRECTION_NORM;
+    correction = ( ( date.Year % 4 ) == 0 ) ? DAYS_IN_MONTH_CORRECTION_LEAP : DAYS_IN_MONTH_CORRECTION_NORM;
 
     seconds +=
-        ( DIVC( ( date->Month - 1 ) * ( 30 + 31 ), 2 ) - ( ( ( correction >> ( ( date->Month - 1 ) * 2 ) ) & 0x03 ) ) );
+        ( DIVC( ( date.Month - 1 ) * ( 30 + 31 ), 2 ) - ( ( ( correction >> ( ( date.Month - 1 ) * 2 ) ) & 0x03 ) ) );
 
-    seconds += ( date->Date - 1 );
+    seconds += ( date.Date - 1 );
 
     // Convert from days to seconds
     seconds *= SECONDS_IN_1DAY;
 
-    seconds += ( ( uint32_t ) time->Seconds + ( ( uint32_t ) time->Minutes * SECONDS_IN_1MINUTE ) +
-                 ( ( uint32_t ) time->Hours * SECONDS_IN_1HOUR ) );
+    seconds += ( ( uint32_t ) time.Seconds + ( ( uint32_t ) time.Minutes * SECONDS_IN_1MINUTE ) +
+                 ( ( uint32_t ) time.Hours * SECONDS_IN_1HOUR ) );
 
-    timestamp_in_ticks = ( ( ( uint64_t ) seconds ) << N_PREDIV_S ) + ( PREDIV_S - time->SubSeconds );
+    timestamp_in_ticks = ( ( ( uint64_t ) seconds ) << N_PREDIV_S ) + ( PREDIV_S - time.SubSeconds );
 
     return timestamp_in_ticks;
 }
 
 void RTC_WKUP_IRQHandler( void )
 {
-    HAL_RTCEx_WakeUpTimerIRQHandler( &bsp_rtc.handle );
-    wut_timer_irq_happened = true;
+    HAL_RTCEx_WakeUpTimerIRQHandler( &hal_rtc_handle );
 }
 
 void HAL_RTC_MspInit( RTC_HandleTypeDef* rtc_handle )

@@ -92,12 +92,11 @@ uint32_t hal_rtc_get_time_s( void );
  */
 uint32_t hal_rtc_get_time_ms( void );
 
-
 /*!
  * Returns the current RTC time in 0.1milliseconds
  *
  * \remark will also be used for d2d
- * 
+ *
  *
  * retval rtc_time_ms Current RTC time in milliseconds wraps every 4.9 days
  */
@@ -115,13 +114,6 @@ void hal_rtc_wakeup_timer_set_ms( const int32_t milliseconds );
  * Stop the rtc wakeup timer
  */
 void hal_rtc_wakeup_timer_stop( void );
-
-/*!
- * Return true if the wake up timer irq has been triggered
- *
- * \retval true if wut irq happended
- */
-bool hal_rtc_has_wut_irq_happened( void );
 
 #ifdef __cplusplus
 }

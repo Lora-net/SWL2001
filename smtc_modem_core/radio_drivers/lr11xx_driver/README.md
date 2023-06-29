@@ -13,6 +13,7 @@ The driver is split in several components:
 - Wi-Fi Passive Scanning
 - GNSS Scan Scanning
 - Crypto engine
+- Ranging
 
 ### Bootloader
 
@@ -41,6 +42,10 @@ This component is used to configure and initiate the acquisition of GNSS signals
 ### Crypto engine
 
 This component is used to set and derive keys in the internal keychain and perform cryptographic operations with the integrated hardware accelerator.
+
+### Ranging
+
+This component is used to configure and operate the device's LoRa Ranging feature.
 
 ## Structure
 
@@ -81,7 +86,7 @@ The workaround is to reset the bit 30 in the register `0x00F30054` when the chip
 
 This workaround does not solve the case where `LR11XX_RADIO_MODE_SLEEP` is configured with `lr11xx_radio_auto_tx_rx` and the chip is set to Rx mode. This is dues to the fact that the workaround cannot be applied before the subsequent transmission, automatically launched by the chip after waking up from sleep mode with retention.
 
-#### Implementation 1
+#### Implementation 1: systematic call by the driver
 
 The first implementation - enabled by default in the driver - adds an implicit call updating the parameter to each function that could set the chip in transmission - directly or not -:
 
@@ -94,8 +99,47 @@ This implementation can be disabled by defining the macro `LR11XX_DISABLE_HIGH_A
 
 The main advantage of this implementation is that it is transparent to the user who only needs to update the driver without changing its application. The main drawback is that the implicit call is done systematically even when not required.
 
-#### Implementation 2
+#### Implementation 2: user-handled call
 
 The second method requires the user to explicitly call the function `lr11xx_radio_apply_high_acp_workaround` when the chip wakes up from sleep mode with retention (note: to ease the implementation, it can be called when the chip wakes up from any sleep mode).
 
 This method requires the macro `LR11XX_DISABLE_HIGH_ACP_WORKAROUND` to be defined so the implementation 1 of the workaround (enabled by default) is disabled.
+
+### Mixer configuration
+
+#### Description
+
+The following firmware versions are affected:
+
+- LR1120 firmware 0x0101
+
+When the chip ends a reception in the 2.4 GHz band, a parameter is not reconfigured properly. This misconfiguration will prevent a subsequent GNSS scan from working properly.
+
+It is important to note that if the chip enters one of the following state between the reception in the 2.4GHz band and the GNSS scan, the parameter is properly reconfigured and the limitation does not appear:
+
+- sleep mode (with or without retention)
+- Wi-Fi scan
+- Reception in the sub-GHz band
+
+### Workaround
+
+The workaround is to set the bit 4 in the register `0x00F30024` when the chip ends a reception in the 2.4GHz band before launching a GNSS scan.
+
+This workaround is not needed when using any LR1110 firmware version. Nevertheless, it does not prevent a LR1110 from working properly if the workaround is not deactivated.
+
+#### Implementation 1: systematic call by the driver
+
+The first implementation - enabled by default in the driver - adds an implicit call updating the parameter to each function that could set the chip in GNSS scan mode:
+
+- `lr11xx_gnss_scan_autonomous`
+- `lr11xx_gnss_scan_assisted`
+
+This implementation can be disabled by defining the macro `LR11XX_DISABLE_MIXER_CFG_WORKAROUND`. This disabling will be useful when, in the future, a new firmware integrating a fix is released and does not require the workaround anymore.
+
+The main advantage of this implementation is that it is transparent to the user who only needs to update the driver without changing its application. The main drawback is that the implicit call is done systematically even when not required.
+
+#### Implementation 2: user-handled call
+
+The second method requires the user to explicitly call the function `lr11xx_gnss_apply_mixer_cfg_workaround` when the chip ends a reception in the 2.4GHz if a GNSS scan is planned after, without going through one of the states specified in the description of this limitation.
+
+This method requires the macro `LR11XX_DISABLE_MIXER_CFG_WORKAROUND` to be defined so the implementation 1 of the workaround (enabled by default) is disabled.

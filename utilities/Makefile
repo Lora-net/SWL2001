@@ -14,6 +14,10 @@ APPBUILD_ROOT = build
 # Prefix for all binaries names
 APPTARGET_ROOT = app
 
+# Target board (NUCLEO_L476 or NUCLEO_L073)
+BOARD ?= NUCLEO_L476
+export BOARD
+
 # CRYPTO Management
 CRYPTO ?= SOFT
 
@@ -50,7 +54,7 @@ USE_GNSS ?= yes
 # default action: print help
 #-----------------------------------------------------------------------------
 help:
-	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	sx1261	sx1262	sx1268")
+	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	lr1121	sx1261	sx1262	sx1268")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------------------- Clean -------------------------------------")
 	$(call echo_help, " * make clean_<TARGET>             : clean basic_modem app and lib for a given target")
@@ -66,6 +70,10 @@ help:
 	$(call echo_help_b, "---------------------- Optional build parameters ---------------------------")
 	$(call echo_help, " * MODEM_APP=xxx                   : choose which modem application to build:(default is EXAMPLE_EXTI)")
 	$(call echo_help, " *                                  - EXAMPLE_EXTI")
+	$(call echo_help, " *                                  - EXAMPLE_PORTING_TESTS")
+	$(call echo_help, " * BOARD=xxx                       : choose which mcu board will be used:(default is NUCLEO_L476)")
+	$(call echo_help, " *                                  - NUCLEO_L476")
+	$(call echo_help, " *                                  - NUCLEO_L073")
 	$(call echo_help, " * REGION=xxx                      : choose which region should be compiled (default: all)")
 	$(call echo_help, " *                                  - AS_923")
 	$(call echo_help, " *                                  - AU_915")
@@ -77,7 +85,7 @@ help:
 	$(call echo_help, " *                                  - RU_864")
 	$(call echo_help, " *                                  - US_915")
 	$(call echo_help, " *                                  - WW_2G4 (to be used only for lr1120 and sx128x targets)")
-	$(call echo_help, " * RP_VERSION=xxx                  : choose wich regional paramerter version should be compiled (default: RP2_101) ")
+	$(call echo_help, " * RP_VERSION=xxx                  : choose wich regional paramerter version should be compiled (default: RP2_103) ")
 	$(call echo_help, " *                                  - RP2_101")
 	$(call echo_help, " *                                  - RP2_103 (LR-FHSS support)")
 	$(call echo_help, " * CRYPTO=xxx                      : choose which crypto should be compiled (default: SOFT)")
@@ -104,6 +112,10 @@ ifeq ($(RADIO),lr1110)
 endif
 
 ifeq ($(RADIO),lr1120)
+-include makefiles/lr11xx.mk
+endif
+
+ifeq ($(RADIO),lr1121)
 -include makefiles/lr11xx.mk
 endif
 
@@ -137,28 +149,32 @@ clean_all: clean_app
 	$(MAKE) -C $(LORA_BASICS_MODEM) clean_all $(MTHREAD_FLAG)
 
 clean_lr1110:
-	$(MAKE) -C $(LORA_BASICS_MODEM) clean_lr1110 $(MTHREAD_FLAG)
-	$(MAKE) clean_target RADIO=lr1110 $(MTHREAD_FLAG)
+	$(MAKE) clean_modem RADIO=lr1110
+	$(MAKE) clean_target RADIO=lr1110
 
 clean_lr1120:
-	$(MAKE) -C $(LORA_BASICS_MODEM) clean_lr1120 $(MTHREAD_FLAG)
-	$(MAKE) clean_target RADIO=lr1120 $(MTHREAD_FLAG)
+	$(MAKE) clean_modem RADIO=lr1120
+	$(MAKE) clean_target RADIO=lr1120
 
+clean_lr1121:
+	$(MAKE) clean_modem RADIO=lr1121
+	$(MAKE) clean_target RADIO=lr1121
+	
 clean_sx1261:
-	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx1261 $(MTHREAD_FLAG)
-	$(MAKE) clean_target RADIO=sx1261 $(MTHREAD_FLAG)
+	$(MAKE) clean_modem RADIO=sx1261
+	$(MAKE) clean_target RADIO=sx1261
 
 clean_sx1262:
-	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx1262 $(MTHREAD_FLAG)
-	$(MAKE) clean_target RADIO=sx1262 $(MTHREAD_FLAG)
+	$(MAKE) clean_modem RADIO=sx1262
+	$(MAKE) clean_target RADIO=sx1262
 
 clean_sx1268:
-	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx1268 $(MTHREAD_FLAG)
-	$(MAKE) clean_target RADIO=sx1268 $(MTHREAD_FLAG)
+	$(MAKE) clean_modem RADIO=sx1268
+	$(MAKE) clean_target RADIO=sx1268
 
 clean_sx128x:
-	$(MAKE) -C $(LORA_BASICS_MODEM) clean_sx128x $(MTHREAD_FLAG)
-	$(MAKE) clean_target RADIO=sx128x $(MTHREAD_FLAG)
+	$(MAKE) clean_modem RADIO=sx128x
+	$(MAKE) clean_target RADIO=sx128x
 
 clean_app:
 	-rm -rf $(APPBUILD_ROOT)*
@@ -187,6 +203,17 @@ full_lr1120:
 	$(MAKE) lr1120 $(MTHREAD_FLAG)
 ifneq ($(DRIVE),nc)
 	$(MAKE) flash RADIO=lr1120
+endif
+
+#-- LR1121 -------------------------------------------------------------------
+lr1121:
+	$(MAKE) example RADIO=lr1121 $(MTHREAD_FLAG)
+
+full_lr1121:
+	$(MAKE) clean_lr1121
+	$(MAKE) lr1121 $(MTHREAD_FLAG)
+ifneq ($(DRIVE),nc)
+	$(MAKE) flash RADIO=lr1121
 endif
 
 #-- SX1261 -------------------------------------------------------------------

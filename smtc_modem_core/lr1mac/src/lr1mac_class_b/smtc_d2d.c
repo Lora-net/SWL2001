@@ -54,7 +54,7 @@
 #define LR1MAC class_b_d2d_obj->ping_slot_obj->lr1_mac
 #define RP class_b_d2d_obj->ping_slot_obj->rp
 
-#define MULTICAST_SYMB_DURATION_US smtc_real_get_symbol_duration_us( LR1MAC, MULTICAST_OBJ->rx_data_rate )
+#define MULTICAST_SYMB_DURATION_US smtc_real_get_symbol_duration_us( LR1MAC->real, MULTICAST_OBJ->rx_data_rate )
 #define MULTICAST_SYMB_DURATION_MS \
     ( ( ( MULTICAST_SYMB_DURATION_US / 1000UL ) == 0 ) ? 1 : ( MULTICAST_SYMB_DURATION_US / 1000UL ) )
 #define MAX_TX_PREAMBLE_DURATION_MS 1000UL
@@ -132,8 +132,8 @@ smtc_class_b_d2d_status_t smtc_class_b_d2d_request_tx( smtc_class_b_d2d_t* class
     }
 
     status_lorawan_t status = smtc_real_is_payload_size_valid(
-        LR1MAC, class_b_d2d_obj->ping_slot_obj->rx_session_param[multi_cast_group_id]->rx_data_rate, payload_size,
-        LR1MAC->uplink_dwell_time );
+        LR1MAC->real, class_b_d2d_obj->ping_slot_obj->rx_session_param[multi_cast_group_id]->rx_data_rate, payload_size,
+        UP_LINK, LR1MAC->tx_fopts_current_length );
     if( status == ERRORLORAWAN )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "PAYLOAD SIZE TOO HIGH\n" );
@@ -194,7 +194,7 @@ uint8_t smtc_class_b_d2d_next_max_payload_length_get( smtc_class_b_d2d_t* class_
     {
         return 0;
     }
-    return ( smtc_real_get_max_payload_size( LR1MAC, MULTICAST_OBJ->rx_data_rate, LR1MAC->uplink_dwell_time ) - 8 );
+    return ( smtc_real_get_max_payload_size( LR1MAC->real, MULTICAST_OBJ->rx_data_rate, UP_LINK ) - 8 );
 }
 
 status_lorawan_t smtc_class_b_d2d_fcnt_down( void* ping_slot_obj_void, uint32_t* fcnt_dwn_stack_tmp, uint32_t mic_in )
@@ -204,7 +204,7 @@ status_lorawan_t smtc_class_b_d2d_fcnt_down( void* ping_slot_obj_void, uint32_t*
     uint32_t          fractional_second;
     uint32_t          fcnt_tmp;
     status_lorawan_t  status = lr1mac_core_convert_rtc_to_gps_epoch_time(
-        ping_slot_obj->lr1_mac, smtc_modem_hal_get_time_in_ms( ), &seconds_since_epoch, &fractional_second );
+         ping_slot_obj->lr1_mac, smtc_modem_hal_get_time_in_ms( ), &seconds_since_epoch, &fractional_second );
 
     // number of virtually beacon since 5 jan 1980
     uint32_t number_of_beacon_period_since_gps_epoch = seconds_since_epoch >> 7;
@@ -330,16 +330,16 @@ static void class_b_d2d_rp_request( smtc_class_b_d2d_t* class_b_d2d_obj )
     lr1mac_bandwidth_t tx_bw;
     uint32_t           toa;
     rp_radio_params_t  radio_params = { 0 };
-    smtc_real_lora_dr_to_sf_bw( LR1MAC, MULTICAST_OBJ->rx_data_rate, &tx_sf, &tx_bw );
+    smtc_real_lora_dr_to_sf_bw( LR1MAC->real, MULTICAST_OBJ->rx_data_rate, &tx_sf, &tx_bw );
     ralf_params_lora_t lora_param;
     memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
     lora_param.rf_freq_in_hz     = MULTICAST_OBJ->rx_frequency;
-    lora_param.sync_word         = smtc_real_get_sync_word( LR1MAC );
+    lora_param.sync_word         = smtc_real_get_sync_word( LR1MAC->real );
     lora_param.output_pwr_in_dbm = smtc_real_clamp_output_power_eirp_vs_freq_and_dr(
-        LR1MAC, LR1MAC->tx_power, MULTICAST_OBJ->rx_frequency, MULTICAST_OBJ->rx_data_rate );
+        LR1MAC->real, LR1MAC->tx_power, MULTICAST_OBJ->rx_frequency, MULTICAST_OBJ->rx_data_rate );
     lora_param.mod_params.sf   = ( ral_lora_sf_t ) tx_sf;
     lora_param.mod_params.bw   = ( ral_lora_bw_t ) tx_bw;
-    lora_param.mod_params.cr   = smtc_real_get_coding_rate( LR1MAC );
+    lora_param.mod_params.cr   = smtc_real_get_coding_rate( LR1MAC->real );
     lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
 
     lora_param.pkt_params.preamble_len_in_symb = preamble_length_symb;
@@ -395,11 +395,11 @@ static void class_b_d2d_launch_callback_for_rp( void* rp_void )
     uint8_t            sf;
     lr1mac_bandwidth_t bw;
     modulation_type_t  modulation_type =
-        smtc_real_get_modulation_type_from_datarate( LR1MAC, MULTICAST_OBJ->rx_data_rate );
+        smtc_real_get_modulation_type_from_datarate( LR1MAC->real, MULTICAST_OBJ->rx_data_rate );
 
     if( modulation_type == LORA )
     {
-        smtc_real_lora_dr_to_sf_bw( LR1MAC, MULTICAST_OBJ->rx_data_rate, &sf, &bw );
+        smtc_real_lora_dr_to_sf_bw( LR1MAC->real, MULTICAST_OBJ->rx_data_rate, &sf, &bw );
 
         ral_lora_cad_params_t cad_params = { .cad_symb_nb          = RAL_LORA_CAD_04_SYMB,
                                              .cad_det_peak_in_symb = class_b_d2d_get_cad_det_peak_4_symb( sf, bw ),
@@ -499,7 +499,7 @@ static uint32_t class_b_d2d_get_fcnt_down( smtc_class_b_d2d_t* class_b_d2d_obj )
 static void class_b_d2d_cad_to_tx( smtc_class_b_d2d_t* class_b_d2d_obj )
 {
     modulation_type_t modulation_type =
-        smtc_real_get_modulation_type_from_datarate( LR1MAC, MULTICAST_OBJ->rx_data_rate );
+        smtc_real_get_modulation_type_from_datarate( LR1MAC->real, MULTICAST_OBJ->rx_data_rate );
     uint8_t id = class_b_d2d_obj->ping_slot_obj->rp->radio_task_id;
 
     if( modulation_type == LORA )

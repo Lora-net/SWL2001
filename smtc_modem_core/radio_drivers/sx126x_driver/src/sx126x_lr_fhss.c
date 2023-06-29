@@ -165,6 +165,17 @@ sx126x_status_t sx126x_lr_fhss_init( const void* context, const sx126x_lr_fhss_p
     return status;
 }
 
+uint16_t sx126x_lr_fhss_get_bit_delay_in_us( const sx126x_lr_fhss_params_t* params, uint16_t payload_length )
+{
+    lr_fhss_digest_t digest;
+
+    lr_fhss_process_parameters( &params->lr_fhss_params, payload_length, &digest );
+
+    const uint8_t nb_padding_bits = 1 + ( ( 32768 - digest.nb_bits ) & 0x07 );
+
+    return 1550 + nb_padding_bits * 2048;
+}
+
 sx126x_status_t sx126x_lr_fhss_process_parameters( const sx126x_lr_fhss_params_t* params, uint16_t hop_sequence_id,
                                                    uint16_t payload_length, sx126x_lr_fhss_state_t* state )
 {

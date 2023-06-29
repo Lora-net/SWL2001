@@ -66,6 +66,7 @@ extern "C" {
  * @brief Application examples
  */
 #define EXAMPLE_EXTI 0
+#define EXAMPLE_PORTING_TESTS 1
 
 /*
  * -----------------------------------------------------------------------------
@@ -73,6 +74,7 @@ extern "C" {
  */
 
 void main_exti( void );
+void main_porting_tests( void );
 
 #ifdef __cplusplus
 }

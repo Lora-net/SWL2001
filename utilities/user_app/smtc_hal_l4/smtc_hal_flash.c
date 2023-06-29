@@ -39,7 +39,6 @@
 
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
-#include <stdio.h>    // TODO: check if needed
 
 #include "smtc_hal_flash.h"
 #include "stm32l4xx_hal.h"

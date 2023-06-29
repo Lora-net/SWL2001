@@ -71,7 +71,7 @@ extern "C" {
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
-void region_as_923_config( lr1_stack_mac_t* lr1_mac, uint8_t group_id );
+void region_as_923_init( smtc_real_t* real, uint8_t group_id );
 
 /**
  * \brief
@@ -79,49 +79,37 @@ void region_as_923_config( lr1_stack_mac_t* lr1_mac, uint8_t group_id );
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_as_923_init( lr1_stack_mac_t* lr1_mac );
+void region_as_923_config( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_as_923_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_as_923_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate, uint32_t* out_tx_frequency,
+                                                 uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_as_923_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_as_923_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_as_923_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+status_channel_t region_as_923_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_as_923_set_channel_mask( lr1_stack_mac_t* lr1_mac );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_channel_t region_as_923_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_as_923_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
+void region_as_923_enable_all_channels_with_valid_freq( smtc_real_t* real );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate

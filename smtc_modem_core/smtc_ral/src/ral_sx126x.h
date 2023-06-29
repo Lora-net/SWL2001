@@ -87,11 +87,13 @@ extern "C" {
         .lr_fhss_handle_tx_done         = ral_sx126x_lr_fhss_handle_tx_done,                                          \
         .lr_fhss_get_time_on_air_in_ms  = ral_sx126x_lr_fhss_get_time_on_air_in_ms,                                   \
         .lr_fhss_get_hop_sequence_count = ral_sx126x_lr_fhss_get_hop_sequence_count,                                  \
+        .lr_fhss_get_bit_delay_in_us    = ral_sx126x_lr_fhss_get_bit_delay_in_us,                                     \
         .get_lora_rx_pkt_cr_crc         = ral_sx126x_get_lora_rx_pkt_cr_crc,                                          \
         .get_tx_consumption_in_ua       = ral_sx126x_get_tx_consumption_in_ua,                                        \
         .get_gfsk_rx_consumption_in_ua  = ral_sx126x_get_gfsk_rx_consumption_in_ua,                                   \
         .get_lora_rx_consumption_in_ua  = ral_sx126x_get_lora_rx_consumption_in_ua,                                   \
-        .get_random_numbers             = ral_sx126x_get_random_numbers,                                              \
+        .get_random_numbers = ral_sx126x_get_random_numbers, .handle_rx_done = ral_sx126x_handle_rx_done,             \
+        .handle_tx_done = ral_sx126x_handle_tx_done,                                                                  \
     }
 
 #define RAL_SX126X_INSTANTIATE( ctx )                         \
@@ -151,11 +153,19 @@ ral_status_t ral_sx126x_set_fs( const void* context );
 
 /**
  * @see ral_set_tx
+ *
+ * @remark In case the external oscillator is a crystal and at least one trimming capacitor is set to value different
+ * from the default one in @ref ral_sx126x_bsp_get_trim_cap, the implementation will perform a configuration of the
+ * trimming capacitors before configuring the transceiver into the desired mode.
  */
 ral_status_t ral_sx126x_set_tx( const void* context );
 
 /**
  * @see ral_set_rx
+ *
+ * @remark In case the external oscillator is a crystal and at least one trimming capacitor is set to value different
+ * from the default one in @ref ral_sx126x_bsp_get_trim_cap, the implementation will perform a configuration of the
+ * trimming capacitors before configuring the transceiver into the desired mode.
  */
 ral_status_t ral_sx126x_set_rx( const void* context, const uint32_t timeout_in_ms );
 
@@ -182,16 +192,28 @@ ral_status_t ral_sx126x_set_rx_duty_cycle( const void* context, const uint32_t r
 
 /**
  * @see ral_set_lora_cad
+ *
+ * @remark In case the external oscillator is a crystal and at least one trimming capacitor is set to value different
+ * from the default one in @ref ral_sx126x_bsp_get_trim_cap, the implementation will perform a configuration of the
+ * trimming capacitors before configuring the transceiver into the desired mode.
  */
 ral_status_t ral_sx126x_set_lora_cad( const void* context );
 
 /**
  * @see ral_set_tx_cw
+ *
+ * @remark In case the external oscillator is a crystal and at least one trimming capacitor is set to value different
+ * from the default one in @ref ral_sx126x_bsp_get_trim_cap, the implementation will perform a configuration of the
+ * trimming capacitors before configuring the transceiver into the desired mode.
  */
 ral_status_t ral_sx126x_set_tx_cw( const void* context );
 
 /**
  * @see ral_set_tx_infinite_preamble
+ *
+ * @remark In case the external oscillator is a crystal and at least one trimming capacitor is set to value different
+ * from the default one in @ref ral_sx126x_bsp_get_trim_cap, the implementation will perform a configuration of the
+ * trimming capacitors before configuring the transceiver into the desired mode.
  */
 ral_status_t ral_sx126x_set_tx_infinite_preamble( const void* context );
 
@@ -279,7 +301,7 @@ ral_status_t ral_sx126x_set_lora_cad_params( const void* context, const ral_lora
 /**
  * @see ral_set_lora_symb_nb_timeout
  */
-ral_status_t ral_sx126x_set_lora_symb_nb_timeout( const void* context, const uint8_t nb_of_symbs );
+ral_status_t ral_sx126x_set_lora_symb_nb_timeout( const void* context, const uint16_t nb_of_symbs );
 
 /**
  * @see ral_set_flrc_mod_params
@@ -397,6 +419,12 @@ ral_status_t ral_sx126x_lr_fhss_get_hop_sequence_count( const void*             
                                                         const ral_lr_fhss_params_t* lr_fhss_params );
 
 /**
+ * @see ral_lr_fhss_get_bit_delay_in_us
+ */
+uint16_t ral_sx126x_lr_fhss_get_bit_delay_in_us( const void* context, const ral_lr_fhss_params_t* params,
+                                                 uint16_t payload_length );
+
+/**
  * @see ral_get_lora_rx_pkt_cr_crc
  */
 ral_status_t ral_sx126x_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present );
@@ -424,6 +452,16 @@ ral_status_t ral_sx126x_get_lora_rx_consumption_in_ua( const void* context, cons
  * @see ral_get_random_numbers
  */
 ral_status_t ral_sx126x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n );
+
+/**
+ * @see ral_handle_rx_done
+ */
+ral_status_t ral_sx126x_handle_rx_done( const void* context );
+
+/**
+ * @see ral_handle_tx_done
+ */
+ral_status_t ral_sx126x_handle_tx_done( const void* context );
 
 #ifdef __cplusplus
 }

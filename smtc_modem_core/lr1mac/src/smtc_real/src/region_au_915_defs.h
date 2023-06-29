@@ -108,6 +108,8 @@ extern "C" {
 #define DTC_SUPPORTED_AU_915                (false)
 #define LBT_SUPPORTED_AU_915                (false)
 
+#define UPLINK_DWELL_TIME_AU_915            (true)
+
 #define CF_LIST_SUPPORTED_AU_915            (CF_LIST_CH_MASK)
 
 #define DEFAULT_TX_FREQ_125_START_AU_915    (915200000) // Hz
@@ -184,7 +186,7 @@ static const uint8_t datarate_offsets_au_915[8][6] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_au_915[2][8] = { {

@@ -144,7 +144,7 @@ static const uint8_t datarate_offsets_kr_920[6][6] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_kr_920[] = {

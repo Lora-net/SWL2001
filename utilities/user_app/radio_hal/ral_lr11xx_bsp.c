@@ -44,6 +44,8 @@
 #include "lr11xx_pa_pwr_cfg.h"
 #include "smtc_hal_mcu.h"
 #include "smtc_modem_api.h"
+#include "smtc_modem_hal.h"
+#include "lr11xx_radio.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -163,19 +165,21 @@ void ral_lr11xx_bsp_get_tx_cfg( const void* context, const ral_lr11xx_bsp_tx_cfg
 
 void ral_lr11xx_bsp_get_reg_mode( const void* context, lr11xx_system_reg_mode_t* reg_mode )
 {
-    // TODO: manage reg mode context saving, for the moment assume that LR11XX is in DCDC reg mode
     *reg_mode = LR11XX_SYSTEM_REG_MODE_DCDC;
 }
 
-void ral_lr11xx_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_lr11xx_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   lr11xx_system_tcxo_supply_voltage_t* supply_voltage, uint32_t* startup_time_in_tick )
 {
-    // Radio control TCXO 1.8V and 5 ms of startup time
-    *tcxo_is_radio_controlled = true;
-    *supply_voltage           = LR11XX_SYSTEM_TCXO_CTRL_1_8V;
-    *startup_time_in_tick     = 164;  // 5ms in 30.52µs ticks
+#if !defined( LR1121 )
+    // Get startup value defined in modem_hal to avoid mis-alignment
+    uint32_t startup_time_ms = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
+    *xosc_cfg                = RAL_XOSC_CFG_TCXO_RADIO_CTRL;
+    *supply_voltage          = LR11XX_SYSTEM_TCXO_CTRL_1_8V;
+    // tick is 30.52µs
+    *startup_time_in_tick = lr11xx_radio_convert_time_in_ms_to_rtc_step( startup_time_ms );
+#endif
 }
-
 void ral_lr11xx_bsp_get_crc_state( const void* context, bool* crc_is_activated )
 {
 #if defined( USE_LR11XX_CRC_OVER_SPI )

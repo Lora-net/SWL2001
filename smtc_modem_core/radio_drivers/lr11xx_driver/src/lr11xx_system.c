@@ -204,7 +204,7 @@ lr11xx_status_t lr11xx_system_get_version( const void* context, lr11xx_system_ve
     if( status == LR11XX_STATUS_OK )
     {
         version->hw   = rbuffer[0];
-        version->type = rbuffer[1];
+        version->type = ( lr11xx_system_version_type_t ) rbuffer[1];
         version->fw   = ( ( uint16_t ) rbuffer[2] << 8 ) + ( uint16_t ) rbuffer[3];
     }
 

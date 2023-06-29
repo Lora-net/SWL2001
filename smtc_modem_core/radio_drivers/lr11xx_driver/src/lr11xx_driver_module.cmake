@@ -38,6 +38,7 @@ set(LR11XX_DRIVER_MODULE_C_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/lr11xx_lr_fhss.c
   ${CMAKE_CURRENT_LIST_DIR}/lr11xx_radio.c
   ${CMAKE_CURRENT_LIST_DIR}/lr11xx_radio_timings.c
+  ${CMAKE_CURRENT_LIST_DIR}/lr11xx_ranging.c
   ${CMAKE_CURRENT_LIST_DIR}/lr11xx_regmem.c
   ${CMAKE_CURRENT_LIST_DIR}/lr11xx_system.c
   ${CMAKE_CURRENT_LIST_DIR}/lr11xx_wifi.c

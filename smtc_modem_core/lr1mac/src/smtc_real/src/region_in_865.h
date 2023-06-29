@@ -71,7 +71,7 @@ extern "C" {
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
-void region_in_865_config( lr1_stack_mac_t* lr1_mac );
+void region_in_865_init( smtc_real_t* real );
 
 /**
  * \brief
@@ -79,56 +79,44 @@ void region_in_865_config( lr1_stack_mac_t* lr1_mac );
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_in_865_init( lr1_stack_mac_t* lr1_mac );
+void region_in_865_config( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_in_865_init_session( lr1_stack_mac_t* lr1_mac );
+void region_in_865_init_session( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_in_865_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_in_865_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate, uint32_t* out_tx_frequency,
+                                                 uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_in_865_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_in_865_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_in_865_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+status_channel_t region_in_865_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_in_865_set_channel_mask( lr1_stack_mac_t* lr1_mac );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_channel_t region_in_865_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_in_865_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
+void region_in_865_enable_all_channels_with_valid_freq( smtc_real_t* real );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate

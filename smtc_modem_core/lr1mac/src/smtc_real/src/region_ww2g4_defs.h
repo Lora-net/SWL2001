@@ -147,7 +147,7 @@ static const uint8_t datarate_offsets_ww2g4[8][6] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_ww2g4[] = {

@@ -70,6 +70,35 @@ extern "C" {
         0x97, 0x23, 0x52, 0x25, 0x56, 0x53, 0x65, 0x64 \
     }
 
+/*!
+ * @brief Length in byte of the LR-FHSS sync word
+ */
+#define LR11XX_RADIO_LR_FHSS_SYNC_WORD_LENGTH ( 4 )
+
+/*!
+ * @brief Ramp-up delay for the power amplifier in Sigfox context
+ *
+ * This parameter configures the delay to fine tune the ramp-up time of the power amplifier for BPSK operation.
+ */
+enum
+{
+    LR11XX_RADIO_SIGFOX_DBPSK_RAMP_UP_TIME_DEFAULT = 0x0000,  //!< No optimization
+    LR11XX_RADIO_SIGFOX_DBPSK_RAMP_UP_TIME_100_BPS = 0x1306,  //!< Ramp-up optimization for 100bps
+    LR11XX_RADIO_SIGFOX_DBPSK_RAMP_UP_TIME_600_BPS = 0x0325,  //!< Ramp-up optimization for 600bps
+};
+
+/*!
+ * @brief Ramp-down delay for the power amplifier in Sigfox context
+ *
+ * This parameter configures the delay to fine tune the ramp-down time of the power amplifier for BPSK operation.
+ */
+enum
+{
+    LR11XX_RADIO_SIGFOX_DBPSK_RAMP_DOWN_TIME_DEFAULT = 0x0000,  //!< No optimization
+    LR11XX_RADIO_SIGFOX_DBPSK_RAMP_DOWN_TIME_100_BPS = 0x1D70,  //!< Ramp-down optimization for 100bps
+    LR11XX_RADIO_SIGFOX_DBPSK_RAMP_DOWN_TIME_600_BPS = 0x04E1,  //!< Ramp-down optimization for 600bps
+};
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
@@ -204,6 +233,19 @@ lr11xx_status_t lr11xx_radio_set_gfsk_sync_word( const void*   context,
  * @returns Operation status
  */
 lr11xx_status_t lr11xx_radio_set_lora_sync_word( const void* context, const uint8_t sync_word );
+
+/*!
+ * @brief Set the syncword for LR-FHSS
+ *
+ * Default value: 0x2C0F7995
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] sync_word The syncword to set. It is up to the caller to ensure this array is at least four bytes long
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_radio_set_lr_fhss_sync_word( const void*   context,
+                                                    const uint8_t sync_word[LR11XX_RADIO_LR_FHSS_SYNC_WORD_LENGTH] );
 
 /*!
  * @brief Set the LoRa modem sync word to private / public
@@ -399,6 +441,21 @@ lr11xx_status_t lr11xx_radio_set_gfsk_mod_params( const void*                   
                                                   const lr11xx_radio_mod_params_gfsk_t* mod_params );
 
 /*!
+ * @brief Set the modulation parameters for BPSK packets
+ *
+ * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] mod_params The structure of modulation configuration
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_pkt_type
+ */
+lr11xx_status_t lr11xx_radio_set_bpsk_mod_params( const void*                           context,
+                                                  const lr11xx_radio_mod_params_bpsk_t* mod_params );
+
+/*!
  * @brief Set the modulation parameters for LoRa packets
  *
  * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
@@ -414,6 +471,21 @@ lr11xx_status_t lr11xx_radio_set_lora_mod_params( const void*                   
                                                   const lr11xx_radio_mod_params_lora_t* mod_params );
 
 /*!
+ * @brief Set the modulation parameters for LR-FHSS
+ *
+ * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] mod_params The structure of modulation configuration
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_lr_fhss_set_pkt_type
+ */
+lr11xx_status_t lr11xx_radio_set_lr_fhss_mod_params( const void*                              context,
+                                                     const lr11xx_radio_mod_params_lr_fhss_t* mod_params );
+
+/*!
  * @brief Set the packet parameters for GFSK packets
  *
  * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
@@ -427,6 +499,21 @@ lr11xx_status_t lr11xx_radio_set_lora_mod_params( const void*                   
  */
 lr11xx_status_t lr11xx_radio_set_gfsk_pkt_params( const void*                           context,
                                                   const lr11xx_radio_pkt_params_gfsk_t* pkt_params );
+
+/*!
+ * @brief Set the packet parameters for BPSK packets
+ *
+ * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] pkt_params The structure of packet configuration
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_bpsk_mod_params
+ */
+lr11xx_status_t lr11xx_radio_set_bpsk_pkt_params( const void*                           context,
+                                                  const lr11xx_radio_pkt_params_bpsk_t* pkt_params );
 
 /*!
  * @brief Set the packet parameters for LoRa packets
@@ -619,12 +706,31 @@ lr11xx_status_t lr11xx_radio_set_tx_infinite_preamble( const void* context );
  * @brief Configure the LoRa modem to issue a RX timeout after an exact number of symbols given in parameter if no LoRa
  * modulation is detected
  *
+ * @warning Values of nb_symbol higher than 255 are only valid for chip firmware equal to or more recent than 0x308.
+ *
  * @param [in] context Chip implementation context
  * @param [in] nb_symbol number of symbols to compute the timeout
  *
  * @returns Operation status
  */
-lr11xx_status_t lr11xx_radio_set_lora_sync_timeout( const void* context, const uint8_t nb_symbol );
+lr11xx_status_t lr11xx_radio_set_lora_sync_timeout( const void* context, const uint16_t nb_symbol );
+
+/*!
+ * @brief Configure the LoRa modem to issue a RX timeout after an exact number of symbols given in parameter if no LoRa
+ * modulation is detected
+ *
+ * @warning This command has been introduced in chip firware 0x0308 and is not available in earlier version
+ *
+ * @remark The number of symbol is computed as mantissa ^ (2*exponent + 1)
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] mantissa Mantissa - from 0 to 31 - to compute the number of symbols of the timeout
+ * @param [in] exponent Exponent - from 0 to 7 - to compute the number of symbols of the timeout
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_radio_set_lora_sync_timeout_with_mantissa_exponent( const void* context, const uint8_t mantissa,
+                                                                           const uint8_t exponent );
 
 /*!
  * @brief Configure the seed and the polynomial used to compute CRC in GFSK packet
@@ -743,6 +849,36 @@ uint32_t lr11xx_radio_get_gfsk_time_on_air_in_ms( const lr11xx_radio_pkt_params_
  */
 uint32_t lr11xx_radio_convert_time_in_ms_to_rtc_step( uint32_t time_in_ms );
 
+/*!
+ * @brief Configure the radio for BLE beaconing.
+ *
+ * The caller shall ensure that the payload, if provided, follows the format of the Advertising physical channel PDU as defined in the
+ * Bluetooth core specification.
+ *
+ * This automatically configures the syncword to 0x8e89bed6 and the 3-byte CRC (polynomial set to 0x100065b, seed set to
+ * 0x555555).
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] channel_id BLE channel - allowed channels are 37, 38, 39
+ * @param [in] buffer Array of bytes to be used as beacon payload (optional)
+ * @param [in] length Number of bytes in the @ref buffer array
+ *
+ * @returns Operation status
+ *
+ * @note As opposed to the function @ref lr11xx_radio_cfg_and_send_ble_beacon, this function  only configures the radio
+ * interface for BLE beacon advertising. To actually start the transmission, the function @ref lr11xx_radio_set_tx must
+ * be called.
+ * @note The previously configured payload with @ref lr11xx_radio_cfg_ble_beacon or @ref
+ * lr11xx_radio_cfg_and_send_ble_beacon is sent if @p length is set to 0, except if a call to @ref
+ * lr11xx_regmem_write_buffer8, @ref lr11xx_lr_fhss_build_frame is done in between or @ref lr11xx_system_set_sleep with
+ * warm start disabled
+ *
+ * @sa lr11xx_radio_cfg_and_send_ble_beacon
+ * @sa lr11xx_radio_set_tx
+ */
+lr11xx_status_t lr11xx_radio_cfg_ble_beacon( const void* context, const uint8_t channel_id, const uint8_t* buffer,
+                                             const uint8_t length );
+
 /**
  * @brief Get the information from the last received LoRa packet header (if @ref LR11XX_RADIO_LORA_PKT_EXPLICIT) or the
  * locally configured settings (if @ref LR11XX_RADIO_LORA_PKT_IMPLICIT)
@@ -759,6 +895,34 @@ uint32_t lr11xx_radio_convert_time_in_ms_to_rtc_step( uint32_t time_in_ms );
 lr11xx_status_t lr11xx_radio_get_lora_rx_info( const void* context, bool* is_crc_present, lr11xx_radio_lora_cr_t* cr );
 
 /*!
+ * @brief Configure the radio for BLE and send the given beacon on the desired channel.
+ *
+ * The caller shall ensure that the payload, if provided, follows the format of the Advertising physical channel PDU as defined in the
+ * Bluetooth core specification.
+ *
+ * This automatically configures the syncword to 0x8e89bed6 and the 3-byte CRC (polynomial set to 0x100065b, seed set to
+ * 0x555555).
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] channel_id BLE channel - allowed channels are 37, 38, 39
+ * @param [in] buffer Array of bytes to be used as beacon payload (optional)
+ * @param [in] length Number of bytes in the @ref buffer array
+ *
+ * @returns Operation status
+ *
+ * @note This function combines the configuration for BLE beaconing - done with @ref lr11xx_radio_cfg_ble_beacon) -
+ * and the actual transmission - done with @ref lr11xx_radio_set_tx.
+ * @note The previously configured payload with @ref lr11xx_radio_cfg_ble_beacon or @ref
+ * lr11xx_radio_cfg_and_send_ble_beacon is sent if @p length is set to 0, except if a call to @ref
+ * lr11xx_regmem_write_buffer8, @ref lr11xx_lr_fhss_build_frame is done in between or @ref lr11xx_system_set_sleep with
+ * warm start disabled
+ *
+ * @sa lr11xx_radio_cfg_ble_beacon
+ */
+lr11xx_status_t lr11xx_radio_cfg_and_send_ble_beacon( const void* context, const uint8_t channel_id,
+                                                      const uint8_t* buffer, const uint8_t length );
+
+/*!
  * @brief Apply the workaround for the high ACP limitation
  *
  * @param [in] context Chip implementation context
@@ -766,6 +930,23 @@ lr11xx_status_t lr11xx_radio_get_lora_rx_info( const void* context, bool* is_crc
  * @returns Operation status
  */
 lr11xx_status_t lr11xx_radio_apply_high_acp_workaround( const void* context );
+
+/**
+ * @brief Get the mantissa and exponent for a given number of symbol
+ *
+ * @remark This function computes the [mantissa, exponent] duple which corresponds to nb_of_symb: the smallest
+ * value verifying both following conditions:
+ * - nb_of_symb >= nb_symbol; and
+ * - nb_of_symb = mant * 2 ^ (2 * exp + 1)
+ *
+ * @param [in] nb_symbol Number of symbols
+ * @param [out] mant Mantissa computed from nb_symb
+ * @param [out] ext Exponent computed from nb_symb
+ *
+ * @returns Number of symbols corresponding to the [mantissa, exponent] duple computed with the following formula:
+ * nb_of_symb = mant * 2 ^ (2 * exp + 1)
+ */
+uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uint8_t* mant, uint8_t* exp );
 
 #ifdef __cplusplus
 }

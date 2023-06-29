@@ -230,6 +230,7 @@ typedef enum rp_hook_status_e
     RP_HOOK_STATUS_ID_ERROR,
     RP_TASK_STATUS_ALREADY_RUNNING,
     RP_TASK_STATUS_SCHEDULE_TASK_IN_PAST,
+    RP_TASK_STATUS_TASK_TOO_FAR_IN_FUTURE,
 } rp_hook_status_t;
 
 /*!

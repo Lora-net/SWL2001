@@ -150,7 +150,7 @@ static const uint8_t datarate_offsets_in_865[8][8] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_in_865[] = {

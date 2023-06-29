@@ -90,12 +90,7 @@ extern "C" {
 #define RADIO_LNA_CTRL          PB_0
 #endif
 
-//Hw modem specific pinout
-#define HW_MODEM_COMMAND_PIN    PC_6
-#define HW_MODEM_EVENT_PIN      PC_5
-#define HW_MODEM_BUSY_PIN       PC_8
-#define HW_MODEM_TX_LINE        PC_10
-#define HW_MODEM_RX_LINE        PC_11
+#define EXTI_BUTTON             PC_13
 
 // clang-format on
 

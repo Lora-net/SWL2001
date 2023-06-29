@@ -259,7 +259,6 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
             ret = DM_ERROR;
             break;
         }
-        modem_supervisor_add_task_dm_status_now( );
         break;
     case DM_SET_CONF:
         if( dm_set_conf( ( dm_info_field_t ) cmd_input->buffer[0], cmd_input->buffer + 1, cmd_input->buffer_len - 1 ) !=
@@ -275,12 +274,7 @@ dm_rc_t dm_parse_cmd( dm_cmd_msg_t* cmd_input )
         if( lorawan_api_devnonce_get( ) != dev_nonce )
         {
             uint8_t dm_fields_payload[1] = { DM_INFO_SESSION };
-            dm_rc_t return_code          = set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
-            if( return_code == DM_OK )
-            {
-                modem_supervisor_add_task_dm_status_now( );
-            }
-
+            set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
             ret = DM_ERROR;
             break;
         }
@@ -546,11 +540,7 @@ static dm_rc_t dm_reset( dm_reset_code_t reset_code, uint16_t reset_session )
     else
     {
         uint8_t dm_fields_payload[1] = { DM_INFO_RSTCOUNT };
-        dm_rc_t return_code          = set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
-        if( return_code == DM_OK )
-        {
-            modem_supervisor_add_task_dm_status_now( );
-        }
+        set_dm_info( dm_fields_payload, 1, DM_INFO_NOW );
         ret = DM_ERROR;
         SMTC_MODEM_HAL_TRACE_ERROR( "invalid DM reset session code\n" );
     }

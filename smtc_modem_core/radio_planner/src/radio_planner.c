@@ -286,6 +286,12 @@ rp_hook_status_t rp_task_enqueue( radio_planner_t* rp, const rp_task_t* task, ui
         return RP_TASK_STATUS_SCHEDULE_TASK_IN_PAST;
     }
 
+    if( ( ( task->start_time_ms - now ) > 36000000 ) &&
+        ( task->start_time_ms > now ) )  // this task is too far in the futur , improve robustness to wrapping issue   
+    {
+        return RP_TASK_STATUS_TASK_TOO_FAR_IN_FUTURE;
+    }
+
     if( rp->tasks[hook_id].state == RP_TASK_STATE_RUNNING )
     {
         SMTC_MODEM_HAL_RP_TRACE_PRINTF( " RP: Task enqueue impossible. Task is already running\n" );
@@ -628,6 +634,12 @@ static void rp_irq_get_status( radio_planner_t* rp, const uint8_t hook_id )
             smtc_modem_hal_assert( ral_lr_fhss_handle_tx_done( &rp->radio->ral,
                                                                &rp->radio_params[hook_id].tx.lr_fhss.ral_lr_fhss_params,
                                                                NULL ) == RAL_STATUS_OK );
+
+            // fix issue with delay between the end of the transmission and the generation of txdone irq
+            // get delay according to lr-fhss params
+            uint32_t bit_delay_us = ral_lr_fhss_get_bit_delay_in_us(
+                &rp->radio->ral, &rp->radio_params[hook_id].tx.lr_fhss.ral_lr_fhss_params, rp->payload_size[hook_id] );
+            rp->irq_timestamp_ms[hook_id] = rp->irq_timestamp_ms[hook_id] - ( bit_delay_us / 1000 );
         }
     }
     else if( ( ( radio_irq & RAL_IRQ_RX_HDR_ERROR ) == RAL_IRQ_RX_HDR_ERROR ) ||

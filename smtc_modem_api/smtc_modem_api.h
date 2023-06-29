@@ -668,7 +668,7 @@ smtc_modem_return_code_t smtc_modem_get_tx_power_offset_db( uint8_t stack_id, in
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK                Command executed without errors
- * @retval SMTC_MODEM_RC_INVALID           \p tx_pwr_offset_db is out of range
+ * @retval SMTC_MODEM_RC_INVALID           \p tx_pwr_offset_db is out of [-30:30] range
  * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
  * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
  */
@@ -720,7 +720,6 @@ smtc_modem_return_code_t smtc_modem_get_time( uint32_t* gps_time_s, uint32_t* gp
  * @brief Trigger a single uplink requesting time using current enabled time synchronization service
  *
  * @param [in] stack_id     Stack identifier
- * @param [in] sync_service Time synchronization service to use
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK                Command executed without errors
@@ -828,7 +827,7 @@ smtc_modem_return_code_t smtc_modem_time_get_sync_invalid_delay_s( uint32_t* syn
 smtc_modem_return_code_t smtc_modem_get_status( uint8_t stack_id, smtc_modem_status_mask_t* status_mask );
 
 /**
- * @brief Set and start the alarm timer
+ * @brief Set and start the alarm timer (up to 864000s ie 10 days)
  *
  * @remark When the timer expires, an alarm event is generated
  *
@@ -836,6 +835,7 @@ smtc_modem_return_code_t smtc_modem_get_status( uint8_t stack_id, smtc_modem_sta
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK            Command executed without errors
+ * @retval SMTC_MODEM_RC_INVALID       \p alarm_timer_in_s exceed max value of 864000s (10 days)
  * @retval SMTC_MODEM_RC_BUSY          Modem is currently in test mode
  */
 smtc_modem_return_code_t smtc_modem_alarm_start_timer( uint32_t alarm_timer_in_s );
@@ -1681,7 +1681,7 @@ smtc_modem_return_code_t smtc_modem_get_duty_cycle_status( int32_t* duty_cycle_s
 smtc_modem_return_code_t smtc_modem_get_stack_state( uint8_t stack_id, smtc_modem_stack_state_t* stack_state );
 
 /**
- * @brief Configure LoRaWAN network type to private or public
+ * @brief Configure LoRaWAN network type to private or public (default: public)
  *
  * @param [in]  stack_id      Stack identifier
  * @param [in]  network_type  Configuration to be applied (true: public network / false: private network)

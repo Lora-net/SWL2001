@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2023-03-27
+
+### Added
+
+- `sx126x_driver_version_get_version_string()` function - produces a c-string representation of the driver version
+- `SX126X_DRIVER_VERSION_CHECK` macro - validates the provided version information is compatible with the driver
+- `sx126x_lr_fhss_get_bit_delay_in_us( )` function - computes the delay between the last LR-FHSS bit sent and the TX done interrupt
+
 ## [2.1.0] - 2022-05-18
 
 ### Added

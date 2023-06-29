@@ -72,61 +72,49 @@ extern "C" {
  */
 
 /**
- * @brief Congigure the region with default value and pointers
+ * @brief Initialize the region with default value and pointers
  *
- * @param lr1_mac
+ * @param real
  */
-void region_ru_864_config( lr1_stack_mac_t* lr1_mac );
+void region_ru_864_init( smtc_real_t* real );
 
 /**
- * \brief
+ * \brief Configure the region
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_ru_864_init( lr1_stack_mac_t* lr1_mac );
+void region_ru_864_config( smtc_real_t* real );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_ru_864_get_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_ru_864_get_next_channel( smtc_real_t* real, smtc_dtc_t* dtc_obj, uint8_t tx_data_rate,
+                                                 uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-status_lorawan_t region_ru_864_get_join_next_channel( lr1_stack_mac_t* lr1_mac );
+status_lorawan_t region_ru_864_get_join_next_channel( smtc_real_t* real, smtc_dtc_t* dtc_obj, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_ru_864_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type );
+status_channel_t region_ru_864_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
 /**
  * \brief
  * \remark
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_ru_864_set_channel_mask( lr1_stack_mac_t* lr1_mac );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_channel_t region_ru_864_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t ChMaskCntl, uint16_t ChMask );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_ru_864_enable_all_channels_with_valid_freq( lr1_stack_mac_t* lr1_mac );
+void region_ru_864_enable_all_channels_with_valid_freq( smtc_real_t* real );
 
 /**
  * @brief Get the corresponding RF modulation from a Datarate

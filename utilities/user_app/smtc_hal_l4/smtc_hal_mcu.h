@@ -146,11 +146,6 @@ void hal_mcu_disable_low_power_wait( void );
  */
 void hal_mcu_enable_low_power_wait( void );
 
-/*!
- * Suspend once low power process and avoid looping on it once
- */
-void hal_mcu_disable_once_low_power_wait( void );
-
 #ifdef __cplusplus
 }
 #endif

@@ -201,19 +201,19 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
     rp_radio_params_t rp_radio_params = { 0 };
     rp_radio_params.rx.timeout_in_ms  = 120000;
 
-    modulation_type_t modulation_type =
-        smtc_real_get_modulation_type_from_datarate( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate );
+    modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate(
+        class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate );
 
     if( modulation_type == LORA )
     {
         uint8_t            sf;
         lr1mac_bandwidth_t bw;
-        smtc_real_lora_dr_to_sf_bw( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate, &sf, &bw );
+        smtc_real_lora_dr_to_sf_bw( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate, &sf, &bw );
 
         ralf_params_lora_t lora_param;
         memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
-        lora_param.sync_word       = smtc_real_get_sync_word( class_c_obj->lr1_mac );
+        lora_param.sync_word       = smtc_real_get_sync_word( class_c_obj->lr1_mac->real );
         lora_param.symb_nb_timeout = 0;
         lora_param.rf_freq_in_hz   = RX_SESSION_PARAM_CURRENT->rx_frequency;
 
@@ -222,9 +222,9 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
         lora_param.pkt_params.crc_is_on        = false;
         lora_param.pkt_params.invert_iq_is_on  = true;
         lora_param.pkt_params.preamble_len_in_symb =
-            smtc_real_get_preamble_len( class_c_obj->lr1_mac, lora_param.mod_params.sf );
+            smtc_real_get_preamble_len( class_c_obj->lr1_mac->real, lora_param.mod_params.sf );
 
-        lora_param.mod_params.cr   = smtc_real_get_coding_rate( class_c_obj->lr1_mac );
+        lora_param.mod_params.cr   = smtc_real_get_coding_rate( class_c_obj->lr1_mac->real );
         lora_param.mod_params.sf   = ( ral_lora_sf_t ) sf;
         lora_param.mod_params.bw   = ( ral_lora_bw_t ) bw;
         lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
@@ -236,11 +236,11 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "MODULATION FSK\n" );
         uint8_t kbitrate;
-        smtc_real_fsk_dr_to_bitrate( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate, &kbitrate );
+        smtc_real_fsk_dr_to_bitrate( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate, &kbitrate );
         ralf_params_gfsk_t gfsk_param;
         memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-        gfsk_param.sync_word      = smtc_real_get_gfsk_sync_word( class_c_obj->lr1_mac );
+        gfsk_param.sync_word      = smtc_real_get_gfsk_sync_word( class_c_obj->lr1_mac->real );
         gfsk_param.dc_free_is_on  = true;
         gfsk_param.whitening_seed = GFSK_WHITENING_SEED;
         gfsk_param.crc_seed       = GFSK_CRC_SEED;
@@ -410,8 +410,8 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_
     }
 
     // Check if frequency and datarate are acceptable
-    if( ( smtc_real_is_frequency_valid( class_c_obj->lr1_mac, freq ) != OKLORAWAN ) ||
-        ( smtc_real_is_rx_dr_valid( class_c_obj->lr1_mac, dr ) != OKLORAWAN ) )
+    if( ( smtc_real_is_frequency_valid( class_c_obj->lr1_mac->real, freq ) != OKLORAWAN ) ||
+        ( smtc_real_is_rx_dr_valid( class_c_obj->lr1_mac->real, dr ) != OKLORAWAN ) )
     {
         return SMTC_MC_RC_ERROR_PARAM;
     }
@@ -507,31 +507,17 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c
 
 smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_class_c_t* class_c_obj )
 {
-    uint8_t active_sessions = 0;
+    smtc_multicast_config_rc_t status = SMTC_MC_RC_OK;
 
     for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
     {
-        if( class_c_obj->rx_session_param[i + 1]->enabled == true )
+        status = lr1mac_class_c_multicast_stop_session( class_c_obj, i );
+        if( status != SMTC_MC_RC_OK )
         {
-            // Set the enable bit to false to indicate that the session is stopped
-            class_c_obj->rx_session_param[i + 1]->enabled = false;
-            // Reset frequency and datarate to their not init values
-            class_c_obj->rx_session_param[i + 1]->rx_frequency = 0;
-            class_c_obj->rx_session_param[i + 1]->rx_data_rate = LR1MAC_MC_NO_DATARATE;
-            // Increment the counter of active sessions
-            active_sessions++;
+            break;
         }
     }
-
-    if( active_sessions != 0 )
-    {
-        // As there is no more multicast sessions enabled => restart unicast session
-        // a new rx c with unicast param task will be enqueue automatically if class C is still active
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST]->enabled = true;
-        // Abort current continuous reception for multicast sessions
-        rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
-    }
-    return SMTC_MC_RC_OK;
+    return status;
 }
 
 smtc_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,

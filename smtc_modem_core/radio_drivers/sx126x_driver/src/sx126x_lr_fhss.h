@@ -109,6 +109,16 @@ extern "C" {
 sx126x_status_t sx126x_lr_fhss_init( const void* context, const sx126x_lr_fhss_params_t* params );
 
 /**
+ * @brief Get the delay in microsecond between the last bit sent and the TX done interrupt
+ *
+ * @param [in]  params          sx126x LR-FHSS parameter structure
+ * @param [in]  payload_length  Length of application-layer payload
+ *
+ * @returns Delay in microseconds
+ */
+uint16_t sx126x_lr_fhss_get_bit_delay_in_us( const sx126x_lr_fhss_params_t* params, uint16_t payload_length );
+
+/**
  * @brief Check the parameters, and in case of success, generate the digest summary which contains important size info
  *
  * @param [in]  params          sx126x LR-FHSS parameter structure

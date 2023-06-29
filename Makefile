@@ -33,7 +33,7 @@ LOG_MEM ?= yes
 RADIO ?= nc
 
 #MCU - Must be provided by user
-MCU_FLAGS =? nc
+MCU_FLAGS ?= nc
 
 #-----------------------------------------------------------------------------
 # Internal LBM features management
@@ -72,7 +72,7 @@ USE_GNSS ?= yes
 # default action: print help
 #-----------------------------------------------------------------------------
 help:
-	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	sx1261	sx1262	sx1268")
+	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	lr1121	sx1261	sx1262	sx1268")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------------------- Clean -------------------------------------")
 	$(call echo_help, " * make clean_<TARGET>                     : clean basic_modem for a given target")
@@ -81,7 +81,7 @@ help:
 	$(call echo_help_b, "----------------------------- Compilation ----------------------------------")
 	$(call echo_help, " * make basic_modem_<TARGET> MCU_FLAGS=xxx : build basic_modem on a given target with chosen mcu flags")
 	$(call echo_help, " *                                           MCU_FLAGS are mandatory. Ex for stm32l4:")
-	$(call echo_help, " *                                           MCU_FLAGS=\"-mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard\"")
+	$(call echo_help, " *                                           MCU_FLAGS=\"-mcpu=cortex-m4 -mthumb -mabi=aapcs -mfpu=fpv4-sp-d16 -mfloat-abi=hard\"")
 	$(call echo_help, "")
 	$(call echo_help_b, "---------------------- Optional build parameters ---------------------------")
 	$(call echo_help, " * REGION=xxx                              : choose which region should be compiled (default: all)")
@@ -96,7 +96,7 @@ help:
 	$(call echo_help, " *                                          - RU_864")
 	$(call echo_help, " *                                          - US_915")
 	$(call echo_help, " *                                          - WW_2G4 (to be used only for lr1120 and sx128x targets)")
-	$(call echo_help, " * RP_VERSION=xxx                          : choose wich regional paramerter version should be compiled (default: RP2_101) ")
+	$(call echo_help, " * RP_VERSION=xxx                          : choose wich regional paramerter version should be compiled (default: RP2_103) ")
 	$(call echo_help, " *                                          - RP2_101")
 	$(call echo_help, " *                                          - RP2_103 (LR-FHSS support)")
 	$(call echo_help, " * CRYPTO=xxx                              : choose which crypto should be compiled (default: SOFT)")
@@ -125,6 +125,10 @@ ifeq ($(RADIO),lr1120)
 -include makefiles/lr11xx.mk
 endif
 
+ifeq ($(RADIO),lr1121)
+-include makefiles/lr11xx.mk
+endif
+
 ifeq ($(RADIO),sx1261)
 -include makefiles/sx126x.mk
 endif
@@ -148,7 +152,7 @@ endif
 .PHONY: FORCE
 FORCE:
 
-all: basic_modem_sx128x basic_modem_lr1110 basic_modem_lr1120 basic_modem_sx1261 basic_modem_sx1262
+all: basic_modem_sx128x basic_modem_lr1110 basic_modem_lr1120 basic_modem_lr1121 basic_modem_sx1261 basic_modem_sx1262
 
 #-----------------------------------------------------------------------------
 # Clean
@@ -164,6 +168,9 @@ clean_lr1110:
 
 clean_lr1120:
 	$(MAKE) clean_target RADIO=lr1120
+
+clean_lr1121:
+	$(MAKE) clean_target RADIO=lr1121
 
 clean_sx1261:
 	$(MAKE) clean_target RADIO=sx1261
@@ -185,6 +192,9 @@ basic_modem_lr1110:
 
 basic_modem_lr1120:
 	$(MAKE) basic_modem RADIO=lr1120 $(MTHREAD_FLAG)
+
+basic_modem_lr1121:
+	$(MAKE) basic_modem RADIO=lr1121 $(MTHREAD_FLAG)
 
 basic_modem_sx1261:
 	$(MAKE) basic_modem RADIO=sx1261 $(MTHREAD_FLAG)

@@ -214,9 +214,9 @@ struct
     int8_t                       tx_power_offset_db;
     radio_planner_t*             modem_rp;
     modem_power_config_t         power_config_lut[POWER_CONFIG_LUT_SIZE];
-#if defined( ADD_D2D )
+#if defined( SMTC_D2D )
     modem_context_class_b_d2d_t  class_b_d2d_ctx;
-#endif  // ADD_D2D
+#endif  // SMTC_D2D
     void ( *modem_lbm_notification_extended_1_callback )( void );
     void ( *modem_lbm_notification_extended_2_callback )( void );
     const void* modem_radio_ctx;
@@ -238,6 +238,7 @@ struct
 #if defined( ADD_SMTC_FILE_UPLOAD )
 #define  modem_dm_upload_sctr                       modem_ctx_context.modem_dm_upload_sctr
 #define  modem_upload_state                         modem_ctx_context.modem_upload_state
+#define  modem_upload_avgdelay                      modem_ctx_context.modem_upload_avgdelay
 #endif // ADD_SMTC_FILE_UPLOAD
 #if defined( ADD_SMTC_STREAM )
 #define  modem_stream_state                         modem_ctx_context.modem_stream_state
@@ -264,9 +265,6 @@ struct
 #define  duty_cycle_disabled_by_host                modem_ctx_context.duty_cycle_disabled_by_host
 #define  crc_fw                                     modem_ctx_context.crc_fw
 #define  modem_adr_profile                          modem_ctx_context.modem_adr_profile
-#if defined ( ADD_SMTC_FILE_UPLOAD )
-#define  modem_upload_avgdelay                      modem_ctx_context.modem_upload_avgdelay
-#endif // ADD_SMTC_FILE_UPLOAD
 #define  nb_adr_mobile_timeout                      modem_ctx_context.nb_adr_mobile_timeout
 #define  is_modem_in_test_mode                      modem_ctx_context.is_modem_in_test_mode
 #define  rx_pathloss_db                             modem_ctx_context.rx_pathloss_db
@@ -370,8 +368,9 @@ void modem_context_init( )
     is_modem_suspend = MODEM_NOT_SUSPEND;
     modem_start_time = 0;
 #if defined( ADD_SMTC_FILE_UPLOAD )
-    modem_dm_upload_sctr = 0;
-    modem_upload_state   = MODEM_UPLOAD_NOT_INIT;
+    modem_dm_upload_sctr  = 0;
+    modem_upload_state    = MODEM_UPLOAD_NOT_INIT;
+    modem_upload_avgdelay = 0;
 #endif  // ADD_SMTC_FILE_UPLOAD
 #if defined( ADD_SMTC_STREAM )
     modem_stream_state.port       = DEFAULT_DM_PORT;
@@ -397,16 +396,13 @@ void modem_context_init( )
     duty_cycle_disabled_by_host = false;
     crc_fw                      = compute_crc_fw( );
     modem_adr_profile           = SMTC_MODEM_ADR_PROFILE_NETWORK_CONTROLLED;
-#if defined( ADD_SMTC_FILE_UPLOAD )
-    modem_upload_avgdelay = 0;
-#endif  // ADD_SMTC_FILE_UPLOAD
-    nb_adr_mobile_timeout = DEFAULT_ADR_MOBILE_MODE_TIMEOUT;
-    is_modem_in_test_mode = false;
-    rx_pathloss_db        = 0;
-    tx_power_offset_db    = 0;
-    modem_rp              = NULL;
-    modem_appkey_status   = MODEM_APPKEY_CRC_STATUS_INVALID;
-    modem_appkey_crc      = 0;
+    nb_adr_mobile_timeout       = DEFAULT_ADR_MOBILE_MODE_TIMEOUT;
+    is_modem_in_test_mode       = false;
+    rx_pathloss_db              = 0;
+    tx_power_offset_db          = 0;
+    modem_rp                    = NULL;
+    modem_appkey_status         = MODEM_APPKEY_CRC_STATUS_INVALID;
+    modem_appkey_crc            = 0;
     memset( modem_appstatus, 0, 8 );
     memset( modem_event_count, 0, MODEM_NUMBER_OF_EVENTS );
     memset( modem_event_status, 0, MODEM_NUMBER_OF_EVENTS );
@@ -414,9 +410,9 @@ void modem_context_init( )
     memset( &modem_dwn_pkt, 0, sizeof( modem_downlink_msg_t ) );
     // init power config tab to 0x80 as it corresponds to an expected power of 128dbm, value that is never reached
     memset( power_config_lut, 0x80, POWER_CONFIG_LUT_SIZE * sizeof( modem_power_config_t ) );
-#if defined( ADD_D2D )
+#if defined( SMTC_D2D )
     memset( &class_b_d2d_ctx, 0, sizeof( modem_context_class_b_d2d_t ) );
-#endif  // ADD_D2D
+#endif  // SMTC_D2D
 }
 
 void modem_event_init( void )
@@ -488,7 +484,7 @@ uint8_t get_asynchronous_msgnumber( void )
 void increment_asynchronous_msgnumber( uint8_t event_type, uint8_t status )
 {
     // Next condition should never append because only one asynch msg by type of message
-    if( asynchronous_msgnumber > MODEM_NUMBER_OF_EVENTS )
+    if( asynchronous_msgnumber >= MODEM_NUMBER_OF_EVENTS )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( " Modem reach the max number of asynch message\n" );
         return;
@@ -497,8 +493,8 @@ void increment_asynchronous_msgnumber( uint8_t event_type, uint8_t status )
     tmp = get_modem_event_count( event_type );
     if( tmp == 0 )
     {
-        asynchronous_msgnumber++;
         asynch_msg[asynchronous_msgnumber] = event_type;
+        asynchronous_msgnumber++;
     }
 
     increment_modem_event_count_and_status( event_type, status );
@@ -506,7 +502,11 @@ void increment_asynchronous_msgnumber( uint8_t event_type, uint8_t status )
 
 uint8_t get_last_msg_event( void )
 {
-    return asynch_msg[asynchronous_msgnumber];
+    if( asynchronous_msgnumber > 0 )
+    {
+        return asynch_msg[asynchronous_msgnumber - 1];
+    }
+    return 0xFF;
 }
 
 uint32_t get_modem_uptime_s( void )
@@ -656,9 +656,9 @@ void get_modem_appstatus( uint8_t* app_status )
 
 void modem_supervisor_add_task_join( void )
 {
-    smodem_task task_join;
-    task_join.id       = JOIN_TASK;
-    task_join.priority = TASK_HIGH_PRIORITY;
+    smodem_task task_join = { 0 };
+    task_join.id          = JOIN_TASK;
+    task_join.priority    = TASK_HIGH_PRIORITY;
 
     uint32_t current_time_s = smtc_modem_hal_get_time_in_s( );
 
@@ -691,7 +691,7 @@ void modem_supervisor_add_task_join( void )
 
 void modem_supervisor_add_task_dm_status( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = DM_TASK;
     task_dm.priority          = TASK_LOW_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -704,7 +704,7 @@ void modem_supervisor_add_task_dm_status( uint32_t next_execute )
 
 void modem_supervisor_add_task_dm_status_now( void )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = DM_TASK_NOW;
     task_dm.priority          = TASK_LOW_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -714,7 +714,7 @@ void modem_supervisor_add_task_dm_status_now( void )
 }
 void modem_supervisor_add_task_crash_log( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = CRASH_LOG_TASK;
     task_dm.priority          = TASK_LOW_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -726,7 +726,7 @@ void modem_supervisor_add_task_crash_log( uint32_t next_execute )
 #if defined( ADD_SMTC_ALC_SYNC )
 void modem_supervisor_add_task_clock_sync_time_req( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = CLOCK_SYNC_TIME_REQ_TASK;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -759,7 +759,7 @@ bool modem_supervisor_is_clock_sync_running( void )
 
 void modem_supervisor_add_task_alc_sync_ans( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = ALC_SYNC_ANS_TASK;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -773,7 +773,7 @@ void modem_supervisor_add_task_alc_sync_ans( uint32_t next_execute )
 
 void modem_supervisor_add_task_alm_dbg_ans( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = DM_ALM_DBG_ANS;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -786,7 +786,7 @@ void modem_supervisor_add_task_alm_dbg_ans( uint32_t next_execute )
 
 void modem_supervisor_add_task_modem_mute( void )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = MUTE_TASK;
     task_dm.priority          = TASK_MEDIUM_HIGH_PRIORITY;
     task_dm.time_to_execute_s = smtc_modem_hal_get_time_in_s( ) + 86400;  // Every 24h
@@ -795,7 +795,7 @@ void modem_supervisor_add_task_modem_mute( void )
 
 void modem_supervisor_add_task_retrieve_dl( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = RETRIEVE_DL_TASK;
     task_dm.priority          = TASK_LOW_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -809,7 +809,7 @@ void modem_supervisor_add_task_retrieve_dl( uint32_t next_execute )
 
 void modem_supervisor_add_task_frag( uint32_t next_execute )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = FRAG_TASK;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -825,7 +825,7 @@ void modem_supervisor_add_task_stream( void )
 {
     // Modem supervisor copy everything,
     // so this is safe even when it is going to be invalidated.
-    smodem_task stream_task;
+    smodem_task stream_task = { 0 };
 
     stream_task.id                = STREAM_TASK;
     stream_task.time_to_execute_s = smtc_modem_hal_get_time_in_s( ) + smtc_modem_hal_get_random_nb_in_range( 1, 3 );
@@ -844,7 +844,7 @@ void modem_supervisor_add_task_stream( void )
 #if defined( ADD_SMTC_FILE_UPLOAD )
 void modem_supervisor_add_task_file_upload( uint32_t delay_in_s )
 {
-    smodem_task upload_task;
+    smodem_task upload_task = { 0 };
 
     upload_task.id                = FILE_UPLOAD_TASK;
     upload_task.priority          = TASK_HIGH_PRIORITY;
@@ -856,7 +856,7 @@ void modem_supervisor_add_task_file_upload( uint32_t delay_in_s )
 
 void modem_supervisor_add_task_link_check_req( uint32_t delay_in_s )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = LINK_CHECK_REQ_TASK;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -869,7 +869,7 @@ void modem_supervisor_add_task_link_check_req( uint32_t delay_in_s )
 
 void modem_supervisor_add_task_device_time_req( uint32_t delay_in_s )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = DEVICE_TIME_REQ_TASK;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -882,7 +882,7 @@ void modem_supervisor_add_task_device_time_req( uint32_t delay_in_s )
 
 void modem_supervisor_add_task_ping_slot_info_req( uint32_t delay_in_s )
 {
-    smodem_task task_dm;
+    smodem_task task_dm       = { 0 };
     task_dm.id                = PING_SLOT_INFO_REQ_TASK;
     task_dm.priority          = TASK_HIGH_PRIORITY;
     task_dm.PacketType        = UNCONF_DATA_UP;
@@ -1189,6 +1189,16 @@ dm_rc_t set_dm_info( const uint8_t* requested_info_list, uint8_t len, dm_info_ra
             ret = DM_ERROR;
             SMTC_MODEM_HAL_TRACE_ERROR( "invalid DM info code (0x%02x)\n", requested_info_list[i] );
         }
+// In case geoloc is not available, check if DM_INFO_ALMSTATUS is requested and return an error if yes
+#if !defined( ENABLE_MODEM_GNSS_FEATURE )
+        if( requested_info_list[i] == DM_INFO_ALMSTATUS )
+        {
+            ret = DM_ERROR;
+            SMTC_MODEM_HAL_TRACE_ERROR(
+                "invalid DM info code: SMTC_MODEM_DM_FIELD_ALMANAC_STATUS is not allowed on chip without gnss "
+                "features\n" );
+        }
+#endif
     }
     if( ret == DM_OK )
     {
@@ -1199,6 +1209,11 @@ dm_rc_t set_dm_info( const uint8_t* requested_info_list, uint8_t len, dm_info_ra
                 if( flag == DM_INFO_NOW )
                 {
                     modem_supervisor_add_task_crash_log( 0 );
+                    if( len == 1 )
+                    {
+                        // only crash log is requested return directly here to avoid sending another empty message
+                        return DM_OK;
+                    }
                 }
                 else
                 {
@@ -1215,7 +1230,8 @@ dm_rc_t set_dm_info( const uint8_t* requested_info_list, uint8_t len, dm_info_ra
         {
             dm_info_bitfield_now = info_req;
             tag_number_now       = 0;  // Reset tag_number used by dm_status_payload to
-                                       // start a report from beginning
+            // start a report from beginning
+            modem_supervisor_add_task_dm_status_now( );
         }
         else
         {
@@ -1713,7 +1729,7 @@ void modem_context_factory_reset( void )
     smtc_modem_hal_context_store( CONTEXT_MODEM, ( uint8_t* ) &ctx, sizeof( ctx ) );
 
     // dummy context reading to ensure context store is done before exiting the function
-    smtc_modem_hal_context_restore( CONTEXT_LR1MAC, ( uint8_t* ) &ctx, sizeof( ctx ) );
+    smtc_modem_hal_context_restore( CONTEXT_MODEM, ( uint8_t* ) &ctx, sizeof( ctx ) );
 
     is_modem_reset_requested = true;
     SMTC_MODEM_HAL_TRACE_INFO( "modem_context_factory_reset done\n" );
@@ -2036,7 +2052,7 @@ void modem_context_set_modem_radio_ctx( const void* radio_ctx )
     modem_radio_ctx = radio_ctx;
 }
 
-#if defined( ADD_D2D )
+#if defined( SMTC_D2D )
 void modem_context_set_class_b_d2d_last_metadata( uint8_t mc_grp_id, bool tx_done, uint8_t nb_trans_not_send )
 {
     class_b_d2d_ctx.tx_done           = tx_done;
@@ -2059,7 +2075,7 @@ void modem_context_get_class_b_d2d_last_metadata( modem_context_class_b_d2d_t* c
 {
     memcpy( class_b_d2d, &class_b_d2d_ctx, sizeof( modem_context_class_b_d2d_t ) );
 }
-#endif  // ADD_D2D
+#endif  // SMTC_D2D
 
 void modem_set_extended_callback( func_callback callback, uint8_t extended_uplink_id )
 {
@@ -2094,6 +2110,9 @@ func_callback modem_get_extended_callback( uint8_t extended_uplink_id )
 
 void modem_leave( void )
 {
+    // reset all tasks to retrieve a clean env (and clear all ongoing tasks)
+    modem_supervisor_init_task( );
+
     // Set joined/joining status to false
     set_modem_status_modem_joined( false );
     lorawan_api_join_status_clear( );
@@ -2114,9 +2133,6 @@ void modem_leave( void )
     set_modem_status_streaming( false );
     modem_set_stream_state( MODEM_STREAM_NOT_INIT );
 #endif  // ADD_SMTC_STREAM
-
-    // re init task to retrieve a clean env (and clear all ongoing tasks)
-    modem_supervisor_init_task( );
 }
 
 /* --- EOF ------------------------------------------------------------------ */

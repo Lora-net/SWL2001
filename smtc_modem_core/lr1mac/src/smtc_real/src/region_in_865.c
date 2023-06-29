@@ -47,15 +47,16 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
-#define real_ctx lr1_mac->real->real_ctx
+#define real_ctx real->real_ctx
+#define real_const real->real_const
 
-#define tx_frequency_channel lr1_mac->real->region.in865.tx_frequency_channel
-#define rx1_frequency_channel lr1_mac->real->region.in865.rx1_frequency_channel
-#define dr_bitfield_tx_channel lr1_mac->real->region.in865.dr_bitfield_tx_channel
-#define channel_index_enabled lr1_mac->real->region.in865.channel_index_enabled
-#define dr_distribution_init lr1_mac->real->region.in865.dr_distribution_init
-#define dr_distribution lr1_mac->real->region.in865.dr_distribution
-#define unwrapped_channel_mask lr1_mac->real->region.in865.unwrapped_channel_mask
+#define tx_frequency_channel real->region.in865.tx_frequency_channel
+#define rx1_frequency_channel real->region.in865.rx1_frequency_channel
+#define dr_bitfield_tx_channel real->region.in865.dr_bitfield_tx_channel
+#define channel_index_enabled real->region.in865.channel_index_enabled
+#define dr_distribution_init real->region.in865.dr_distribution_init
+#define dr_distribution real->region.in865.dr_distribution
+#define unwrapped_channel_mask real->region.in865.unwrapped_channel_mask
 
 /*
  * -----------------------------------------------------------------------------
@@ -82,51 +83,52 @@
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-void region_in_865_config( lr1_stack_mac_t* lr1_mac )
+void region_in_865_init( smtc_real_t* real )
 {
-    const_number_of_tx_channel         = NUMBER_OF_CHANNEL_IN_865;
-    const_number_of_rx_channel         = NUMBER_OF_CHANNEL_IN_865;
-    const_number_of_boot_tx_channel    = NUMBER_OF_BOOT_TX_CHANNEL_IN_865;
-    const_number_of_channel_bank       = BANK_MAX_IN865;
-    const_join_accept_delay1           = JOIN_ACCEPT_DELAY1_IN_865;
-    const_received_delay1              = RECEIVE_DELAY1_IN_865;
-    const_tx_power_dbm                 = TX_POWER_EIRP_IN_865 - 2;  // EIRP to ERP
-    const_max_tx_power_idx             = MAX_TX_POWER_IDX_IN_865;
-    const_adr_ack_limit                = ADR_ACK_LIMIT_IN_865;
-    const_adr_ack_delay                = ADR_ACK_DELAY_IN_865;
-    const_datarate_backoff             = &datarate_backoff_in_865[0];
-    const_ack_timeout                  = ACK_TIMEOUT_IN_865;
-    const_frequency_factor             = FREQUENCY_FACTOR_IN_865;
-    const_freq_min                     = FREQMIN_IN_865;
-    const_freq_max                     = FREQMAX_IN_865;
-    const_rx2_freq                     = RX2_FREQ_IN_865;
-    const_rx2_dr_init                  = RX2DR_INIT_IN_865;
-    const_sync_word_private            = SYNC_WORD_PRIVATE_IN_865;
-    const_sync_word_public             = SYNC_WORD_PUBLIC_IN_865;
-    const_sync_word_gfsk               = ( uint8_t* ) SYNC_WORD_GFSK_IN_865;
-    const_min_tx_dr                    = MIN_DR_IN_865;
-    const_max_tx_dr                    = MAX_DR_IN_865;
-    const_min_tx_dr_limit              = MIN_TX_DR_LIMIT_IN_865;
-    const_number_of_tx_dr              = NUMBER_OF_TX_DR_IN_865;
-    const_min_rx_dr                    = MIN_DR_IN_865;
-    const_max_rx_dr                    = MAX_DR_IN_865;
-    const_number_rx1_dr_offset         = NUMBER_RX1_DR_OFFSET_IN_865;
-    const_dr_bitfield                  = DR_BITFIELD_SUPPORTED_IN_865;
-    const_default_tx_dr_bit_field      = DEFAULT_TX_DR_BIT_FIELD_IN_865;
-    const_tx_param_setup_req_supported = TX_PARAM_SETUP_REQ_SUPPORTED_IN_865;
-    const_new_channel_req_supported    = NEW_CHANNEL_REQ_SUPPORTED_IN_865;
-    const_dtc_supported                = DTC_SUPPORTED_IN_865;
-    const_lbt_supported                = LBT_SUPPORTED_IN_865;
-    const_max_payload_m                = &M_in_865[0];
-    const_coding_rate                  = RAL_LORA_CR_4_5;
-    const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_IN_865[0];
-    const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_IN_865[0];
-    const_join_dr_distri               = &JOIN_DR_DISTRIBUTION_IN_865[0];
-    const_default_dr_distri            = &DEFAULT_DR_DISTRIBUTION_IN_865[0];
-    const_cf_list_type_supported       = CF_LIST_SUPPORTED_IN_865;
-    const_beacon_dr                    = BEACON_DR_IN_865;
-    const_beacon_frequency             = BEACON_FREQ_IN_865;
-    const_ping_slot_frequency          = PING_SLOT_FREQ_IN_865;
+    real_const.const_number_of_tx_channel         = NUMBER_OF_CHANNEL_IN_865;
+    real_const.const_number_of_rx_channel         = NUMBER_OF_CHANNEL_IN_865;
+    real_const.const_number_of_boot_tx_channel    = NUMBER_OF_BOOT_TX_CHANNEL_IN_865;
+    real_const.const_number_of_channel_bank       = BANK_MAX_IN865;
+    real_const.const_join_accept_delay1           = JOIN_ACCEPT_DELAY1_IN_865;
+    real_const.const_received_delay1              = RECEIVE_DELAY1_IN_865;
+    real_const.const_tx_power_dbm                 = TX_POWER_EIRP_IN_865 - 2;  // EIRP to ERP
+    real_const.const_max_tx_power_idx             = MAX_TX_POWER_IDX_IN_865;
+    real_const.const_adr_ack_limit                = ADR_ACK_LIMIT_IN_865;
+    real_const.const_adr_ack_delay                = ADR_ACK_DELAY_IN_865;
+    real_const.const_datarate_offsets             = &datarate_offsets_in_865[0][0];
+    real_const.const_datarate_backoff             = &datarate_backoff_in_865[0];
+    real_const.const_ack_timeout                  = ACK_TIMEOUT_IN_865;
+    real_const.const_frequency_factor             = FREQUENCY_FACTOR_IN_865;
+    real_const.const_freq_min                     = FREQMIN_IN_865;
+    real_const.const_freq_max                     = FREQMAX_IN_865;
+    real_const.const_rx2_freq                     = RX2_FREQ_IN_865;
+    real_const.const_rx2_dr_init                  = RX2DR_INIT_IN_865;
+    real_const.const_sync_word_private            = SYNC_WORD_PRIVATE_IN_865;
+    real_const.const_sync_word_public             = SYNC_WORD_PUBLIC_IN_865;
+    real_const.const_sync_word_gfsk               = ( uint8_t* ) SYNC_WORD_GFSK_IN_865;
+    real_const.const_min_tx_dr                    = MIN_DR_IN_865;
+    real_const.const_max_tx_dr                    = MAX_DR_IN_865;
+    real_const.const_min_tx_dr_limit              = MIN_TX_DR_LIMIT_IN_865;
+    real_const.const_number_of_tx_dr              = NUMBER_OF_TX_DR_IN_865;
+    real_const.const_min_rx_dr                    = MIN_DR_IN_865;
+    real_const.const_max_rx_dr                    = MAX_DR_IN_865;
+    real_const.const_number_rx1_dr_offset         = NUMBER_RX1_DR_OFFSET_IN_865;
+    real_const.const_dr_bitfield                  = DR_BITFIELD_SUPPORTED_IN_865;
+    real_const.const_default_tx_dr_bit_field      = DEFAULT_TX_DR_BIT_FIELD_IN_865;
+    real_const.const_tx_param_setup_req_supported = TX_PARAM_SETUP_REQ_SUPPORTED_IN_865;
+    real_const.const_new_channel_req_supported    = NEW_CHANNEL_REQ_SUPPORTED_IN_865;
+    real_const.const_dtc_supported                = DTC_SUPPORTED_IN_865;
+    real_const.const_lbt_supported                = LBT_SUPPORTED_IN_865;
+    real_const.const_max_payload_m                = &M_in_865[0];
+    real_const.const_coding_rate                  = RAL_LORA_CR_4_5;
+    real_const.const_mobile_longrange_dr_distri   = &MOBILE_LONGRANGE_DR_DISTRIBUTION_IN_865[0];
+    real_const.const_mobile_lowpower_dr_distri    = &MOBILE_LOWPER_DR_DISTRIBUTION_IN_865[0];
+    real_const.const_join_dr_distri               = &JOIN_DR_DISTRIBUTION_IN_865[0];
+    real_const.const_default_dr_distri            = &DEFAULT_DR_DISTRIBUTION_IN_865[0];
+    real_const.const_cf_list_type_supported       = CF_LIST_SUPPORTED_IN_865;
+    real_const.const_beacon_dr                    = BEACON_DR_IN_865;
+    real_const.const_beacon_frequency             = BEACON_FREQ_IN_865;
+    real_const.const_ping_slot_frequency          = PING_SLOT_FREQ_IN_865;
 
     real_ctx.tx_frequency_channel_ctx   = &tx_frequency_channel[0];
     real_ctx.rx1_frequency_channel_ctx  = &rx1_frequency_channel[0];
@@ -136,24 +138,24 @@ void region_in_865_config( lr1_stack_mac_t* lr1_mac )
     real_ctx.dr_distribution_init_ctx   = &dr_distribution_init[0];
     real_ctx.dr_distribution_ctx        = &dr_distribution[0];
 
-    memset1( dr_distribution_init, 1, const_number_of_tx_dr );
-    memset1( dr_distribution, 0, const_number_of_tx_dr );
+    memset1( dr_distribution_init, 1, real_const.const_number_of_tx_dr );
+    memset1( dr_distribution, 0, real_const.const_number_of_tx_dr );
 }
 
-void region_in_865_init( lr1_stack_mac_t* lr1_mac )
+void region_in_865_config( smtc_real_t* real )
 {
-    for( int i = 0; i < const_number_of_tx_channel; i++ )
+    for( int i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
         tx_frequency_channel[i]  = 0;
         rx1_frequency_channel[i] = 0;
         SMTC_PUT_BIT8( channel_index_enabled, i, CHANNEL_DISABLED );
 
         // Enable default datarate for all channels
-        dr_bitfield_tx_channel[i] = const_default_tx_dr_bit_field;
+        dr_bitfield_tx_channel[i] = real_const.const_default_tx_dr_bit_field;
     }
 
     // Set Tx/Rx default Freq and enable channels
-    for( uint8_t i = 0; i < const_number_of_boot_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_boot_tx_channel; i++ )
     {
         tx_frequency_channel[i]  = default_freq_in_865[i];
         rx1_frequency_channel[i] = default_freq_in_865[i];
@@ -164,27 +166,29 @@ void region_in_865_init( lr1_stack_mac_t* lr1_mac )
     memset1( &unwrapped_channel_mask[0], 0xFF, BANK_MAX_IN865 );
 }
 
-void region_in_865_init_session( lr1_stack_mac_t* lr1_mac )
+void region_in_865_init_session( smtc_real_t* real )
 {
     // Not used for IN865
     return;
 }
 
-status_lorawan_t region_in_865_get_join_next_channel( lr1_stack_mac_t* lr1_mac )
+status_lorawan_t region_in_865_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
+                                                      uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency )
 {
-    return region_in_865_get_next_channel( lr1_mac );
+    return region_in_865_get_next_channel( real, tx_data_rate, out_tx_frequency, out_rx1_frequency );
 }
 
-status_lorawan_t region_in_865_get_next_channel( lr1_stack_mac_t* lr1_mac )
+status_lorawan_t region_in_865_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate, uint32_t* out_tx_frequency,
+                                                 uint32_t* out_rx1_frequency )
 {
     uint8_t active_channel_nb = 0;
     uint8_t active_channel_index[NUMBER_OF_CHANNEL_IN_865];
 
-    for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
         if( SMTC_GET_BIT8( channel_index_enabled, i ) == CHANNEL_ENABLED )
         {
-            if( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], lr1_mac->tx_data_rate ) == 1 )
+            if( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], tx_data_rate ) == 1 )
             {
                 active_channel_index[active_channel_nb] = i;
                 active_channel_nb++;
@@ -200,7 +204,7 @@ status_lorawan_t region_in_865_get_next_channel( lr1_stack_mac_t* lr1_mac )
     uint8_t temp        = ( smtc_modem_hal_get_random_nb_in_range( 0, ( active_channel_nb - 1 ) ) ) % active_channel_nb;
     uint8_t channel_idx = 0;
     channel_idx         = active_channel_index[temp];
-    if( channel_idx >= const_number_of_tx_channel )
+    if( channel_idx >= real_const.const_number_of_tx_channel )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "INVALID CHANNEL  active channel = %d and random channel = %d \n",
                                      active_channel_nb, temp );
@@ -208,41 +212,13 @@ status_lorawan_t region_in_865_get_next_channel( lr1_stack_mac_t* lr1_mac )
     }
     else
     {
-        lr1_mac->tx_frequency  = tx_frequency_channel[channel_idx];
-        lr1_mac->rx1_frequency = rx1_frequency_channel[channel_idx];
+        *out_tx_frequency  = tx_frequency_channel[channel_idx];
+        *out_rx1_frequency = rx1_frequency_channel[channel_idx];
     }
     return OKLORAWAN;
 }
 
-void region_in_865_set_rx_config( lr1_stack_mac_t* lr1_mac, rx_win_type_t type )
-{
-    if( type == RX1 )
-    {
-        lr1_mac->rx_data_rate = datarate_offsets_in_865[lr1_mac->tx_data_rate][lr1_mac->rx1_dr_offset];
-    }
-    else if( type == RX2 )
-    {
-        lr1_mac->rx_data_rate = lr1_mac->rx2_data_rate;
-    }
-    else
-    {
-        SMTC_MODEM_HAL_TRACE_WARNING( "INVALID RX TYPE \n" );
-    }
-}
-void region_in_865_set_channel_mask( lr1_stack_mac_t* lr1_mac )
-{
-    // Copy all unwrapped channels in channel enable
-    memcpy1( channel_index_enabled, unwrapped_channel_mask, BANK_MAX_IN865 );
-
-    for( uint8_t i = 0; i < NUMBER_OF_CHANNEL_IN_865; i++ )
-    {
-        SMTC_MODEM_HAL_TRACE_PRINTF( " %d ", SMTC_GET_BIT8( channel_index_enabled, i ) );
-    }
-    SMTC_MODEM_HAL_TRACE_MSG( " \n" );
-}
-
-status_channel_t region_in_865_build_channel_mask( lr1_stack_mac_t* lr1_mac, uint8_t channel_mask_cntl,
-                                                   uint16_t channel_mask )
+status_channel_t region_in_865_build_channel_mask( smtc_real_t* real, uint8_t channel_mask_cntl, uint16_t channel_mask )
 {
     status_channel_t status = OKCHANNEL;
     switch( channel_mask_cntl )
@@ -251,7 +227,7 @@ status_channel_t region_in_865_build_channel_mask( lr1_stack_mac_t* lr1_mac, uin
         memcpy1( unwrapped_channel_mask + ( channel_mask_cntl * 2 ), ( uint8_t* ) &channel_mask, 2 );
 
         // Check if all enabled channels has a valid frequency
-        for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+        for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
         {
             if( ( SMTC_GET_BIT8( unwrapped_channel_mask, i ) == CHANNEL_ENABLED ) && ( tx_frequency_channel[i] == 0 ) )
             {
@@ -268,7 +244,7 @@ status_channel_t region_in_865_build_channel_mask( lr1_stack_mac_t* lr1_mac, uin
         break;
     case 6:
         memset1( unwrapped_channel_mask, 0x00, BANK_MAX_IN865 );
-        for( uint8_t i = 0; i < const_number_of_tx_channel; i++ )
+        for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
         {
             if( tx_frequency_channel[i] > 0 )
             {

@@ -37,7 +37,7 @@ endif # REGION
 #-----------------------------------------------------------------------------
 
 ifndef RP_VERSION
-MODEM_C_DEFS += -DRP2_101
+MODEM_C_DEFS += -DRP2_103
 endif
 
 ifeq ($(RP_VERSION),RP2_103)

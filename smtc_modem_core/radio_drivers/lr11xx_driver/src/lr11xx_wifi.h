@@ -560,9 +560,9 @@ void lr11xx_wifi_parse_data_rate_info( const lr11xx_wifi_datarate_info_byte_t da
  * @remark It is a driver limitation, not a LR11XX limitation, that avoid allocating temporary buffers of size too big
  * when reading Wi-Fi passive scan results.
  *
- * @see LR11XX_WIFI_N_RESULTS_MAX_PER_CHUNK
- *
  * @returns The maximal number of results to fetch per SPI calls
+ *
+ * @see LR11XX_WIFI_N_RESULTS_MAX_PER_CHUNK
  */
 uint8_t lr11xx_wifi_get_nb_results_max_per_chunk( void );
 

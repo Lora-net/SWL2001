@@ -58,14 +58,12 @@
  * @param dtc_obj                 // Duty cycle object
  * @param rp                      // Radio Planner object
  * @param otaa_abp_conf           // Activation mode, only OTAA is supported
- * @param smtc_real_region_types  // Contains the regions type (EU868, US915, ...)
  * @param push_callback           // Callback to push received downlink
  * @param push_context            // Context concerning the downlink
  */
 void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_real_t* real, smtc_lbt_t* lbt_obj, smtc_dtc_t* dtc_obj,
-                       radio_planner_t* rp, lr1mac_activation_mode_t otaa_abp_conf,
-                       smtc_real_region_types_t smtc_real_region_types, void ( *push_callback )( void* push_context ),
-                       void*                    push_context );
+                       radio_planner_t* rp, lr1mac_activation_mode_t        otaa_abp_conf,
+                       void ( *push_callback )( void* push_context ), void* push_context );
 
 /**
  * \brief Sends an uplink
@@ -546,16 +544,6 @@ uint32_t lr1mac_core_get_timestamp_last_device_time_ans_s( lr1_stack_mac_t* lr1_
  * @return uint32_t
  */
 uint32_t lr1mac_core_get_time_left_connection_lost( lr1_stack_mac_t* lr1_mac_obj );
-
-/**
- * @brief Set the callback called when a network DeviceTimeAns is received
- *
- * @param lr1_mac_obj
- * @param device_time_callback
- */
-void lr1mac_core_set_device_time_callback( lr1_stack_mac_t* lr1_mac_obj,
-                                           void ( *device_time_callback )( void* context, uint32_t rx_timestamp_s ),
-                                           void* context, uint32_t rx_timestamp_s );
 
 /**
  * @brief Set delay in seconds to concider time no more valid if no time sync received

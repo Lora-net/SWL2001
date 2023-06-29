@@ -294,7 +294,7 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
                 ( ping_slot_obj->lr1_mac->ping_slot_freq_hz != 0 )
                     ? ping_slot_obj->lr1_mac->ping_slot_freq_hz
                     : smtc_real_get_ping_slot_frequency(
-                          ping_slot_obj->lr1_mac, ping_slot_seconds_since_epoch,
+                          ping_slot_obj->lr1_mac->real, ping_slot_seconds_since_epoch,
                           ping_slot_obj->rx_session_param[RX_SESSION_UNICAST]->dev_addr );
 
             ping_slot_obj->rx_session_param[RX_SESSION_UNICAST]->rx_data_rate = ping_slot_obj->lr1_mac->ping_slot_dr;
@@ -326,31 +326,33 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
                                                    RX_SESSION_PARAM_CURRENT->ping_slot_parameters.ping_offset_time,
                                                    &ping_slot_seconds_since_epoch, &ping_slot_fractional_second );
 
-        ping_slot_freq = ( RX_SESSION_PARAM_CURRENT->rx_frequency != 0 )
-                             ? RX_SESSION_PARAM_CURRENT->rx_frequency
-                             : smtc_real_get_ping_slot_frequency( ping_slot_obj->lr1_mac, ping_slot_seconds_since_epoch,
-                                                                  RX_SESSION_PARAM_CURRENT->dev_addr );
+        ping_slot_freq =
+            ( RX_SESSION_PARAM_CURRENT->rx_frequency != 0 )
+                ? RX_SESSION_PARAM_CURRENT->rx_frequency
+                : smtc_real_get_ping_slot_frequency( ping_slot_obj->lr1_mac->real, ping_slot_seconds_since_epoch,
+                                                     RX_SESSION_PARAM_CURRENT->dev_addr );
 
         ping_slot_dr = RX_SESSION_PARAM_CURRENT->rx_data_rate;
 
-        modulation_type = smtc_real_get_modulation_type_from_datarate( ping_slot_obj->lr1_mac, ping_slot_dr );
+        modulation_type = smtc_real_get_modulation_type_from_datarate( ping_slot_obj->lr1_mac->real, ping_slot_dr );
 
-        smtc_real_get_rx_window_parameters( ping_slot_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate,
+        smtc_real_get_rx_window_parameters( ping_slot_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate,
                                             ( RX_SESSION_PARAM_CURRENT->ping_slot_parameters.ping_offset_time -
                                               ping_slot_obj->last_valid_rx_beacon_ms ),
                                             &RX_SESSION_PARAM_CURRENT->rx_window_symb, &rx_timeout_symb_in_ms_tmp,
-                                            &rx_timeout_symb_locked_in_ms_tmp, RX_BEACON_TIMESTAMP_ERROR );
+                                            &rx_timeout_symb_locked_in_ms_tmp, RX_BEACON_TIMESTAMP_ERROR,
+                                            ping_slot_obj->lr1_mac->crystal_error );
 
         if( modulation_type == LORA )
         {
             uint8_t            sf;
             lr1mac_bandwidth_t bw;
-            smtc_real_lora_dr_to_sf_bw( ping_slot_obj->lr1_mac, ping_slot_dr, &sf, &bw );
+            smtc_real_lora_dr_to_sf_bw( ping_slot_obj->lr1_mac->real, ping_slot_dr, &sf, &bw );
 
             ralf_params_lora_t lora_param;
             memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
-            lora_param.sync_word       = smtc_real_get_sync_word( ping_slot_obj->lr1_mac );
+            lora_param.sync_word       = smtc_real_get_sync_word( ping_slot_obj->lr1_mac->real );
             lora_param.symb_nb_timeout = RX_SESSION_PARAM_CURRENT->rx_window_symb;
             lora_param.rf_freq_in_hz   = ping_slot_freq;
 
@@ -360,7 +362,7 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
             lora_param.pkt_params.invert_iq_is_on      = true;
             lora_param.pkt_params.preamble_len_in_symb = 255;
 
-            lora_param.mod_params.cr = smtc_real_get_coding_rate( ping_slot_obj->lr1_mac );
+            lora_param.mod_params.cr = smtc_real_get_coding_rate( ping_slot_obj->lr1_mac->real );
             lora_param.mod_params.sf = ( ral_lora_sf_t ) sf;
             lora_param.mod_params.bw = ( ral_lora_bw_t ) bw;
 
@@ -374,12 +376,12 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "MODULATION FSK\n" );
             uint8_t kbitrate;
-            smtc_real_fsk_dr_to_bitrate( ping_slot_obj->lr1_mac, ping_slot_dr, &kbitrate );
+            smtc_real_fsk_dr_to_bitrate( ping_slot_obj->lr1_mac->real, ping_slot_dr, &kbitrate );
 
             ralf_params_gfsk_t gfsk_param;
             memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-            gfsk_param.sync_word      = smtc_real_get_gfsk_sync_word( ping_slot_obj->lr1_mac );
+            gfsk_param.sync_word      = smtc_real_get_gfsk_sync_word( ping_slot_obj->lr1_mac->real );
             gfsk_param.dc_free_is_on  = true;
             gfsk_param.whitening_seed = GFSK_WHITENING_SEED;
             gfsk_param.crc_seed       = GFSK_CRC_SEED;
@@ -412,7 +414,7 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
         rp_task.schedule_task_low_priority = true;
         int8_t board_delay_ms =
             smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) + smtc_modem_hal_get_board_delay_ms( );
-        smtc_real_get_rx_start_time_offset_ms( ping_slot_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate,
+        smtc_real_get_rx_start_time_offset_ms( ping_slot_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate,
                                                board_delay_ms, RX_SESSION_PARAM_CURRENT->rx_window_symb,
                                                &rx_offset_ms_tmp );
         rp_task.start_time_ms = RX_SESSION_PARAM_CURRENT->ping_slot_parameters.ping_offset_time + rx_offset_ms_tmp +
@@ -603,9 +605,21 @@ smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_start_session( smtc_ping_s
         return SMTC_MC_RC_ERROR_BUSY;
     }
 
-    // Check if frequency and datarate are acceptable
-    if( ( smtc_real_is_frequency_valid( ping_slot_obj->lr1_mac, freq ) != OKLORAWAN ) ||
-        ( smtc_real_is_rx_dr_valid( ping_slot_obj->lr1_mac, dr ) != OKLORAWAN ) )
+    // Check if freq = 0 is acceptable
+    if( ( freq == 0 ) && !smtc_real_is_beacon_hopping( ping_slot_obj->lr1_mac->real ) )
+    {
+        // freq = 0 is only acceptable in regions in which beacon is freq hopping
+        return SMTC_MC_RC_ERROR_PARAM;
+    }
+
+    // Check if non null frequency is acceptable
+    if( ( freq != 0 ) && ( smtc_real_is_frequency_valid( ping_slot_obj->lr1_mac->real, freq ) != OKLORAWAN ) )
+    {
+        return SMTC_MC_RC_ERROR_PARAM;
+    }
+
+    // Check if datarate is acceptable
+    if( ( smtc_real_is_rx_dr_valid( ping_slot_obj->lr1_mac->real, dr ) != OKLORAWAN ) )
     {
         return SMTC_MC_RC_ERROR_PARAM;
     }
@@ -637,6 +651,11 @@ smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_stop_session( smtc_ping_sl
     ping_slot_obj->rx_session_param[mc_group_id + 1]->enabled                 = false;
     ping_slot_obj->rx_session_param[mc_group_id + 1]->waiting_beacon_to_start = false;
 
+    if( ping_slot_obj->rx_session_index == ( mc_group_id + 1 ) )
+    {
+        rp_task_abort( ping_slot_obj->rp, ping_slot_obj->ping_slot_id4rp );
+    }
+
     // Reset frequency and datarate to their not init values
     ping_slot_obj->rx_session_param[mc_group_id + 1]->rx_frequency = 0;
     ping_slot_obj->rx_session_param[mc_group_id + 1]->rx_data_rate = LR1MAC_MC_NO_DATARATE;
@@ -646,17 +665,18 @@ smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_stop_session( smtc_ping_sl
 
 smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_stop_all_sessions( smtc_ping_slot_t* ping_slot_obj )
 {
+    smtc_multicast_config_rc_t status = SMTC_MC_RC_OK;
+
     for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
     {
-        // Set the enable bit to false to indicate that the session is stopped
-        ping_slot_obj->rx_session_param[i + 1]->enabled                 = false;
-        ping_slot_obj->rx_session_param[i + 1]->waiting_beacon_to_start = false;
-        // Reset frequency and datarate to their not init values
-        ping_slot_obj->rx_session_param[i + 1]->rx_frequency = 0;
-        ping_slot_obj->rx_session_param[i + 1]->rx_data_rate = LR1MAC_MC_NO_DATARATE;
+        status = smtc_ping_slot_multicast_b_stop_session( ping_slot_obj, i );
+        if( status != SMTC_MC_RC_OK )
+        {
+            break;
+        }
     }
 
-    return SMTC_MC_RC_OK;
+    return status;
 }
 
 smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_get_session_status( smtc_ping_slot_t* ping_slot_obj,
@@ -1080,7 +1100,7 @@ static uint32_t smtc_ping_slot_get_duration_timeout_ms( smtc_ping_slot_t* ping_s
                                                         uint8_t datarate )
 {
     uint32_t time_symb_ms =
-        ( nb_rx_window_symb * smtc_real_get_symbol_duration_us( ping_slot_obj->lr1_mac, datarate ) ) / 1000;
+        ( nb_rx_window_symb * smtc_real_get_symbol_duration_us( ping_slot_obj->lr1_mac->real, datarate ) ) / 1000;
     return ( ( time_symb_ms < 1 ) ? 1 : time_symb_ms );
 }
 
@@ -1088,24 +1108,25 @@ static uint32_t smtc_ping_slot_compute_downlink_toa( lr1_stack_mac_t* lr1_mac, u
 {
     uint32_t toa = 0;
 
-    modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate( lr1_mac, datarate );
+    modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate( lr1_mac->real, datarate );
 
     if( modulation_type == LORA )
     {
         uint8_t            sf;
         lr1mac_bandwidth_t bw;
-        smtc_real_lora_dr_to_sf_bw( lr1_mac, datarate, &sf, &bw );
+        smtc_real_lora_dr_to_sf_bw( lr1_mac->real, datarate, &sf, &bw );
 
         ralf_params_lora_t lora_param;
         memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
-        lora_param.mod_params.sf                   = ( ral_lora_sf_t ) sf;
-        lora_param.mod_params.bw                   = ( ral_lora_bw_t ) bw;
-        lora_param.mod_params.cr                   = smtc_real_get_coding_rate( lr1_mac );
-        lora_param.pkt_params.preamble_len_in_symb = smtc_real_get_preamble_len( lr1_mac, lora_param.mod_params.sf );
-        lora_param.pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
-        lora_param.pkt_params.pld_len_in_bytes     = payload_size;
-        lora_param.pkt_params.crc_is_on            = false;
+        lora_param.mod_params.sf = ( ral_lora_sf_t ) sf;
+        lora_param.mod_params.bw = ( ral_lora_bw_t ) bw;
+        lora_param.mod_params.cr = smtc_real_get_coding_rate( lr1_mac->real );
+        lora_param.pkt_params.preamble_len_in_symb =
+            smtc_real_get_preamble_len( lr1_mac->real, lora_param.mod_params.sf );
+        lora_param.pkt_params.header_type      = RAL_LORA_PKT_EXPLICIT;
+        lora_param.pkt_params.pld_len_in_bytes = payload_size;
+        lora_param.pkt_params.crc_is_on        = false;
         lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
 
         toa = ral_get_lora_time_on_air_in_ms( ( &lr1_mac->rp->radio->ral ), ( &lora_param.pkt_params ),
@@ -1114,7 +1135,7 @@ static uint32_t smtc_ping_slot_compute_downlink_toa( lr1_stack_mac_t* lr1_mac, u
     else if( modulation_type == FSK )
     {
         uint8_t bitrate;
-        smtc_real_fsk_dr_to_bitrate( lr1_mac, datarate, &bitrate );
+        smtc_real_fsk_dr_to_bitrate( lr1_mac->real, datarate, &bitrate );
 
         ralf_params_gfsk_t gfsk_param;
         memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
@@ -1141,7 +1162,6 @@ static void ping_slot_mac_rx_lora_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ralf_setup_lora( rp->radio, &rp->radio_params[id].rx.lora ) == RAL_STATUS_OK );
     smtc_modem_hal_assert( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT |
                                                                             RAL_IRQ_RX_HDR_ERROR |
@@ -1150,6 +1170,7 @@ static void ping_slot_mac_rx_lora_launch_callback_for_rp( void* rp_void )
     while( ( int32_t )( rp->tasks[id].start_time_100us - smtc_modem_hal_get_time_in_100us( ) ) > 0 )
     {
     }
+    smtc_modem_hal_start_radio_tcxo( );
     smtc_modem_hal_assert( ral_set_rx( &( rp->radio->ral ), rp->radio_params[id].rx.timeout_in_ms ) == RAL_STATUS_OK );
     rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }

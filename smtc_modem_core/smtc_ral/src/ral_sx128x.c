@@ -718,7 +718,7 @@ ral_status_t ral_sx128x_set_lora_cad_params( const void* context, const ral_lora
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_sx128x_set_lora_symb_nb_timeout( const void* context, const uint8_t nb_of_symbs )
+ral_status_t ral_sx128x_set_lora_symb_nb_timeout( const void* context, const uint16_t nb_of_symbs )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
@@ -963,6 +963,15 @@ ral_status_t ral_sx128x_lr_fhss_get_hop_sequence_count( const void*             
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
+uint16_t ral_sx128x_lr_fhss_get_bit_delay_in_us( const void* context, const ral_lr_fhss_params_t* params,
+                                                 uint16_t payload_length )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) params;          // Unused parameter
+    ( void ) payload_length;  // Unused parameter
+    return 0;
+}
+
 ral_status_t ral_sx128x_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present )
 {
     ral_status_t             status = RAL_STATUS_ERROR;
@@ -1126,6 +1135,16 @@ ral_status_t ral_sx128x_get_lora_rx_consumption_in_ua( const void* context, cons
 ral_status_t ral_sx128x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx128x_handle_rx_done( const void* context )
+{
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx128x_handle_tx_done( const void* context )
+{
+    return RAL_STATUS_OK;
 }
 
 /*

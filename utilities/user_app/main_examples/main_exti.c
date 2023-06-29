@@ -51,6 +51,9 @@
 
 #include "smtc_hal_mcu.h"
 #include "smtc_hal_gpio.h"
+#include "smtc_hal_watchdog.h"
+
+#include "modem_pinout.h"
 
 #if defined( SX128X )
 #include "ralf_sx128x.h"
@@ -61,6 +64,44 @@
 #endif
 
 #include <string.h>
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE MACROS-----------------------------------------------------------
+ */
+
+/**
+ * @brief Returns the minimum value between a and b
+ *
+ * @param [in] a 1st value
+ * @param [in] b 2nd value
+ * @retval Minimum value
+ */
+#ifndef MIN
+#define MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
+#endif
+
+/*!
+ * @brief Stringify constants
+ */
+#define xstr( a ) str( a )
+#define str( a ) #a
+
+/*!
+ * @brief Helper macro that returned a human-friendly message if a command does not return SMTC_MODEM_RC_OK
+ *
+ * @remark The macro is implemented to be used with functions returning a @ref smtc_modem_return_code_t
+ *
+ * @param[in] rc  Return code
+ */
+#define ASSERT_SMTC_MODEM_RC( rc )          \
+    do                                      \
+    {                                       \
+        if( rc != SMTC_MODEM_RC_OK )        \
+        {                                   \
+            assert_smtc_modem_rc_dbg( rc ); \
+        }                                   \
+    } while( 0 )
 
 /*
  * -----------------------------------------------------------------------------
@@ -75,9 +116,11 @@
 /**
  * @brief Stack credentials
  */
+#if !defined( USE_LR11XX_CREDENTIALS )
 static const uint8_t user_dev_eui[8]  = USER_LORAWAN_DEVICE_EUI;
 static const uint8_t user_join_eui[8] = USER_LORAWAN_JOIN_EUI;
 static const uint8_t user_app_key[16] = USER_LORAWAN_APP_KEY;
+#endif
 
 #if defined( SX128X )
 const ralf_t modem_radio = RALF_SX128X_INSTANTIATE( NULL );
@@ -88,6 +131,12 @@ const ralf_t modem_radio = RALF_LR11XX_INSTANTIATE( NULL );
 #else
 #error "Please select radio board.."
 #endif
+
+/**
+ * @brief Watchdog counter reload value during sleep (The period must be lower than MCU watchdog period (here 32s))
+ */
+#define WATCHDOG_RELOAD_PERIOD_MS 20000
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -100,14 +149,53 @@ const ralf_t modem_radio = RALF_LR11XX_INSTANTIATE( NULL );
 static volatile bool user_button_is_press = false;  // Flag for button status
 static uint8_t       rx_payload[255]      = { 0 };  // Buffer for rx payload
 static uint8_t       rx_payload_size      = 0;      // Size of the payload in the rx_payload buffer
+static uint32_t      uplink_counter       = 0;      // uplink raising counter
 
+/**
+ * @brief Internal credentials
+ */
+#if defined( USE_LR11XX_CREDENTIALS )
+static uint8_t chip_eui[SMTC_MODEM_EUI_LENGTH] = { 0 };
+static uint8_t chip_pin[SMTC_MODEM_PIN_LENGTH] = { 0 };
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
+
+/**
+ * @brief Assert to check modem return code
+ *
+ * @param rc
+ */
+static void assert_smtc_modem_rc_dbg( smtc_modem_return_code_t rc );
+
+/**
+ * @brief Check if modem is joined
+ *
+ * @return true if joined, false otherwise
+ */
 static bool is_joined( void );
-static void get_event( void );
+
+/**
+ * @brief User callback for modem event
+ *
+ *  This callback is called every time an event ( see smtc_modem_event_t ) appears in the modem.
+ *  Several events may have to be read from the modem when this callback is called.
+ */
+static void modem_event_callback( void );
+
+/**
+ * @brief User callback for button EXTI
+ *
+ * @param context Define by the user at the init
+ */
 static void user_button_callback( void* context );
+
+/**
+ * @brief Action to be done after button pressed
+ */
+static void main_handle_push_button( void );
 
 /*
  * -----------------------------------------------------------------------------
@@ -126,47 +214,46 @@ void main_exti( void )
     // Configure all the µC periph (clock, gpio, timer, ...)
     hal_mcu_init( );
 
-    // Init the modem and use get_event as event callback, please note that the callback will be
-    // called immediatly after the first call to smtc_modem_run_engine because of the reset detection
-    smtc_modem_init( &modem_radio, &get_event );
+    // Init the modem and use modem_event_callback as event callback, please note that the callback will be
+    // called immediately after the first call to smtc_modem_run_engine because of the reset detection
+    smtc_modem_init( &modem_radio, &modem_event_callback );
 
     // Configure Nucleo blue button as EXTI
     hal_gpio_irq_t nucleo_blue_button = {
+        .pin      = EXTI_BUTTON,
         .context  = NULL,                  // context pass to the callback - not used in this example
         .callback = user_button_callback,  // callback called when EXTI is triggered
     };
-    hal_gpio_init_in( PC_13, BSP_GPIO_PULL_MODE_NONE, BSP_GPIO_IRQ_MODE_FALLING, &nucleo_blue_button );
+    hal_gpio_init_in( EXTI_BUTTON, BSP_GPIO_PULL_MODE_NONE, BSP_GPIO_IRQ_MODE_FALLING, &nucleo_blue_button );
 
     // Re-enable IRQ
     hal_mcu_enable_irq( );
 
     SMTC_HAL_TRACE_INFO( "EXTI example is starting \n" );
 
+    uint32_t sleep_time_ms = 0;
     while( 1 )
     {
-        // Execute modem runtime, this function must be recalled in sleep_time_ms (max value, can be recalled sooner)
-        uint32_t sleep_time_ms = smtc_modem_run_engine( );
-
-        // Check if a button has been pressed
+        // Check button
         if( user_button_is_press == true )
         {
-            // Clear button flag
             user_button_is_press = false;
 
-            // Check if the device has already joined a network
-            if( is_joined( ) == true )
-            {
-                // Send MCU temperature on port 102
-                uint8_t temperature = ( uint8_t ) smtc_modem_hal_get_temperature( );
-                SMTC_HAL_TRACE_INFO( "MCU temperature : %d \n", temperature );
-                smtc_modem_request_uplink( STACK_ID, 102, false, &temperature, 1 );
-            }
+            main_handle_push_button( );
         }
-        else
+
+        // Modem process launch
+        sleep_time_ms = smtc_modem_run_engine( );
+
+        // Atomically check sleep conditions (button was not pressed)
+        hal_mcu_disable_irq( );
+        if( user_button_is_press == false )
         {
-            // nothing to process, go to sleep (if low power is enabled)
-            hal_mcu_set_sleep_for_ms( sleep_time_ms );
+            hal_watchdog_reload( );
+            hal_mcu_set_sleep_for_ms( MIN( sleep_time_ms, WATCHDOG_RELOAD_PERIOD_MS ) );
         }
+        hal_watchdog_reload( );
+        hal_mcu_enable_irq( );
     }
 }
 
@@ -175,15 +262,9 @@ void main_exti( void )
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-/**
- * @brief User callback for modem event
- *
- *  This callback is called every time an event ( see smtc_modem_event_t ) appears in the modem.
- *  Several events may have to be read from the modem when this callback is called.
- */
-static void get_event( void )
+static void modem_event_callback( void )
 {
-    SMTC_HAL_TRACE_MSG_COLOR( "get_event () callback\n", HAL_DBG_TRACE_COLOR_BLUE );
+    SMTC_HAL_TRACE_MSG_COLOR( "Modem event callback\n", HAL_DBG_TRACE_COLOR_BLUE );
 
     smtc_modem_event_t current_event;
     uint8_t            event_pending_count;
@@ -193,21 +274,29 @@ static void get_event( void )
     do
     {
         // Read modem event
-        smtc_modem_get_event( &current_event, &event_pending_count );
+        ASSERT_SMTC_MODEM_RC( smtc_modem_get_event( &current_event, &event_pending_count ) );
 
         switch( current_event.event_type )
         {
         case SMTC_MODEM_EVENT_RESET:
             SMTC_HAL_TRACE_INFO( "Event received: RESET\n" );
 
+#if !defined( USE_LR11XX_CREDENTIALS )
             // Set user credentials
-            smtc_modem_set_deveui( stack_id, user_dev_eui );
-            smtc_modem_set_joineui( stack_id, user_join_eui );
-            smtc_modem_set_nwkkey( stack_id, user_app_key );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_set_deveui( stack_id, user_dev_eui ) );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_set_joineui( stack_id, user_join_eui ) );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_set_nwkkey( stack_id, user_app_key ) );
+#else
+            // Get internal credentials
+            ASSERT_SMTC_MODEM_RC( smtc_modem_get_chip_eui( stack_id, chip_eui ) );
+            SMTC_HAL_TRACE_ARRAY( "CHIP_EUI", chip_eui, SMTC_MODEM_EUI_LENGTH );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_get_pin( stack_id, chip_pin ) );
+            SMTC_HAL_TRACE_ARRAY( "CHIP_PIN", chip_pin, SMTC_MODEM_PIN_LENGTH );
+#endif
             // Set user region
-            smtc_modem_set_region( stack_id, MODEM_EXAMPLE_REGION );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_set_region( stack_id, MODEM_EXAMPLE_REGION ) );
             // Schedule a Join LoRaWAN network
-            smtc_modem_join_network( stack_id );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_join_network( stack_id ) );
             break;
 
         case SMTC_MODEM_EVENT_ALARM:
@@ -297,15 +386,10 @@ static void get_event( void )
     } while( event_pending_count > 0 );
 }
 
-/**
- * @brief Join status of the product
- *
- * @return Return 1 if the device is joined else 0
- */
 static bool is_joined( void )
 {
     uint32_t status = 0;
-    smtc_modem_get_status( STACK_ID, &status );
+    ASSERT_SMTC_MODEM_RC( smtc_modem_get_status( STACK_ID, &status ) );
     if( ( status & SMTC_MODEM_STATUS_JOINED ) == SMTC_MODEM_STATUS_JOINED )
     {
         return true;
@@ -316,11 +400,6 @@ static bool is_joined( void )
     }
 }
 
-/**
- * @brief User callback for button EXTI
- *
- * @param context Define by the user at the init
- */
 static void user_button_callback( void* context )
 {
     SMTC_HAL_TRACE_INFO( "Button pushed\n" );
@@ -334,11 +413,66 @@ static void user_button_callback( void* context )
     {
         last_press_timestamp_ms = smtc_modem_hal_get_time_in_ms( );
         user_button_is_press    = true;
+    }
+}
 
-        // When the button is pressed, the device is likely to be in low power mode. In this low power mode
-        // implementation, low power needs to be disabled once to leave the low power loop and process the button
-        // action.
-        hal_mcu_disable_once_low_power_wait( );
+static void main_handle_push_button( void )
+{
+    if( is_joined( ) == true )
+    {
+        // Send uplink counter on port 102
+        uint8_t buff[4] = { 0 };
+        buff[0]         = ( uplink_counter >> 24 ) & 0xFF;
+        buff[1]         = ( uplink_counter >> 16 ) & 0xFF;
+        buff[2]         = ( uplink_counter >> 8 ) & 0xFF;
+        buff[3]         = ( uplink_counter & 0xFF );
+        ASSERT_SMTC_MODEM_RC( smtc_modem_request_uplink( STACK_ID, 102, false, buff, 4 ) );
+        // Increment uplink counter
+        if( uplink_counter < 0xFFFFFFFF )
+        {
+            uplink_counter++;
+        }
+        else
+        {
+            uplink_counter = 0;
+        }
+    }
+}
+
+static void assert_smtc_modem_rc_dbg( smtc_modem_return_code_t rc )
+{
+    if( rc == SMTC_MODEM_RC_NOT_INIT )
+    {
+        SMTC_HAL_TRACE_ERROR( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__,
+                              xstr( SMTC_MODEM_RC_NOT_INIT ) );
+    }
+    else if( rc == SMTC_MODEM_RC_INVALID )
+    {
+        SMTC_HAL_TRACE_ERROR( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__,
+                              xstr( SMTC_MODEM_RC_INVALID ) );
+    }
+    else if( rc == SMTC_MODEM_RC_BUSY )
+    {
+        SMTC_HAL_TRACE_ERROR( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__, xstr( SMTC_MODEM_RC_BUSY ) );
+    }
+    else if( rc == SMTC_MODEM_RC_FAIL )
+    {
+        SMTC_HAL_TRACE_ERROR( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__, xstr( SMTC_MODEM_RC_FAIL ) );
+    }
+    else if( rc == SMTC_MODEM_RC_BAD_SIZE )
+    {
+        SMTC_HAL_TRACE_ERROR( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__,
+                              xstr( SMTC_MODEM_RC_BAD_SIZE ) );
+    }
+    else if( rc == SMTC_MODEM_RC_NO_TIME )
+    {
+        SMTC_HAL_TRACE_WARNING( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__,
+                                xstr( SMTC_MODEM_RC_NO_TIME ) );
+    }
+    else if( rc == SMTC_MODEM_RC_INVALID_STACK_ID )
+    {
+        SMTC_HAL_TRACE_ERROR( "In %s - %s (line %d): %s\n", __FILE__, __func__, __LINE__,
+                              xstr( SMTC_MODEM_RC_INVALID_STACK_ID ) );
     }
 }
 

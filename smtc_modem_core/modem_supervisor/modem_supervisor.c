@@ -75,8 +75,25 @@
 #endif  // LR1110_MODEM_E
 
 /*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE CONSTANTS -------------------------------------------------------
+ */
+#define DM_PERIOD_AFTER_JOIN 0
+#define MODEM_MAX_TIME 0x1FFFFF
+#define MODEM_MAX_TIME 0x1FFFFF
+#define CALL_LR1MAC_PERIOD_MS 400
+#define MODEM_MAX_ALARM_S 0x7FFFFFFF
+
+#ifndef MODEM_MIN_RANDOM_DELAY_MS
+#define MODEM_MIN_RANDOM_DELAY_MS 200
+#endif
+
+#ifndef MODEM_MAX_RANDOM_DELAY_MS
+#define MODEM_MAX_RANDOM_DELAY_MS 3000
+#endif
+/*
  *-----------------------------------------------------------------------------------
- * --- PUBLIC MACROS ----------------------------------------------------------------
+ * --- PRIVATE MACROS ----------------------------------------------------------------
  */
 
 /*!
@@ -92,6 +109,12 @@
  * @brief Math Abs macro
  */
 #define ABS( N ) ( ( N < 0 ) ? ( -N ) : ( N ) )
+
+/**
+ * @brief Macro for modem task random delay calculation
+ */
+#define MODEM_TASK_DELAY_MS \
+    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 
 /*
  * -----------------------------------------------------------------------------
@@ -1030,7 +1053,11 @@ uint32_t modem_supervisor_engine( void )
             increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_ALARM, 0 );
             modem_set_user_alarm( 0 );
             user_alarm_in_seconds = MODEM_MAX_ALARM_S;
-            if( *app_callback != NULL )
+            if( lorawan_api_modem_certification_is_enabled( ) == true )
+            {
+                certification_event_handler( );
+            }
+            else if( *app_callback != NULL )
             {
                 app_callback( );
             }

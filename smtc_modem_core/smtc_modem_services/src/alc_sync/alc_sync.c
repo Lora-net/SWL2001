@@ -542,7 +542,8 @@ void alc_sync_decode_device_app_time_periodicity_req( alc_sync_ctx_t* ctx, uint8
     // The actual periodicity in seconds is 128*2^Period
     ctx->periodicity_s = 128 << ( buffer[0] & 0x0F );
     // To avoid a periodicity greater than the invalid delay previously set by the user
-    alc_sync_set_valid_delay_second( ctx, MIN( ctx->periodicity_s * 3, ALC_SYNC_DEFAULT_S_SINCE_LAST_CORRECTION ) );
+    alc_sync_set_valid_delay_second( ctx, MIN( MAX( ctx->periodicity_s * 3, ctx->delay_before_time_no_more_valid_s ),
+                                               ALC_SYNC_DEFAULT_S_SINCE_LAST_CORRECTION ) );
 }
 
 void alc_sync_decode_force_device_resync_req( alc_sync_ctx_t* ctx, uint8_t* buffer )

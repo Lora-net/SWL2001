@@ -99,6 +99,17 @@ BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_lr11xx_crypto_with_cred
 endif # LR11XX_WITH_CREDENTIALS
 endif # lr1120
 
+ifeq ($(RADIO),lr1121)
+ifeq ($(CRYPTO),LR11XX)
+TARGET_MODEM := $(TARGET_MODEM)_lr11xx_crypto
+BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_lr11xx_crypto
+endif # LR11XX
+ifeq ($(CRYPTO),LR11XX_WITH_CREDENTIALS)
+TARGET_MODEM := $(TARGET_MODEM)_lr11xx_crypto_with_cred
+BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_lr11xx_crypto_with_cred
+endif # LR11XX_WITH_CREDENTIALS
+endif # lr1121
+
 ifeq ($(MIDDLEWARE),yes)
 TARGET_MODEM := $(TARGET_MODEM)_middleware
 BUILD_DIR_MODEM := $(BUILD_DIR_MODEM)_middleware
@@ -178,7 +189,6 @@ WFLAG += \
 	-Wno-unused-parameter \
 	-Wpedantic \
 	-fomit-frame-pointer \
-	-mabi=aapcs \
 	-fno-unroll-loops \
 	-ffast-math \
 	-ftree-vectorize \
@@ -266,8 +276,9 @@ COMMON_C_DEFS += \
 	-DADD_SMTC_ALC_SYNC
 endif
 
+EXTRAFLAGS ?=
 
-CFLAGS += -fno-builtin $(MCU_FLAGS) $(BOARD_C_DEFS) $(COMMON_C_DEFS) $(MODEM_C_DEFS) $(BOARD_C_INCLUDES) $(COMMON_C_INCLUDES) $(MODEM_C_INCLUDES) $(OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
+CFLAGS += -fno-builtin $(MCU_FLAGS) $(BOARD_C_DEFS) $(COMMON_C_DEFS) $(MODEM_C_DEFS) $(EXTRAFLAGS) $(BOARD_C_INCLUDES) $(COMMON_C_INCLUDES) $(MODEM_C_INCLUDES) $(OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
 CFLAGS += -falign-functions=4
 CFLAGS += -std=c17
 

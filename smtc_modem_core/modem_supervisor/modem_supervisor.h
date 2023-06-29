@@ -64,12 +64,6 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-#define DM_PERIOD_AFTER_JOIN 0
-#define MODEM_TASK_DELAY_MS 200
-#define MODEM_MAX_TIME 0x1FFFFF
-#define CALL_LR1MAC_PERIOD_MS 400
-#define MODEM_MAX_ALARM_S 0x7FFFFFFF
-
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
