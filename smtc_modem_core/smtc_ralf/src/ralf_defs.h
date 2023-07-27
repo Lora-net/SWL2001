@@ -70,7 +70,6 @@ typedef struct ralf_params_gfsk_s
     uint16_t              crc_seed;
     uint16_t              crc_polynomial;
     uint16_t              whitening_seed;
-    bool                  dc_free_is_on;
     int8_t                output_pwr_in_dbm;
 } ralf_params_gfsk_t;
 
@@ -100,6 +99,15 @@ typedef struct ralf_params_lr_fhss_s
     int8_t               output_pwr_in_dbm;
     uint16_t             hop_sequence_id;
 } ralf_params_lr_fhss_t;
+
+typedef struct ralf_params_lora_cad_s
+{
+    ral_lora_cad_params_t ral_lora_cad_params;
+    ral_lora_sf_t         sf;  //!< LoRa Spreading Factor
+    ral_lora_bw_t         bw;  //!< LoRa Bandwidth
+    uint32_t              rf_freq_in_hz;
+    bool                  invert_iq_is_on;  //!< LoRa IQ polarity setup
+} ralf_params_lora_cad_t;
 
 /*
  * -----------------------------------------------------------------------------

@@ -311,7 +311,7 @@ typedef struct soft_se_data_s
  */
 typedef struct soft_se_context_nvm_s
 {
-    soft_se_data_t data;
+    soft_se_data_t data[NUMBER_OF_STACKS];
     uint32_t       crc;
 } soft_se_context_nvm_t;
 
@@ -320,7 +320,7 @@ typedef struct soft_se_context_nvm_s
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
 
-static soft_se_data_t soft_se_data = { 0 };
+static soft_se_data_t soft_se_data[NUMBER_OF_STACKS] = { 0 };
 
 /*
  * -----------------------------------------------------------------------------
@@ -338,7 +338,8 @@ static soft_se_data_t soft_se_data = { 0 };
  * @param [in] key_item Key item reference
  * @return smtc_se_return_code_t
  */
-static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, soft_se_key_t** key_item );
+static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, soft_se_key_t** key_item,
+                                            uint8_t stack_id );
 
 /**
  * @brief Computes a CMAC of a message using provided initial Bx block
@@ -353,7 +354,7 @@ static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, sof
  * @return smtc_se_return_code_t
  */
 static smtc_se_return_code_t compute_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer, uint16_t size,
-                                           smtc_se_key_identifier_t key_id, uint32_t* cmac );
+                                           smtc_se_key_identifier_t key_id, uint32_t* cmac, uint8_t stack_id );
 
 /**
  * @brief CRC function for soft se context security
@@ -376,15 +377,17 @@ smtc_se_return_code_t smtc_secure_element_init( void )
                                   .pin      = { 0x00, 0x00, 0x00, 0x00 },
                                   .key_list = SOFT_SE_KEY_LIST };
     // init soft secure element data euis and pin to 0 and key_list with empty lut
-    memcpy( ( uint8_t* ) &soft_se_data, ( uint8_t* ) &local_data, sizeof( local_data ) );
-
+    for( uint8_t stack_id = 0; stack_id < NUMBER_OF_STACKS; stack_id++ )
+    {
+        memcpy( ( uint8_t* ) &soft_se_data[stack_id], ( uint8_t* ) &local_data, sizeof( local_data ) );
+    }
     SMTC_MODEM_HAL_TRACE_INFO( "Use soft secure element for cryptographic functionalities\n" );
 
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_id,
-                                                   const uint8_t            key[SMTC_SE_KEY_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_id, const uint8_t key[SMTC_SE_KEY_SIZE],
+                                                   uint8_t stack_id )
 {
     if( key == NULL )
     {
@@ -393,7 +396,7 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
 
     for( uint8_t i = 0; i < SOFT_SE_NUMBER_OF_KEYS; i++ )
     {
-        if( soft_se_data.key_list[i].key_id == key_id )
+        if( soft_se_data[stack_id].key_list[i].key_id == key_id )
         {
             if( ( key_id == SMTC_SE_MC_KEY_0 ) || ( key_id == SMTC_SE_MC_KEY_1 ) || ( key_id == SMTC_SE_MC_KEY_2 ) ||
                 ( key_id == SMTC_SE_MC_KEY_3 ) )
@@ -401,14 +404,14 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
                 smtc_se_return_code_t rc                = SMTC_SE_RC_ERROR;
                 uint8_t               decrypted_key[16] = { 0 };
 
-                rc = smtc_secure_element_aes_encrypt( key, 16, SMTC_SE_MC_KE_KEY, decrypted_key );
+                rc = smtc_secure_element_aes_encrypt( key, 16, SMTC_SE_MC_KE_KEY, decrypted_key, stack_id );
 
-                memcpy( soft_se_data.key_list[i].key_value, decrypted_key, SMTC_SE_KEY_SIZE );
+                memcpy( soft_se_data[stack_id].key_list[i].key_value, decrypted_key, SMTC_SE_KEY_SIZE );
                 return rc;
             }
             else
             {
-                memcpy( &( soft_se_data.key_list[i].key_value ), key, SMTC_SE_KEY_SIZE );
+                memcpy( &( soft_se_data[stack_id].key_list[i].key_value ), key, SMTC_SE_KEY_SIZE );
                 return SMTC_SE_RC_SUCCESS;
             }
         }
@@ -419,18 +422,18 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
 
 smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer,
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
-                                                            uint32_t* cmac )
+                                                            uint32_t* cmac, uint8_t stack_id )
 {
     if( key_id >= SMTC_SE_SLOT_RAND_ZERO_KEY )
     {
         return SMTC_SE_RC_ERROR_INVALID_KEY_ID;
     }
 
-    return compute_cmac( mic_bx_buffer, buffer, size, key_id, cmac );
+    return compute_cmac( mic_bx_buffer, buffer, size, key_id, cmac, stack_id );
 }
 
 smtc_se_return_code_t smtc_secure_element_verify_aes_cmac( uint8_t* buffer, uint16_t size, uint32_t expected_cmac,
-                                                           smtc_se_key_identifier_t key_id )
+                                                           smtc_se_key_identifier_t key_id, uint8_t stack_id )
 {
     if( buffer == NULL )
     {
@@ -440,7 +443,7 @@ smtc_se_return_code_t smtc_secure_element_verify_aes_cmac( uint8_t* buffer, uint
     smtc_se_return_code_t rc        = SMTC_SE_RC_ERROR;
     uint32_t              comp_cmac = 0;
 
-    rc = compute_cmac( NULL, buffer, size, key_id, &comp_cmac );
+    rc = compute_cmac( NULL, buffer, size, key_id, &comp_cmac, stack_id );
 
     if( rc != SMTC_SE_RC_SUCCESS )
     {
@@ -456,7 +459,8 @@ smtc_se_return_code_t smtc_secure_element_verify_aes_cmac( uint8_t* buffer, uint
 }
 
 smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, uint16_t size,
-                                                       smtc_se_key_identifier_t key_id, uint8_t* enc_buffer )
+                                                       smtc_se_key_identifier_t key_id, uint8_t* enc_buffer,
+                                                       uint8_t stack_id )
 {
     if( buffer == NULL || enc_buffer == NULL )
     {
@@ -473,7 +477,7 @@ smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, ui
     memset( &aes_ctx, 0, sizeof( aes_context ) );
 
     soft_se_key_t*        key_item;
-    smtc_se_return_code_t rc = get_key_by_id( key_id, &key_item );
+    smtc_se_return_code_t rc = get_key_by_id( key_id, &key_item, stack_id );
 
     if( rc == SMTC_SE_RC_SUCCESS )
     {
@@ -492,7 +496,8 @@ smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, ui
 }
 
 smtc_se_return_code_t smtc_secure_element_derive_and_store_key( uint8_t* input, smtc_se_key_identifier_t rootkey_id,
-                                                                smtc_se_key_identifier_t targetkey_id )
+                                                                smtc_se_key_identifier_t targetkey_id,
+                                                                uint8_t                  stack_id )
 {
     if( input == NULL )
     {
@@ -512,14 +517,14 @@ smtc_se_return_code_t smtc_secure_element_derive_and_store_key( uint8_t* input, 
     }
 
     // Derive key
-    rc = smtc_secure_element_aes_encrypt( input, 16, rootkey_id, key );
+    rc = smtc_secure_element_aes_encrypt( input, 16, rootkey_id, key, stack_id );
     if( rc != SMTC_SE_RC_SUCCESS )
     {
         return rc;
     }
 
     // Store key
-    rc = smtc_secure_element_set_key( targetkey_id, key );
+    rc = smtc_secure_element_set_key( targetkey_id, key, stack_id );
     if( rc != SMTC_SE_RC_SUCCESS )
     {
         return rc;
@@ -532,7 +537,7 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
                                                                uint8_t joineui[SMTC_SE_EUI_SIZE], uint16_t dev_nonce,
                                                                const uint8_t* enc_join_accept,
                                                                uint8_t enc_join_accept_size, uint8_t* dec_join_accept,
-                                                               uint8_t* version_minor )
+                                                               uint8_t* version_minor, uint8_t stack_id )
 {
     if( ( enc_join_accept == NULL ) || ( dec_join_accept == NULL ) || ( version_minor == NULL ) )
     {
@@ -557,7 +562,7 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
     // Decrypt JoinAccept, skip MHDR
     if( smtc_secure_element_aes_encrypt( enc_join_accept + LORAMAC_MHDR_FIELD_SIZE,
                                          enc_join_accept_size - LORAMAC_MHDR_FIELD_SIZE, enckey_id,
-                                         dec_join_accept + LORAMAC_MHDR_FIELD_SIZE ) != SMTC_SE_RC_SUCCESS )
+                                         dec_join_accept + LORAMAC_MHDR_FIELD_SIZE, stack_id ) != SMTC_SE_RC_SUCCESS )
     {
         return SMTC_SE_RC_FAIL_ENCRYPT;
     }
@@ -582,7 +587,7 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
         //   cmac = aes128_cmac(NwkKey, MHDR |  JoinNonce | NetID | DevAddr | DLSettings | RxDelay | CFList |
         //   CFListType)
         if( smtc_secure_element_verify_aes_cmac( dec_join_accept, ( enc_join_accept_size - LORWAN_MIC_FIELD_SIZE ), mic,
-                                                 SMTC_SE_NWK_KEY ) != SMTC_SE_RC_SUCCESS )
+                                                 SMTC_SE_NWK_KEY, stack_id ) != SMTC_SE_RC_SUCCESS )
         {
             return SMTC_SE_RC_FAIL_CMAC;
         }
@@ -595,86 +600,87 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_deveui( const uint8_t deveui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_deveui( const uint8_t deveui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( deveui == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
-    memcpy( soft_se_data.deveui, deveui, SMTC_SE_EUI_SIZE );
+    memcpy( soft_se_data[stack_id].deveui, deveui, SMTC_SE_EUI_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_get_deveui( uint8_t deveui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_get_deveui( uint8_t deveui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( deveui == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
-    memcpy( deveui, soft_se_data.deveui, SMTC_SE_EUI_SIZE );
+    memcpy( deveui, soft_se_data[stack_id].deveui, SMTC_SE_EUI_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_joineui( const uint8_t joineui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_joineui( const uint8_t joineui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( joineui == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
-    memcpy( soft_se_data.joineui, joineui, SMTC_SE_EUI_SIZE );
+    memcpy( soft_se_data[stack_id].joineui, joineui, SMTC_SE_EUI_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_get_joineui( uint8_t joineui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_get_joineui( uint8_t joineui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( joineui == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
-    memcpy( joineui, soft_se_data.joineui, SMTC_SE_EUI_SIZE );
+    memcpy( joineui, soft_se_data[stack_id].joineui, SMTC_SE_EUI_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_pin( const uint8_t pin[SMTC_SE_PIN_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_pin( const uint8_t pin[SMTC_SE_PIN_SIZE], uint8_t stack_id )
 {
     if( pin == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
 
-    memcpy( soft_se_data.pin, pin, SMTC_SE_PIN_SIZE );
+    memcpy( soft_se_data[stack_id].pin, pin, SMTC_SE_PIN_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_get_pin( uint8_t pin[SMTC_SE_PIN_SIZE] )
+smtc_se_return_code_t smtc_secure_element_get_pin( uint8_t pin[SMTC_SE_PIN_SIZE], uint8_t stack_id )
 {
     if( pin == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
-    memcpy( pin, soft_se_data.pin, SMTC_SE_EUI_SIZE );
+    memcpy( pin, soft_se_data[stack_id].pin, SMTC_SE_PIN_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
 smtc_se_return_code_t smtc_secure_element_store_context( void )
 {
-    soft_se_context_nvm_t ctx = {
-        .data = soft_se_data,
-    };
+    soft_se_context_nvm_t ctx = { 0 };
+
+    memcpy( ( uint8_t* ) &ctx.data, ( uint8_t* ) &soft_se_data[0], sizeof( soft_se_data ) );
+
     ctx.crc = soft_ce_crc( ( uint8_t* ) &ctx, sizeof( ctx ) - 4 );
 
-    smtc_modem_hal_context_store( CONTEXT_SECURE_ELEMENT, ( uint8_t* ) &ctx, sizeof( ctx ) );
+    smtc_modem_hal_context_store( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
     smtc_secure_element_restore_context( );
     return SMTC_SE_RC_SUCCESS;
 }
 
 smtc_se_return_code_t smtc_secure_element_restore_context( void )
 {
-    soft_se_context_nvm_t ctx;
-    smtc_modem_hal_context_restore( CONTEXT_SECURE_ELEMENT, ( uint8_t* ) &ctx, sizeof( ctx ) );
+    soft_se_context_nvm_t ctx = { 0 };
+    smtc_modem_hal_context_restore( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
     if( soft_ce_crc( ( uint8_t* ) &ctx, sizeof( ctx ) - 4 ) == ctx.crc )
     {
-        soft_se_data = ctx.data;
+        memcpy( ( uint8_t* ) soft_se_data, ( uint8_t* ) &ctx.data, ( sizeof( ctx.data ) ) );
         return SMTC_SE_RC_SUCCESS;
     }
     else
@@ -685,7 +691,10 @@ smtc_se_return_code_t smtc_secure_element_restore_context( void )
                                       .pin      = { 0x00, 0x00, 0x00, 0x00 },
                                       .key_list = SOFT_SE_KEY_LIST };
         // init soft secure element data euis and pin to 0 and key_list with empty lut
-        memcpy( ( uint8_t* ) &soft_se_data, ( uint8_t* ) &local_data, sizeof( local_data ) );
+        for( uint8_t stack_id = 0; stack_id < NUMBER_OF_STACKS; stack_id++ )
+        {
+            memcpy( ( uint8_t* ) &soft_se_data[stack_id], ( uint8_t* ) &local_data, sizeof( local_data ) );
+        }
         return SMTC_SE_RC_ERROR;
     }
 }
@@ -694,13 +703,14 @@ smtc_se_return_code_t smtc_secure_element_restore_context( void )
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, soft_se_key_t** key_item )
+static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, soft_se_key_t** key_item,
+                                            uint8_t stack_id )
 {
     for( uint8_t i = 0; i < SOFT_SE_NUMBER_OF_KEYS; i++ )
     {
-        if( soft_se_data.key_list[i].key_id == key_id )
+        if( soft_se_data[stack_id].key_list[i].key_id == key_id )
         {
-            *key_item = &( soft_se_data.key_list[i] );
+            *key_item = &( soft_se_data[stack_id].key_list[i] );
             return SMTC_SE_RC_SUCCESS;
         }
     }
@@ -708,7 +718,7 @@ static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, sof
 }
 
 static smtc_se_return_code_t compute_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer, uint16_t size,
-                                           smtc_se_key_identifier_t key_id, uint32_t* cmac )
+                                           smtc_se_key_identifier_t key_id, uint32_t* cmac, uint8_t stack_id )
 {
     if( ( buffer == NULL ) || ( cmac == NULL ) )
     {
@@ -722,7 +732,7 @@ static smtc_se_return_code_t compute_cmac( uint8_t* mic_bx_buffer, const uint8_t
 
     soft_se_key_t* key_item;
 
-    smtc_se_return_code_t rc = get_key_by_id( key_id, &key_item );
+    smtc_se_return_code_t rc = get_key_by_id( key_id, &key_item, stack_id );
 
     if( rc == SMTC_SE_RC_SUCCESS )
     {

@@ -66,12 +66,14 @@ typedef struct ralf_s ralf_t;
 typedef ral_status_t ( *ralf_setup_gfsk_f )( const ralf_t* radio, const ralf_params_gfsk_t* params );
 typedef ral_status_t ( *ralf_setup_lora_f )( const ralf_t* radio, const ralf_params_lora_t* params );
 typedef ral_status_t ( *ralf_setup_flrc_f )( const ralf_t* radio, const ralf_params_flrc_t* params );
+typedef ral_status_t ( *ralf_setup_lora_cad_f )( const ralf_t* radio, const ralf_params_lora_cad_t* params );
 
 typedef struct ralf_drv_s
 {
-    ralf_setup_gfsk_f setup_gfsk;
-    ralf_setup_lora_f setup_lora;
-    ralf_setup_flrc_f setup_flrc;
+    ralf_setup_gfsk_f     setup_gfsk;
+    ralf_setup_lora_f     setup_lora;
+    ralf_setup_flrc_f     setup_flrc;
+    ralf_setup_lora_cad_f setup_lora_cad;
 } ralf_drv_t;
 
 /*

@@ -66,6 +66,8 @@ extern "C" {
  * @brief Application examples
  */
 #define EXAMPLE_EXTI 0
+#define HW_MODEM 1
+#define EXAMPLE_PORTING_TESTS 2
 
 /*
  * -----------------------------------------------------------------------------
@@ -73,6 +75,8 @@ extern "C" {
  */
 
 void main_exti( void );
+void main_hw_modem( void );
+void main_porting_tests( void );
 
 #ifdef __cplusplus
 }

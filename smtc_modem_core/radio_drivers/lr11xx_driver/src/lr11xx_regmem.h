@@ -52,6 +52,11 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
+/*!
+ * @brief Maximum number of words that can be written to / read from a LR11XX chip with regmem32 commands
+ */
+#define LR11XX_REGMEM_MAX_WRITE_READ_WORDS 64
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
@@ -68,7 +73,7 @@ extern "C" {
  */
 
 /*!
- * @brief Write words into register memory space of LR11XX.
+ * @brief Write up to 64 words into register memory space of LR11XX.
  *
  * A word is 32-bit long. The writing operations write contiguously in register memory, starting at the address
  * provided.
@@ -86,7 +91,7 @@ lr11xx_status_t lr11xx_regmem_write_regmem32( const void* context, const uint32_
                                               const uint8_t length );
 
 /*!
- * @brief Read words into register memory space of LR11XX.
+ * @brief Read up to 64 words into register memory space of LR11XX.
  *
  * A word is 32-bit long. The reading operations read contiguously from register memory, starting at the address
  * provided.

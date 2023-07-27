@@ -46,17 +46,11 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
-#define LR11XX_LR_FHSS_PKT_TYPE_LR_FHSS ( 0x04 )
-#define LR_FHSS_BITRATE_IN_256_BPS_STEPS ( 125000 )
-#define LR11XX_LR_FHSS_SET_MODULATION_PARAMS_LR_FHSS_CMD_LENGTH ( 2 + 5 )
 #define LR11XX_LR_FHSS_BUILD_FRAME_LENGTH ( 2 + 9 )
-#define LR11XX_LR_FHSS_SET_SYNC_WORD_LENGTH ( 2 + 0 )
-#define LR11XX_LR_FHSS_SET_MODULATION_PARAM_DIVIDE_BITRATE_BY_256 ( 0x80000000 )
 #define LR11XX_LR_FHSS_HEADER_BITS ( 114 )
 #define LR11XX_LR_FHSS_FRAG_BITS ( 48 )
 #define LR11XX_LR_FHSS_BLOCK_PREAMBLE_BITS ( 2 )
 #define LR11XX_LR_FHSS_BLOCK_BITS ( LR11XX_LR_FHSS_FRAG_BITS + LR11XX_LR_FHSS_BLOCK_PREAMBLE_BITS )
-#define LR11XX_LR_FHSS_SYNCWORD_LENGTH ( 4 )
 
 /*
  * -----------------------------------------------------------------------------
@@ -73,9 +67,7 @@
  */
 enum
 {
-    LR11XX_LR_FHSS_SET_MODULATION_PARAM_OC = 0x020F,
-    LR11XX_LR_FHSS_BUILD_FRAME_OC          = 0x022C,
-    LR11XX_LR_FHSS_SET_SYNC_WORD_OC        = 0x022D,
+    LR11XX_LR_FHSS_BUILD_FRAME_OC = 0x022C,
 };
 
 /*!
@@ -87,23 +79,6 @@ typedef enum
     LR11XX_LR_FHSS_HOPPING_ENABLE  = 0x01,
 } lr11xx_lr_fhss_hopping_configuration_t;
 
-/*!
- * @brief Pulse shape configurations
- */
-typedef enum
-{
-    LR11XX_LR_FHSS_PULSE_SHAPE_BT_1 = 0x0B  //!< Gaussian BT 1.0
-} lr11xx_lr_fhss_pulse_shape_t;
-
-/*!
- * @brief Modulation configuration for LR_FHSS packets
- */
-typedef struct lr11xx_lr_fhss_mod_params_lr_fhss_s
-{
-    uint32_t                     br_in_bps;    //!< LR_FHSS bitrate [bit/s]
-    lr11xx_lr_fhss_pulse_shape_t pulse_shape;  //!< LR_FHSS pulse shape
-} lr11xx_lr_fhss_mod_params_lr_fhss_t;
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
@@ -113,34 +88,6 @@ typedef struct lr11xx_lr_fhss_mod_params_lr_fhss_s
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
-
-/*!
- * @brief Set the modulation parameters for LR_FHSS
- *
- * The command @ref lr11xx_lr_fhss_set_pkt_type must be called prior this one.
- *
- * @param [in] context Chip implementation context
- * @param [in] mod_params The structure of modulation configuration
- *
- * @returns Operation status
- *
- * @see lr11xx_lr_fhss_set_pkt_type
- */
-static lr11xx_status_t lr11xx_lr_fhss_set_lr_fhss_mod_params( const void*                                context,
-                                                              const lr11xx_lr_fhss_mod_params_lr_fhss_t* mod_params );
-
-/*!
- * @brief Set the syncword for LR_FHSS
- *
- * Default value: 0x2C0F7995
- *
- * @param [in] context Chip implementation context
- * @param [in] sync_word The syncword to set. It is up to the caller to ensure this array is at least four bytes long
- *
- * @returns Operation status
- */
-static lr11xx_status_t lr11xx_lr_fhss_set_sync_word( const void*   context,
-                                                     const uint8_t sync_word[LR11XX_LR_FHSS_SYNCWORD_LENGTH] );
 
 /*!
  * @brief Get the bit count and block count for a LR-FHSS frame
@@ -160,20 +107,28 @@ static uint16_t lr11xx_lr_fhss_get_nb_bits( const lr_fhss_v1_params_t* params, u
 
 lr11xx_status_t lr11xx_lr_fhss_init( const void* context )
 {
-    const lr11xx_status_t set_packet_type_status =
-        lr11xx_radio_set_pkt_type( context, LR11XX_LR_FHSS_PKT_TYPE_LR_FHSS );
+    const lr11xx_status_t set_packet_type_status = lr11xx_radio_set_pkt_type( context, LR11XX_RADIO_PKT_TYPE_LR_FHSS );
     if( set_packet_type_status != LR11XX_STATUS_OK )
     {
         return set_packet_type_status;
     }
 
-    const lr11xx_lr_fhss_mod_params_lr_fhss_t mod_lr_fhss = {
-        .br_in_bps   = LR11XX_LR_FHSS_SET_MODULATION_PARAM_DIVIDE_BITRATE_BY_256 + LR_FHSS_BITRATE_IN_256_BPS_STEPS,
-        .pulse_shape = LR11XX_LR_FHSS_PULSE_SHAPE_BT_1
+    const lr11xx_radio_mod_params_lr_fhss_t mod_lr_fhss = {
+        .br_in_bps   = LR11XX_RADIO_LR_FHSS_BITRATE_488_BPS,
+        .pulse_shape = LR11XX_RADIO_LR_FHSS_PULSE_SHAPE_BT_1,
     };
 
-    const lr11xx_status_t set_modulation_param_status = lr11xx_lr_fhss_set_lr_fhss_mod_params( context, &mod_lr_fhss );
+    const lr11xx_status_t set_modulation_param_status = lr11xx_radio_set_lr_fhss_mod_params( context, &mod_lr_fhss );
     return set_modulation_param_status;
+}
+
+uint16_t lr11xx_lr_fhss_get_bit_delay_in_us( const lr11xx_lr_fhss_params_t* params, uint16_t payload_length )
+{
+    const uint16_t nb_bits = lr11xx_lr_fhss_get_nb_bits( &( params->lr_fhss_params ), payload_length );
+
+    const uint8_t nb_padding_bits = 1 + ( ( 32768 - nb_bits ) & 0x07 );
+
+    return 1600 + nb_padding_bits * 2048;
 }
 
 lr11xx_status_t lr11xx_lr_fhss_build_frame( const void* context, const lr11xx_lr_fhss_params_t* lr_fhss_params,
@@ -181,7 +136,7 @@ lr11xx_status_t lr11xx_lr_fhss_build_frame( const void* context, const lr11xx_lr
 {
     // Since the build_frame command is last, it is possible to check status through stat1
 
-    lr11xx_status_t status = lr11xx_lr_fhss_set_sync_word( context, lr_fhss_params->lr_fhss_params.sync_word );
+    lr11xx_status_t status = lr11xx_radio_set_lr_fhss_sync_word( context, lr_fhss_params->lr_fhss_params.sync_word );
     if( status != LR11XX_STATUS_OK )
     {
         return status;
@@ -227,35 +182,6 @@ unsigned int lr11xx_lr_fhss_get_hop_sequence_count( const lr11xx_lr_fhss_params_
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION ---------------------------------------------
  */
-
-lr11xx_status_t lr11xx_lr_fhss_set_lr_fhss_mod_params( const void*                                radio,
-                                                       const lr11xx_lr_fhss_mod_params_lr_fhss_t* mod_params )
-{
-    const uint8_t cbuffer[LR11XX_LR_FHSS_SET_MODULATION_PARAMS_LR_FHSS_CMD_LENGTH] = {
-        ( uint8_t ) ( LR11XX_LR_FHSS_SET_MODULATION_PARAM_OC >> 8 ),
-        ( uint8_t ) ( LR11XX_LR_FHSS_SET_MODULATION_PARAM_OC >> 0 ),
-        ( uint8_t ) ( mod_params->br_in_bps >> 24 ),
-        ( uint8_t ) ( mod_params->br_in_bps >> 16 ),
-        ( uint8_t ) ( mod_params->br_in_bps >> 8 ),
-        ( uint8_t ) ( mod_params->br_in_bps >> 0 ),
-        ( uint8_t ) mod_params->pulse_shape,
-    };
-
-    return ( lr11xx_status_t ) lr11xx_hal_write( radio, cbuffer,
-                                                 LR11XX_LR_FHSS_SET_MODULATION_PARAMS_LR_FHSS_CMD_LENGTH, 0, 0 );
-}
-
-lr11xx_status_t lr11xx_lr_fhss_set_sync_word( const void*   context,
-                                              const uint8_t sync_word[LR11XX_LR_FHSS_SYNCWORD_LENGTH] )
-{
-    const uint8_t cbuffer[LR11XX_LR_FHSS_SET_SYNC_WORD_LENGTH] = {
-        ( uint8_t ) ( LR11XX_LR_FHSS_SET_SYNC_WORD_OC >> 8 ),
-        ( uint8_t ) ( LR11XX_LR_FHSS_SET_SYNC_WORD_OC >> 0 ),
-    };
-
-    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_LR_FHSS_SET_SYNC_WORD_LENGTH, sync_word,
-                                                 LR11XX_LR_FHSS_SYNCWORD_LENGTH );
-}
 
 uint16_t lr11xx_lr_fhss_get_nb_bits( const lr_fhss_v1_params_t* params, uint16_t payload_length )
 {

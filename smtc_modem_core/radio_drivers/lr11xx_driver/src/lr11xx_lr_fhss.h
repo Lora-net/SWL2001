@@ -81,10 +81,20 @@ extern "C" {
  */
 lr11xx_status_t lr11xx_lr_fhss_init( const void* context );
 
+/**
+ * @brief Get the delay in microsecond between the last bit sent and the TX done interrupt
+ *
+ * @param [in]  params          lr11xx LR-FHSS parameter structure
+ * @param [in]  payload_length  Length of application-layer payload
+ *
+ * @returns Delay in microseconds
+ */
+uint16_t lr11xx_lr_fhss_get_bit_delay_in_us( const lr11xx_lr_fhss_params_t* params, uint16_t payload_length );
+
 /*!
  * @brief Configure a payload to be sent with LR_FHSS
  *
- * When calling this method, lr11xx_lr_fhss_set_sync_word is implicitely called to configure the sync word.
+ * When calling this method, lr11xx_radio_set_lr_fhss_sync_word is implicitely called to configure the sync word.
  * Note that the syncword must be 4 bytes long.
  *
  * @param [in] context Chip implementation context

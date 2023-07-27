@@ -41,7 +41,7 @@
 
 #include "smtc_modem_hal.h"
 #include "ral_sx128x_bsp.h"
-#include "smtc_modem_api.h"
+#include "radio_utilities.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -80,17 +80,10 @@ void ral_sx128x_bsp_get_reg_mode( const void* context, sx128x_reg_mod_t* reg_mod
 void ral_sx128x_bsp_get_tx_cfg( const void* context, const ral_sx128x_bsp_tx_cfg_input_params_t* input_params,
                                 ral_sx128x_bsp_tx_cfg_output_params_t* output_params )
 {
-    int8_t modem_tx_offset;
+    // get board tx power offset
+    int8_t board_tx_pwr_offset_db = radio_utilities_get_tx_power_offset( );
 
-    // get modem_configured tx power offset
-    if( smtc_modem_get_tx_power_offset_db( 0, &modem_tx_offset ) != SMTC_MODEM_RC_OK )
-    {
-        // in case rc code is not RC_OK, this function will not return the offset and we need to use no offset (in test
-        // mode for example)
-        modem_tx_offset = 0;
-    }
-
-    int16_t power = input_params->system_output_pwr_in_dbm + modem_tx_offset;
+    int16_t power = input_params->system_output_pwr_in_dbm + board_tx_pwr_offset_db;
 
     if( power > 13 )
     {
@@ -109,4 +102,10 @@ void ral_sx128x_bsp_get_tx_cfg( const void* context, const ral_sx128x_bsp_tx_cfg
     }
 
     output_params->pa_ramp_time = SX128X_RAMP_20_US;
+}
+
+void ral_sx128x_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
+                                           uint8_t* in_out_cad_det_peak )
+{
+    // Function used to fine tune the cad detection peak, update if needed
 }

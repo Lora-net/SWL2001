@@ -46,31 +46,6 @@
 #include "smtc_modem_hal.h"
 #include "smtc_modem_hal_dbg_trace.h"
 
-void memcpy1( uint8_t* dst, const uint8_t* src, uint16_t size )
-{
-    while( size-- )
-    {
-        *dst++ = *src++;
-    }
-}
-
-void memcpy1_r( uint8_t* dst, const uint8_t* src, uint16_t size )
-{
-    const uint8_t* p = src + ( size - 1 );
-    while( size-- )
-    {
-        *dst++ = *p--;
-    }
-}
-
-void memset1( uint8_t* dst, uint8_t value, uint16_t size )
-{
-    while( size-- )
-    {
-        *dst++ = value;
-    }
-}
-
 uint32_t lr1mac_utilities_crc( uint8_t* buf, int len )
 {
     uint32_t crc = 0xFFFFFFFA;
@@ -200,8 +175,7 @@ status_lorawan_t lr1mac_rx_payload_min_size_check( uint8_t rx_payload_size )
     return ( status );
 }
 
-status_lorawan_t lr1mac_rx_mhdr_extract( uint8_t* rx_payload, uint8_t* rx_ftype, uint8_t* rx_major,
-                                         uint8_t* tx_ack_bit )
+status_lorawan_t lr1mac_rx_mhdr_extract( uint8_t* rx_payload, uint8_t* rx_ftype, uint8_t* rx_major, bool* tx_ack_bit )
 {
     status_lorawan_t status = OKLORAWAN;
     *rx_ftype               = rx_payload[0] >> 5;
@@ -210,15 +184,15 @@ status_lorawan_t lr1mac_rx_mhdr_extract( uint8_t* rx_payload, uint8_t* rx_ftype,
         ( *rx_ftype == REJOIN_REQUEST ) || ( *rx_ftype == PROPRIETARY ) || ( *rx_major != LORAWANR1 ) )
     {
         status = ERRORLORAWAN;
-        SMTC_MODEM_HAL_TRACE_MSG( " BAD RX MHDR\n " );
+        SMTC_MODEM_HAL_TRACE_WARNING( " BAD RX MHDR\n " );
     }
-    *tx_ack_bit = ( *rx_ftype == CONF_DATA_DOWN ) ? 1 : 0;
+    *tx_ack_bit = ( *rx_ftype == CONF_DATA_DOWN ) ? true : false;
 
     return ( status );
 }
 
 int lr1mac_rx_fhdr_extract( uint8_t* rx_payload, uint8_t rx_payload_size, uint8_t* rx_fopts_length,
-                            uint16_t* fcnt_dwn_tmp, uint32_t dev_addr, uint8_t* rx_fport, uint8_t* rx_payload_empty,
+                            uint16_t* fcnt_dwn_tmp, uint32_t dev_addr, uint8_t* rx_fport, bool* rx_fport_present,
                             uint8_t* rx_fctrl, uint8_t* rx_fopts )
 {
     int      status       = OKLORAWAN;
@@ -229,17 +203,18 @@ int lr1mac_rx_fhdr_extract( uint8_t* rx_payload, uint8_t rx_payload_size, uint8_
 
     *fcnt_dwn_tmp    = rx_payload[6] + ( rx_payload[7] << 8 );
     *rx_fopts_length = *rx_fctrl & 0x0F;
-    memcpy1( &rx_fopts[0], &rx_payload[FHDROFFSET], *rx_fopts_length );
+    memcpy( &rx_fopts[0], &rx_payload[FHDROFFSET], *rx_fopts_length );
     // case empty payload without fport :
     if( rx_payload_size > FHDROFFSET + MICSIZE + *rx_fopts_length )
     {
         *rx_fport         = rx_payload[FHDROFFSET + *rx_fopts_length];
-        *rx_payload_empty = 0;
+        *rx_fport_present = true;
     }
     else
     {
-        *rx_payload_empty = 1;
-        SMTC_MODEM_HAL_TRACE_MSG( " EMPTY MSG \n" );
+        *rx_fport         = 0;
+        *rx_fport_present = false;
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( " EMPTY MSG \n" );
     }
     /**************************/
     /* manage Fctrl Byte      */

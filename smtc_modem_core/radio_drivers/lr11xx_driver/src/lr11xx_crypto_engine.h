@@ -44,6 +44,7 @@ extern "C" {
  * --- DEPENDENCIES ------------------------------------------------------------
  */
 
+#include <stdbool.h>
 #include "lr11xx_crypto_engine_types.h"
 #include "lr11xx_types.h"
 
@@ -88,9 +89,9 @@ lr11xx_status_t lr11xx_crypto_select( const void* context, const lr11xx_crypto_e
  * @param [in] key_id The identifier of the key to be set
  * @param [in] key The key to be set
  *
- * @see lr11xx_crypto_derive_key
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_derive_key
  */
 lr11xx_status_t lr11xx_crypto_set_key( const void* context, lr11xx_crypto_status_t* status, const uint8_t key_id,
                                        const lr11xx_crypto_key_t key );
@@ -105,9 +106,9 @@ lr11xx_status_t lr11xx_crypto_set_key( const void* context, lr11xx_crypto_status
  * lr11xx_crypto_store_to_flash
  * @param [in] nonce The nonce to be used to perform the derivation
  *
- * @see lr11xx_crypto_set_key
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_set_key
  */
 lr11xx_status_t lr11xx_crypto_derive_key( const void* context, lr11xx_crypto_status_t* status, const uint8_t src_key_id,
                                           const uint8_t dest_key_id, const lr11xx_crypto_nonce_t nonce );
@@ -143,9 +144,9 @@ lr11xx_status_t lr11xx_crypto_process_join_accept( const void* context, lr11xx_c
  * @param [in] length The length in bytes of the data to compute
  * @param [out] mic Placeholder for the computed MIC (first 4 bytes of the AES-CMAC)
  *
- * @see lr11xx_crypto_verify_aes_cmac
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_verify_aes_cmac
  */
 lr11xx_status_t lr11xx_crypto_compute_aes_cmac( const void* context, lr11xx_crypto_status_t* status,
                                                 const uint8_t key_id, const uint8_t* data, const uint16_t length,
@@ -161,9 +162,9 @@ lr11xx_status_t lr11xx_crypto_compute_aes_cmac( const void* context, lr11xx_cryp
  * @param [in] length The length in bytes of the data to compute
  * @param [in] mic The MIC value (first 4 bytes of the CMAC) use for comparison
  *
- * @see lr11xx_crypto_compute_aes_cmac
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_compute_aes_cmac
  */
 lr11xx_status_t lr11xx_crypto_verify_aes_cmac( const void* context, lr11xx_crypto_status_t* status,
                                                const uint8_t key_id, const uint8_t* data, const uint16_t length,
@@ -180,9 +181,9 @@ lr11xx_status_t lr11xx_crypto_verify_aes_cmac( const void* context, lr11xx_crypt
  * @param [out] result A pointer to a data buffer that will be filled with the encrypted data. Values of this buffer are
  * meaningful if and only if the return status is LR11XX_CRYPTO_STATUS_SUCCESS
  *
- * @see lr11xx_crypto_set_key, lr11xx_crypto_derive_key
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_set_key, lr11xx_crypto_derive_key
  */
 lr11xx_status_t lr11xx_crypto_aes_encrypt_01( const void* context, lr11xx_crypto_status_t* status, const uint8_t key_id,
                                               const uint8_t* data, const uint16_t length, uint8_t* result );
@@ -198,9 +199,9 @@ lr11xx_status_t lr11xx_crypto_aes_encrypt_01( const void* context, lr11xx_crypto
  * @param [out] result A pointer to a data buffer that will be filled with the encrypted data. Values of this buffer are
  * meaningful if and only if the return status is LR11XX_CRYPTO_STATUS_SUCCESS
  *
- * @see lr11xx_crypto_set_key, lr11xx_crypto_derive_key
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_set_key, lr11xx_crypto_derive_key
  */
 lr11xx_status_t lr11xx_crypto_aes_encrypt( const void* context, lr11xx_crypto_status_t* status, const uint8_t key_id,
                                            const uint8_t* data, const uint16_t length, uint8_t* result );
@@ -216,9 +217,9 @@ lr11xx_status_t lr11xx_crypto_aes_encrypt( const void* context, lr11xx_crypto_st
  * @param [out] result A pointer to a data buffer that will be filled with the decrypted data. Values of this buffer are
  * meaningful if and only if the return status is LR11XX_CRYPTO_STATUS_SUCCESS
  *
- * @see lr11xx_crypto_set_key, lr11xx_crypto_derive_key
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_set_key, lr11xx_crypto_derive_key
  */
 lr11xx_status_t lr11xx_crypto_aes_decrypt( const void* context, lr11xx_crypto_status_t* status, const uint8_t key_id,
                                            const uint8_t* data, const uint16_t length, uint8_t* result );
@@ -229,9 +230,9 @@ lr11xx_status_t lr11xx_crypto_aes_decrypt( const void* context, lr11xx_crypto_st
  * @param [in] context Chip implementation context
  * @param [out] status The status returned by the execution of this cryptographic function
  *
- * @see lr11xx_crypto_restore_from_flash
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_restore_from_flash
  */
 lr11xx_status_t lr11xx_crypto_store_to_flash( const void* context, lr11xx_crypto_status_t* status );
 
@@ -241,9 +242,9 @@ lr11xx_status_t lr11xx_crypto_store_to_flash( const void* context, lr11xx_crypto
  * @param [in] context Chip implementation context
  * @param [out] status The status returned by the execution of this cryptographic function
  *
- * @see lr11xx_crypto_store_to_flash
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_store_to_flash
  */
 lr11xx_status_t lr11xx_crypto_restore_from_flash( const void* context, lr11xx_crypto_status_t* status );
 
@@ -258,9 +259,9 @@ lr11xx_status_t lr11xx_crypto_restore_from_flash( const void* context, lr11xx_cr
  * @param [in] param_id The identifier of the parameter to be set
  * @param [in] parameter The parameter to be set
  *
- * @see lr11xx_crypto_get_parameter
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_get_parameter
  */
 lr11xx_status_t lr11xx_crypto_set_parameter( const void* context, lr11xx_crypto_status_t* status,
                                              const uint8_t param_id, const lr11xx_crypto_param_t parameter );
@@ -276,12 +277,61 @@ lr11xx_status_t lr11xx_crypto_set_parameter( const void* context, lr11xx_crypto_
  * @param [in] param_id The identifier of the parameter to get
  * @param [out] parameter The placeholder to store the parameter
  *
- * @see lr11xx_crypto_set_parameter
- *
  * @returns Operation status
+ *
+ * @see lr11xx_crypto_set_parameter
  */
 lr11xx_status_t lr11xx_crypto_get_parameter( const void* context, lr11xx_crypto_status_t* status,
                                              const uint8_t param_id, lr11xx_crypto_param_t parameter );
+
+/*!
+ * @brief Check if an encrypted firmware image is suitable for the transceiver on which the check is done
+ *
+ * @remark The result can be read by calling @ref lr11xx_crypto_get_check_encrypted_firmware_image_result
+ *
+ * @remark A user checks the suitability of a firmware image by calling this function with 64-word long chunk of data
+ * sent in-order (except for the last one that can be shorter).
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] offset_in_byte Offset of data buffer in firmware image - has to be a multiple of 4
+ * @param [in] data Buffer holding the encrypted content. Its size in words must be at least length
+ * @param [in] length_in_word Number of words (i.e. 4 bytes) in the buffer to transfer. This value must be in the range
+ * [0:64]
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_crypto_check_encrypted_firmware_image( const void* context, const uint32_t offset_in_byte,
+                                                              const uint32_t* data, const uint8_t length_in_word );
+
+/*!
+ * @brief Check if an encrypted firmware image is suitable for the transceiver on which the check is done
+ *
+ * @remark The result can be read by calling @ref lr11xx_crypto_get_check_encrypted_firmware_image_result
+ *
+ * @remark This function is developed on top of @ref lr11xx_crypto_check_encrypted_firmware_image and takes care of the
+ * whole firmware image transfer
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] offset_in_byte Offset of data buffer in firmware image - has to be a multiple of 4
+ * @param [in] data Buffer holding the encrypted content. Its size in words must be at least length
+ * @param [in] length_in_word Number of words (i.e. 4 bytes) in the buffer to transfer
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_crypto_check_encrypted_firmware_image_full( const void* context, const uint32_t offset_in_byte,
+                                                                   const uint32_t* data,
+                                                                   const uint32_t  length_in_word );
+
+/*!
+ * @brief Get the result of the encrypted firmware image check
+ *
+ * @param [in] context Chip implementation context
+ * @param [out] is_encrypted_fw_image_ok Result of the encrypted firmware image check
+ *
+ * @returns Operation status
+ */
+lr11xx_status_t lr11xx_crypto_get_check_encrypted_firmware_image_result( const void* context,
+                                                                         bool*       is_encrypted_fw_image_ok );
 
 #ifdef __cplusplus
 }

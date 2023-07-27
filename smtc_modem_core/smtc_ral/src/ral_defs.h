@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RAL_DEFS_H__
-#define RAL_DEFS_H__
+#ifndef RAL_DEFS_H
+#define RAL_DEFS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,6 +90,13 @@ typedef enum ral_fallback_modes_e
     RAL_FALLBACK_STDBY_XOSC,
     RAL_FALLBACK_FS,
 } ral_fallback_modes_t;
+
+typedef enum ral_xosc_cfg_e
+{
+    RAL_XOSC_CFG_XTAL,
+    RAL_XOSC_CFG_TCXO_RADIO_CTRL,
+    RAL_XOSC_CFG_TCXO_EXT_CTRL,
+} ral_xosc_cfg_t;
 
 /**
  * API return status
@@ -323,7 +330,7 @@ typedef struct ral_gfsk_pkt_params_s
     uint8_t                      sync_word_len_in_bits;  //!< GFSK Sync word length in bits
     ral_gfsk_address_filtering_t address_filtering;      //!< GFSK Address filtering configuration
     ral_gfsk_pkt_len_modes_t     header_type;            //!< GFSK Header type
-    uint8_t                      pld_len_in_bytes;       //!< GFSK Payload length in bytes
+    uint16_t                     pld_len_in_bytes;       //!< GFSK Payload length in bytes
     ral_gfsk_crc_type_t          crc_type;               //!< GFSK CRC type configuration
     ral_gfsk_dc_free_t           dc_free;                //!< GFSK Whitening configuration
 } ral_gfsk_pkt_params_t;
@@ -499,6 +506,6 @@ static inline uint8_t ral_compute_lora_ldro( const ral_lora_sf_t sf, const ral_l
 }
 #endif
 
-#endif  // RAL_DEFS_H__
+#endif  // RAL_DEFS_H
 
 /* --- EOF ------------------------------------------------------------------ */

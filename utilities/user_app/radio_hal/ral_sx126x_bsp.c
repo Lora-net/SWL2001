@@ -41,7 +41,7 @@
 #include <stdbool.h>  // bool type
 
 #include "ral_sx126x_bsp.h"
-#include "smtc_modem_api.h"
+#include "radio_utilities.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -86,17 +86,10 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
                                 ral_sx126x_bsp_tx_cfg_output_params_t* output_params )
 
 {
-    int8_t modem_tx_offset;
+    // get board tx power offset
+    int8_t board_tx_pwr_offset_db = radio_utilities_get_tx_power_offset( );
 
-    // get modem_configured tx power offset
-    if( smtc_modem_get_tx_power_offset_db( 0, &modem_tx_offset ) != SMTC_MODEM_RC_OK )
-    {
-        // in case rc code is not RC_OK, this function will not return the offset and we need to use no offset (in test
-        // mode for example)
-        modem_tx_offset = 0;
-    }
-
-    int16_t power = input_params->system_output_pwr_in_dbm + modem_tx_offset;
+    int16_t power = input_params->system_output_pwr_in_dbm + board_tx_pwr_offset_db;
 
     output_params->pa_ramp_time  = SX126X_RAMP_40_US;
     output_params->pa_cfg.pa_lut = 0x01;  // reserved value, same for sx1261 sx1262 and sx1268
@@ -157,16 +150,32 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
 #endif
 }
 
-void ral_sx126x_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_sx126x_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   sx126x_tcxo_ctrl_voltages_t* supply_voltage, uint32_t* startup_time_in_tick )
 {
     // No tcxo on Basic Modem sx1261,sx1262 or sx1268 reference boards
-    *tcxo_is_radio_controlled = false;
+    *xosc_cfg = RAL_XOSC_CFG_XTAL;
+}
+
+void ral_sx126x_bsp_get_trim_cap( const void* context, uint8_t* trimming_cap_xta, uint8_t* trimming_cap_xtb )
+{
+    // Do nothing, let the driver choose the default values
+}
+
+void ral_sx126x_bsp_get_rx_boost_cfg( const void* context, bool* rx_boost_is_activated )
+{
+    *rx_boost_is_activated = false;
 }
 
 void ral_sx126x_bsp_get_ocp_value( const void* context, uint8_t* ocp_in_step_of_2_5_ma )
 {
     // Do nothing, let the driver choose the default values
+}
+
+void ral_sx126x_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
+                                           uint8_t* in_out_cad_det_peak )
+{
+    // Function used to fine tune the cad detection peak, update if needed
 }
 
 /* --- EOF ------------------------------------------------------------------ */

@@ -116,13 +116,6 @@ void hal_rtc_wakeup_timer_set_ms( const int32_t milliseconds );
  */
 void hal_rtc_wakeup_timer_stop( void );
 
-/*!
- * Return true if the wake up timer irq has been triggered
- *
- * \retval true if wut irq happended
- */
-bool hal_rtc_has_wut_irq_happened( void );
-
 #ifdef __cplusplus
 }
 #endif

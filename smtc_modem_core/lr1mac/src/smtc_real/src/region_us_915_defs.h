@@ -158,7 +158,10 @@ typedef struct region_us915_context_s
     uint8_t  snapshot_channel_tx_mask[BANK_MAX_US915];  // 8ch-125KHz + 1ch-500KHZ // snapshot of used channels
     uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_US_915];
     uint8_t  dr_distribution[NUMBER_OF_TX_DR_US_915];
+    uint8_t  join_dr_distribution[NUMBER_OF_TX_DR_US_915];
+    uint8_t  custom_dr_distribution_init[NUMBER_OF_TX_DR_US_915];
     uint8_t  first_ch_mask_received;
+    uint8_t  tx_channel_idx;
 
     us_915_channels_bank_t snapshot_bank_tx_mask;
 
@@ -185,7 +188,7 @@ static const uint8_t datarate_offsets_us_915[7][4] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_us_915[] = {

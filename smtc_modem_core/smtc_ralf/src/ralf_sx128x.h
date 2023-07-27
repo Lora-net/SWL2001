@@ -55,10 +55,10 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-#define RALF_DRV_SX128X_INSTANTIATE                                                 \
-    {                                                                               \
-        .setup_gfsk = ralf_sx128x_setup_gfsk, .setup_lora = ralf_sx128x_setup_lora, \
-        .setup_flrc = ralf_sx128x_setup_flrc,                                       \
+#define RALF_DRV_SX128X_INSTANTIATE                                                         \
+    {                                                                                       \
+        .setup_gfsk = ralf_sx128x_setup_gfsk, .setup_lora = ralf_sx128x_setup_lora,         \
+        .setup_flrc = ralf_sx128x_setup_flrc, .setup_lora_cad = ralf_sx128x_setup_lora_cad, \
     }
 
 #define RALF_SX128X_INSTANTIATE( ctx )                                                 \
@@ -95,6 +95,11 @@ ral_status_t ralf_sx128x_setup_lora( const ralf_t* ral, const ralf_params_lora_t
  * @see ralf_setup_flrc
  */
 ral_status_t ralf_sx128x_setup_flrc( const ralf_t* radio, const ralf_params_flrc_t* params );
+
+/**
+ * @see ralf_setup_cad
+ */
+ral_status_t ralf_sx128x_setup_lora_cad( const ralf_t* radio, const ralf_params_lora_cad_t* params );
 
 #ifdef __cplusplus
 }

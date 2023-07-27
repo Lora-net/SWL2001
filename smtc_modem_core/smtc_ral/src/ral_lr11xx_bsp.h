@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RAL_LR11XX_BSP_H__
-#define RAL_LR11XX_BSP_H__
+#ifndef RAL_LR11XX_BSP_H
+#define RAL_LR11XX_BSP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,11 +116,11 @@ void ral_lr11xx_bsp_get_reg_mode( const void* context, lr11xx_system_reg_mode_t*
  * @remark If no TCXO is present, this function should set tcxo_is_radio_controlled to false, and return.
  *
  * @param [in] context Chip implementation context
- * @param [out] tcxo_is_radio_controlled Let the caller know if there is a radio-controlled TCXO
+ * @param [out] xosc_cfg Let the caller know what kind of XOSC is used
  * @param [out] supply_voltage TCXO supply voltage parameter
  * @param [out] startup_time_in_tick TCXO setup time in clock tick
  */
-void ral_lr11xx_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_lr11xx_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   lr11xx_system_tcxo_supply_voltage_t* supply_voltage, uint32_t* startup_time_in_tick );
 
 /**
@@ -141,10 +141,29 @@ void ral_lr11xx_bsp_get_crc_state( const void* context, bool* crc_is_activated )
 void ral_lr11xx_bsp_get_rssi_calibration_table( const void* context, const uint32_t freq_in_hz,
                                                 lr11xx_radio_rssi_calibration_table_t* rssi_calibration_table );
 
+/**
+ * @brief Get the Channel Activity Detection (CAD) DetPeak value
+ *
+ * @param [in] sf                       CAD LoRa spreading factor
+ * @param [in] bw                       CAD LoRa bandwidth
+ * @param [in] nb_symbol                CAD on number of symbols
+ * @param [in, out] in_out_cad_det_peak  CAD DetPeak value proposed by the ral could be overwritten
+ */
+void ral_lr11xx_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
+                                           uint8_t* in_out_cad_det_peak );
+
+/**
+ * Get the Rx boost configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param [out] rx_boost_is_activated Let the caller know if the RX boosted mode is activated
+ */
+void ral_lr11xx_bsp_get_rx_boost_cfg( const void* context, bool* rx_boost_is_activated );
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // RAL_LR11XX_BSP_H__
+#endif  // RAL_LR11XX_BSP_H
 
 /* --- EOF ------------------------------------------------------------------ */

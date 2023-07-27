@@ -150,18 +150,18 @@ typedef enum smtc_class_b_beacon_e
 /**
  * @brief beacon statistics collection
  */
-typedef struct smtc_beacon_metadata_s
+typedef struct smtc_beacon_statistics_s
 {
-    uint32_t nb_beacon_received;  //!< total number of valid received beacon since the process is BEACON_LOCK
-    uint32_t nb_beacon_missed;    //!< total number of missed beacon since the process is BEACON_LOCK
-    uint32_t last_beacon_received_consecutively;  //!< total number of beacon received consecutively
-    uint32_t last_beacon_lost_consecutively;      //!< total number of beacon lost consecutively
+    beacon_state_t beacon_state;        //!< the state of the beacon state machine
+    uint32_t       nb_beacon_received;  //!< total number of valid received beacon since the process is BEACON_LOCK
+    uint32_t       nb_beacon_missed;    //!< total number of missed beacon since the process is BEACON_LOCK
+    uint32_t       last_beacon_received_consecutively;  //!< total number of beacon received consecutively
+    uint32_t       last_beacon_lost_consecutively;      //!< total number of beacon lost consecutively
     uint32_t last_beacon_received_timestamp;  //!< timestamp of the last valid received beacon defined in the local rtc
                                               //!< time based (in ms)
     uint8_t
         four_last_beacon_rx_statistic;  //!< return the numbers of valid received beacon during the 4 last period beacon
-    lr1mac_down_metadata_t rx_metadata;  //!< usual reception metadata such as snr, rssi,..
-} smtc_beacon_metadata_t;
+} smtc_beacon_statistics_t;
 
 /**
  * @brief Define the beacon  object used to collect and track the beacon during a  class b session
@@ -171,30 +171,31 @@ typedef struct smtc_lr1_beacon_s
     smtc_ping_slot_t* ping_slot_obj;  //!< the beacon object embeds the ping slot object
     radio_planner_t*  rp;             //!< the beacon object embeds the radio planer object
     lr1_stack_mac_t*  lr1_mac;        //!< the beacon object embeds the lr1mac stack class a object
-    uint8_t beacon_sniff_id_rp;      //!< the beacon acquisition requires a dedicated hook inside the radio planer, this
-                                     //!< value defined this specific hook id, by changing this value we change the
-                                     //!< prioritization of the beacon acquisition
-    bool           is_valid_beacon;  //!< define if the last received beacon is valid
-    bool           enabled;          //!< to enable the beacon acquisition
-    bool           started;          //!< to launch the beacon acquisition
-    uint8_t        beacon_buffer[BEACON_SIZE];  //!< the beacon payload
-    uint8_t        beacon_buffer_length;        //!< the beacon payload length in bytes
-    beacon_state_t beacon_state;                //!< the state of the beacon state machine
-    uint32_t       beacon_epoch_time;           //!< the epoch time inside the last valid beacon
-    uint16_t       beacon_open_rx_nb_symb;   //!< the duration in symbol of the rx time out of the next beacon reception
-    uint32_t       beacon_toa;               //!< the beacon toa
-    int32_t        dpll_error_wo_filtering;  //!< the internal digital pll phase error without filtering
-    int32_t        dpll_error;               //!< the internal digital pll phase error after low pass filter
-    int32_t        dpll_error_sum;           //!< the cumulative digital pll phase error after low pass filter
-    uint32_t       dpll_frequency_100us;     //!< the digital pll frequency with a 0.1ms resolution
-    uint32_t       dpll_phase_100us;         //!< the digital pll phase with a 0.1ms resolution
-    uint8_t listen_beacon_rate;  //!< default value : DEFAULT_LISTEN_BEACON_RATE, referred to the explanation of this
-                                 //!< default value to understood this parameter
+    uint8_t beacon_sniff_id_rp;  //!< the beacon acquisition requires a dedicated hook inside the radio planer, this
+                                 //!< value defined this specific hook id, by changing this value we change the
+                                 //!< prioritization of the beacon acquisition
+    bool    is_valid_beacon;     //!< define if the last received beacon is valid
+    bool    enabled;             //!< to enable the beacon acquisition
+    bool    started;             //!< to launch the beacon acquisition
+    uint8_t beacon_buffer[BEACON_SIZE];  //!< the beacon payload
+    uint8_t beacon_buffer_length;        //!< the beacon payload length in bytes
 
-    void ( *push_callback )( void* );  //!< this call back is used to push a valid beacon payload to the upper layer,
+    uint32_t beacon_epoch_time;        //!< the epoch time inside the last valid beacon
+    uint16_t beacon_open_rx_nb_symb;   //!< the duration in symbol of the rx time out of the next beacon reception
+    uint32_t beacon_toa;               //!< the beacon toa
+    int32_t  dpll_error_wo_filtering;  //!< the internal digital pll phase error without filtering
+    int32_t  dpll_error;               //!< the internal digital pll phase error after low pass filter
+    int32_t  dpll_error_sum;           //!< the cumulative digital pll phase error after low pass filter
+    uint32_t dpll_frequency_100us;     //!< the digital pll frequency with a 0.1ms resolution
+    uint32_t dpll_phase_100us;         //!< the digital pll phase with a 0.1ms resolution
+    uint8_t  listen_beacon_rate;  //!< default value : DEFAULT_LISTEN_BEACON_RATE, referred to the explanation of this
+                                  //!< default value to understood this parameter
+
+    void ( *push_callback )(
+        lr1_stack_mac_down_data_t* );  //!< this call back is used to push a valid beacon payload to the upper layer,
     void* push_context;  //!< the context given by the upper layer to transmit with the previous push_callback function
 
-    smtc_beacon_metadata_t beacon_metadata;  // the beacon metadata
+    smtc_beacon_statistics_t beacon_statistics;  // the beacon statistics
 } smtc_lr1_beacon_t;
 
 /**
@@ -212,7 +213,7 @@ typedef struct smtc_lr1_beacon_s
 
 void smtc_beacon_sniff_init( smtc_lr1_beacon_t* lr1_beacon_obj, smtc_ping_slot_t* ping_slot_obj,
                              lr1_stack_mac_t* lr1_mac, radio_planner_t* rp, uint8_t beacon_snif_id_rp,
-                             void ( *push_callback )( void* push_context ), void* push_context );
+                             void ( *push_callback )( lr1_stack_mac_down_data_t* push_context ) );
 
 /**
  * @brief Beacon service enablement
@@ -221,6 +222,15 @@ void smtc_beacon_sniff_init( smtc_lr1_beacon_t* lr1_beacon_obj, smtc_ping_slot_t
  * @param [in] enable          to enable the beacon acquisition
  */
 void smtc_beacon_class_b_enable_service( smtc_lr1_beacon_t* lr1_beacon_obj, bool enable );
+
+/**
+ * @brief Get beacon enabled status
+ *
+ * @param [in] lr1_beacon_obj
+ * @return true
+ * @return false
+ */
+bool smtc_beacon_class_b_enable_get( smtc_lr1_beacon_t* lr1_beacon_obj );
 
 /**
  * @brief Stop beacon windows
@@ -255,9 +265,9 @@ void smtc_beacon_sniff_rp_callback( smtc_lr1_beacon_t* lr1_beacon_obj );
  * @brief Get beacon statistics
  *
  * @param [in] lr1_beacon_obj Beacon object
- * @param [out] beacon_metadata return beacon metadata as defined in @ref smtc_beacon_metadata_t
+ * @param [out] beacon_statistics return beacon metadata as defined in @ref smtc_beacon_statistics_t
  */
-void smtc_beacon_sniff_get_metadata( smtc_lr1_beacon_t* lr1_beacon_obj, smtc_beacon_metadata_t* beacon_metadata );
+void smtc_beacon_sniff_get_statistics( smtc_lr1_beacon_t* lr1_beacon_obj, smtc_beacon_statistics_t* beacon_statistics );
 
 /**
  * @brief Decode the epoch time field in beacon payload

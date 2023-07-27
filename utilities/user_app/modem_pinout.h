@@ -65,13 +65,21 @@ extern "C" {
 #define DEBUG_UART_RX           PA_3
 
 //Radio specific pinout and peripherals
+#define RADIO_NRST              PA_0
 #define RADIO_SPI_MOSI          PA_7
 #define RADIO_SPI_MISO          PA_6
 #define RADIO_SPI_SCLK          PA_5
+#if defined( SX1272 ) || defined( SX1276 )
+#define RADIO_NSS               PB_6
+#define RADIO_DIO_0             PA_10
+#define RADIO_DIO_1             PB_3
+#define RADIO_DIO_2             PB_5
+#define RADIO_ANTENNA_SWITCH    PC_1
+#else
 #define RADIO_NSS               PA_8
-#define RADIO_NRST              PA_0
 #define RADIO_DIOX              PB_4
 #define RADIO_BUSY_PIN          PB_3
+#endif
 
 #define RADIO_SPI_ID            1
 
@@ -79,15 +87,9 @@ extern "C" {
 #define SX126X_RADIO_RF_SWITCH_CTRL    PA_9
 #endif
 
-
 #if defined (SX128X)
 // For sx128x eval board with 2 antennas
 #define RADIO_ANTENNA_SWITCH    PB_0
-#endif
-
-#if defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
-// LR11XX_TRANSCEIVER - Use for GNSS LNA control
-#define RADIO_LNA_CTRL          PB_0
 #endif
 
 //Hw modem specific pinout
@@ -108,7 +110,6 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
-
 #ifdef __cplusplus
 }
 #endif

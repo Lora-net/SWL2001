@@ -718,7 +718,7 @@ ral_status_t ral_sx128x_set_lora_cad_params( const void* context, const ral_lora
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_sx128x_set_lora_symb_nb_timeout( const void* context, const uint8_t nb_of_symbs )
+ral_status_t ral_sx128x_set_lora_symb_nb_timeout( const void* context, const uint16_t nb_of_symbs )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
@@ -963,6 +963,15 @@ ral_status_t ral_sx128x_lr_fhss_get_hop_sequence_count( const void*             
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
+uint16_t ral_sx128x_lr_fhss_get_bit_delay_in_us( const void* context, const ral_lr_fhss_params_t* params,
+                                                 uint16_t payload_length )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) params;          // Unused parameter
+    ( void ) payload_length;  // Unused parameter
+    return 0;
+}
+
 ral_status_t ral_sx128x_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present )
 {
     ral_status_t             status = RAL_STATUS_ERROR;
@@ -1124,6 +1133,22 @@ ral_status_t ral_sx128x_get_lora_rx_consumption_in_ua( const void* context, cons
 }
 
 ral_status_t ral_sx128x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
+{
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx128x_handle_rx_done( const void* context )
+{
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx128x_handle_tx_done( const void* context )
+{
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx128x_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                               ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
@@ -1396,7 +1421,7 @@ static ral_status_t ral_sx128x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
         return RAL_STATUS_UNKNOWN_VALUE;
     }
 
-    radio_pkt_params->sync_word_len   = ( sx128x_gfsk_sync_word_len_t ) ( ( sync_word_len_in_bytes - 1 ) << 1 );
+    radio_pkt_params->sync_word_len   = ( sx128x_gfsk_sync_word_len_t )( ( sync_word_len_in_bytes - 1 ) << 1 );
     radio_pkt_params->match_sync_word = SX128X_GFSK_FLRC_RX_MATCH_SYNCWORD_1;
 
     unsigned int preamble_len_in_nibbles = ral_pkt_params->preamble_len_in_bits / 4;
@@ -1410,7 +1435,7 @@ static ral_status_t ral_sx128x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
         return RAL_STATUS_UNKNOWN_VALUE;
     }
 
-    radio_pkt_params->preamble_len = ( sx128x_gfsk_preamble_len_t ) ( ( preamble_len_in_nibbles - 1 ) << 4 );
+    radio_pkt_params->preamble_len = ( sx128x_gfsk_preamble_len_t )( ( preamble_len_in_nibbles - 1 ) << 4 );
 
     radio_pkt_params->header_type = ( ral_pkt_params->header_type == RAL_GFSK_PKT_FIX_LEN )
                                         ? SX128X_GFSK_FLRC_PKT_FIX_LEN
@@ -1446,7 +1471,7 @@ static ral_status_t ral_sx128x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
 static ral_status_t ral_sx128x_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
                                                                  sx128x_mod_params_lora_t*    radio_mod_params )
 {
-    radio_mod_params->sf = ( sx128x_lora_sf_t ) ( ral_mod_params->sf << 4 );
+    radio_mod_params->sf = ( sx128x_lora_sf_t )( ral_mod_params->sf << 4 );
 
     ral_status_t status = ral_sx128x_convert_lora_bw_from_radio( ral_mod_params->bw, &radio_mod_params->bw );
     if( status != RAL_STATUS_OK )
@@ -1546,7 +1571,7 @@ static ral_status_t ral_sx128x_convert_flrc_mod_params_from_ral( const ral_flrc_
 
     *radio_mod_params = ( sx128x_mod_params_flrc_t ){
         .br_bw       = br_bw_dsb_param,
-        .cr          = ( sx128x_flrc_cr_t ) ( ral_mod_params->cr << 1 ),
+        .cr          = ( sx128x_flrc_cr_t )( ral_mod_params->cr << 1 ),
         .pulse_shape = pulse_shape,
     };
 
@@ -1568,7 +1593,7 @@ static ral_status_t ral_sx128x_convert_flrc_pkt_params_from_ral( const ral_flrc_
     }
 
     *radio_pkt_params = ( sx128x_pkt_params_flrc_t ){
-        .preamble_len = ( sx128x_gfsk_preamble_len_t ) ( ( preamble_len_in_nibbles - 1 ) << 4 ),
+        .preamble_len = ( sx128x_gfsk_preamble_len_t )( ( preamble_len_in_nibbles - 1 ) << 4 ),
         .sync_word_len =
             ( ral_pkt_params->sync_word_is_on == true ) ? SX128X_FLRC_SYNC_WORD_ON : SX128X_FLRC_SYNC_WORD_OFF,
         .match_sync_word  = SX128X_GFSK_FLRC_RX_MATCH_SYNCWORD_1,

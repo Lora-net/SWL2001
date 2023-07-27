@@ -108,6 +108,8 @@ extern "C" {
 #define DTC_SUPPORTED_AU_915                (false)
 #define LBT_SUPPORTED_AU_915                (false)
 
+#define UPLINK_DWELL_TIME_AU_915            (true)
+
 #define CF_LIST_SUPPORTED_AU_915            (CF_LIST_CH_MASK)
 
 #define DEFAULT_TX_FREQ_125_START_AU_915    (915200000) // Hz
@@ -156,7 +158,10 @@ typedef struct region_au915_context_s
     uint8_t  snapshot_channel_tx_mask[BANK_MAX_AU915];  // 8ch-125KHz + 1ch-500KHZ // snapshot of used channels
     uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_AU_915];
     uint8_t  dr_distribution[NUMBER_OF_TX_DR_AU_915];
+    uint8_t  join_dr_distribution[NUMBER_OF_TX_DR_AU_915];
+    uint8_t  custom_dr_distribution_init[NUMBER_OF_TX_DR_AU_915];
     uint8_t  first_ch_mask_received;
+    uint8_t  tx_channel_idx;
 
     au_915_channels_bank_t snapshot_bank_tx_mask;
 
@@ -184,7 +189,7 @@ static const uint8_t datarate_offsets_au_915[8][6] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_au_915[2][8] = { {

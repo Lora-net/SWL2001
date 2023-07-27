@@ -39,7 +39,6 @@
 
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
-#include <stdio.h>    // TODO: check if needed
 
 #include "smtc_hal_flash.h"
 #include "stm32l4xx_hal.h"
@@ -76,7 +75,9 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
-
+#if defined( ALLOW_FUOTA ) || defined( MULTISTACK )
+static uint8_t copy_page[4096] = { 0xFF };
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
@@ -257,6 +258,21 @@ void hal_flash_read_buffer( uint32_t addr, uint8_t* buffer, uint32_t size )
         FlashIndex++;
     }
 }
+
+#if defined( ALLOW_FUOTA ) || defined( MULTISTACK )
+void hal_flash_read_modify_write( uint32_t addr, const uint8_t* buffer, uint32_t size )
+{
+    uint32_t first_page = flash_get_page( addr );
+
+    // uint32_t last_page = flash_get_page (addr + size);
+
+    hal_flash_read_buffer( ( uint32_t )( FLASH_BASE + ( FLASH_PAGE_SIZE * first_page ) ), &copy_page[0], 4096 );
+    uint32_t index = addr - ( FLASH_BASE + ( FLASH_PAGE_SIZE * first_page ) );
+    memcpy( &copy_page[index], buffer, size );
+    hal_flash_erase_page( addr, 2 );
+    hal_flash_write_buffer( ( uint32_t )( FLASH_BASE + ( FLASH_PAGE_SIZE * first_page ) ), copy_page, 4096 );
+}
+#endif  // ALLOW_FUOTA or MULTISTACK
 
 /*
  * -----------------------------------------------------------------------------

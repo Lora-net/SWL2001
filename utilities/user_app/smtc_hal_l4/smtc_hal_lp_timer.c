@@ -54,6 +54,8 @@
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
+#define HAL_LP_TIMER_NB 2  //!< Number of supported low power timers
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -64,9 +66,20 @@
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
 
-static LPTIM_HandleTypeDef lptim_handle;
+static LPTIM_HandleTypeDef lptim_handle[HAL_LP_TIMER_NB];
 
-static hal_lp_timer_irq_t lptim_tmr_irq = { .context = NULL, .callback = NULL };
+static hal_lp_timer_irq_t lptim_tmr_irq[HAL_LP_TIMER_NB] = {
+    {
+        .context  = NULL,
+        .callback = NULL,
+    },
+#if( HAL_LP_TIMER_NB > 1 )
+    {
+        .context  = NULL,
+        .callback = NULL,
+    },
+#endif
+};
 
 /*
  * -----------------------------------------------------------------------------
@@ -78,29 +91,29 @@ static hal_lp_timer_irq_t lptim_tmr_irq = { .context = NULL, .callback = NULL };
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-void hal_lp_timer_init( void )
+void hal_lp_timer_init( hal_lp_timer_id_t id )
 {
-    lptim_handle.Instance             = LPTIM1;
-    lptim_handle.Init.Clock.Source    = LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC;
-    lptim_handle.Init.Clock.Prescaler = LPTIM_PRESCALER_DIV16;
-    lptim_handle.Init.Trigger.Source  = LPTIM_TRIGSOURCE_SOFTWARE;
-    lptim_handle.Init.OutputPolarity  = LPTIM_OUTPUTPOLARITY_HIGH;
-    lptim_handle.Init.UpdateMode      = LPTIM_UPDATE_IMMEDIATE;
-    lptim_handle.Init.CounterSource   = LPTIM_COUNTERSOURCE_INTERNAL;
+    lptim_handle[id].Instance             = ( id == 0 ) ? LPTIM1 : LPTIM2;
+    lptim_handle[id].Init.Clock.Source    = LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC;
+    lptim_handle[id].Init.Clock.Prescaler = LPTIM_PRESCALER_DIV16;
+    lptim_handle[id].Init.Trigger.Source  = LPTIM_TRIGSOURCE_SOFTWARE;
+    lptim_handle[id].Init.OutputPolarity  = LPTIM_OUTPUTPOLARITY_HIGH;
+    lptim_handle[id].Init.UpdateMode      = LPTIM_UPDATE_IMMEDIATE;
+    lptim_handle[id].Init.CounterSource   = LPTIM_COUNTERSOURCE_INTERNAL;
 
-    if( HAL_LPTIM_Init( &lptim_handle ) != HAL_OK )
+    if( HAL_LPTIM_Init( &lptim_handle[id] ) != HAL_OK )
     {
         mcu_panic( );
     }
-    lptim_tmr_irq = ( hal_lp_timer_irq_t ){ .context = NULL, .callback = NULL };
+    lptim_tmr_irq[id] = ( hal_lp_timer_irq_t ){ .context = NULL, .callback = NULL };
 }
 
-void hal_lp_timer_start( const uint32_t milliseconds, const hal_lp_timer_irq_t* tmr_irq )
+void hal_lp_timer_start( hal_lp_timer_id_t id, const uint32_t milliseconds, const hal_lp_timer_irq_t* tmr_irq )
 {
     uint32_t delay_ms_2_tick = 0;
 
     // Remark LSE_VALUE / LPTIM_PRESCALER_DIV16
-    delay_ms_2_tick = ( uint32_t )( ( ( uint64_t ) milliseconds * ( LSE_VALUE >> 4 ) ) / 1000 );
+    delay_ms_2_tick = ( uint32_t ) ( ( ( uint64_t ) milliseconds * ( LSE_VALUE >> 4 ) ) / 1000 );
 
     // check if delay_ms_2_tick is not greater than 0xFFFF and clamp it if it is the case
     if( delay_ms_2_tick > 0xFFFF )
@@ -109,33 +122,44 @@ void hal_lp_timer_start( const uint32_t milliseconds, const hal_lp_timer_irq_t* 
     }
 
     // Auto reload period is set to max value 0xFFFF
-    HAL_LPTIM_TimeOut_Start_IT( &lptim_handle, 0xFFFF, delay_ms_2_tick );
-    lptim_tmr_irq = *tmr_irq;
+    HAL_LPTIM_TimeOut_Start_IT( &lptim_handle[id], 0xFFFF, delay_ms_2_tick );
+    lptim_tmr_irq[id] = *tmr_irq;
 }
 
-void hal_lp_timer_stop( void )
+void hal_lp_timer_stop( hal_lp_timer_id_t id )
 {
-    HAL_LPTIM_TimeOut_Stop_IT( &lptim_handle );
+    HAL_LPTIM_TimeOut_Stop_IT( &lptim_handle[id] );
 }
 
-void hal_lp_timer_irq_enable( void )
+void hal_lp_timer_irq_enable( hal_lp_timer_id_t id )
 {
-    HAL_NVIC_EnableIRQ( LPTIM1_IRQn );
+    HAL_NVIC_EnableIRQ( ( id == 0 ) ? LPTIM1_IRQn : LPTIM2_IRQn );
 }
 
-void hal_lp_timer_irq_disable( void )
+void hal_lp_timer_irq_disable( hal_lp_timer_id_t id )
 {
-    HAL_NVIC_DisableIRQ( LPTIM1_IRQn );
+    HAL_NVIC_DisableIRQ( ( id == 0 ) ? LPTIM1_IRQn : LPTIM2_IRQn );
 }
 
 void LPTIM1_IRQHandler( void )
 {
-    HAL_LPTIM_IRQHandler( &lptim_handle );
-    HAL_LPTIM_TimeOut_Stop( &lptim_handle );
+    HAL_LPTIM_IRQHandler( &lptim_handle[HAL_LP_TIMER_ID_1] );
+    HAL_LPTIM_TimeOut_Stop( &lptim_handle[HAL_LP_TIMER_ID_1] );
 
-    if( lptim_tmr_irq.callback != NULL )
+    if( lptim_tmr_irq[HAL_LP_TIMER_ID_1].callback != NULL )
     {
-        lptim_tmr_irq.callback( lptim_tmr_irq.context );
+        lptim_tmr_irq[HAL_LP_TIMER_ID_1].callback( lptim_tmr_irq[HAL_LP_TIMER_ID_1].context );
+    }
+}
+
+void LPTIM2_IRQHandler( void )
+{
+    HAL_LPTIM_IRQHandler( &lptim_handle[HAL_LP_TIMER_ID_2] );
+    HAL_LPTIM_TimeOut_Stop( &lptim_handle[HAL_LP_TIMER_ID_2] );
+
+    if( lptim_tmr_irq[HAL_LP_TIMER_ID_2].callback != NULL )
+    {
+        lptim_tmr_irq[HAL_LP_TIMER_ID_2].callback( lptim_tmr_irq[HAL_LP_TIMER_ID_2].context );
     }
 }
 
@@ -147,6 +171,12 @@ void HAL_LPTIM_MspInit( LPTIM_HandleTypeDef* lptimhandle )
         HAL_NVIC_SetPriority( LPTIM1_IRQn, 0, 0 );
         HAL_NVIC_EnableIRQ( LPTIM1_IRQn );
     }
+    if( lptimhandle->Instance == LPTIM2 )
+    {
+        __HAL_RCC_LPTIM2_CLK_ENABLE( );
+        HAL_NVIC_SetPriority( LPTIM2_IRQn, 0, 0 );
+        HAL_NVIC_EnableIRQ( LPTIM2_IRQn );
+    }
 }
 
 void HAL_LPTIM_MspDeInit( LPTIM_HandleTypeDef* lptimhandle )
@@ -155,6 +185,11 @@ void HAL_LPTIM_MspDeInit( LPTIM_HandleTypeDef* lptimhandle )
     {
         __HAL_RCC_LPTIM1_CLK_DISABLE( );
         HAL_NVIC_DisableIRQ( LPTIM1_IRQn );
+    }
+    if( lptimhandle->Instance == LPTIM2 )
+    {
+        __HAL_RCC_LPTIM2_CLK_DISABLE( );
+        HAL_NVIC_DisableIRQ( LPTIM2_IRQn );
     }
 }
 

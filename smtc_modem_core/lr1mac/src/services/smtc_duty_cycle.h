@@ -77,16 +77,23 @@ extern "C" {
 
 // clang-format on
 
+/*
+ * -----------------------------------------------------------------------------
+ * --- PUBLIC TYPES ------------------------------------------------------------
+ */
+typedef enum smtc_dtc_rc_e
+{
+    SMTC_DTC_OK = 0,
+    SMTC_DTC_ERR,
+} smtc_dtc_rc_t;
+
 typedef enum smtc_dtc_enablement_type_e
 {
     SMTC_DTC_PARTIAL_DISABLED = 0,  // No sending constraint but uplink TOA are take in care
     SMTC_DTC_ENABLED          = 1,  // Sending constraint and uplink TOA are take in care
     SMTC_DTC_FULL_DISABLED    = 2,  // Sending constraint and uplink TOA are NOT take in care
 } smtc_dtc_enablement_type_t;
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC TYPES ------------------------------------------------------------
- */
+
 typedef struct smtc_dtc_band_s
 {
     uint32_t freq_min;
@@ -119,61 +126,55 @@ static const uint32_t smtc_dtc_resolution_ms = ( ( ( SMTC_DTC_SECONDS_BY_UNIT * 
 /**
  * @brief Duty cycle initialization
  *
- * @param dtc_obj Contains the duty cycle context
  */
-void smtc_duty_cycle_init( smtc_dtc_t* dtc_obj );
+void smtc_duty_cycle_init( void );
 
 /**
  * @brief Duty cycle configuration
  *
- * @param dtc_obj                   Contains the duty cycle context
  * @param number_of_bands           Number of bands in this region
  * @param band_idx                  Index bands to store configuration
  * @param duty_cycle_regulation     Duty cycle limitation on this band
  * @param freq_min                  Frequency min on this band
  * @param freq_max                  Frequency max on this band
  */
-void smtc_duty_cycle_config( smtc_dtc_t* dtc_obj, uint8_t number_of_bands, uint8_t band_idx,
-                             uint16_t duty_cycle_regulation, uint32_t freq_min, uint32_t freq_max );
+void smtc_duty_cycle_config( uint8_t number_of_bands, uint8_t band_idx, uint16_t duty_cycle_regulation,
+                             uint32_t freq_min, uint32_t freq_max );
 
 /**
  * @brief Duty cycle enablement
  *
  * @remark When disabled the TOA is take into account, but no restriction if DTC full consumed
  *
- * @param dtc_obj                   Contains the duty cycle context
  * @param enable                    Enable: true, Disabled: false,
- * @return uint8_t                  return false if not initialized
+ * @return smtc_dtc_rc_t
  */
-uint8_t smtc_duty_cycle_enable_set( smtc_dtc_t* dtc_obj, smtc_dtc_enablement_type_t enable );
+smtc_dtc_rc_t smtc_duty_cycle_enable_set( smtc_dtc_enablement_type_t enable );
 
 /**
  * @brief Duty cycle enablement status
  *
- * @param dtc_obj
  * @return smtc_dtc_enablement_type_t
  */
-smtc_dtc_enablement_type_t smtc_duty_cycle_enable_get( smtc_dtc_t* dtc_obj );
+smtc_dtc_enablement_type_t smtc_duty_cycle_enable_get( void );
 
 /**
  * @brief Sum Time On Air for a specified freq (inside a band)
  *
  * @remark smtc_duty_cycle_update() must be called before this function to have a right value
  *
- * @param dtc_obj                   Contains the duty cycle context
  * @param freq_hz                   Frequency used for the packet
  * @param toa_ms                    Packet Time On Air in milliseconds
  */
-void smtc_duty_cycle_sum( smtc_dtc_t* dtc_obj, uint32_t freq_hz, uint32_t toa_ms );
+void smtc_duty_cycle_sum( uint32_t freq_hz, uint32_t toa_ms );
 
 /**
  * @brief  Update Time On Air
  *
  * @remark smtc_duty_cycle_update() must be called before check Duty Cycle available
  *
- * @param dtc_obj                   Contains the duty cycle context
  */
-void smtc_duty_cycle_update( smtc_dtc_t* dtc_obj );
+void smtc_duty_cycle_update( void );
 
 /**
  * @brief Check if Time On Air is not greater than TOA available for a frequency
@@ -203,11 +204,10 @@ int32_t smtc_duty_cycle_band_get_available_toa_ms( smtc_dtc_t* dtc_obj, uint8_t 
  *
  * @remark  smtc_duty_cycle_update() must be called before this function to have a right value
  *
- * @param dtc_obj                   Contains the duty cycle context
  * @param freq_hz                   Frequency that need a check
  * @return bool
  */
-bool smtc_duty_cycle_is_channel_free( smtc_dtc_t* dtc_obj, uint32_t freq_hz );
+bool smtc_duty_cycle_is_channel_free( uint32_t freq_hz );
 
 /**
  * @brief Check if a band is Duty Cycle free
@@ -225,12 +225,11 @@ bool smtc_duty_cycle_is_band_free( smtc_dtc_t* dtc_obj, uint8_t band );
  *
  * @remark  smtc_duty_cycle_update() must be called before this function to have a right value
  *
- * @param dtc_obj                   Contains the duty cycle context
  * @param number_of_tx_freq         number of tx freq in list
  * @param tx_freq_list              tx frequency list used by the app to check only duty cycle in these bands
  * @return int32_t                  milliseconds, if > 0: the next slot availble, else the available time
  */
-int32_t smtc_duty_cycle_get_next_free_time_ms( smtc_dtc_t* dtc_obj, uint8_t number_of_tx_freq, uint32_t* tx_freq_list );
+int32_t smtc_duty_cycle_get_next_free_time_ms( uint8_t number_of_tx_freq, uint32_t* tx_freq_list );
 #ifdef __cplusplus
 }
 #endif

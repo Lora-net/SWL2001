@@ -57,6 +57,11 @@
 #include <string.h>
 #include <stdio.h>
 #endif
+
+#if defined( SX1272 ) || defined( SX1276 )
+#include "sx127x_hal.h"
+#endif
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -72,30 +77,15 @@
 // 1 to enable debug with probe (ie do not de init pins)
 #define HW_DEBUG_PROBE 0
 
-/*!
- * Watchdog counter reload value during sleep
- *
- * \remark The period must be lower than MCU watchdog period
- */
-#define WATCHDOG_RELOAD_PERIOD_SECONDS 20
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
-// Low Power options
-typedef enum low_power_mode_e
-{
-    LOW_POWER_ENABLE,
-    LOW_POWER_DISABLE,
-    LOW_POWER_DISABLE_ONCE
-} low_power_mode_t;
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
-static volatile bool             exit_wait       = false;
-static volatile low_power_mode_t lp_current_mode = LOW_POWER_ENABLE;
 
 /*
  * -----------------------------------------------------------------------------
@@ -103,15 +93,13 @@ static volatile low_power_mode_t lp_current_mode = LOW_POWER_ENABLE;
  */
 static void system_clock_config( void );
 static void mcu_gpio_init( void );
+static void lpm_enter_sleep_mode( void );
+static void lpm_exit_sleep_mode( void );
+static void sleep_handler( void );
 
 #if( LOW_POWER_MODE == 1 )
 static void lpm_mcu_deinit( void );
 static void lpm_mcu_reinit( void );
-static void lpm_enter_stop_mode( void );
-static void lpm_exit_stop_mode( void );
-static void lpm_handler( void );
-#else
-static bool no_low_power_wait( const int32_t milliseconds );
 #endif
 
 /*
@@ -142,23 +130,39 @@ void hal_mcu_enable_irq( void )
 
 void hal_mcu_init( void )
 {
-    HAL_Init( );             // Initialize MCU HAL library
-    system_clock_config( );  // Initialize clocks
-    mcu_gpio_init( );        // Initialize GPIOs
+    // Initialize MCU HAL library
+    HAL_Init( );
 
-#if defined( HW_MODEM_ENABLED )
-    uart4_init( );
-#endif
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
-    uart2_init( );
-#endif
-
-    hal_lp_timer_init( );
-    hal_spi_init( RADIO_SPI_ID, RADIO_SPI_MOSI, RADIO_SPI_MISO, RADIO_SPI_SCLK );
-    hal_rtc_init( );
+    // Initialize clocks
+    system_clock_config( );
 
     // Initialize watchdog
     hal_watchdog_init( );
+
+#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+    // Initialize Uart for debug traces
+    uart2_init( );
+#endif
+#if defined( HW_MODEM_ENABLED )
+    // Initialize Uart for hw commands
+    uart4_init( );
+#endif
+
+    // Initialize GPIOs
+    mcu_gpio_init( );
+
+    // Initialize Low Power Timer
+    hal_lp_timer_init( HAL_LP_TIMER_ID_1 );
+
+#if( SX127X )
+    hal_lp_timer_init( HAL_LP_TIMER_ID_2 );
+#endif
+
+    // Initialize SPI for radio
+    hal_spi_init( RADIO_SPI_ID, RADIO_SPI_MOSI, RADIO_SPI_MISO, RADIO_SPI_SCLK );
+
+    // Initialize RTC (for real time and wut)
+    hal_rtc_init( );
 }
 
 void hal_mcu_reset( void )
@@ -179,84 +183,15 @@ void __attribute__( ( optimize( "O0" ) ) ) hal_mcu_wait_us( const int32_t micros
 
 void hal_mcu_set_sleep_for_ms( const int32_t milliseconds )
 {
-    bool last_sleep_loop = false;
-
     if( milliseconds <= 0 )
     {
         return;
     }
 
-    if( lp_current_mode == LOW_POWER_DISABLE_ONCE )
-    {
-        lp_current_mode = LOW_POWER_ENABLE;
-        return;
-    }
-    int32_t time_counter = milliseconds;
-
-    watchdog_reload( );
-
-#if( LOW_POWER_MODE == 1 )
-    if( lp_current_mode == LOW_POWER_ENABLE )
-    {
-        do
-        {
-            if( ( time_counter > ( WATCHDOG_RELOAD_PERIOD_SECONDS * 1000 ) ) )
-            {
-                time_counter -= WATCHDOG_RELOAD_PERIOD_SECONDS * 1000;
-                hal_rtc_wakeup_timer_set_ms( WATCHDOG_RELOAD_PERIOD_SECONDS * 1000 );
-            }
-            else
-            {
-                hal_rtc_wakeup_timer_set_ms( time_counter );
-                // if the sleep time is less than the wdog reload period, this is the last sleep loop
-                last_sleep_loop = true;
-            }
-            lpm_handler( );
-            watchdog_reload( );
-        } while( ( hal_rtc_has_wut_irq_happened( ) == true ) && ( last_sleep_loop == false ) );
-        if( last_sleep_loop == false )
-        {
-            // in case sleep mode is interrupted by an other irq than the wake up timer, stop it and exit
-            hal_rtc_wakeup_timer_stop( );
-        }
-    }
-#else
-    while( ( time_counter > ( WATCHDOG_RELOAD_PERIOD_SECONDS * 1000 ) ) && ( lp_current_mode == LOW_POWER_ENABLE ) )
-    {
-        time_counter -= WATCHDOG_RELOAD_PERIOD_SECONDS * 1000;
-        if( ( no_low_power_wait( WATCHDOG_RELOAD_PERIOD_SECONDS * 1000 ) == true ) ||
-            ( lp_current_mode != LOW_POWER_ENABLE ) )
-        {
-            // wait function was interrupted, inturrupt here also
-            watchdog_reload( );
-            return;
-        }
-        watchdog_reload( );
-    }
-    if( lp_current_mode == LOW_POWER_ENABLE )
-    {
-        no_low_power_wait( time_counter );
-        watchdog_reload( );
-    }
-#endif
-}
-
-void hal_mcu_disable_low_power_wait( void )
-{
-    exit_wait       = true;
-    lp_current_mode = LOW_POWER_DISABLE;
-}
-
-void hal_mcu_enable_low_power_wait( void )
-{
-    exit_wait       = false;
-    lp_current_mode = LOW_POWER_ENABLE;
-}
-
-void hal_mcu_disable_once_low_power_wait( void )
-{
-    exit_wait       = true;
-    lp_current_mode = LOW_POWER_DISABLE_ONCE;
+    hal_rtc_wakeup_timer_set_ms( milliseconds );
+    sleep_handler( );
+    // stop timer after sleep process
+    hal_rtc_wakeup_timer_stop( );
 }
 
 #ifdef USE_FULL_ASSERT
@@ -349,9 +284,10 @@ static void system_clock_config( void )
     }
 
     periph_clk_init.PeriphClockSelection =
-        RCC_PERIPHCLK_RTC | RCC_PERIPHCLK_LPTIM1 | RCC_PERIPHCLK_RNG | RCC_PERIPHCLK_ADC;
+        RCC_PERIPHCLK_RTC | RCC_PERIPHCLK_LPTIM1 | RCC_PERIPHCLK_LPTIM2 | RCC_PERIPHCLK_RNG | RCC_PERIPHCLK_ADC;
     periph_clk_init.RTCClockSelection       = RCC_RTCCLKSOURCE_LSE;
     periph_clk_init.Lptim1ClockSelection    = RCC_LPTIM1CLKSOURCE_LSE;
+    periph_clk_init.Lptim2ClockSelection    = RCC_LPTIM2CLKSOURCE_LSE;
     periph_clk_init.AdcClockSelection       = RCC_ADCCLKSOURCE_SYSCLK;
     periph_clk_init.RngClockSelection       = RCC_RNGCLKSOURCE_PLLSAI1;
     periph_clk_init.PLLSAI1.PLLSAI1Source   = RCC_PLLSOURCE_HSI;
@@ -362,11 +298,11 @@ static void system_clock_config( void )
     periph_clk_init.PLLSAI1.PLLSAI1R        = RCC_PLLR_DIV2;
     periph_clk_init.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_48M2CLK;
 
-#if( BSP_USE_PRINTF_UART == BSP_FEATURE_ON )
+#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     periph_clk_init.PeriphClockSelection |= RCC_PERIPHCLK_USART2;
     periph_clk_init.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
 #endif
-#if( BSP_USE_USER_UART == BSP_FEATURE_ON )
+#if defined( HW_MODEM_ENABLED )
     periph_clk_init.PeriphClockSelection |= RCC_PERIPHCLK_UART4;
     periph_clk_init.Uart4ClockSelection = RCC_UART4CLKSOURCE_PCLK1;
 #endif
@@ -390,9 +326,20 @@ static void mcu_gpio_init( void )
     HAL_DBGMCU_EnableDBGSleepMode( );
     HAL_DBGMCU_EnableDBGStopMode( );
     HAL_DBGMCU_EnableDBGStandbyMode( );
+// #else
+//     HAL_DBGMCU_DisableDBGSleepMode( );
+//     HAL_DBGMCU_DisableDBGStopMode( );
+//     HAL_DBGMCU_DisableDBGStandbyMode( );
 #endif
 
     hal_gpio_init_out( RADIO_NSS, 1 );
+#if defined( SX1272 ) || defined( SX1276 )
+    hal_gpio_init_in( RADIO_DIO_0, BSP_GPIO_PULL_MODE_DOWN, BSP_GPIO_IRQ_MODE_RISING, NULL );
+    hal_gpio_init_in( RADIO_DIO_1, BSP_GPIO_PULL_MODE_DOWN, BSP_GPIO_IRQ_MODE_RISING_FALLING, NULL );
+    hal_gpio_init_in( RADIO_DIO_2, BSP_GPIO_PULL_MODE_DOWN, BSP_GPIO_IRQ_MODE_RISING, NULL );
+    hal_gpio_init_in( RADIO_NRST, BSP_GPIO_PULL_MODE_NONE, BSP_GPIO_IRQ_MODE_OFF, NULL );
+    hal_gpio_init_out( RADIO_ANTENNA_SWITCH, 0 );
+#else
     hal_gpio_init_in( RADIO_BUSY_PIN, BSP_GPIO_PULL_MODE_NONE, BSP_GPIO_IRQ_MODE_OFF, NULL );
     // Here init only the pin as an exti rising and the callback will be attached later
     hal_gpio_init_in( RADIO_DIOX, BSP_GPIO_PULL_MODE_DOWN, BSP_GPIO_IRQ_MODE_RISING, NULL );
@@ -401,66 +348,73 @@ static void mcu_gpio_init( void )
     hal_gpio_init_out( RADIO_ANTENNA_SWITCH, 1 );
 #elif defined( LR11XX_TRANSCEIVER ) && defined( ENABLE_MODEM_GNSS_FEATURE )
     hal_gpio_init_out( RADIO_LNA_CTRL, 0 );
+    hal_gpio_init_out( SMTC_LED_TX, 0 );
+    hal_gpio_init_out( SMTC_LED_RX, 0 );
 #elif defined( SX126X )
     // If the sx126x drives the rf switch with dio2, just put the SX126X_RADIO_RF_SWITCH_CTRL in pull up
     hal_gpio_init_in( SX126X_RADIO_RF_SWITCH_CTRL, BSP_GPIO_PULL_MODE_UP, BSP_GPIO_IRQ_MODE_OFF, NULL );
 #endif
+#endif
 }
 
-#if( LOW_POWER_MODE == 1 )
-
 /**
- * @brief Enters Low Power Stop Mode
+ * @brief Either enters Low Power Stop Mode or calls WFI
  *
  * @note ARM exits the function when waking up
  *
  */
-static void lpm_enter_stop_mode( void )
+static void lpm_enter_sleep_mode( void )
 {
-    CRITICAL_SECTION_BEGIN( );
-
+#if( LOW_POWER_MODE == 1 )
     // Deinit periph & enter Stop Mode
     lpm_mcu_deinit( );
-    HAL_PWREx_EnterSTOP2Mode( PWR_STOPENTRY_WFI );
-
-    CRITICAL_SECTION_END( );
+#if defined( SX1272 ) || defined( SX1276 )
+    if( sx127x_hal_timer_is_started( NULL ) == true )
+    {
+        HAL_PWREx_EnterSTOP1Mode( PWR_STOPENTRY_WFI );
+    }
+    else
+#endif
+    {
+        HAL_PWREx_EnterSTOP2Mode( PWR_STOPENTRY_WFI );
+    }
+#else
+    __WFI( );
+#endif
 }
 
 /**
- * @brief Exists Low Power Stop Mode
+ * @brief Wakes from Low Power Stop Mode or from WFI
  *
  */
-static void lpm_exit_stop_mode( void )
+static void lpm_exit_sleep_mode( void )
 {
-    // Disable IRQ while the MCU is not running on HSI
-    CRITICAL_SECTION_BEGIN( );
-
+#if( LOW_POWER_MODE == 1 )
     // Initializes the peripherals
     lpm_mcu_reinit( );
-
-    CRITICAL_SECTION_END( );
+#endif
 }
 
 /**
- * @brief Low power handler
+ * @brief Sleep handler
  *
  */
-static void lpm_handler( void )
+static void sleep_handler( void )
 {
     // stop systick to avoid getting pending irq while going in stop mode
     // Systick is automatically restart when going out of sleep
     HAL_SuspendTick( );
 
-    __disable_irq( );
-    // If an interrupt has occurred after __disable_irq( ), it is kept pending
+    // If an interrupt has occurred after entering critical section, it is kept pending
     // and cortex will not enter low power anyway
 
-    lpm_enter_stop_mode( );
-    lpm_exit_stop_mode( );
+    lpm_enter_sleep_mode( );
+    lpm_exit_sleep_mode( );
 
-    __enable_irq( );
     HAL_ResumeTick( );
 }
+
+#if( LOW_POWER_MODE == 1 )
 
 /**
  * @brief De-init periph begore going in sleep mode
@@ -525,32 +479,6 @@ static void lpm_mcu_reinit( void )
     hal_spi_init( RADIO_SPI_ID, RADIO_SPI_MOSI, RADIO_SPI_MISO, RADIO_SPI_SCLK );
 }
 
-#else  // ie LOW_POWER_MODE == 0
-
-/**
- * @brief Fake a wait but doesn't go in sleep mode
- *
- * @param milliseconds number of ms to wait
- * @return true If wait has been interrupt
- * @return false if wait has not been interrupt
- */
-static bool no_low_power_wait( const int32_t milliseconds )
-{
-    uint32_t start_time = smtc_modem_hal_get_time_in_ms( );
-
-    while( smtc_modem_hal_get_time_in_ms( ) < ( start_time + milliseconds ) )
-    {
-        // interruptible wait for 10ms
-        HAL_Delay( 10 );
-        if( exit_wait == true )
-        {
-            // stop wait/lp function and return immediatly
-            exit_wait = false;
-            return true;
-        }
-    }
-    return false;
-}
 #endif
 
 /**
@@ -560,7 +488,7 @@ void HardFault_Handler( void )
 {
     SMTC_HAL_TRACE_ERROR( "\x1B[0;31m" );  // red color
     SMTC_HAL_TRACE_ERROR( "HARDFAULT_Handler\n" );
-    SMTC_HAL_TRACE_ERROR( "\x1B[0m" );  // default color
+    SMTC_HAL_TRACE_ERROR( "\x1B[0m" );     // default color
     while( 1 )
     {
     }

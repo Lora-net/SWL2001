@@ -329,6 +329,15 @@ static ral_status_t ral_sx126x_convert_lora_cad_params_from_ral( const ral_lora_
 static void ral_sx126x_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
                                                         sx126x_lr_fhss_params_t*    radio_lr_fhss_params );
 
+/**
+ * @brief Configure the crystal trimming capacitor
+ *
+ * @param [in] context  Radio context
+ *
+ * @returns Operation status
+ */
+static ral_status_t ral_sx126x_cfg_trim_cap( const void* context );
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -350,8 +359,9 @@ ral_status_t ral_sx126x_init( const void* context )
     sx126x_tcxo_ctrl_voltages_t tcxo_supply_voltage;
     sx126x_reg_mod_t            reg_mode;
     bool                        dio2_is_set_as_rf_switch = false;
-    bool                        tcxo_is_radio_controlled = false;
-    uint32_t                    startup_time_in_tick     = 0;
+    ral_xosc_cfg_t              xosc_cfg;
+    uint32_t                    startup_time_in_tick = 0;
+    bool                        rx_boost_is_activated;
 
     status = ( ral_status_t ) sx126x_init_retention_list( context );
     if( status != RAL_STATUS_OK )
@@ -373,8 +383,8 @@ ral_status_t ral_sx126x_init( const void* context )
         return status;
     }
 
-    ral_sx126x_bsp_get_xosc_cfg( context, &tcxo_is_radio_controlled, &tcxo_supply_voltage, &startup_time_in_tick );
-    if( tcxo_is_radio_controlled == true )
+    ral_sx126x_bsp_get_xosc_cfg( context, &xosc_cfg, &tcxo_supply_voltage, &startup_time_in_tick );
+    if( xosc_cfg == RAL_XOSC_CFG_TCXO_RADIO_CTRL )
     {
         status = ( ral_status_t ) sx126x_set_dio3_as_tcxo_ctrl( context, tcxo_supply_voltage, startup_time_in_tick );
         if( status != RAL_STATUS_OK )
@@ -387,6 +397,13 @@ ral_status_t ral_sx126x_init( const void* context )
         {
             return status;
         }
+    }
+
+    ral_sx126x_bsp_get_rx_boost_cfg( context, &rx_boost_is_activated );
+    status = ( ral_status_t ) sx126x_cfg_rx_boosted( context, rx_boost_is_activated );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
     }
 
     return status;
@@ -435,24 +452,37 @@ ral_status_t ral_sx126x_set_fs( const void* context )
 
 ral_status_t ral_sx126x_set_tx( const void* context )
 {
-    return ( ral_status_t ) sx126x_set_tx( context, 0 );
+    ral_status_t status = ral_sx126x_cfg_trim_cap( context );
+
+    if( status == RAL_STATUS_OK )
+    {
+        status = ( ral_status_t ) sx126x_set_tx( context, 0 );
+    }
+
+    return status;
 }
 
 ral_status_t ral_sx126x_set_rx( const void* context, const uint32_t timeout_in_ms )
 {
-    if( timeout_in_ms == RAL_RX_TIMEOUT_CONTINUOUS_MODE )
+    ral_status_t status = ral_sx126x_cfg_trim_cap( context );
+
+    if( status == RAL_STATUS_OK )
     {
-        return ( ral_status_t ) sx126x_set_rx_with_timeout_in_rtc_step( context, 0x00FFFFFF );
-    }
-    else
-    {  // max timeout is 0xFFFFFE -> 262143 ms (0xFFFFFE / 64000 * 1000) - Single reception mode set if timeout_ms is 0
-        if( timeout_in_ms < 262144 )
+        if( timeout_in_ms == RAL_RX_TIMEOUT_CONTINUOUS_MODE )
         {
-            return ( ral_status_t ) sx126x_set_rx( context, timeout_in_ms );
+            return ( ral_status_t ) sx126x_set_rx_with_timeout_in_rtc_step( context, 0x00FFFFFF );
         }
         else
-        {
-            return RAL_STATUS_ERROR;
+        {  // max timeout is 0xFFFFFE -> 262143 ms (0xFFFFFE / 64000 * 1000) - Single reception mode set if timeout_ms
+           // is 0
+            if( timeout_in_ms < 262144 )
+            {
+                return ( ral_status_t ) sx126x_set_rx( context, timeout_in_ms );
+            }
+            else
+            {
+                return RAL_STATUS_ERROR;
+            }
         }
     }
 
@@ -507,17 +537,38 @@ ral_status_t ral_sx126x_set_rx_duty_cycle( const void* context, const uint32_t r
 
 ral_status_t ral_sx126x_set_lora_cad( const void* context )
 {
-    return ( ral_status_t ) sx126x_set_cad( context );
+    ral_status_t status = ral_sx126x_cfg_trim_cap( context );
+
+    if( status == RAL_STATUS_OK )
+    {
+        status = ( ral_status_t ) sx126x_set_cad( context );
+    }
+
+    return status;
 }
 
 ral_status_t ral_sx126x_set_tx_cw( const void* context )
 {
-    return ( ral_status_t ) sx126x_set_tx_cw( context );
+    ral_status_t status = ral_sx126x_cfg_trim_cap( context );
+
+    if( status == RAL_STATUS_OK )
+    {
+        status = ( ral_status_t ) sx126x_set_tx_cw( context );
+    }
+
+    return status;
 }
 
 ral_status_t ral_sx126x_set_tx_infinite_preamble( const void* context )
 {
-    return ( ral_status_t ) sx126x_set_tx_infinite_preamble( context );
+    ral_status_t status = ral_sx126x_cfg_trim_cap( context );
+
+    if( status == RAL_STATUS_OK )
+    {
+        status = ( ral_status_t ) sx126x_set_tx_infinite_preamble( context );
+    }
+
+    return status;
 }
 
 ral_status_t ral_sx126x_cal_img( const void* context, const uint16_t freq1_in_mhz, const uint16_t freq2_in_mhz )
@@ -796,9 +847,16 @@ ral_status_t ral_sx126x_set_lora_cad_params( const void* context, const ral_lora
     return ( ral_status_t ) sx126x_set_cad_params( context, &radio_lora_cad_params );
 }
 
-ral_status_t ral_sx126x_set_lora_symb_nb_timeout( const void* context, const uint8_t nb_of_symbs )
+ral_status_t ral_sx126x_set_lora_symb_nb_timeout( const void* context, const uint16_t nb_of_symbs )
 {
-    return ( ral_status_t ) sx126x_set_lora_symb_nb_timeout( context, nb_of_symbs );
+    if( nb_of_symbs <= SX126X_MAX_LORA_SYMB_NUM_TIMEOUT )
+    {
+        return ( ral_status_t ) sx126x_set_lora_symb_nb_timeout( context, nb_of_symbs );
+    }
+    else
+    {
+        return RAL_STATUS_UNKNOWN_VALUE;
+    }
 }
 
 ral_status_t ral_sx126x_set_flrc_mod_params( const void* context, const ral_flrc_mod_params_t* params )
@@ -993,6 +1051,16 @@ ral_status_t ral_sx126x_lr_fhss_get_hop_sequence_count( const void*             
     return ( ral_status_t ) sx126x_lr_fhss_get_hop_sequence_count( &sx126x_params );
 }
 
+uint16_t ral_sx126x_lr_fhss_get_bit_delay_in_us( const void* context, const ral_lr_fhss_params_t* params,
+                                                 uint16_t payload_length )
+{
+    sx126x_lr_fhss_params_t sx126x_params;
+
+    ral_sx126x_convert_lr_fhss_params_from_ral( params, &sx126x_params );
+
+    return sx126x_lr_fhss_get_bit_delay_in_us( &sx126x_params, payload_length );
+}
+
 ral_status_t ral_sx126x_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present )
 {
     ral_status_t     status = RAL_STATUS_ERROR;
@@ -1139,6 +1207,114 @@ ral_status_t ral_sx126x_get_lora_rx_consumption_in_ua( const void* context, cons
 ral_status_t ral_sx126x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
 {
     return ( ral_status_t ) sx126x_get_random_numbers( context, numbers, n );
+}
+
+ral_status_t ral_sx126x_handle_rx_done( const void* context )
+{
+    return ( ral_status_t ) sx126x_handle_rx_done( context );
+}
+
+ral_status_t ral_sx126x_handle_tx_done( const void* context )
+{
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx126x_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                               ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak )
+{
+    if( bw >= RAL_LORA_BW_500_KHZ )
+    {
+        switch( sf )
+        {
+        case RAL_LORA_SF5:
+            *cad_det_peak = 19;
+            break;
+        case RAL_LORA_SF6:
+            *cad_det_peak = 20;
+            break;
+        case RAL_LORA_SF7:
+            *cad_det_peak = 21;
+            break;
+        case RAL_LORA_SF8:
+            *cad_det_peak = 22;
+            break;
+        case RAL_LORA_SF9:
+            *cad_det_peak = 23;
+            break;
+        case RAL_LORA_SF10:
+            *cad_det_peak = 23;
+            break;
+        case RAL_LORA_SF11:
+            *cad_det_peak = 26;
+            break;
+        case RAL_LORA_SF12:
+            *cad_det_peak = 30;
+            break;
+        default:
+            return RAL_STATUS_UNKNOWN_VALUE;
+            break;
+        }
+    }
+    else if( bw >= RAL_LORA_BW_125_KHZ )
+    {
+        switch( sf )
+        {
+        case RAL_LORA_SF5:
+            *cad_det_peak = 19;
+            break;
+        case RAL_LORA_SF6:
+            *cad_det_peak = 20;
+            break;
+        case RAL_LORA_SF7:
+            *cad_det_peak = 22;
+            break;
+        case RAL_LORA_SF8:
+            *cad_det_peak = 22;
+            break;
+        case RAL_LORA_SF9:
+            *cad_det_peak = 24;
+            break;
+        case RAL_LORA_SF10:
+            *cad_det_peak = 25;
+            break;
+        case RAL_LORA_SF11:
+            *cad_det_peak = 26;
+            break;
+        case RAL_LORA_SF12:
+            *cad_det_peak = 29;
+            break;
+        default:
+            return RAL_STATUS_UNKNOWN_VALUE;
+            break;
+        }
+    }
+    else
+    {
+        return RAL_STATUS_UNKNOWN_VALUE;
+    }
+
+    // Nothing To do when nb_symbol == RAL_LORA_CAD_01_SYMB or nb_symbol == RAL_LORA_CAD_02_SYMB
+    // with more symbols detection the sensibility could be increased
+    switch( nb_symbol )
+    {
+    case RAL_LORA_CAD_01_SYMB:
+    case RAL_LORA_CAD_02_SYMB:
+        break;
+    case RAL_LORA_CAD_04_SYMB:
+        *cad_det_peak -= 1;
+        break;
+    case RAL_LORA_CAD_08_SYMB:
+    case RAL_LORA_CAD_16_SYMB:
+        *cad_det_peak -= 2;
+        break;
+    default:
+        return RAL_STATUS_UNKNOWN_VALUE;
+        break;
+    }
+
+    ral_sx126x_bsp_get_lora_cad_det_peak( sf, bw, nb_symbol, cad_det_peak );
+
+    return RAL_STATUS_OK;
 }
 
 /*
@@ -1630,6 +1806,53 @@ static void ral_sx126x_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params
         .center_freq_in_pll_steps = sx126x_convert_freq_in_hz_to_pll_step( ral_lr_fhss_params->center_frequency_in_hz ),
         .device_offset            = ral_lr_fhss_params->device_offset,
     };
+}
+
+static ral_status_t ral_sx126x_cfg_trim_cap( const void* context )
+{
+    sx126x_tcxo_ctrl_voltages_t tcxo_supply_voltage;
+    ral_xosc_cfg_t              xosc_cfg;
+    uint32_t                    startup_time_in_tick = 0;
+
+    ral_sx126x_bsp_get_xosc_cfg( context, &xosc_cfg, &tcxo_supply_voltage, &startup_time_in_tick );
+
+    if( xosc_cfg == RAL_XOSC_CFG_XTAL )
+    {
+        uint8_t trimming_cap_xta = SX126X_XTAL_TRIMMING_CAPACITOR_DEFAULT_VALUE_STDBY_XOSC;
+        uint8_t trimming_cap_xtb = SX126X_XTAL_TRIMMING_CAPACITOR_DEFAULT_VALUE_STDBY_XOSC;
+
+        ral_sx126x_bsp_get_trim_cap( context, &trimming_cap_xta, &trimming_cap_xtb );
+
+        if( ( trimming_cap_xta != SX126X_XTAL_TRIMMING_CAPACITOR_DEFAULT_VALUE_STDBY_XOSC ) ||
+            ( trimming_cap_xtb != SX126X_XTAL_TRIMMING_CAPACITOR_DEFAULT_VALUE_STDBY_XOSC ) )
+        {
+            sx126x_status_t      status;
+            sx126x_chip_status_t chip_status;
+
+            status = sx126x_get_status( context, &chip_status );
+            if( status != SX126X_STATUS_OK )
+            {
+                return ( ral_status_t ) status;
+            }
+
+            if( chip_status.chip_mode == SX126X_CHIP_MODE_STBY_RC )
+            {
+                status = sx126x_set_standby( context, SX126X_STANDBY_CFG_XOSC );
+                if( status != SX126X_STATUS_OK )
+                {
+                    return ( ral_status_t ) status;
+                }
+            }
+
+            status = sx126x_set_trimming_capacitor_values( context, trimming_cap_xta, trimming_cap_xtb );
+            if( status != SX126X_STATUS_OK )
+            {
+                return ( ral_status_t ) status;
+            }
+        }
+    }
+
+    return RAL_STATUS_OK;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

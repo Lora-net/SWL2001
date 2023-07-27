@@ -31,8 +31,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __SMTC_HAL_LP_TIMER_H__
-#define __SMTC_HAL_LP_TIMER_H__
+#ifndef SMTC_HAL_LP_TIMER_H
+#define SMTC_HAL_LP_TIMER_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +61,15 @@ extern "C" {
  */
 
 /*!
+ * \brief Low power timer ID
+ */
+typedef enum hal_lp_timer_id_e
+{
+    HAL_LP_TIMER_ID_1 = 0,
+    HAL_LP_TIMER_ID_2 = 1,
+} hal_lp_timer_id_t;
+
+/*!
  * Timer IRQ handling data context
  */
 typedef struct hal_lp_timer_irq_s
@@ -75,37 +84,46 @@ typedef struct hal_lp_timer_irq_s
  */
 
 /*!
- *  Initializes the MCU TMR peripheral
+ * \brief Initialize the MCU TMR peripheral
+ *
+ * \param [in] id Low power timer id
  */
-void hal_lp_timer_init( void );
+void hal_lp_timer_init( hal_lp_timer_id_t id );
 
 /*!
- * Starts the provided timer objet for the given time
+ * \brief Start the provided timer objet for the given time
  *
+ * \param [in] id           Low power timer id
  * \param [in] milliseconds Number of milliseconds
  * \param [in] tmr_irq      Timer IRQ handling data ontext
  */
-void hal_lp_timer_start( const uint32_t milliseconds, const hal_lp_timer_irq_t* tmr_irq );
+void hal_lp_timer_start( hal_lp_timer_id_t id, const uint32_t milliseconds, const hal_lp_timer_irq_t* tmr_irq );
 
 /*!
- * Starts the provided timer objet for the given time
+ * \brief Start the provided timer objet for the given time
+ *
+ * \param [in] id Low power timer id
  */
-void hal_lp_timer_stop( void );
+void hal_lp_timer_stop( hal_lp_timer_id_t id );
 
 /*!
- * Enables timer interrupts (HW timer only)
+ * \brief Enable timer interrupts (HW timer only)
+ *
+ * \param [in] id Low power timer id
  */
-void hal_lp_timer_irq_enable( void );
+void hal_lp_timer_irq_enable( hal_lp_timer_id_t id );
 
 /*!
- * Disables timer interrupts (HW timer only)
+ * \brief Disable timer interrupts (HW timer only)
+ *
+ * \param [in] id Low power timer id
  */
-void hal_lp_timer_irq_disable( void );
+void hal_lp_timer_irq_disable( hal_lp_timer_id_t id );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // __SMTC_HAL_LP_TIMER_H__
+#endif  // SMTC_HAL_LP_TIMER_H
 
 /* --- EOF ------------------------------------------------------------------ */

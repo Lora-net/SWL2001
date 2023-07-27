@@ -48,7 +48,6 @@ extern "C" {
 #include <stdbool.h>  // bool type
 
 #include "smtc_modem_api.h"
-#include "ralf.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -76,7 +75,7 @@ extern "C" {
  *
  * @param [in] event_callback User event callback prototype
  */
-void smtc_modem_init( const ralf_t* radio, void ( *event_callback )( void ) );
+void smtc_modem_init( void ( *event_callback )( void ) );
 
 /**
  * @brief Run the modem engine
@@ -86,6 +85,27 @@ void smtc_modem_init( const ralf_t* radio, void ( *event_callback )( void ) );
  * @return  the time in ms after which the function must at least be called again
  */
 uint32_t smtc_modem_run_engine( void );
+
+/**
+ * @brief Check if some modem irq flags are pending
+ *
+ * @return true if some flags are pending, false otherwise
+ */
+bool smtc_modem_is_irq_flag_pending( void );
+
+/**
+ * @brief Set optional user radio context that can be retrieved in radio drivers hal calls
+ *
+ * @param [in] radio_ctx pointer on context
+ */
+void smtc_modem_set_radio_context( const void* radio_ctx );
+
+/**
+ * @brief Get optional user radio context
+ *
+ * @returns Radio context reference
+ */
+const void* smtc_modem_get_radio_context( void );
 
 #ifdef __cplusplus
 }

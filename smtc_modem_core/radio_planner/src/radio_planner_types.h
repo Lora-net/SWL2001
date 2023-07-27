@@ -127,8 +127,9 @@ typedef struct rp_radio_params_s
     {
         union
         {
-            ralf_params_gfsk_t gfsk;
-            ralf_params_lora_t lora;
+            ralf_params_gfsk_t     gfsk;
+            ralf_params_lora_t     lora;
+            ralf_params_lora_cad_t lora_cad;
         };
         uint32_t timeout_in_ms;
         union
@@ -160,6 +161,9 @@ typedef enum rp_task_types_e
     RP_TASK_TYPE_WIFI_RSSI,
     RP_TASK_TYPE_LBT,
     RP_TASK_TYPE_USER,
+    RP_TASK_TYPE_TX_BLE,
+    RP_TASK_TYPE_RX_BLE,
+    RP_TASK_TYPE_RX_BLE_SCAN,
     RP_TASK_TYPE_NONE,
 } rp_task_types_t;
 
@@ -230,6 +234,7 @@ typedef enum rp_hook_status_e
     RP_HOOK_STATUS_ID_ERROR,
     RP_TASK_STATUS_ALREADY_RUNNING,
     RP_TASK_STATUS_SCHEDULE_TASK_IN_PAST,
+    RP_TASK_STATUS_TASK_TOO_FAR_IN_FUTURE,
 } rp_hook_status_t;
 
 /*!

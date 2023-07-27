@@ -136,7 +136,7 @@ typedef enum smtc_modem_crypto_addr_id_e
 smtc_modem_crypto_return_code_t smtc_modem_crypto_payload_encrypt( const uint8_t* buffer, uint16_t size,
                                                                    smtc_se_key_identifier_t key_id, uint32_t address,
                                                                    uint8_t dir, uint32_t frame_counter,
-                                                                   uint8_t* enc_buffer );
+                                                                   uint8_t* enc_buffer,uint8_t stack_id );
 
 /**
  * @brief Computes the payload decryption
@@ -153,7 +153,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_payload_encrypt( const uint8_t
 smtc_modem_crypto_return_code_t smtc_modem_crypto_payload_decrypt( const uint8_t* enc_buffer, uint16_t size,
                                                                    smtc_se_key_identifier_t key_id, uint32_t address,
                                                                    uint8_t dir, uint32_t frame_counter,
-                                                                   uint8_t* dec_buffer );
+                                                                   uint8_t* dec_buffer,uint8_t stack_id );
 
 /**
  * @brief Computes the LoRaWAN Join Request frame MIC field
@@ -164,7 +164,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_payload_decrypt( const uint8_t
  * @return smtc_modem_crypto_return_code_t
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_compute_join_mic( const uint8_t* buffer, uint16_t size,
-                                                                    uint32_t* mic );
+                                                                    uint32_t* mic, uint8_t stack_id  );
 
 /**
  * @brief Process join-accept message. It decrypts the message and verifies the MIC
@@ -175,7 +175,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_compute_join_mic( const uint8_
  * @return smtc_modem_crypto_return_code_t
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_process_join_accept( const uint8_t* enc_buffer, uint16_t size,
-                                                                       uint8_t* dec_buffer );
+                                                                       uint8_t* dec_buffer, uint8_t stack_id );
 
 /**
  * @brief Derives and store the sessions keys
@@ -187,7 +187,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_process_join_accept( const uin
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( const uint8_t join_nonce[LORAWAN_JOIN_NONCE_SIZE],
                                                                 const uint8_t net_id[LORAWAN_NET_ID_SIZE],
-                                                                uint16_t      dev_nonce );
+                                                                uint16_t      dev_nonce, uint8_t stack_id );
 
 /**
  * @brief Verifies mic
@@ -203,7 +203,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_skeys( const uint8_t jo
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( const uint8_t* buffer, uint16_t size,
                                                               smtc_se_key_identifier_t key_id, uint32_t devaddr,
-                                                              uint8_t dir, uint32_t fcnt, uint32_t expected_mic );
+                                                              uint8_t dir, uint32_t fcnt, uint32_t expected_mic, uint8_t stack_id );
 
 /**
  * @brief Compute and add mic to a buffer
@@ -218,7 +218,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_verify_mic( const uint8_t* buf
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_compute_and_add_mic( uint8_t* buffer, uint16_t size,
                                                                        smtc_se_key_identifier_t key_id,
-                                                                       uint32_t devaddr, uint8_t dir, uint32_t fcnt );
+                                                                       uint32_t devaddr, uint8_t dir, uint32_t fcnt, uint8_t stack_id );
 
 /**
  * @brief Sets a key
@@ -227,7 +227,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_compute_and_add_mic( uint8_t* 
  * @param [in] key Key value (16 bytes), if its a multicast key it must be encrypted with McKEKey
  * @return smtc_modem_crypto_return_code_t
  */
-smtc_modem_crypto_return_code_t smtc_modem_crypto_set_key( smtc_se_key_identifier_t key_id, const uint8_t* key );
+smtc_modem_crypto_return_code_t smtc_modem_crypto_set_key( smtc_se_key_identifier_t key_id, const uint8_t* key, uint8_t stack_id );
 
 /**
  * @brief Derives a Multicast group key pair ( McAppSKey, McNwkSKey ) from McKey
@@ -237,7 +237,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_set_key( smtc_se_key_identifie
  * @return smtc_modem_crypto_return_code_t
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_multicast_session_keys( smtc_modem_crypto_addr_id_t addr_id,
-                                                                                 uint32_t                    mc_addr );
+                                                                                 uint32_t                    mc_addr, uint8_t stack_id );
 
 /**
  * @brief Get the class B ping slot rand number that will be used to compute PingPeriod Offset
@@ -248,7 +248,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_multicast_session_keys(
  * @return smtc_modem_crypto_return_code_t
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t beacon_epoch_time, uint32_t dev_addr,
-                                                                    uint8_t rand[16] );
+                                                                    uint8_t rand[16], uint8_t stack_id );
 
 /**
  * @brief Encryption function for modem services (LFU and Stream)
@@ -260,7 +260,7 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t bea
  * @return smtc_modem_crypto_return_code_t
  */
 smtc_modem_crypto_return_code_t smtc_modem_crypto_service_encrypt( const uint8_t* clear_buff, uint16_t len,
-                                                                   uint8_t nonce[14], uint8_t* enc_buff );
+                                                                   uint8_t nonce[14], uint8_t* enc_buff, uint8_t stack_id );
 
 #ifdef __cplusplus
 }

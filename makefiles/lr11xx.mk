@@ -1,6 +1,8 @@
 ##############################################################################
 # Definitions for the LR11XX tranceiver
 ##############################################################################
+-include makefiles/options.mk
+
 ifeq ($(RADIO),lr1110)
 TARGET = lr1110
 endif
@@ -8,15 +10,12 @@ ifeq ($(RADIO),lr1120)
 TARGET = lr1120
 endif
 
+# Allow modem options
+ALLOW_CSMA_BUILD = yes
 
 #-----------------------------------------------------------------------------
-# Common sources
+# Radio specific sources
 #-----------------------------------------------------------------------------
-
-ifeq ($(USE_GNSS),yes)
-SMTC_MODEM_SERVICES_C_SOURCES += \
-	smtc_modem_core/smtc_modem_services/src/almanac_update/almanac_update.c
-endif
 
 RADIO_DRIVER_C_SOURCES += \
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_bootloader.c\
@@ -26,11 +25,8 @@ RADIO_DRIVER_C_SOURCES += \
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_regmem.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_system.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_wifi.c\
-	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_lr_fhss.c
-ifeq ($(USE_GNSS),yes)
-RADIO_DRIVER_C_SOURCES += \
+	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_lr_fhss.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_gnss.c
-endif
 
 SMTC_RAL_C_SOURCES += \
 	smtc_modem_core/smtc_ral/src/ral_lr11xx.c
@@ -82,12 +78,8 @@ endif # soft_crypto
 #-----------------------------------------------------------------------------
 MODEM_C_DEFS += \
 	-DLR11XX\
-	-DLR11XX_TRANSCEIVER
-
-ifeq ($(RADIO),lr1120)
-MODEM_C_DEFS += \
-	-DLR1120
-endif
+	-DLR11XX_TRANSCEIVER\
+	-DLR11XX_DISABLE_WARNINGS
 
 ifeq ($(CRYPTO),LR11XX)
 MODEM_C_DEFS += \
@@ -99,9 +91,3 @@ MODEM_C_DEFS += \
 	-DUSE_LR11XX_CE \
 	-DUSE_PRE_PROVISIONED_FEATURES
 endif # LR11XX_WITH_CREDENTIALS
-
-# GNSS USE
-ifeq ($(USE_GNSS),yes)
-MODEM_C_DEFS += \
-	-DENABLE_MODEM_GNSS_FEATURE
-endif

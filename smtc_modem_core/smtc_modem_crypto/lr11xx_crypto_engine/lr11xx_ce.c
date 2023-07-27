@@ -42,12 +42,11 @@
 
 #include "smtc_secure_element.h"
 
+#include "modem_core.h"
 #include "lr11xx_system.h"
 #include "lr11xx_crypto_engine.h"
 #include "smtc_modem_hal.h"
 #include "smtc_modem_hal_dbg_trace.h"
-
-#include "modem_context.h"
 
 #include <string.h>  //for memset
 
@@ -154,31 +153,28 @@ smtc_se_return_code_t smtc_secure_element_init( void )
     memset( &lr11xx_ce_data, 0, sizeof( lr11xx_ce_data_t ) );
 
     // get radio context
-    lr11xx_ctx = modem_context_get_modem_radio_ctx( );
-
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
+    lr11xx_ctx = modem_get_radio_ctx( );
 
     // Restore lr11xx crypto data from flash memory into RAM
-    smtc_modem_hal_assert( lr11xx_crypto_restore_from_flash( lr11xx_ctx, &lr11xx_crypto_status ) == LR11XX_STATUS_OK );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_restore_from_flash( lr11xx_ctx, &lr11xx_crypto_status ) ==
+                                     LR11XX_STATUS_OK );
 
 #if defined( USE_PRE_PROVISIONED_FEATURES )
     SMTC_MODEM_HAL_TRACE_WARNING( "Use lr11xx preprovisioned EUIs and keys\n" );
 
     // Read LR11XX pre-provisioned identity
-    smtc_modem_hal_assert( lr11xx_system_read_uid( lr11xx_ctx, lr11xx_ce_data.deveui ) == LR11XX_STATUS_OK );
-    smtc_modem_hal_assert( lr11xx_system_read_join_eui( lr11xx_ctx, lr11xx_ce_data.joineui ) == LR11XX_STATUS_OK );
-    smtc_modem_hal_assert( lr11xx_system_read_pin( lr11xx_ctx, lr11xx_ce_data.pin ) == LR11XX_STATUS_OK );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_system_read_uid( lr11xx_ctx, lr11xx_ce_data.deveui ) == LR11XX_STATUS_OK );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_system_read_join_eui( lr11xx_ctx, lr11xx_ce_data.joineui ) ==
+                                     LR11XX_STATUS_OK );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_system_read_pin( lr11xx_ctx, lr11xx_ce_data.pin ) == LR11XX_STATUS_OK );
 #endif
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
 
     // Return codes are in line between secure element definition and lr11xx internal definition
     return ( smtc_se_return_code_t ) lr11xx_crypto_status;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_id,
-                                                   const uint8_t            key[SMTC_SE_KEY_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_id, const uint8_t key[SMTC_SE_KEY_SIZE],
+                                                   uint8_t stack_id )
 {
     if( key == NULL )
     {
@@ -195,38 +191,33 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
         return SMTC_SE_RC_ERROR_INVALID_KEY_ID;
     }
 
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
-
     if( ( key_id == SMTC_SE_MC_KEY_0 ) || ( key_id == SMTC_SE_MC_KEY_1 ) || ( key_id == SMTC_SE_MC_KEY_2 ) ||
         ( key_id == SMTC_SE_MC_KEY_3 ) )
     {  // Decrypt the key if its a Mckey
 
-        smtc_modem_hal_assert( lr11xx_crypto_derive_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                         convert_key_id_from_se_to_lr11xx( SMTC_SE_MC_KE_KEY ),
-                                                         lr11xx_key_id, key ) == LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_derive_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                      convert_key_id_from_se_to_lr11xx( SMTC_SE_MC_KE_KEY ), lr11xx_key_id,
+                                      key ) == LR11XX_STATUS_OK );
     }
     else
     {
-        smtc_modem_hal_assert( lr11xx_crypto_set_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status, lr11xx_key_id,
-                                                      key ) == LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_set_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                                                lr11xx_key_id, key ) == LR11XX_STATUS_OK );
     }
 
     if( status == SMTC_SE_RC_SUCCESS )
     {
-        smtc_modem_hal_assert( lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) ==
-                               LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) == LR11XX_STATUS_OK );
     }
-
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
 
     return status;
 }
 
 smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer,
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
-                                                            uint32_t* cmac )
+                                                            uint32_t* cmac, uint8_t stack_id )
 {
     smtc_se_return_code_t status = SMTC_SE_RC_ERROR;
     // uint8_t*              local_buffer = buffer;
@@ -241,9 +232,6 @@ smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buff
         return SMTC_SE_RC_ERROR_BUF_SIZE;
     }
 
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
-
     if( mic_bx_buffer != NULL )
     {
         uint8_t  mic_buff[CRYPTO_BUFFER_SIZE];
@@ -254,25 +242,24 @@ smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buff
         memcpy( mic_buff, mic_bx_buffer, MIC_BLOCK_BX_SIZE );
         memcpy( ( mic_buff + MIC_BLOCK_BX_SIZE ), buffer, size );
         // local_buffer = mic_buff;
-        smtc_modem_hal_assert( lr11xx_crypto_compute_aes_cmac( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                               convert_key_id_from_se_to_lr11xx( key_id ), mic_buff,
-                                                               cur_size, ( uint8_t* ) cmac ) == LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_compute_aes_cmac( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                            convert_key_id_from_se_to_lr11xx( key_id ), mic_buff, cur_size,
+                                            ( uint8_t* ) cmac ) == LR11XX_STATUS_OK );
     }
     else
     {
-        smtc_modem_hal_assert( lr11xx_crypto_compute_aes_cmac( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                               convert_key_id_from_se_to_lr11xx( key_id ), buffer, size,
-                                                               ( uint8_t* ) cmac ) == LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_compute_aes_cmac( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                            convert_key_id_from_se_to_lr11xx( key_id ), buffer, size,
+                                            ( uint8_t* ) cmac ) == LR11XX_STATUS_OK );
     }
-
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
 
     return status;
 }
 
 smtc_se_return_code_t smtc_secure_element_verify_aes_cmac( uint8_t* buffer, uint16_t size, uint32_t expected_cmac,
-                                                           smtc_se_key_identifier_t key_id )
+                                                           smtc_se_key_identifier_t key_id, uint8_t stack_id )
 {
     smtc_se_return_code_t status = SMTC_SE_RC_ERROR;
 
@@ -281,21 +268,17 @@ smtc_se_return_code_t smtc_secure_element_verify_aes_cmac( uint8_t* buffer, uint
         return SMTC_SE_RC_ERROR_NPE;
     }
 
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
-
-    smtc_modem_hal_assert( lr11xx_crypto_verify_aes_cmac( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                          convert_key_id_from_se_to_lr11xx( key_id ), buffer, size,
-                                                          ( uint8_t* ) &expected_cmac ) == LR11XX_STATUS_OK );
-
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_verify_aes_cmac( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                                                    convert_key_id_from_se_to_lr11xx( key_id ), buffer,
+                                                                    size,
+                                                                    ( uint8_t* ) &expected_cmac ) == LR11XX_STATUS_OK );
 
     return status;
 }
 
 smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, uint16_t size,
-                                                       smtc_se_key_identifier_t key_id, uint8_t* enc_buffer )
+                                                       smtc_se_key_identifier_t key_id, uint8_t* enc_buffer,
+                                                       uint8_t stack_id )
 {
     smtc_se_return_code_t status = SMTC_SE_RC_ERROR;
 
@@ -304,30 +287,25 @@ smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, ui
         return SMTC_SE_RC_ERROR_NPE;
     }
 
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
-
     if( key_id == SMTC_SE_SLOT_RAND_ZERO_KEY )
     {
-        smtc_modem_hal_assert( lr11xx_crypto_aes_encrypt( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                          LR11XX_CRYPTO_KEYS_IDX_GP0, buffer, size,
-                                                          enc_buffer ) == LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_aes_encrypt( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                                                    LR11XX_CRYPTO_KEYS_IDX_GP0, buffer, size,
+                                                                    enc_buffer ) == LR11XX_STATUS_OK );
     }
     else
     {
-        smtc_modem_hal_assert( lr11xx_crypto_aes_encrypt_01( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                             convert_key_id_from_se_to_lr11xx( key_id ), buffer, size,
-                                                             enc_buffer ) == LR11XX_STATUS_OK );
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_aes_encrypt_01( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                                                       convert_key_id_from_se_to_lr11xx( key_id ),
+                                                                       buffer, size, enc_buffer ) == LR11XX_STATUS_OK );
     }
-
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
 
     return status;
 }
 
 smtc_se_return_code_t smtc_secure_element_derive_and_store_key( uint8_t* input, smtc_se_key_identifier_t rootkey_id,
-                                                                smtc_se_key_identifier_t targetkey_id )
+                                                                smtc_se_key_identifier_t targetkey_id,
+                                                                uint8_t                  stack_id )
 {
     smtc_se_return_code_t status = SMTC_SE_RC_ERROR;
 
@@ -336,19 +314,13 @@ smtc_se_return_code_t smtc_secure_element_derive_and_store_key( uint8_t* input, 
         return SMTC_SE_RC_ERROR_NPE;
     }
 
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_derive_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                                               convert_key_id_from_se_to_lr11xx( rootkey_id ),
+                                                               convert_key_id_from_se_to_lr11xx( targetkey_id ),
+                                                               input ) == LR11XX_STATUS_OK );
 
-    smtc_modem_hal_assert( lr11xx_crypto_derive_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
-                                                     convert_key_id_from_se_to_lr11xx( rootkey_id ),
-                                                     convert_key_id_from_se_to_lr11xx( targetkey_id ),
-                                                     input ) == LR11XX_STATUS_OK );
-
-    smtc_modem_hal_assert( lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) ==
-                           LR11XX_STATUS_OK );
-
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) ==
+                                     LR11XX_STATUS_OK );
 
     return status;
 }
@@ -357,7 +329,7 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
                                                                uint8_t* joineui, uint16_t dev_nonce,
                                                                const uint8_t* enc_join_accept,
                                                                uint8_t enc_join_accept_size, uint8_t* dec_join_accept,
-                                                               uint8_t* version_minor )
+                                                               uint8_t* version_minor, uint8_t stack_id )
 {
     smtc_se_return_code_t status = SMTC_SE_RC_ERROR;
 
@@ -387,12 +359,9 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
     // Try first to process LoRaWAN 1.0.x JoinAccept
     uint8_t mic_header_10x[1] = { 0x20 };
 
-    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
-    modem_context_suspend_radio_access( RP_TASK_TYPE_NONE );
-
     //   cmac = aes128_cmac(NwkKey, MHDR |  JoinNonce | NetID | DevAddr | DLSettings | RxDelay | CFList |
     //   CFListType)
-    smtc_modem_hal_assert(
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
         lr11xx_crypto_process_join_accept(
             lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status, convert_key_id_from_se_to_lr11xx( enckey_id ),
             convert_key_id_from_se_to_lr11xx( SMTC_SE_NWK_KEY ), ( lr11xx_crypto_lorawan_version_t ) 0, mic_header_10x,
@@ -408,13 +377,10 @@ smtc_se_return_code_t smtc_secure_element_process_join_accept( smtc_se_join_req_
         }
     }
 
-    // lr11xx crypto operation done: resume modem radio access
-    modem_context_resume_radio_access( );
-
     return status;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_deveui( const uint8_t deveui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_deveui( const uint8_t deveui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( deveui == NULL )
     {
@@ -424,7 +390,7 @@ smtc_se_return_code_t smtc_secure_element_set_deveui( const uint8_t deveui[SMTC_
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_get_deveui( uint8_t deveui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_get_deveui( uint8_t deveui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( deveui == NULL )
     {
@@ -434,7 +400,7 @@ smtc_se_return_code_t smtc_secure_element_get_deveui( uint8_t deveui[SMTC_SE_EUI
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_joineui( const uint8_t joineui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_joineui( const uint8_t joineui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( joineui == NULL )
     {
@@ -444,7 +410,7 @@ smtc_se_return_code_t smtc_secure_element_set_joineui( const uint8_t joineui[SMT
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_get_joineui( uint8_t joineui[SMTC_SE_EUI_SIZE] )
+smtc_se_return_code_t smtc_secure_element_get_joineui( uint8_t joineui[SMTC_SE_EUI_SIZE], uint8_t stack_id )
 {
     if( joineui == NULL )
     {
@@ -454,7 +420,7 @@ smtc_se_return_code_t smtc_secure_element_get_joineui( uint8_t joineui[SMTC_SE_E
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_set_pin( const uint8_t pin[SMTC_SE_PIN_SIZE] )
+smtc_se_return_code_t smtc_secure_element_set_pin( const uint8_t pin[SMTC_SE_PIN_SIZE], uint8_t stack_id )
 {
     if( pin == NULL )
     {
@@ -464,14 +430,14 @@ smtc_se_return_code_t smtc_secure_element_set_pin( const uint8_t pin[SMTC_SE_PIN
     return SMTC_SE_RC_SUCCESS;
 }
 
-smtc_se_return_code_t smtc_secure_element_get_pin( uint8_t pin[SMTC_SE_PIN_SIZE] )
+smtc_se_return_code_t smtc_secure_element_get_pin( uint8_t pin[SMTC_SE_PIN_SIZE], uint8_t stack_id )
 {
     if( pin == NULL )
     {
         return SMTC_SE_RC_ERROR_NPE;
     }
 
-    memcpy( pin, lr11xx_ce_data.pin, SMTC_SE_EUI_SIZE );
+    memcpy( pin, lr11xx_ce_data.pin, SMTC_SE_PIN_SIZE );
     return SMTC_SE_RC_SUCCESS;
 }
 
@@ -482,7 +448,7 @@ smtc_se_return_code_t smtc_secure_element_store_context( void )
     };
     ctx.crc = lr11xx_ce_crc( ( uint8_t* ) &ctx, sizeof( ctx ) - 4 );
 
-    smtc_modem_hal_context_store( CONTEXT_SECURE_ELEMENT, ( uint8_t* ) &ctx, sizeof( ctx ) );
+    smtc_modem_hal_context_store( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
     smtc_secure_element_restore_context( );
     return SMTC_SE_RC_SUCCESS;
 }
@@ -490,7 +456,7 @@ smtc_se_return_code_t smtc_secure_element_store_context( void )
 smtc_se_return_code_t smtc_secure_element_restore_context( void )
 {
     lr11xx_ce_context_nvm_t ctx;
-    smtc_modem_hal_context_restore( CONTEXT_SECURE_ELEMENT, ( uint8_t* ) &ctx, sizeof( ctx ) );
+    smtc_modem_hal_context_restore( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
     if( lr11xx_ce_crc( ( uint8_t* ) &ctx, sizeof( ctx ) - 4 ) == ctx.crc )
     {
         lr11xx_ce_data = ctx.data;

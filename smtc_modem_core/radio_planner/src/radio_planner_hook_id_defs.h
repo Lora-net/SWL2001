@@ -55,28 +55,45 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
+
 #ifndef RP_HOOK_ID_REDEFINE
 enum RP_HOOK_ID_DEF
 {
-#if !defined( LR1110_MODEM_E )
-    RP_HOOK_ID_USER_SUSPEND = 0,
-    RP_HOOK_ID_USER_SUSPEND_0,
-#endif  // !LR1110_MODEM_E
-    RP_HOOK_ID_SUSPEND,
+    RP_HOOK_ID_SUSPEND = 0,
     RP_HOOK_ID_LR1MAC_STACK,
-    RP_HOOK_ID_LBT,
-    RP_HOOK_ID_RTC_COMPENSATION,
+    RP_HOOK_ID_LBT = RP_HOOK_ID_LR1MAC_STACK + NUMBER_OF_STACKS,
+
+#if defined( ADD_CSMA )
+    RP_HOOK_ID_CAD,
+#endif
+
+#if defined( ADD_CLASS_B )
     RP_HOOK_ID_CLASS_B_BEACON,
-#if defined( SMTC_D2D )
-    RP_HOOK_ID_CLASS_B_D2D,
-#endif  // SMTC_D2D
-    RP_HOOK_ID_CLASS_B_PING_SLOT,
-    RP_HOOK_ID_USER_SUSPEND_1,
-#if !defined( LR1110_MODEM_E )
-    RP_HOOK_ID_USER_SUSPEND_2,
-#endif  // !LR1110_MODEM_E
+    RP_HOOK_ID_CLASS_B_PING_SLOT = RP_HOOK_ID_CLASS_B_BEACON + NUMBER_OF_STACKS,
+    RP_HOOK_ID_TEST_MODE         = RP_HOOK_ID_CLASS_B_PING_SLOT + NUMBER_OF_STACKS,
+#else
+    RP_HOOK_ID_TEST_MODE,
+#endif
+
+#if defined( ADD_ALMANAC )
+    RP_HOOK_ID_DIRECT_RP_ACCESS_4_ALMANAC,
+    RP_HOOK_ID_DIRECT_RP_ACCESS = RP_HOOK_ID_DIRECT_RP_ACCESS_4_ALMANAC + NUMBER_OF_STACKS,
+#else
+    RP_HOOK_ID_DIRECT_RP_ACCESS,
+#endif
+
+#if defined( ADD_BLE )
+    RP_HOOK_ID_BLE_RX_BEACON,
+    RP_HOOK_ID_BLE_TX_BEACON,
+#endif
+
+#if defined( ADD_CLASS_C )
     RP_HOOK_ID_CLASS_C,
-    RP_HOOK_ID_MAX
+    RP_HOOK_ID_MAX = RP_HOOK_ID_CLASS_C + NUMBER_OF_STACKS,
+#else
+    RP_HOOK_ID_MAX,
+#endif
+
 };
 #endif
 /*

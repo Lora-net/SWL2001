@@ -1,6 +1,8 @@
 ##############################################################################
 # Definitions for the SX128x tranceiver
 ##############################################################################
+-include makefiles/options.mk
+
 TARGET = sx128x
 
 RADIO_DRIVER_C_SOURCES +=  \

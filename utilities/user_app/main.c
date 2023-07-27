@@ -85,6 +85,11 @@ int main( void )
 #if MAKEFILE_APP == EXAMPLE_EXTI
     // This example show how to send data on an external event.
     main_exti( );
+#elif MAKEFILE_APP == HW_MODEM
+    // This main is used to perform non regressions tests
+    main_hw_modem( );
+#elif MAKEFILE_APP == EXAMPLE_PORTING_TESTS
+    main_porting_tests( );
 #else
 #error "Unknown application" ## MAKEFILE_APP
 #endif

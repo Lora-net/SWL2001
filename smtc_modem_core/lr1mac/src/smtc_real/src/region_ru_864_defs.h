@@ -127,6 +127,8 @@ typedef struct region_ru864_context_s
     uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_RU_864];
     uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_RU_864];
     uint8_t  dr_distribution[NUMBER_OF_TX_DR_RU_864];
+    uint8_t  join_dr_distribution[NUMBER_OF_TX_DR_RU_864];
+    uint8_t  custom_dr_distribution_init[NUMBER_OF_TX_DR_RU_864];
     uint8_t  channel_index_enabled[BANK_MAX_RU864];   // Enable by Network
     uint8_t  unwrapped_channel_mask[BANK_MAX_RU864];  // Temp conf send by Network
 } region_ru864_context_t;
@@ -158,7 +160,7 @@ static const uint8_t datarate_offsets_ru_864[8][6] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_ru_864[] = {

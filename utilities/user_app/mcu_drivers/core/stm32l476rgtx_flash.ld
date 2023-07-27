@@ -55,18 +55,18 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-RAM  (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
-RAM2 (xrw)      : ORIGIN = 0x10000000, LENGTH = 31K
-NOINITRAM2(rwx) : ORIGIN = 0x10007C00, LENGTH = 1K
-FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 1024K
+RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 96K
+RAM2 (xrw)      : ORIGIN = 0x10000000, LENGTH = 32732
+NOINITRAM2 (xrw): ORIGIN = 0x10007FDC, LENGTH = 36
+FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 1024K
 }
+
 
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM2) + LENGTH(RAM2);    /* end of RAM2 */
-/* Generate a link error if heap and stack don't fit into RAM2 */
-_Min_Heap_Size = 0x4000;      /* required amount of heap  */
-_Min_Stack_Size = 0x3C00;     /* required amount of stack */
-
+/* Generate a link error if heap and stack don't fit into RAM */
+_Min_Heap_Size = 0x200;      /* required amount of heap  */
+_Min_Stack_Size = 0x800; /* required amount of stack */
 
 
 /* Define output sections */
@@ -163,22 +163,6 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >RAM AT> FLASH
 
-  /* GCOV variables section, they take quite some space */
-  /*
-  .data.__gcov_ :
-  {
-    . = ALIGN(8);
-    _sgcov = . ;
-    *(.data.__gcov_*)
-  } >RAM AT> FLASH
-
-  .bss.__gcov0 :
-  {
-    . = ALIGN(8);
-    *(.bss.__gcov0*)
-    _egcov = . ;
-  } >RAM
-  */
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -196,6 +180,18 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM
 
+  /* User_heap_stack section, used to check that there is enough RAM left */
+  ._user_heap_stack :
+  {
+    . = ALIGN(8);
+    PROVIDE ( end = . );
+    PROVIDE ( _end = . );
+    . = . + _Min_Heap_Size;
+    . = . + _Min_Stack_Size;
+    . = ALIGN(8);
+  } >RAM2
+
+  /* No init RAM2 section */
   .noinit (NOLOAD) :
   {
     . = ALIGN(4);
@@ -208,45 +204,6 @@ SECTIONS
     . = ALIGN(4);
   } >NOINITRAM2
 
-  .heap :
-  {
-      . = ALIGN(8);
-      PROVIDE ( end = . );
-      _sheap = . ;
-      __heap_start__ = _sheap;
-      __HeapBase = _sheap;
-      . = . + _Min_Heap_Size;
-      . = ALIGN(8);
-      _eheap = . ;
-      __heap_end__ = _eheap;
-      __HeapLimit = _eheap;
-  } >RAM2
-
-  .stack :
-  {
-    . = ALIGN(8);
-    _sstack = .;
-    __stack_start__ = _sstack;
-    stack_size = _estack - ABSOLUTE(_sstack);
-    . = . + MAX(_Min_Stack_Size, stack_size);
-    . = ALIGN(8);
-    __stack_end__ = .;
-  } >RAM2
-
-  /* User_heap_stack section, used to check that there is enough RAM left */
-  /*
-  ._user_heap_stack :
-  {
-    . = ALIGN(8);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
-    . = . + _Min_Stack_Size;
-    . = ALIGN(8);
-  } >RAM
-  */
-
-
 
   /* Remove information from the standard libraries */
   /DISCARD/ :
@@ -258,5 +215,3 @@ SECTIONS
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
-
-

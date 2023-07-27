@@ -44,7 +44,9 @@ extern "C" {
 #include <stdbool.h>  // bool type
 #include "lr1_stack_mac_layer.h"
 #include "lr1mac_defs.h"
+#if defined( SMTC_MULTICAST )
 #include "smtc_multicast.h"
+#endif  // SMTC_MULTICAST
 #include "radio_planner.h"
 #include "smtc_secure_element.h"
 
@@ -100,22 +102,13 @@ typedef struct smtc_ping_slot_s
     lr1_stack_mac_t* lr1_mac;
     uint8_t          ping_slot_id4rp;
     radio_planner_t* rp;
-    rp_status_t      planner_status;
+    rp_status_t      rp_planner_status;
     bool             enabled;  // is ping slot service enabled
 
-    void ( *rx_callback )( void* );    // Callback to setup the radio with Rx parameters
-    void* rx_context;                  // Context of the callback to setup the radio with Rx parameters
-    void ( *push_callback )( void* );  // Callback to push the downlink to the upper layer
-    void* push_context;                // Context to the callback to push the downlink to the upper layer
-
-    void ( *d2d_callback )( void* );  // Callback used by the Device To Device to send a downlink to others devices
-    void* d2d_context;  // Context of the callback used by the Device To Device to send a downlink to others devices
-
-    status_lorawan_t ( *d2d_check_fcnt_down_callback )( void*, uint32_t* fcnt_dwn_stack_tmp, uint32_t mic_in );
-
-    lr1mac_down_metadata_t rx_metadata;      // Downlink metadata
-    uint8_t                rx_payload_size;  //@note Have to by replace by a fifo objet to manage class b
-    uint8_t                rx_payload[255];  //@note Have to by replace by a fifo objet to manage class b
+    void ( *rx_callback )( void* );  // Callback to setup the radio with Rx parameters
+    void* rx_context;                // Context of the callback to setup the radio with Rx parameters
+    void ( *push_callback )( lr1_stack_mac_down_data_t* );  // Callback to push the downlink to the upper layer
+    void* push_context;  // Context to the callback to push the downlink to the upper layer
 
     rx_session_type_t          rx_session_index;          // Current running Rx session  (unicast, multicast0, ...)
     lr1mac_rx_session_param_t  rx_session_param_unicast;  // Unicast session context
@@ -126,18 +119,16 @@ typedef struct smtc_ping_slot_s
     uint32_t beacon_reserved_ms;
     uint32_t beacon_guard_ms;
 
-    rx_packet_type_t      valid_rx_packet;
-    uint8_t               tx_ack_bit;
-    uint8_t               tx_mtype;
-    uint8_t               rx_ftype;
-    uint8_t               rx_major;
-    uint8_t               rx_fctrl;
-    uint8_t               rx_fopts[15];
-    uint8_t               rx_fopts_length;
-    uint8_t               rx_payload_empty;
-    uint32_t              last_valid_rx_beacon_ms;
-    uint32_t              last_valid_rx_ping_slot_toa;
-    user_rx_packet_type_t available_app_packet;
+    rx_packet_type_t valid_rx_packet;
+
+    uint8_t  tx_mtype;
+    uint8_t  rx_ftype;
+    uint8_t  rx_major;
+    uint8_t  rx_fctrl;
+    uint8_t  rx_fopts[15];
+    uint8_t  rx_fopts_length;
+    uint32_t last_valid_rx_beacon_ms;
+    uint32_t last_valid_rx_ping_slot_toa;
 
     uint32_t last_toa;  // Last downlink Time On Air
 
@@ -146,19 +137,21 @@ typedef struct smtc_ping_slot_s
 /**
  * @brief Init the class B ping slot object and the callback to push downlink
  *
- * @param [in,out] ping_slot_obj    // Ping slot object
- * @param [in] lr1_mac              // lr1mac object
- * @param [in] multicast_obj        // multicast object
- * @param [in] rp                   // Radio planner object
- * @param [in] ping_slot_id_rp      // Hook ID for radio planner
- * @param [in] rx_callback          // radio planner callback to set the Rx windows parameters
- * @param [in] rx_context           // callback context
- * @param [in] push_callback        // Callback to handle received downlink
- * @param [in] push_context         // callback context
+ * @param [in,out] ping_slot_obj        // Ping slot object
+ * @param [in] lr1_mac                  // lr1mac object
+ * @param [in] multicast_rx_sessions    // multicast rx sessions
+ * @param [in] nb_multicast_rx_sessions // number of multicast rx sessions
+ * @param [in] rp                       // Radio planner object
+ * @param [in] ping_slot_id_rp          // Hook ID for radio planner
+ * @param [in] rx_callback              // radio planner callback to set the Rx windows parameters
+ * @param [in] rx_context               // callback context
+ * @param [in] push_callback            // Callback to handle received downlink
+ * @param [in] push_context             // callback context
  */
-void smtc_ping_slot_init( smtc_ping_slot_t* ping_slot_obj, lr1_stack_mac_t* lr1_mac, smtc_multicast_t* multicast_obj,
+void smtc_ping_slot_init( smtc_ping_slot_t* ping_slot_obj, lr1_stack_mac_t* lr1_mac,
+                          lr1mac_rx_session_param_t* multicast_rx_sessions, uint8_t nb_multicast_rx_sessions,
                           radio_planner_t* rp, uint8_t ping_slot_id_rp, void ( *rx_callback )( void* rx_context ),
-                          void* rx_context, void ( *push_callback )( void* push_context ), void* push_context );
+                          void* rx_context, void ( *push_callback )( lr1_stack_mac_down_data_t* push_context ) );
 
 /**
  * @brief init all class B sessions when a beacon is received
@@ -216,8 +209,10 @@ void smtc_ping_slot_mac_rp_callback( smtc_ping_slot_t* ping_slot_obj );
  */
 
 uint32_t smtc_ping_slot_compute_first_slot( uint32_t beacon_time_received_100us, uint32_t beacon_reserved_ms,
-                                            uint32_t beacon_epoch_time, uint32_t dev_addr, uint16_t ping_period );
+                                            uint32_t beacon_epoch_time, uint32_t dev_addr, uint16_t ping_period,
+                                            uint8_t stack_id );
 
+#if defined( SMTC_MULTICAST )
 /**
  * @brief Start a ping slot multicast session
  *
@@ -269,7 +264,7 @@ smtc_multicast_config_rc_t smtc_ping_slot_multicast_b_get_session_status( smtc_p
                                                                           uint8_t mc_group_id, bool* is_session_started,
                                                                           bool* waiting_beacon_to_start, uint32_t* freq,
                                                                           uint8_t* dr, uint8_t* ping_slot_periodicity );
-
+#endif  // SMTC_MULTICAST
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------

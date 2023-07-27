@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RAL_H__
-#define RAL_H__
+#ifndef RAL_H
+#define RAL_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -527,7 +527,7 @@ static inline ral_status_t ral_set_lora_cad_params( const ral_t* radio, const ra
  *
  * @returns Operation status
  */
-static inline ral_status_t ral_set_lora_symb_nb_timeout( const ral_t* radio, const uint8_t nb_of_symbs )
+static inline ral_status_t ral_set_lora_symb_nb_timeout( const ral_t* radio, const uint16_t nb_of_symbs )
 {
     return radio->driver.set_lora_symb_nb_timeout( radio->context, nb_of_symbs );
 }
@@ -840,6 +840,21 @@ static inline unsigned int ral_lr_fhss_get_hop_sequence_count( const ral_t*     
 }
 
 /**
+ * @brief Return the delay in microsecond between the last bit sent and the Tx done interrupt using the given parameters
+ *
+ * @param [in] radio  Pointer to radio data structure
+ * @param [in] lr_fhss_params  Pointer to lr fhss parameters data structure
+ * @param [in] payload_length  Payload length in byte
+ *
+ * @return Delay in microsecond
+ */
+static inline unsigned int ral_lr_fhss_get_bit_delay_in_us( const ral_t* radio, const ral_lr_fhss_params_t* params,
+                                                            uint16_t payload_length )
+{
+    return radio->driver.lr_fhss_get_bit_delay_in_us( radio->context, params, payload_length );
+}
+
+/**
  * @brief Get the coding rate and CRC configuration of the last received LoRa packet
  *
  * @param [in] radio            Pointer to radio data structure
@@ -931,10 +946,44 @@ static inline ral_status_t ral_get_random_numbers( const ral_t* radio, uint32_t*
     return radio->driver.get_random_numbers( radio->context, numbers, n );
 }
 
+/**
+ * @brief Generic finalizing function after reception
+ *
+ * @remark This function can be called when a @ref RAL_IRQ_RX_DONE occurs, not matter the reception mode
+ *
+ * @param [in] radio    Pointer to radio data structure
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_handle_rx_done( const ral_t* radio )
+{
+    return radio->driver.handle_rx_done( radio->context );
+}
+
+/**
+ * @brief Generic finalizing function after transmission
+ *
+ * @remark This function can be called when a @ref RAL_IRQ_TX_DONE occurs
+ *
+ * @param [in] radio    Pointer to radio data structure
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_handle_tx_done( const ral_t* radio )
+{
+    return radio->driver.handle_tx_done( radio->context );
+}
+
+static inline ral_status_t ral_get_lora_cad_det_peak( const ral_t* radio, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                                      ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak )
+{
+    return radio->driver.get_lora_cad_det_peak( radio->context, sf, bw, nb_symbol, cad_det_peak );
+}
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // RAL_H__
+#endif  // RAL_H
 
 /* --- EOF ------------------------------------------------------------------ */

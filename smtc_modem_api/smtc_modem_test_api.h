@@ -238,17 +238,6 @@ smtc_modem_return_code_t smtc_modem_test_get_rssi( int8_t* rssi );
 smtc_modem_return_code_t smtc_modem_test_radio_reset( void );
 
 /**
- * @brief Enable / disable the applicative dutycycle
- * @remark
- *
- * @param [in] status  0: disable, 1: enable
- *
- * @return Modem return code as defined in @ref smtc_modem_return_code_t
-
- */
-smtc_modem_return_code_t smtc_modem_test_duty_cycle_app_activate( bool status );
-
-/**
  * @brief Direct access to radio command write
  *
  * @param [in] command         Pointer to the buffer to be transmitted

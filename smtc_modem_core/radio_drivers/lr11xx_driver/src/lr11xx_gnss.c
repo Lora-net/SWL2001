@@ -47,15 +47,29 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
+/**
+ * @brief Management of the mixer configuration workaround - only LR1120 firmware 0x0101 is impacted
+ *
+ * @remark This workaround can be deactived when using any LR1110 firmware version
+ */
+#ifdef LR11XX_DISABLE_MIXER_CFG_WORKAROUND
+#define LR11XX_GNSS_APPLY_MIXER_CFG_WORKAROUND( context ) LR11XX_STATUS_OK
+#else
+#define LR11XX_GNSS_APPLY_MIXER_CFG_WORKAROUND( context ) lr11xx_gnss_apply_mixer_cfg_workaround( context )
+#endif
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
+#define LR11XX_GNSS_READ_GNSS_RSSI_TEST_CMD_LENGTH ( 2 + 2 )
 #define LR11XX_GNSS_SET_CONSTELLATION_CMD_LENGTH ( 2 + 1 )
 #define LR11XX_GNSS_READ_CONSTELLATION_CMD_LENGTH ( 2 )
 #define LR11XX_GNSS_SET_ALMANAC_UPDATE_CMD_LENGTH ( 2 + 1 )
 #define LR11XX_GNSS_READ_ALMANAC_UPDATE_CMD_LENGTH ( 2 )
+#define LR11XX_GNSS_SET_FREQ_SEARCH_SPACE_CMD_LENGTH ( 2 + 1 )
+#define LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH ( 2 )
 #define LR11XX_GNSS_READ_FW_VERSION_CMD_LENGTH ( 2 )
 #define LR11XX_GNSS_READ_SUPPORTED_CONSTELLATION_CMD_LENGTH ( 2 )
 #define LR11XX_GNSS_SET_SCAN_MODE_CMD_LENGTH ( 2 + 1 )
@@ -73,7 +87,10 @@
 #define LR11XX_GNSS_SCAN_GET_TIMINGS_CMD_LENGTH ( 2 )
 #define LR11XX_GNSS_GET_NB_SV_SATELLITES_CMD_LENGTH ( 2 )
 #define LR11XX_GNSS_GET_SV_SATELLITES_CMD_LENGTH ( 2 )
+#define LR11XX_GNSS_GET_SV_VISIBLE_CMD_LENGTH ( 2 + 9 )
+#define LR11XX_GNSS_GET_SV_VISIBLE_DOPPLER_CMD_LENGTH ( 2 )
 
+#define LR11XX_GNSS_READ_GNSS_RSSI_TEST_READ_RBUFFER_LENGTH ( 2 )
 #define LR11XX_GNSS_ALMANAC_READ_RBUFFER_LENGTH ( 6 )
 #define LR11XX_GNSS_ALMANAC_DATE_LENGTH ( 2 )
 #define LR11XX_GNSS_ALMANAC_UPDATE_MAX_NB_OF_BLOCKS \
@@ -115,10 +132,13 @@
  */
 enum
 {
+    LR11XX_GNSS_READ_GNSS_RSSI_TEST_OC          = 0x0222,
     LR11XX_GNSS_SET_CONSTELLATION_OC            = 0x0400,  //!< Set the constellation to use
     LR11XX_GNSS_READ_CONSTELLATION_OC           = 0x0401,  //!< Read the used constellations
     LR11XX_GNSS_SET_ALMANAC_UPDATE_OC           = 0x0402,  //!< Set almanac update configuration
     LR11XX_GNSS_READ_ALMANAC_UPDATE_OC          = 0x0403,  //!< Read the almanac update configuration
+    LR11XX_GNSS_SET_FREQ_SEARCH_SPACE_OC        = 0x0404,  //!< Set the frequency search space
+    LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_OC       = 0x0405,  //!< Read the frequency search space
     LR11XX_GNSS_READ_FW_VERSION_OC              = 0x0406,  //!< Read the firmware version
     LR11XX_GNSS_READ_SUPPORTED_CONSTELLATION_OC = 0x0407,  //!< Read the supported constellations
     LR11XX_GNSS_SET_SCAN_MODE_OC                = 0x0408,  //!< Define single or double capture
@@ -136,6 +156,8 @@ enum
     LR11XX_GNSS_GET_NB_SATELLITES_OC            = 0x0417,  //!< Get the number of satellites detected during a scan
     LR11XX_GNSS_GET_SATELLITES_OC               = 0x0418,  //!< Get the list of satellites detected during a scan
     LR11XX_GNSS_GET_TIMINGS_OC                  = 0x0419,  //!< Get the time spent in signal acquisition and analysis
+    LR11XX_GNSS_GET_SV_VISIBLE_OC               = 0x041F,  //!< Get the number of visible SV from a date and a position
+    LR11XX_GNSS_GET_SV_VISIBLE_DOPPLER_OC       = 0x0420,  //!< Get visible SV ID and corresponding doppler value
 };
 
 /*
@@ -410,6 +432,30 @@ lr11xx_status_t lr11xx_gnss_read_almanac_update( const void*                    
                                                 constellations_to_update, sizeof( *constellations_to_update ) );
 }
 
+lr11xx_status_t lr11xx_gnss_set_freq_search_space( const void*                           radio,
+                                                   const lr11xx_gnss_freq_search_space_t freq_search_space )
+{
+    const uint8_t cbuffer[LR11XX_GNSS_SET_FREQ_SEARCH_SPACE_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_GNSS_SET_FREQ_SEARCH_SPACE_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_GNSS_SET_FREQ_SEARCH_SPACE_OC >> 0 ),
+        ( uint8_t ) freq_search_space,
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( radio, cbuffer, LR11XX_GNSS_SET_FREQ_SEARCH_SPACE_CMD_LENGTH, 0, 0 );
+}
+
+lr11xx_status_t lr11xx_gnss_read_freq_search_space( const void*                      radio,
+                                                    lr11xx_gnss_freq_search_space_t* freq_search_space )
+{
+    const uint8_t cbuffer[LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_OC >> 0 ),
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_read( radio, cbuffer, LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH,
+                                                ( uint8_t* ) freq_search_space, sizeof( uint8_t ) );
+}
+
 lr11xx_status_t lr11xx_gnss_read_firmware_version( const void* context, lr11xx_gnss_version_t* version )
 {
     const uint8_t cbuffer[LR11XX_GNSS_READ_FW_VERSION_CMD_LENGTH] = {
@@ -453,38 +499,70 @@ lr11xx_status_t lr11xx_gnss_scan_autonomous( const void* context, const lr11xx_g
                                              const lr11xx_gnss_search_mode_t effort_mode,
                                              const uint8_t gnss_input_parameters, const uint8_t nb_sat )
 {
-    const uint8_t cbuffer[LR11XX_GNSS_SCAN_AUTONOMOUS_CMD_LENGTH] = {
-        ( uint8_t ) ( LR11XX_GNSS_SCAN_AUTONOMOUS_OC >> 8 ),
-        ( uint8_t ) ( LR11XX_GNSS_SCAN_AUTONOMOUS_OC >> 0 ),
-        ( uint8_t ) ( date >> 24 ),
-        ( uint8_t ) ( date >> 16 ),
-        ( uint8_t ) ( date >> 8 ),
-        ( uint8_t ) ( date >> 0 ),
-        ( uint8_t ) effort_mode,
-        gnss_input_parameters,
-        nb_sat,
+    lr11xx_status_t status                                          = LR11XX_STATUS_ERROR;
+    const uint8_t   cbuffer[LR11XX_GNSS_SCAN_AUTONOMOUS_CMD_LENGTH] = {
+          ( uint8_t ) ( LR11XX_GNSS_SCAN_AUTONOMOUS_OC >> 8 ),
+          ( uint8_t ) ( LR11XX_GNSS_SCAN_AUTONOMOUS_OC >> 0 ),
+          ( uint8_t ) ( date >> 24 ),
+          ( uint8_t ) ( date >> 16 ),
+          ( uint8_t ) ( date >> 8 ),
+          ( uint8_t ) ( date >> 0 ),
+          ( uint8_t ) effort_mode,
+          gnss_input_parameters,
+          nb_sat,
     };
 
-    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_GNSS_SCAN_AUTONOMOUS_CMD_LENGTH, 0, 0 );
+    do
+    {
+        status = LR11XX_GNSS_APPLY_MIXER_CFG_WORKAROUND( context );
+        if( status != LR11XX_STATUS_OK )
+        {
+            break;
+        }
+
+        status = ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_GNSS_SCAN_AUTONOMOUS_CMD_LENGTH, 0, 0 );
+        if( status != LR11XX_STATUS_OK )
+        {
+            break;
+        }
+    } while( 0 );
+
+    return status;
 }
 
 lr11xx_status_t lr11xx_gnss_scan_assisted( const void* context, const lr11xx_gnss_date_t date,
                                            const lr11xx_gnss_search_mode_t effort_mode,
                                            const uint8_t gnss_input_parameters, const uint8_t nb_sat )
 {
-    const uint8_t cbuffer[LR11XX_GNSS_SCAN_ASSISTED_CMD_LENGTH] = {
-        ( uint8_t ) ( LR11XX_GNSS_SCAN_ASSISTED_OC >> 8 ),
-        ( uint8_t ) ( LR11XX_GNSS_SCAN_ASSISTED_OC >> 0 ),
-        ( uint8_t ) ( date >> 24 ),
-        ( uint8_t ) ( date >> 16 ),
-        ( uint8_t ) ( date >> 8 ),
-        ( uint8_t ) ( date >> 0 ),
-        ( uint8_t ) effort_mode,
-        gnss_input_parameters,
-        nb_sat,
+    lr11xx_status_t status                                        = LR11XX_STATUS_ERROR;
+    const uint8_t   cbuffer[LR11XX_GNSS_SCAN_ASSISTED_CMD_LENGTH] = {
+          ( uint8_t ) ( LR11XX_GNSS_SCAN_ASSISTED_OC >> 8 ),
+          ( uint8_t ) ( LR11XX_GNSS_SCAN_ASSISTED_OC >> 0 ),
+          ( uint8_t ) ( date >> 24 ),
+          ( uint8_t ) ( date >> 16 ),
+          ( uint8_t ) ( date >> 8 ),
+          ( uint8_t ) ( date >> 0 ),
+          ( uint8_t ) effort_mode,
+          gnss_input_parameters,
+          nb_sat,
     };
 
-    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_GNSS_SCAN_ASSISTED_CMD_LENGTH, 0, 0 );
+    do
+    {
+        status = LR11XX_GNSS_APPLY_MIXER_CFG_WORKAROUND( context );
+        if( status != LR11XX_STATUS_OK )
+        {
+            break;
+        }
+
+        status = ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_GNSS_SCAN_ASSISTED_CMD_LENGTH, 0, 0 );
+        if( status != LR11XX_STATUS_OK )
+        {
+            break;
+        }
+    } while( 0 );
+
+    return status;
 }
 
 lr11xx_status_t lr11xx_gnss_set_assistance_position(
@@ -590,6 +668,27 @@ lr11xx_status_t lr11xx_gnss_get_detected_satellites(
             local_satellite_result->doppler = ( int16_t ) ( ( result_buffer[local_result_buffer_index + 2] << 8 ) +
                                                             ( result_buffer[local_result_buffer_index + 3] << 0 ) );
         }
+    }
+    return ( lr11xx_status_t ) hal_status;
+}
+
+lr11xx_status_t lr11xx_gnss_read_gnss_rssi_test( const void* context, int8_t* rssi_gnss_dbm )
+{
+    const uint8_t gnss_rssi_path_test                                 = 0x09;
+    const uint8_t cbuffer[LR11XX_GNSS_READ_GNSS_RSSI_TEST_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_GNSS_READ_GNSS_RSSI_TEST_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_GNSS_READ_GNSS_RSSI_TEST_OC >> 0 ),
+        gnss_rssi_path_test,
+        0,
+    };
+
+    uint8_t                   rssi_gnss_raw[LR11XX_GNSS_READ_GNSS_RSSI_TEST_READ_RBUFFER_LENGTH] = { 0 };
+    const lr11xx_hal_status_t hal_status =
+        lr11xx_hal_read( context, cbuffer, LR11XX_GNSS_READ_GNSS_RSSI_TEST_CMD_LENGTH, rssi_gnss_raw,
+                         LR11XX_GNSS_READ_GNSS_RSSI_TEST_READ_RBUFFER_LENGTH );
+    if( hal_status == LR11XX_HAL_STATUS_OK )
+    {
+        *rssi_gnss_dbm = rssi_gnss_raw[1];
     }
     return ( lr11xx_status_t ) hal_status;
 }
@@ -714,6 +813,69 @@ uint32_t lr11xx_gnss_get_consumption( lr11xx_system_reg_mode_t regulator, lr11xx
     gnss_scan_consumption_uah = gnss_scan_consumption_uah / ( 3600000 - ( timings.computation_ms + timings.radio_ms ) );
 
     return gnss_scan_consumption_uah;
+}
+
+lr11xx_status_t lr11xx_gnss_apply_mixer_cfg_workaround( const void* context )
+{
+    return lr11xx_regmem_write_regmem32_mask( context, 0x00F30024, 1 << 4, 1 << 4 );
+}
+
+lr11xx_status_t lr11xx_gnss_get_nb_visible_satellites(
+    const void* context, const lr11xx_gnss_date_t date,
+    const lr11xx_gnss_solver_assistance_position_t* assistance_position,
+    const lr11xx_gnss_constellation_t constellation, uint8_t* nb_visible_sv )
+{
+    const int16_t latitude  = ( ( assistance_position->latitude * 2048 ) / LR11XX_GNSS_SCALING_LATITUDE );
+    const int16_t longitude = ( ( assistance_position->longitude * 2048 ) / LR11XX_GNSS_SCALING_LONGITUDE );
+    const uint8_t cbuffer[LR11XX_GNSS_GET_SV_VISIBLE_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_GNSS_GET_SV_VISIBLE_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_GNSS_GET_SV_VISIBLE_OC >> 0 ),
+        ( uint8_t ) ( date >> 24 ),
+        ( uint8_t ) ( date >> 16 ),
+        ( uint8_t ) ( date >> 8 ),
+        ( uint8_t ) ( date >> 0 ),
+        ( uint8_t ) ( latitude >> 8 ),
+        ( uint8_t ) ( latitude >> 0 ),
+        ( uint8_t ) ( longitude >> 8 ),
+        ( uint8_t ) ( longitude >> 0 ),
+        ( uint8_t ) ( constellation - 1 ),
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_read( context, cbuffer, LR11XX_GNSS_GET_SV_VISIBLE_CMD_LENGTH, nb_visible_sv,
+                                                1 );
+}
+
+lr11xx_status_t lr11xx_gnss_get_visible_satellites( const void* context, const uint8_t nb_visible_satellites,
+                                                    lr11xx_gnss_visible_satellite_t* visible_satellite_id_doppler )
+{
+    uint8_t        result_buffer[12 * 5] = { 0 };
+    const uint16_t read_size             = nb_visible_satellites * 5;
+
+    const uint8_t cbuffer[LR11XX_GNSS_GET_SV_VISIBLE_DOPPLER_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_GNSS_GET_SV_VISIBLE_DOPPLER_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_GNSS_GET_SV_VISIBLE_DOPPLER_OC >> 0 ),
+    };
+
+    const lr11xx_hal_status_t hal_status =
+        lr11xx_hal_read( context, cbuffer, LR11XX_GNSS_GET_SV_VISIBLE_DOPPLER_CMD_LENGTH, result_buffer, read_size );
+
+    if( hal_status == LR11XX_HAL_STATUS_OK )
+    {
+        for( uint8_t index_satellite = 0; index_satellite < nb_visible_satellites; index_satellite++ )
+        {
+            const uint16_t                   local_result_buffer_index = index_satellite * 5;
+            lr11xx_gnss_visible_satellite_t* local_satellite_result    = &visible_satellite_id_doppler[index_satellite];
+
+            local_satellite_result->satellite_id = result_buffer[local_result_buffer_index];
+            local_satellite_result->doppler      = ( int16_t ) ( ( result_buffer[local_result_buffer_index + 1] << 8 ) +
+                                                            ( result_buffer[local_result_buffer_index + 2] << 0 ) );
+            local_satellite_result->doppler_error =
+                ( int16_t ) ( ( result_buffer[local_result_buffer_index + 3] << 8 ) +
+                              ( result_buffer[local_result_buffer_index + 4] << 0 ) );
+        }
+    }
+
+    return ( lr11xx_status_t ) hal_status;
 }
 
 /*

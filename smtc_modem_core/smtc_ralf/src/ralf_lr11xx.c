@@ -115,7 +115,7 @@ ral_status_t ralf_lr11xx_setup_gfsk( const ralf_t* radio, const ralf_params_gfsk
     {
         return status;
     }
-    if( params->dc_free_is_on == true )
+    if( params->pkt_params.dc_free != RAL_GFSK_DC_FREE_OFF )
     {
         status = ral_set_gfsk_whitening_seed( &radio->ral, params->whitening_seed );
         if( status != RAL_STATUS_OK )
@@ -178,6 +178,44 @@ ral_status_t ralf_lr11xx_setup_flrc( const ralf_t* radio, const ralf_params_flrc
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
+ral_status_t ralf_lr11xx_setup_lora_cad( const ralf_t* radio, const ralf_params_lora_cad_t* params )
+{
+    ral_status_t          status     = RAL_STATUS_ERROR;
+    ral_lora_mod_params_t mod_params = { 0 };
+    ral_lora_pkt_params_t pkt_params = { 0 };
+
+    mod_params.bw = params->bw;
+    mod_params.sf = params->sf;
+
+    pkt_params.invert_iq_is_on = params->invert_iq_is_on;
+
+    status = ral_set_pkt_type( &radio->ral, RAL_PKT_TYPE_LORA );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    status = ral_set_rf_freq( &radio->ral, params->rf_freq_in_hz );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    status = ral_set_lora_mod_params( &radio->ral, &mod_params );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    status = ral_set_lora_pkt_params( &radio->ral, &pkt_params );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    status = ral_set_lora_cad_params( &radio->ral, &params->ral_lora_cad_params );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------

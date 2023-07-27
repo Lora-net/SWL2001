@@ -1,6 +1,8 @@
 ##############################################################################
-# Definitions for the SX128x tranceiver
+# Definitions for the SX126x tranceiver
 ##############################################################################
+-include makefiles/options.mk
+
 ifeq ($(RADIO),sx1261)
 TARGET = sx1261
 endif
@@ -10,6 +12,15 @@ endif
 ifeq ($(RADIO),sx1268)
 TARGET = sx1268
 endif
+
+# Allow modem options
+ALLOW_CSMA_BUILD = yes
+
+
+#-----------------------------------------------------------------------------
+# Radio specific sources
+#-----------------------------------------------------------------------------
+
 
 RADIO_DRIVER_C_SOURCES +=  \
 	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x.c\
@@ -34,9 +45,6 @@ MODEM_C_INCLUDES =  \
 	-Ismtc_modem_core/radio_drivers/sx126x_driver/src\
 	-Ismtc_modem_core/smtc_modem_crypto/soft_secure_element
 
-#-----------------------------------------------------------------------------
-# Region
-#-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Radio specific compilation flags

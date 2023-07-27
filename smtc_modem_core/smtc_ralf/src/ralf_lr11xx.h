@@ -54,10 +54,10 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-#define RALF_DRV_LR11XX_INSTANTIATE                                                 \
-    {                                                                               \
-        .setup_gfsk = ralf_lr11xx_setup_gfsk, .setup_lora = ralf_lr11xx_setup_lora, \
-        .setup_flrc = ralf_lr11xx_setup_flrc,                                       \
+#define RALF_DRV_LR11XX_INSTANTIATE                                                         \
+    {                                                                                       \
+        .setup_gfsk = ralf_lr11xx_setup_gfsk, .setup_lora = ralf_lr11xx_setup_lora,         \
+        .setup_flrc = ralf_lr11xx_setup_flrc, .setup_lora_cad = ralf_lr11xx_setup_lora_cad, \
     }
 
 #define RALF_LR11XX_INSTANTIATE( ctx )                                                 \
@@ -94,6 +94,11 @@ ral_status_t ralf_lr11xx_setup_lora( const ralf_t* radio, const ralf_params_lora
  * @see ralf_setup_flrc
  */
 ral_status_t ralf_lr11xx_setup_flrc( const ralf_t* radio, const ralf_params_flrc_t* params );
+
+/**
+ * @see ralf_setup_lora_cad
+ */
+ral_status_t ralf_lr11xx_setup_lora_cad( const ralf_t* radio, const ralf_params_lora_cad_t* params );
 
 #ifdef __cplusplus
 }

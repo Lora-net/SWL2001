@@ -47,7 +47,9 @@ extern "C" {
 #include <stdbool.h>  // bool type
 #include "lr1_stack_mac_layer.h"
 #include "lr1mac_defs.h"
+#if defined( SMTC_MULTICAST )
 #include "smtc_multicast.h"
+#endif  // SMTC_MULTICAST
 #include "radio_planner.h"
 #include "smtc_secure_element.h"
 
@@ -78,16 +80,12 @@ typedef struct lr1mac_class_c_s
     lr1_stack_mac_t* lr1_mac;        // lr1mac object
     uint8_t          class_c_id4rp;  // Hook ID for radio planner
     radio_planner_t* rp;             // Radio planner object
-    rp_status_t      planner_status;
+    rp_status_t      rp_planner_status;
 
     void ( *rx_callback )( void* );  // radio planner callback to set the Rx windows parameters
     void* rx_context;
-    void ( *push_callback )( void* );  // Callback to handle received downlink
+    void ( *push_callback )( lr1_stack_mac_down_data_t* );  // Callback to handle received downlink
     void* push_context;
-
-    lr1mac_down_metadata_t rx_metadata;
-    uint8_t                rx_payload_size;
-    uint8_t                rx_payload[255];
 
     rx_session_type_t rx_session_index;
 
@@ -96,16 +94,13 @@ typedef struct lr1mac_class_c_s
     lr1mac_rx_session_param_t* rx_session_param[LR1MAC_NUMBER_OF_RXC_SESSION];
 
     rx_packet_type_t valid_rx_packet;
-    uint8_t          tx_ack_bit;
-    uint8_t          tx_mtype;
-    uint8_t          rx_ftype;
-    uint8_t          rx_major;
-    uint8_t          rx_fctrl;
-    uint8_t          rx_fopts[15];
-    uint8_t          rx_fopts_length;
-    uint8_t          rx_payload_empty;
 
-    user_rx_packet_type_t available_app_packet;
+    uint8_t tx_mtype;
+    uint8_t rx_ftype;
+    uint8_t rx_major;
+    uint8_t rx_fctrl;
+    uint8_t rx_fopts[15];
+    uint8_t rx_fopts_length;
 
 } lr1mac_class_c_t;
 
@@ -117,18 +112,21 @@ typedef struct lr1mac_class_c_s
 /**
  * @brief Init the class C and the callback to push downlink
  *
- * @param class_c_obj   // Class C object
- * @param lr1_mac       // lr1mac object
- * @param rp            // Radio planner object
- * @param class_c_id_rp // Hook ID for radio planner
- * @param rx_callback   // radio planner callback to set the Rx windows parameters
- * @param rx_context
- * @param push_callback // Callback to handle received downlink
- * @param push_context
+ * @param class_c_obj           // Class C object
+ * @param lr1_mac               // lr1mac object
+ * @param multicast_rx_sessions // multicast rx sessions
+ * @param nb_multicast_rx_sessions // number of multicast rx sessions
+ * @param rp                    // Radio planner object
+ * @param class_c_id_rp         // Hook ID for radio planner
+ * @param rx_callback           // radio planner callback to set the Rx windows parameters
+ * @param rx_context            // radio planner context to set the Rx windows parameters
+ * @param push_callback         // Callback to handle received downlink
  */
-void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac, smtc_multicast_t* multicast_obj,
+
+void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac,
+                          lr1mac_rx_session_param_t* multicast_rx_sessions, uint8_t nb_multicast_rx_sessions,
                           radio_planner_t* rp, uint8_t class_c_id_rp, void ( *rx_callback )( void* rx_context ),
-                          void* rx_context, void ( *push_callback )( void* push_context ), void* push_context );
+                          void* rx_context, void ( *push_callback )( lr1_stack_mac_down_data_t* push_context ) );
 
 /**
  * @brief Class C service enablement
@@ -155,12 +153,22 @@ void lr1mac_class_c_stop( lr1mac_class_c_t* class_c_obj );
 void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj );
 
 /**
+ * @brief is Class C enabled
+ *
+ * @param class_c_obj
+ * @return true
+ * @return false
+ */
+bool lr1mac_class_c_is_running( lr1mac_class_c_t* class_c_obj );
+
+/**
  * @brief Callback called by radio planner on interrupt
  *
  * @param class_c_obj
  */
 void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj );
 
+#if defined( SMTC_MULTICAST )
 /**
  * @brief Start the class C multicast session
  *
@@ -205,6 +213,7 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_cl
 smtc_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,
                                                                         uint8_t mc_group_id, bool* is_session_started,
                                                                         uint32_t* freq, uint8_t* dr );
+#endif  // SMTC_MULTICAST
 
 #ifdef __cplusplus
 }

@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RAL_SX128X_BSP_H__
-#define RAL_SX128X_BSP_H__
+#ifndef RAL_SX128X_BSP_H
+#define RAL_SX128X_BSP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,10 +100,21 @@ void ral_sx128x_bsp_get_reg_mode( const void* context, sx128x_reg_mod_t* reg_mod
 void ral_sx128x_bsp_get_tx_cfg( const void* context, const ral_sx128x_bsp_tx_cfg_input_params_t* input_params,
                                 ral_sx128x_bsp_tx_cfg_output_params_t* output_params );
 
+/**
+ * @brief Get the Channel Activity Detection (CAD) DetPeak value
+ *
+ * @param [in] sf                       CAD LoRa spreading factor
+ * @param [in] bw                       CAD LoRa bandwidth
+ * @param [in] nb_symbol                CAD on number of symbols
+ * @param [in out] in_out_cad_det_peak  CAD DetPeak value proposed by the ral could be overwritten
+ */
+void ral_sx128x_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
+                                           uint8_t* in_out_cad_det_peak );
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // RAL_SX128X_BSP_H__
+#endif  // RAL_SX128X_BSP_H
 
 /* --- EOF ------------------------------------------------------------------ */

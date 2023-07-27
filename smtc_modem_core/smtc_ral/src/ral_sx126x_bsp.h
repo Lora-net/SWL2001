@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RAL_SX126X_BSP_H__
-#define RAL_SX126X_BSP_H__
+#ifndef RAL_SX126X_BSP_H
+#define RAL_SX126X_BSP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,11 +115,11 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
  * @remark If no TCXO is present, this function should set tcxo_is_radio_controlled to false, and return.
  *
  * @param [in] context Chip implementation context
- * @param [out] tcxo_is_radio_controlled Let the caller know if there is a radio-controlled TCXO
+ * @param [out] xosc_cfg Let the caller know what kind of XOSC is used
  * @param [out] supply_voltage TCXO supply voltage parameter
  * @param [out] startup_time_in_tick TCXO setup time in clock tick
  */
-void ral_sx126x_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_sx126x_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   sx126x_tcxo_ctrl_voltages_t* supply_voltage, uint32_t* startup_time_in_tick );
 
 /**
@@ -132,7 +132,7 @@ void ral_sx126x_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_contr
 void ral_sx126x_bsp_get_trim_cap( const void* context, uint8_t* trimming_cap_xta, uint8_t* trimming_cap_xtb );
 
 /**
- * Get the trimming capacitor values
+ * Get the Rx boost configuration
  *
  * @param [in] context Chip implementation context
  * @param [out] rx_boost_is_activated Let the caller know if the RX boosted mode is activated
@@ -147,10 +147,21 @@ void ral_sx126x_bsp_get_rx_boost_cfg( const void* context, bool* rx_boost_is_act
  */
 void ral_sx126x_bsp_get_ocp_value( const void* context, uint8_t* ocp_in_step_of_2_5_ma );
 
+/**
+ * @brief Get the Channel Activity Detection (CAD) DetPeak value
+ *
+ * @param [in] sf                       CAD LoRa spreading factor
+ * @param [in] bw                       CAD LoRa bandwidth
+ * @param [in] nb_symbol                CAD on number of symbols
+ * @param [in, out] in_out_cad_det_peak  CAD DetPeak value proposed by the ral could be overwritten
+ */
+void ral_sx126x_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
+                                           uint8_t* in_out_cad_det_peak );
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // RAL_SX126X_BSP_H__
+#endif  // RAL_SX126X_BSP_H
 
 /* --- EOF ------------------------------------------------------------------ */

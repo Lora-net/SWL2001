@@ -111,7 +111,7 @@ ral_status_t ralf_sx128x_setup_gfsk( const ralf_t* radio, const ralf_params_gfsk
     {
         return status;
     }
-    if( params->dc_free_is_on == true )
+    if( params->pkt_params.dc_free != RAL_GFSK_DC_FREE_OFF )
     {
         status = ral_set_gfsk_whitening_seed( &radio->ral, params->whitening_seed );
         if( status != RAL_STATUS_OK )
@@ -196,6 +196,11 @@ ral_status_t ralf_sx128x_setup_flrc( const ralf_t* radio, const ralf_params_flrc
     status = ral_set_flrc_sync_word( &radio->ral, params->sync_word, 4 );
 
     return status;
+}
+
+ral_status_t ralf_sx128x_setup_lora_cad( const ralf_t* radio, const ralf_params_lora_cad_t* params )
+{
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
 /*

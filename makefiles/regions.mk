@@ -13,7 +13,7 @@ REGION_RU_864 = no
 REGION_US_915 = no
 REGION_WW_2G4 = no
 
-ifndef REGION
+ifeq ($(REGION),ALL)
 ifneq ($(RADIO),sx128x)
 REGION_AS_923 = yes
 REGION_AU_915 = yes
@@ -37,7 +37,7 @@ endif # REGION
 #-----------------------------------------------------------------------------
 
 ifndef RP_VERSION
-MODEM_C_DEFS += -DRP2_101
+MODEM_C_DEFS += -DRP2_103
 endif
 
 ifeq ($(RP_VERSION),RP2_103)

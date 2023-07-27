@@ -118,6 +118,19 @@ static inline ral_status_t ralf_setup_flrc( const ralf_t* radio, const ralf_para
 }
 
 /**
+ * Setup radio to run CAD using LoRa modem
+ *
+ * @param [in] radio Pointer to radio data
+ * @param [in] params LoRa modem CAD parameters
+ *
+ * @returns status Operation status
+ */
+static inline ral_status_t ralf_setup_lora_cad( const ralf_t* radio, const ralf_params_lora_cad_t* params )
+{
+    return radio->ralf_drv.setup_lora_cad( radio, params );
+}
+
+/**
  * @brief Convert ral_t* to ralf_t*
  *
  * @remark Only use this if you are certain that the object pointed to is actually a ralf_t*.

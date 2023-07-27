@@ -68,6 +68,7 @@
 #define LR11XX_RADIO_GET_RSSI_INST_CMD_LENGTH ( 2 )
 #define LR11XX_RADIO_SET_GFSK_SYNC_WORD_CMD_LENGTH ( 2 + LR11XX_RADIO_GFSK_SYNC_WORD_LENGTH )
 #define LR11XX_RADIO_SET_LORA_PUBLIC_NETWORK_CMD_LENGTH ( 2 + 8 )
+#define LR11XX_RADIO_SET_LR_FHSS_SYNC_WORD_LENGTH ( 2 + 0 )
 #define LR11XX_RADIO_SET_RX_CMD_LENGTH ( 2 + 3 )
 #define LR11XX_RADIO_SET_TX_CMD_LENGTH ( 2 + 3 )
 #define LR11XX_RADIO_SET_RF_FREQUENCY_CMD_LENGTH ( 2 + 4 )
@@ -75,8 +76,11 @@
 #define LR11XX_RADIO_SET_CAD_PARAMS_CMD_LENGTH ( 2 + 7 )
 #define LR11XX_RADIO_SET_PKT_TYPE_CMD_LENGTH ( 2 + 1 )
 #define LR11XX_RADIO_SET_MODULATION_PARAMS_GFSK_CMD_LENGTH ( 2 + 10 )
+#define LR11XX_RADIO_SET_MODULATION_PARAMS_BPSK_CMD_LENGTH ( 2 + 5 )
 #define LR11XX_RADIO_SET_MODULATION_PARAMS_LORA_CMD_LENGTH ( 2 + 4 )
+#define LR11XX_RADIO_SET_MODULATION_PARAMS_LR_FHSS_CMD_LENGTH ( 2 + 5 )
 #define LR11XX_RADIO_SET_PKT_PARAM_GFSK_CMD_LENGTH ( 2 + 9 )
+#define LR11XX_RADIO_SET_PKT_PARAM_BPSK_CMD_LENGTH ( 2 + 7 )
 #define LR11XX_RADIO_SET_PKT_PARAM_LORA_CMD_LENGTH ( 2 + 6 )
 #define LR11XX_RADIO_SET_TX_PARAMS_CMD_LENGTH ( 2 + 2 )
 #define LR11XX_RADIO_SET_PKT_ADDRESS_CMD_LENGTH ( 2 + 2 )
@@ -88,12 +92,15 @@
 #define LR11XX_RADIO_SET_TX_CW_CMD_LENGTH ( 2 )
 #define LR11XX_RADIO_SET_TX_INFINITE_PREAMBLE_CMD_LENGTH ( 2 )
 #define LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_CMD_LENGTH ( 2 + 1 )
+#define LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_EXT_CMD_LENGTH ( 2 + 2 )
 #define LR11XX_RADIO_SET_GFSK_CRC_PARAMS_CMD_LENGTH ( 2 + 8 )
 #define LR11XX_RADIO_SET_GFSK_WHITENING_CMD_LENGTH ( 2 + 2 )
 #define LR11XX_RADIO_SET_RX_BOOSTED_LENGTH ( 2 + 1 )
 #define LR11XX_RADIO_SET_RSSI_CALIBRATION_LENGTH ( 2 + 11 )
 #define LR11XX_RADIO_SET_LORA_SYNC_WORD_CMD_LENGTH ( 2 + 1 )
 #define LR11XX_RADIO_GET_LORA_RX_INFO_CMD_LENGTH ( 2 )
+#define LR11XX_RADIO_CFG_BLE_BEACON_CMD_LENGTH ( 2 + 1 )
+#define LR11XX_RADIO_BLE_BEACON_SEND_CMD_LENGTH ( 2 + 1 )
 
 /**
  * @brief Internal RTC frequency
@@ -141,7 +148,10 @@ enum
     LR11XX_RADIO_SET_RX_BOOSTED_OC            = 0x0227,
     LR11XX_RADIO_SET_RSSI_CALIBRATION_OC      = 0x0229,
     LR11XX_RADIO_SET_LORA_SYNC_WORD_OC        = 0x022B,
+    LR11XX_RADIO_SET_LR_FHSS_SYNC_WORD_OC     = 0x022D,
+    LR11XX_RADIO_CFG_BLE_BEACON_OC            = 0x022E,
     LR11XX_RADIO_GET_LORA_RX_INFO_OC          = 0x0230,
+    LR11XX_RADIO_BLE_BEACON_SEND_OC           = 0x0231,
 };
 
 /*
@@ -380,6 +390,18 @@ lr11xx_status_t lr11xx_radio_set_lora_public_network( const void*               
     return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_LORA_SYNC_WORD_CMD_LENGTH, 0, 0 );
 }
 
+lr11xx_status_t lr11xx_radio_set_lr_fhss_sync_word( const void*   context,
+                                                    const uint8_t sync_word[LR11XX_RADIO_LR_FHSS_SYNC_WORD_LENGTH] )
+{
+    const uint8_t cbuffer[LR11XX_RADIO_SET_LR_FHSS_SYNC_WORD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_RADIO_SET_LR_FHSS_SYNC_WORD_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_RADIO_SET_LR_FHSS_SYNC_WORD_OC >> 0 ),
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_LR_FHSS_SYNC_WORD_LENGTH, sync_word,
+                                                 LR11XX_RADIO_LR_FHSS_SYNC_WORD_LENGTH );
+}
+
 lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout_in_ms )
 {
     const uint32_t timeout_in_rtc_step = lr11xx_radio_convert_time_in_ms_to_rtc_step( timeout_in_ms );
@@ -534,6 +556,23 @@ lr11xx_status_t lr11xx_radio_set_gfsk_mod_params( const void*                   
                                                  0, 0 );
 }
 
+lr11xx_status_t lr11xx_radio_set_bpsk_mod_params( const void*                           context,
+                                                  const lr11xx_radio_mod_params_bpsk_t* mod_params )
+{
+    const uint8_t cbuffer[LR11XX_RADIO_SET_MODULATION_PARAMS_BPSK_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_RADIO_SET_MODULATION_PARAM_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_RADIO_SET_MODULATION_PARAM_OC >> 0 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 24 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 16 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 8 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 0 ),
+        ( uint8_t ) mod_params->pulse_shape,
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_MODULATION_PARAMS_BPSK_CMD_LENGTH,
+                                                 0, 0 );
+}
+
 lr11xx_status_t lr11xx_radio_set_lora_mod_params( const void*                           context,
                                                   const lr11xx_radio_mod_params_lora_t* mod_params )
 {
@@ -547,6 +586,23 @@ lr11xx_status_t lr11xx_radio_set_lora_mod_params( const void*                   
     };
 
     return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_MODULATION_PARAMS_LORA_CMD_LENGTH,
+                                                 0, 0 );
+}
+
+lr11xx_status_t lr11xx_radio_set_lr_fhss_mod_params( const void*                              radio,
+                                                     const lr11xx_radio_mod_params_lr_fhss_t* mod_params )
+{
+    const uint8_t cbuffer[LR11XX_RADIO_SET_MODULATION_PARAMS_LR_FHSS_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_RADIO_SET_MODULATION_PARAM_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_RADIO_SET_MODULATION_PARAM_OC >> 0 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 24 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 16 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 8 ),
+        ( uint8_t ) ( mod_params->br_in_bps >> 0 ),
+        ( uint8_t ) mod_params->pulse_shape,
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( radio, cbuffer, LR11XX_RADIO_SET_MODULATION_PARAMS_LR_FHSS_CMD_LENGTH,
                                                  0, 0 );
 }
 
@@ -568,6 +624,24 @@ lr11xx_status_t lr11xx_radio_set_gfsk_pkt_params( const void*                   
     };
 
     return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_PKT_PARAM_GFSK_CMD_LENGTH, 0, 0 );
+}
+
+lr11xx_status_t lr11xx_radio_set_bpsk_pkt_params( const void*                           context,
+                                                  const lr11xx_radio_pkt_params_bpsk_t* pkt_params )
+{
+    const uint8_t cbuffer[LR11XX_RADIO_SET_PKT_PARAM_BPSK_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_RADIO_SET_PKT_PARAM_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_RADIO_SET_PKT_PARAM_OC >> 0 ),
+        pkt_params->pld_len_in_bytes,
+        ( uint8_t ) ( pkt_params->ramp_up_delay >> 8 ),
+        ( uint8_t ) ( pkt_params->ramp_up_delay >> 0 ),
+        ( uint8_t ) ( pkt_params->ramp_down_delay >> 8 ),
+        ( uint8_t ) ( pkt_params->ramp_down_delay >> 0 ),
+        ( uint8_t ) ( pkt_params->pld_len_in_bits >> 8 ),
+        ( uint8_t ) ( pkt_params->pld_len_in_bits >> 0 ),
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_PKT_PARAM_BPSK_CMD_LENGTH, 0, 0 );
 }
 
 lr11xx_status_t lr11xx_radio_set_lora_pkt_params( const void*                           context,
@@ -747,15 +821,46 @@ lr11xx_status_t lr11xx_radio_set_tx_infinite_preamble( const void* context )
     return status;
 }
 
-lr11xx_status_t lr11xx_radio_set_lora_sync_timeout( const void* context, const uint8_t nb_symbol )
+lr11xx_status_t lr11xx_radio_set_lora_sync_timeout( const void* context, const uint16_t nb_symbol )
 {
-    const uint8_t cbuffer[LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_CMD_LENGTH] = {
+    if( nb_symbol <= 255 )
+    {
+        const uint8_t cbuffer[LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_CMD_LENGTH] = {
+            ( uint8_t ) ( LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_OC >> 8 ),
+            ( uint8_t ) ( LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_OC >> 0 ),
+            nb_symbol,
+        };
+
+        return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_CMD_LENGTH, 0,
+                                                     0 );
+    }
+    else
+    {
+        uint8_t exp;
+        uint8_t mant;
+
+        lr11xx_radio_convert_nb_symb_to_mant_exp( nb_symbol, &mant, &exp );
+
+        return lr11xx_radio_set_lora_sync_timeout_with_mantissa_exponent( context, mant, exp );
+    }
+}
+
+lr11xx_status_t lr11xx_radio_set_lora_sync_timeout_with_mantissa_exponent( const void* context, const uint8_t mantissa,
+                                                                           const uint8_t exponent )
+{
+    const uint8_t cbuffer[LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_EXT_CMD_LENGTH] = {
         ( uint8_t ) ( LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_OC >> 8 ),
         ( uint8_t ) ( LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_OC >> 0 ),
-        nb_symbol,
+        mantissa << 3 | exponent,
+        0x01,
     };
 
-    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_CMD_LENGTH, 0,
+    if( ( mantissa > 31 ) || ( exponent > 7 ) )
+    {
+        return LR11XX_STATUS_ERROR;
+    }
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( context, cbuffer, LR11XX_RADIO_SET_LORA_SYNC_TIMEOUT_EXT_CMD_LENGTH, 0,
                                                  0 );
 }
 
@@ -1115,6 +1220,19 @@ uint32_t lr11xx_radio_convert_time_in_ms_to_rtc_step( uint32_t time_in_ms )
     return ( uint32_t ) ( time_in_ms * LR11XX_RTC_FREQ_IN_HZ / 1000 );
 }
 
+lr11xx_status_t lr11xx_radio_cfg_ble_beacon( const void* context, const uint8_t channel_id, const uint8_t* buffer,
+                                             const uint8_t length )
+{
+    const uint8_t command[LR11XX_RADIO_CFG_BLE_BEACON_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_RADIO_CFG_BLE_BEACON_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_RADIO_CFG_BLE_BEACON_OC >> 0 ),
+        channel_id,
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( context, command, LR11XX_RADIO_CFG_BLE_BEACON_CMD_LENGTH, buffer,
+                                                 length );
+}
+
 lr11xx_status_t lr11xx_radio_get_lora_rx_info( const void* context, bool* is_crc_present, lr11xx_radio_lora_cr_t* cr )
 {
     const uint8_t cbuffer[LR11XX_RADIO_GET_LORA_RX_INFO_CMD_LENGTH] = {
@@ -1135,9 +1253,39 @@ lr11xx_status_t lr11xx_radio_get_lora_rx_info( const void* context, bool* is_crc
     return status;
 }
 
+lr11xx_status_t lr11xx_radio_cfg_and_send_ble_beacon( const void* context, const uint8_t channel_id, const uint8_t* buffer,
+                                              const uint8_t length )
+{
+    const uint8_t command[LR11XX_RADIO_BLE_BEACON_SEND_CMD_LENGTH] = {
+        ( uint8_t ) ( LR11XX_RADIO_BLE_BEACON_SEND_OC >> 8 ),
+        ( uint8_t ) ( LR11XX_RADIO_BLE_BEACON_SEND_OC >> 0 ),
+        channel_id,
+    };
+
+    return ( lr11xx_status_t ) lr11xx_hal_write( context, command, LR11XX_RADIO_BLE_BEACON_SEND_CMD_LENGTH, buffer,
+                                                 length );
+}
+
 lr11xx_status_t lr11xx_radio_apply_high_acp_workaround( const void* context )
 {
     return lr11xx_regmem_write_regmem32_mask( context, 0x00F30054, 1 << 30, 0 << 30 );
+}
+
+uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uint8_t* mant, uint8_t* exp )
+{
+    uint8_t  exp_loc  = 0;
+    uint16_t mant_loc = ( nb_symbol + 1 ) >> 1;
+
+    while( mant_loc > 31 )
+    {
+        mant_loc = ( mant_loc + 3 ) >> 2;
+        exp_loc++;
+    }
+
+    *mant = ( uint8_t ) mant_loc;
+    *exp  = exp_loc;
+
+    return mant_loc << ( 2 * exp_loc + 1 );
 }
 
 /*

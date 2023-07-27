@@ -76,7 +76,7 @@ void hal_watchdog_init( void );
  * Reloads watchdog counter
  */
 
-void watchdog_reload( void );
+void hal_watchdog_reload( void );
 
 #ifdef __cplusplus
 }

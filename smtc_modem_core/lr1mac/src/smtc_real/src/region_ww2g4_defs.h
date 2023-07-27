@@ -114,6 +114,8 @@ typedef struct region_ww2g4_context_s
     uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_WW2G4];
     uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_WW2G4];
     uint8_t  dr_distribution[NUMBER_OF_TX_DR_WW2G4];
+    uint8_t  join_dr_distribution[NUMBER_OF_TX_DR_WW2G4];
+    uint8_t  custom_dr_distribution_init[NUMBER_OF_TX_DR_WW2G4];
     uint8_t  channel_index_enabled[BANK_MAX_WW2G4];  // Contain the index of the activated channel only
     uint8_t  unwrapped_channel_mask[BANK_MAX_WW2G4];
 } region_ww2g4_context_t;
@@ -147,7 +149,7 @@ static const uint8_t datarate_offsets_ww2g4[8][6] = {
 };
 
 /**
- * @brief uplink darate backoff
+ * @brief uplink datarate backoff
  *
  */
 static const uint8_t datarate_backoff_ww2g4[] = {

@@ -573,9 +573,16 @@ ral_status_t ral_llcc68_set_lora_cad_params( const void* context, const ral_lora
     return ( ral_status_t ) llcc68_set_cad_params( context, &radio_lora_cad_params );
 }
 
-ral_status_t ral_llcc68_set_lora_symb_nb_timeout( const void* context, const uint8_t nb_of_symbs )
+ral_status_t ral_llcc68_set_lora_symb_nb_timeout( const void* context, const uint16_t nb_of_symbs )
 {
-    return ( ral_status_t ) llcc68_set_lora_symb_nb_timeout( context, nb_of_symbs );
+    if( nb_of_symbs <= LLCC68_MAX_LORA_SYMB_NUM_TIMEOUT )
+    {
+        return ( ral_status_t ) llcc68_set_lora_symb_nb_timeout( context, nb_of_symbs );
+    }
+    else
+    {
+        return RAL_STATUS_UNKNOWN_VALUE;
+    }
 }
 
 ral_status_t ral_llcc68_set_flrc_mod_params( const void* context, const ral_flrc_mod_params_t* params )
@@ -770,6 +777,15 @@ ral_status_t ral_llcc68_lr_fhss_get_hop_sequence_count( const void*             
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
+uint16_t ral_llcc68_lr_fhss_get_bit_delay_in_us( const void* context, const ral_lr_fhss_params_t* params,
+                                                 uint16_t payload_length )
+{
+    ( void ) context;         // Unused parameter
+    ( void ) params;          // Unused parameter
+    ( void ) payload_length;  // Unused parameter
+    return 0;
+}
+
 ral_status_t ral_llcc68_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr_t* cr, bool* is_crc_present )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
@@ -797,6 +813,114 @@ ral_status_t ral_llcc68_get_lora_rx_consumption_in_ua( const void* context, cons
 ral_status_t ral_llcc68_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
 {
     return ( ral_status_t ) llcc68_get_random_numbers( context, numbers, n );
+}
+
+ral_status_t ral_llcc68_handle_rx_done( const void* context )
+{
+    return ( ral_status_t ) llcc68_handle_rx_done( context );
+}
+
+ral_status_t ral_llcc68_handle_tx_done( const void* context )
+{
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_llcc68_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                               ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak )
+{
+    if( bw >= RAL_LORA_BW_500_KHZ )
+    {
+        switch( sf )
+        {
+        case RAL_LORA_SF5:
+            *cad_det_peak = 19;
+            break;
+        case RAL_LORA_SF6:
+            *cad_det_peak = 20;
+            break;
+        case RAL_LORA_SF7:
+            *cad_det_peak = 21;
+            break;
+        case RAL_LORA_SF8:
+            *cad_det_peak = 22;
+            break;
+        case RAL_LORA_SF9:
+            *cad_det_peak = 23;
+            break;
+        case RAL_LORA_SF10:
+            *cad_det_peak = 23;
+            break;
+        case RAL_LORA_SF11:
+            *cad_det_peak = 26;
+            break;
+        case RAL_LORA_SF12:
+            *cad_det_peak = 30;
+            break;
+        default:
+            return RAL_STATUS_UNKNOWN_VALUE;
+            break;
+        }
+    }
+    else if( bw >= RAL_LORA_BW_125_KHZ )
+    {
+        switch( sf )
+        {
+        case RAL_LORA_SF5:
+            *cad_det_peak = 19;
+            break;
+        case RAL_LORA_SF6:
+            *cad_det_peak = 20;
+            break;
+        case RAL_LORA_SF7:
+            *cad_det_peak = 22;
+            break;
+        case RAL_LORA_SF8:
+            *cad_det_peak = 22;
+            break;
+        case RAL_LORA_SF9:
+            *cad_det_peak = 24;
+            break;
+        case RAL_LORA_SF10:
+            *cad_det_peak = 25;
+            break;
+        case RAL_LORA_SF11:
+            *cad_det_peak = 26;
+            break;
+        case RAL_LORA_SF12:
+            *cad_det_peak = 29;
+            break;
+        default:
+            return RAL_STATUS_UNKNOWN_VALUE;
+            break;
+        }
+    }
+    else
+    {
+        return RAL_STATUS_UNKNOWN_VALUE;
+    }
+
+    // Nothing To do when nb_symbol == RAL_LORA_CAD_01_SYMB or nb_symbol == RAL_LORA_CAD_02_SYMB
+    // with more symbols detection the sensibility could be increased
+    switch( nb_symbol )
+    {
+    case RAL_LORA_CAD_01_SYMB:
+    case RAL_LORA_CAD_02_SYMB:
+        break;
+    case RAL_LORA_CAD_04_SYMB:
+        *cad_det_peak -= 1;
+        break;
+    case RAL_LORA_CAD_08_SYMB:
+    case RAL_LORA_CAD_16_SYMB:
+        *cad_det_peak -= 2;
+        break;
+    default:
+        return RAL_STATUS_UNKNOWN_VALUE;
+        break;
+    }
+
+    ral_llcc68_bsp_get_lora_cad_det_peak( sf, bw, nb_symbol, cad_det_peak );
+
+    return RAL_STATUS_OK;
 }
 
 /*

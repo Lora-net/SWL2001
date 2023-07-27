@@ -1,11 +1,12 @@
 ######################################
 # Some pretty colors and printing
 ######################################
+-include makefiles/options.mk
 
 ######################################
 # Verbose build
 ######################################
-ifdef VERBOSE
+ifeq ($(VERBOSE),yes)
 SILENT = 
 else
 SILENT = @
@@ -17,6 +18,7 @@ BOLD_CYAN := '\033[1;36m'
 BOLD_GREEN := '\033[1;32m'
 BOLD_PURPLE := '\033[1;35m'
 BOLD_YELLOW:= '\033[1;33m'
+YELLOW:= '\033[0;33m'
 IPURPLE:= '\033[0;95m'
 BIPURPLE:= '\033[1;95m'
 
@@ -42,7 +44,7 @@ define success
 endef
 
 define warn
-	@$(ECHO_CMD) -e $(BOLD_PURPLE)'! '$(1)$(NC)
+	@$(ECHO_CMD) -e $(YELLOW)'! '$(1)$(NC)
 endef
 
 define echo_help

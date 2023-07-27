@@ -96,9 +96,10 @@ static void             lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj );
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 
-void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac, smtc_multicast_t* multicast_obj,
+void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_mac,
+                          lr1mac_rx_session_param_t* multicast_rx_sessions, uint8_t nb_multicast_rx_sessions,
                           radio_planner_t* rp, uint8_t class_c_id_rp, void ( *rx_callback )( void* rx_context ),
-                          void* rx_context, void ( *push_callback )( void* push_context ), void* push_context )
+                          void* rx_context, void ( *push_callback )( lr1_stack_mac_down_data_t* push_context ) )
 {
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "class_c_obj INIT\n" );
     memset( class_c_obj, 0, sizeof( lr1mac_class_c_t ) );
@@ -111,22 +112,26 @@ void lr1mac_class_c_init( lr1mac_class_c_t* class_c_obj, lr1_stack_mac_t* lr1_ma
     class_c_obj->rx_callback   = rx_callback;
     class_c_obj->rx_context    = rx_context;
     class_c_obj->push_callback = push_callback;
-    class_c_obj->push_context  = push_context;
+    class_c_obj->push_context  = &( lr1_mac->rx_down_data );
 
-    class_c_obj->rx_session_param_unicast.enabled  = true;
-    class_c_obj->rx_session_param_unicast.nwk_skey = SMTC_SE_NWK_S_ENC_KEY;
-    class_c_obj->rx_session_param_unicast.app_skey = SMTC_SE_APP_S_KEY;
+    class_c_obj->rx_session_param_unicast.enabled      = true;
+    class_c_obj->rx_session_param_unicast.nwk_skey     = SMTC_SE_NWK_S_ENC_KEY;
+    class_c_obj->rx_session_param_unicast.app_skey     = SMTC_SE_APP_S_KEY;
+    class_c_obj->rx_session_param_unicast.fcnt_dwn_min = 0;
+    class_c_obj->rx_session_param_unicast.fcnt_dwn_max = ~0;
 
     class_c_obj->rx_session_param[RX_SESSION_UNICAST] = &class_c_obj->rx_session_param_unicast;
 
-    if( multicast_obj != NULL )
+#if defined( SMTC_MULTICAST )
+    if( multicast_rx_sessions != NULL )
     {
         // start to 1 because index 0 is set with lorawan class A value
-        for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
+        for( uint8_t i = 0; i < nb_multicast_rx_sessions; i++ )
         {
-            class_c_obj->rx_session_param[i + 1] = &multicast_obj->rx_session_param[i];
+            class_c_obj->rx_session_param[i + 1] = &multicast_rx_sessions[i];
         }
     }
+#endif  // SMTC_MULTICAST
 
     rp_release_hook( class_c_obj->rp, class_c_obj->class_c_id4rp );
     rp_hook_init( class_c_obj->rp, class_c_obj->class_c_id4rp, ( void ( * )( void* ) )( lr1mac_class_c_rp_callback ),
@@ -154,7 +159,6 @@ void lr1mac_class_c_stop( lr1mac_class_c_t* class_c_obj )
     lr1mac_class_c_multicast_stop_all_sessions( class_c_obj );
 #endif
     rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
-    class_c_obj->rx_metadata.rx_window = RECEIVE_NONE;
 }
 
 void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
@@ -165,17 +169,22 @@ void lr1mac_class_c_start( lr1mac_class_c_t* class_c_obj )
     }
 }
 
+bool lr1mac_class_c_is_running( lr1mac_class_c_t* class_c_obj )
+{
+    return class_c_obj->started;
+}
+
 void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
 {
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "class_c_obj START (%d)\n", class_c_obj->started );
     if( class_c_obj->enabled == false )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "class_c_obj disabled\n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "class_c_obj disabled\n" );
         return;
     }
     if( class_c_obj->rx_callback == NULL )
     {
-        smtc_modem_hal_mcu_panic( "class_c_obj bad initialization \n" );
+        SMTC_MODEM_HAL_PANIC( "class_c_obj bad initialization \n" );
     }
 
     // copy context from LR1MAC class A for the unicast session
@@ -195,36 +204,40 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
 
     if( class_c_obj->rx_session_index == RX_SESSION_COUNT )
     {
-        smtc_modem_hal_lr1mac_panic( "no RxC session enabled\n" );
+        SMTC_MODEM_HAL_PANIC( "no RxC session enabled\n" );
     }
 
     rp_radio_params_t rp_radio_params = { 0 };
     rp_radio_params.rx.timeout_in_ms  = 120000;
 
-    modulation_type_t modulation_type =
-        smtc_real_get_modulation_type_from_datarate( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate );
+    modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate(
+        class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate );
 
     if( modulation_type == LORA )
     {
         uint8_t            sf;
         lr1mac_bandwidth_t bw;
-        smtc_real_lora_dr_to_sf_bw( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate, &sf, &bw );
+        smtc_real_lora_dr_to_sf_bw( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate, &sf, &bw );
 
         ralf_params_lora_t lora_param;
         memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
-        lora_param.sync_word       = smtc_real_get_sync_word( class_c_obj->lr1_mac );
+        lora_param.sync_word       = smtc_real_get_sync_word( class_c_obj->lr1_mac->real );
         lora_param.symb_nb_timeout = 0;
         lora_param.rf_freq_in_hz   = RX_SESSION_PARAM_CURRENT->rx_frequency;
 
-        lora_param.pkt_params.header_type      = RAL_LORA_PKT_EXPLICIT;
-        lora_param.pkt_params.pld_len_in_bytes = 255;
-        lora_param.pkt_params.crc_is_on        = false;
-        lora_param.pkt_params.invert_iq_is_on  = true;
-        lora_param.pkt_params.preamble_len_in_symb =
-            smtc_real_get_preamble_len( class_c_obj->lr1_mac, lora_param.mod_params.sf );
+        lora_param.pkt_params.header_type = RAL_LORA_PKT_EXPLICIT;
 
-        lora_param.mod_params.cr   = smtc_real_get_coding_rate( class_c_obj->lr1_mac );
+        // +5 for MIC + FPort
+        lora_param.pkt_params.pld_len_in_bytes =
+            5 + smtc_real_get_max_payload_size( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate,
+                                                DOWN_LINK );
+        lora_param.pkt_params.crc_is_on       = false;
+        lora_param.pkt_params.invert_iq_is_on = true;
+        lora_param.pkt_params.preamble_len_in_symb =
+            smtc_real_get_preamble_len( class_c_obj->lr1_mac->real, lora_param.mod_params.sf );
+
+        lora_param.mod_params.cr   = smtc_real_get_coding_rate( class_c_obj->lr1_mac->real );
         lora_param.mod_params.sf   = ( ral_lora_sf_t ) sf;
         lora_param.mod_params.bw   = ( ral_lora_bw_t ) bw;
         lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
@@ -236,35 +249,35 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "MODULATION FSK\n" );
         uint8_t kbitrate;
-        smtc_real_fsk_dr_to_bitrate( class_c_obj->lr1_mac, RX_SESSION_PARAM_CURRENT->rx_data_rate, &kbitrate );
+        smtc_real_fsk_dr_to_bitrate( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate, &kbitrate );
         ralf_params_gfsk_t gfsk_param;
         memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-        gfsk_param.sync_word      = smtc_real_get_gfsk_sync_word( class_c_obj->lr1_mac );
-        gfsk_param.dc_free_is_on  = true;
+        gfsk_param.rf_freq_in_hz  = RX_SESSION_PARAM_CURRENT->rx_frequency;
+        gfsk_param.sync_word      = smtc_real_get_gfsk_sync_word( class_c_obj->lr1_mac->real );
         gfsk_param.whitening_seed = GFSK_WHITENING_SEED;
         gfsk_param.crc_seed       = GFSK_CRC_SEED;
         gfsk_param.crc_polynomial = GFSK_CRC_POLYNOMIAL;
-        gfsk_param.rf_freq_in_hz  = RX_SESSION_PARAM_CURRENT->rx_frequency;
 
         gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
         gfsk_param.pkt_params.pld_len_in_bytes      = 255;
         gfsk_param.pkt_params.preamble_len_in_bits  = 40;
+        gfsk_param.pkt_params.preamble_detector     = RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS;
         gfsk_param.pkt_params.sync_word_len_in_bits = 24;
-        gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
         gfsk_param.pkt_params.crc_type              = RAL_GFSK_CRC_2_BYTES_INV;
+        gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
 
+        gfsk_param.mod_params.br_in_bps    = kbitrate * 1000;
         gfsk_param.mod_params.fdev_in_hz   = 25000;
         gfsk_param.mod_params.bw_dsb_in_hz = 100000;
         gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
-        gfsk_param.mod_params.br_in_bps    = kbitrate * 1000;
 
         rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
         rp_radio_params.rx.gfsk  = gfsk_param;
     }
     else
     {
-        smtc_modem_hal_lr1mac_panic( "MODULATION NOT SUPPORTED\n" );
+        SMTC_MODEM_HAL_PANIC( "MODULATION NOT SUPPORTED\n" );
     }
 
     rp_task_t rp_task        = { 0 };
@@ -284,16 +297,15 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
         rp_task.launch_task_callbacks = lr1_stack_mac_rx_gfsk_launch_callback_for_rp;
     }
 
-    if( rp_task_enqueue( class_c_obj->rp, &rp_task, class_c_obj->rx_payload, 255, &rp_radio_params ) !=
-        RP_HOOK_STATUS_OK )
+    if( rp_task_enqueue( class_c_obj->rp, &rp_task, class_c_obj->lr1_mac->rx_down_data.rx_payload, 255,
+                         &rp_radio_params ) != RP_HOOK_STATUS_OK )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "class_c_obj START ERREUR \n" );
+        SMTC_MODEM_HAL_TRACE_ERROR( "class_c_obj START ERROR \n" );
     }
     else
     {
         class_c_obj->started = true;
     }
-    class_c_obj->rx_metadata.rx_window = RECEIVE_NONE;
 }
 
 static void lr1mac_class_c_rp_callback( lr1mac_class_c_t* class_c_obj )
@@ -326,9 +338,9 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
     uint8_t  from_hook_id;
 
     rp_hook_get_id( class_c_obj->rp, class_c_obj, &from_hook_id );
-    rp_get_status( class_c_obj->rp, from_hook_id, &tcurrent_ms, &( class_c_obj->planner_status ) );
+    rp_get_status( class_c_obj->rp, from_hook_id, &tcurrent_ms, &( class_c_obj->rp_planner_status ) );
 
-    switch( class_c_obj->planner_status )
+    switch( class_c_obj->rp_planner_status )
     {
     case RP_STATUS_TX_DONE:
         break;
@@ -336,17 +348,20 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
     case RP_STATUS_RX_PACKET:
 
         // save rssi and snr
-        class_c_obj->rx_metadata.timestamp = tcurrent_ms;
-        class_c_obj->rx_metadata.rx_snr = class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
-        class_c_obj->rx_metadata.rx_rssi =
+        class_c_obj->lr1_mac->rx_down_data.rx_metadata.timestamp = tcurrent_ms;
+        class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr =
+            class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
+        class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
             class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
-        class_c_obj->rx_payload_size = ( uint8_t ) class_c_obj->rp->payload_size[from_hook_id];
+        class_c_obj->lr1_mac->rx_down_data.rx_payload_size = ( uint8_t ) class_c_obj->rp->rx_payload_size[from_hook_id];
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "payload size receive = %u, snr = %d , rssi = %d\n", class_c_obj->rx_payload_size,
-                                     class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db,
-                                     class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
+            "payload size receive = %u, snr = %d , rssi = %d\n", class_c_obj->lr1_mac->rx_down_data.rx_payload_size,
+            class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db,
+            class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm );
 
-        SMTC_MODEM_HAL_TRACE_ARRAY( "RxC Payload", class_c_obj->rx_payload, class_c_obj->rx_payload_size );
+        SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( "RxC Payload", class_c_obj->lr1_mac->rx_down_data.rx_payload,
+                                          class_c_obj->lr1_mac->rx_down_data.rx_payload_size );
 
         status = lr1mac_class_c_mac_downlink_check_under_it( class_c_obj );
 
@@ -358,12 +373,13 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
 
             if( class_c_obj->valid_rx_packet == USER_RX_PACKET )
             {
-                SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( "RxC app Payload", class_c_obj->rx_payload,
-                                                  class_c_obj->rx_payload_size );
-                class_c_obj->rx_metadata.rx_datarate     = RX_SESSION_PARAM_CURRENT->rx_data_rate;
-                class_c_obj->rx_metadata.rx_frequency_hz = RX_SESSION_PARAM_CURRENT->rx_frequency;
+                SMTC_MODEM_HAL_TRACE_ARRAY( "RxC app Payload", class_c_obj->lr1_mac->rx_down_data.rx_payload,
+                                            class_c_obj->lr1_mac->rx_down_data.rx_payload_size );
+                class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_datarate     = RX_SESSION_PARAM_CURRENT->rx_data_rate;
+                class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_frequency_hz = RX_SESSION_PARAM_CURRENT->rx_frequency;
                 // take also multicast rx in count in window type
-                class_c_obj->rx_metadata.rx_window = RECEIVE_ON_RXC + ( uint8_t ) class_c_obj->rx_session_index;
+                class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_window =
+                    RECEIVE_ON_RXC + ( uint8_t ) class_c_obj->rx_session_index;
 
                 class_c_obj->push_callback( class_c_obj->push_context );
             }
@@ -376,13 +392,13 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
         break;
 
     case RP_STATUS_RX_TIMEOUT:
-        SMTC_MODEM_HAL_TRACE_PRINTF( "lr1mac RxC Timeout \n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "lr1mac RxC Timeout \n" );
         break;
     case RP_STATUS_TASK_ABORTED:
         SMTC_MODEM_HAL_TRACE_PRINTF( "lr1mac RxC aborted by the radioplanner \n" );
         break;
     default:
-        SMTC_MODEM_HAL_TRACE_PRINTF( "lr1mac RxC receive It RADIO error %u\n", class_c_obj->planner_status );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "lr1mac RxC receive It RADIO error %u\n", class_c_obj->rp_planner_status );
         break;
     }
 }
@@ -410,8 +426,8 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_
     }
 
     // Check if frequency and datarate are acceptable
-    if( ( smtc_real_is_frequency_valid( class_c_obj->lr1_mac, freq ) != OKLORAWAN ) ||
-        ( smtc_real_is_rx_dr_valid( class_c_obj->lr1_mac, dr ) != OKLORAWAN ) )
+    if( ( smtc_real_is_frequency_valid( class_c_obj->lr1_mac->real, freq ) != OKLORAWAN ) ||
+        ( smtc_real_is_rx_dr_valid( class_c_obj->lr1_mac->real, dr ) != OKLORAWAN ) )
     {
         return SMTC_MC_RC_ERROR_PARAM;
     }
@@ -445,7 +461,7 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_start_session( lr1mac_class_
     class_c_obj->rx_session_param[mc_group_id + 1]->rx_frequency = freq;
     class_c_obj->rx_session_param[mc_group_id + 1]->rx_data_rate = dr;
 
-    // Reset session fcntdown counter
+    // Reset session fcnt_down counter
     class_c_obj->rx_session_param[mc_group_id + 1]->fcnt_dwn = ~0;
 
     // Set the enable bit to true to activate the session
@@ -478,6 +494,10 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c
     class_c_obj->rx_session_param[mc_group_id + 1]->rx_frequency = 0;
     class_c_obj->rx_session_param[mc_group_id + 1]->rx_data_rate = 0xFF;
 
+    // Reset the frame counter range
+    class_c_obj->rx_session_param[mc_group_id + 1]->fcnt_dwn_min = 0;
+    class_c_obj->rx_session_param[mc_group_id + 1]->fcnt_dwn_max = ~0;
+
     uint8_t enabled_multicast_sessions = 0;
 
     // Check if there is still an enabled multicast session
@@ -507,31 +527,17 @@ smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_session( lr1mac_class_c
 
 smtc_multicast_config_rc_t lr1mac_class_c_multicast_stop_all_sessions( lr1mac_class_c_t* class_c_obj )
 {
-    uint8_t active_sessions = 0;
+    smtc_multicast_config_rc_t status = SMTC_MC_RC_OK;
 
     for( uint8_t i = 0; i < LR1MAC_MC_NUMBER_OF_SESSION; i++ )
     {
-        if( class_c_obj->rx_session_param[i + 1]->enabled == true )
+        status = lr1mac_class_c_multicast_stop_session( class_c_obj, i );
+        if( status != SMTC_MC_RC_OK )
         {
-            // Set the enable bit to false to indicate that the session is stopped
-            class_c_obj->rx_session_param[i + 1]->enabled = false;
-            // Reset frequency and datarate to their not init values
-            class_c_obj->rx_session_param[i + 1]->rx_frequency = 0;
-            class_c_obj->rx_session_param[i + 1]->rx_data_rate = LR1MAC_MC_NO_DATARATE;
-            // Increment the counter of active sessions
-            active_sessions++;
+            break;
         }
     }
-
-    if( active_sessions != 0 )
-    {
-        // As there is no more multicast sessions enabled => restart unicast session
-        // a new rx c with unicast param task will be enqueue automatically if class C is still active
-        class_c_obj->rx_session_param[RX_SESSION_UNICAST]->enabled = true;
-        // Abort current continuous reception for multicast sessions
-        rp_task_abort( class_c_obj->rp, class_c_obj->class_c_id4rp );
-    }
-    return SMTC_MC_RC_OK;
+    return status;
 }
 
 smtc_multicast_config_rc_t lr1mac_class_c_multicast_get_session_status( lr1mac_class_c_t* class_c_obj,
@@ -565,7 +571,7 @@ static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c
     class_c_obj->rx_session_index = RX_SESSION_COUNT;
 
     // check Mtype
-    uint8_t rx_ftype_tmp = class_c_obj->rx_payload[0] >> 5;
+    uint8_t rx_ftype_tmp = class_c_obj->lr1_mac->rx_down_data.rx_payload[0] >> 5;
     if( ( rx_ftype_tmp == JOIN_REQUEST ) || ( rx_ftype_tmp == JOIN_ACCEPT ) || ( rx_ftype_tmp == UNCONF_DATA_UP ) ||
         ( rx_ftype_tmp == CONF_DATA_UP ) || ( rx_ftype_tmp == REJOIN_REQUEST ) || ( rx_ftype_tmp == PROPRIETARY ) )
     {
@@ -575,8 +581,10 @@ static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c
     // check devaddr
     if( ( class_c_obj->lr1_mac->join_status == JOINED ) && ( status == OKLORAWAN ) )
     {
-        uint32_t dev_addr_tmp = class_c_obj->rx_payload[1] + ( class_c_obj->rx_payload[2] << 8 ) +
-                                ( class_c_obj->rx_payload[3] << 16 ) + ( class_c_obj->rx_payload[4] << 24 );
+        uint32_t dev_addr_tmp = class_c_obj->lr1_mac->rx_down_data.rx_payload[1] +
+                                ( class_c_obj->lr1_mac->rx_down_data.rx_payload[2] << 8 ) +
+                                ( class_c_obj->lr1_mac->rx_down_data.rx_payload[3] << 16 ) +
+                                ( class_c_obj->lr1_mac->rx_down_data.rx_payload[4] << 24 );
 
         for( rx_session_type_t i = 0; i < LR1MAC_NUMBER_OF_RXC_SESSION; i++ )
         {
@@ -602,7 +610,7 @@ static int lr1mac_class_c_mac_downlink_check_under_it( lr1mac_class_c_t* class_c
 
     if( status != OKLORAWAN )
     {
-        class_c_obj->rx_payload_size = 0;
+        class_c_obj->lr1_mac->rx_down_data.rx_payload_size = 0;
     }
 
     return ( status );
@@ -617,16 +625,18 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
     uint8_t          rx_ftype;
     uint8_t          rx_major;
 
-    status += lr1mac_rx_payload_min_size_check( class_c_obj->rx_payload_size );
-    status += lr1mac_rx_payload_max_size_check( class_c_obj->lr1_mac, class_c_obj->rx_payload_size,
-                                                RX_SESSION_PARAM_CURRENT->rx_data_rate );
+    status += lr1mac_rx_payload_min_size_check( class_c_obj->lr1_mac->rx_down_data.rx_payload_size );
+    status +=
+        lr1mac_rx_payload_max_size_check( class_c_obj->lr1_mac, class_c_obj->lr1_mac->rx_down_data.rx_payload_size,
+                                          RX_SESSION_PARAM_CURRENT->rx_data_rate );
 
     if( status != OKLORAWAN )
     {
         return NO_MORE_VALID_RX_PACKET;
     }
 
-    status += lr1mac_rx_mhdr_extract( class_c_obj->rx_payload, &rx_ftype, &rx_major, &class_c_obj->tx_ack_bit );
+    status += lr1mac_rx_mhdr_extract( class_c_obj->lr1_mac->rx_down_data.rx_payload, &rx_ftype, &rx_major,
+                                      &class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit );
     if( status != OKLORAWAN )
     {
         return NO_MORE_VALID_RX_PACKET;
@@ -634,8 +644,9 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
 
     if( class_c_obj->rx_session_index != RX_SESSION_UNICAST )
     {
-        if( ( class_c_obj->tx_ack_bit == true ) || ( rx_ftype == CONF_DATA_UP ) )
+        if( ( class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit == true ) || ( rx_ftype == CONF_DATA_UP ) )
         {
+            class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit = false;
             return NO_MORE_VALID_RX_PACKET;
         }
     }
@@ -651,22 +662,38 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
     uint32_t fcnt_dwn_stack_tmp = RX_SESSION_PARAM_CURRENT->fcnt_dwn;
 
     status += lr1mac_rx_fhdr_extract(
-        class_c_obj->rx_payload, class_c_obj->rx_payload_size, &( class_c_obj->rx_fopts_length ), &fcnt_dwn_tmp,
-        RX_SESSION_PARAM_CURRENT->dev_addr, &( class_c_obj->rx_metadata.rx_fport ), &( class_c_obj->rx_payload_empty ),
-        &( class_c_obj->rx_fctrl ), class_c_obj->rx_fopts );
+        class_c_obj->lr1_mac->rx_down_data.rx_payload, class_c_obj->lr1_mac->rx_down_data.rx_payload_size,
+        &( class_c_obj->rx_fopts_length ), &fcnt_dwn_tmp, RX_SESSION_PARAM_CURRENT->dev_addr,
+        &( class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_fport ),
+        &( class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_fport_present ), &( class_c_obj->rx_fctrl ),
+        class_c_obj->rx_fopts );
 
     if( status == OKLORAWAN )
     {
         status = lr1mac_fcnt_dwn_accept( fcnt_dwn_tmp, &fcnt_dwn_stack_tmp );
     }
+
     if( status == OKLORAWAN )
     {
-        class_c_obj->rx_payload_size = class_c_obj->rx_payload_size - MICSIZE;
-        memcpy1( ( uint8_t* ) &mic_in, &class_c_obj->rx_payload[class_c_obj->rx_payload_size], MICSIZE );
+        if( ( fcnt_dwn_stack_tmp < RX_SESSION_PARAM_CURRENT->fcnt_dwn_min ) ||
+            ( fcnt_dwn_stack_tmp > RX_SESSION_PARAM_CURRENT->fcnt_dwn_max ) )
+        {
+            status = ERRORLORAWAN;
+        }
+    }
 
-        if( smtc_modem_crypto_verify_mic( &class_c_obj->rx_payload[0], class_c_obj->rx_payload_size,
-                                          RX_SESSION_PARAM_CURRENT->nwk_skey, RX_SESSION_PARAM_CURRENT->dev_addr, 1,
-                                          fcnt_dwn_stack_tmp, mic_in ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
+    if( status == OKLORAWAN )
+    {
+        class_c_obj->lr1_mac->rx_down_data.rx_payload_size =
+            class_c_obj->lr1_mac->rx_down_data.rx_payload_size - MICSIZE;
+        memcpy( ( uint8_t* ) &mic_in,
+                &class_c_obj->lr1_mac->rx_down_data.rx_payload[class_c_obj->lr1_mac->rx_down_data.rx_payload_size],
+                MICSIZE );
+
+        if( smtc_modem_crypto_verify_mic(
+                &class_c_obj->lr1_mac->rx_down_data.rx_payload[0], class_c_obj->lr1_mac->rx_down_data.rx_payload_size,
+                RX_SESSION_PARAM_CURRENT->nwk_skey, RX_SESSION_PARAM_CURRENT->dev_addr, 1, fcnt_dwn_stack_tmp, mic_in,
+                class_c_obj->lr1_mac->stack_id ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
         {
             status = ERRORLORAWAN;
         }
@@ -681,11 +708,12 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         RX_SESSION_PARAM_CURRENT->fcnt_dwn = fcnt_dwn_stack_tmp;
         class_c_obj->lr1_mac->fcnt_dwn     = class_c_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn;
 
-        if( class_c_obj->rx_payload_empty == 0 )  // rx payload not empty
+        if( class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_fport_present == true )  // rx payload not empty
         {
-            class_c_obj->rx_payload_size = class_c_obj->rx_payload_size - FHDROFFSET - 1 - class_c_obj->rx_fopts_length;
+            class_c_obj->lr1_mac->rx_down_data.rx_payload_size =
+                class_c_obj->lr1_mac->rx_down_data.rx_payload_size - FHDROFFSET - 1 - class_c_obj->rx_fopts_length;
 
-            if( class_c_obj->rx_metadata.rx_fport == 0 )
+            if( class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_fport == 0 )
             {  // receive a mac management frame Fport 0
 
                 SMTC_MODEM_HAL_TRACE_WARNING( " Receive an not valid packet RxC on port zero\n" );
@@ -693,12 +721,13 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
             else
             {
                 if( smtc_modem_crypto_payload_decrypt(
-                        &class_c_obj->rx_payload[FHDROFFSET + 1 + class_c_obj->rx_fopts_length],
-                        class_c_obj->rx_payload_size, RX_SESSION_PARAM_CURRENT->app_skey,
+                        &class_c_obj->lr1_mac->rx_down_data.rx_payload[FHDROFFSET + 1 + class_c_obj->rx_fopts_length],
+                        class_c_obj->lr1_mac->rx_down_data.rx_payload_size, RX_SESSION_PARAM_CURRENT->app_skey,
                         RX_SESSION_PARAM_CURRENT->dev_addr, 1, RX_SESSION_PARAM_CURRENT->fcnt_dwn,
-                        &class_c_obj->rx_payload[0] ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
+                        &class_c_obj->lr1_mac->rx_down_data.rx_payload[0],
+                        class_c_obj->lr1_mac->stack_id ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
                 {
-                    smtc_modem_hal_lr1mac_panic( "Crypto error during payload decryption\n" );
+                    SMTC_MODEM_HAL_PANIC( "Crypto error during payload decryption\n" );
                 }
                 if( class_c_obj->rx_fopts_length != 0 )
                 {
@@ -707,8 +736,7 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
                 }
                 else
                 {
-                    rx_packet_type                    = USER_RX_PACKET;
-                    class_c_obj->available_app_packet = LORA_RX_PACKET_AVAILABLE;
+                    rx_packet_type = USER_RX_PACKET;
                 }
             }
         }
@@ -719,6 +747,7 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         */
         else
         {
+            class_c_obj->lr1_mac->rx_down_data.rx_payload_size = 0;
             if( class_c_obj->rx_fopts_length != 0 )
             {
                 SMTC_MODEM_HAL_TRACE_WARNING( " Receive an not valid packet RxC FOpts\n" );
@@ -735,10 +764,6 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
     {
         class_c_obj->rx_ftype = rx_ftype;
         class_c_obj->rx_major = rx_major;
-        if( lr1mac_core_next_free_duty_cycle_ms_get( class_c_obj->lr1_mac ) <= 0 )
-        {
-            class_c_obj->lr1_mac->tx_ack_bit = class_c_obj->tx_ack_bit;
-        }
     }
 
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( " RxC rx_packet_type = %d \n", rx_packet_type );

@@ -43,7 +43,9 @@
 #include "ral_lr11xx_bsp.h"
 #include "lr11xx_pa_pwr_cfg.h"
 #include "smtc_hal_mcu.h"
-#include "smtc_modem_api.h"
+#include "radio_utilities.h"
+#include "smtc_modem_hal.h"
+#include "lr11xx_radio.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -132,17 +134,10 @@ void ral_lr11xx_bsp_get_rf_switch_cfg( const void* context, lr11xx_system_rfswit
 void ral_lr11xx_bsp_get_tx_cfg( const void* context, const ral_lr11xx_bsp_tx_cfg_input_params_t* input_params,
                                 ral_lr11xx_bsp_tx_cfg_output_params_t* output_params )
 {
-    int8_t modem_tx_offset;
+    // get board tx power offset
+    int8_t board_tx_pwr_offset_db = radio_utilities_get_tx_power_offset( );
 
-    // get modem_configured tx power offset
-    if( smtc_modem_get_tx_power_offset_db( 0, &modem_tx_offset ) != SMTC_MODEM_RC_OK )
-    {
-        // in case rc code is not RC_OK, this function will not return the offset and we need to use no offset (in test
-        // mode for example)
-        modem_tx_offset = 0;
-    }
-
-    int16_t power = input_params->system_output_pwr_in_dbm + modem_tx_offset;
+    int16_t power = input_params->system_output_pwr_in_dbm + board_tx_pwr_offset_db;
 
     lr11xx_pa_type_t pa_type;
 
@@ -163,17 +158,18 @@ void ral_lr11xx_bsp_get_tx_cfg( const void* context, const ral_lr11xx_bsp_tx_cfg
 
 void ral_lr11xx_bsp_get_reg_mode( const void* context, lr11xx_system_reg_mode_t* reg_mode )
 {
-    // TODO: manage reg mode context saving, for the moment assume that LR11XX is in DCDC reg mode
     *reg_mode = LR11XX_SYSTEM_REG_MODE_DCDC;
 }
 
-void ral_lr11xx_bsp_get_xosc_cfg( const void* context, bool* tcxo_is_radio_controlled,
+void ral_lr11xx_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   lr11xx_system_tcxo_supply_voltage_t* supply_voltage, uint32_t* startup_time_in_tick )
 {
-    // Radio control TCXO 1.8V and 5 ms of startup time
-    *tcxo_is_radio_controlled = true;
-    *supply_voltage           = LR11XX_SYSTEM_TCXO_CTRL_1_8V;
-    *startup_time_in_tick     = 164;  // 5ms in 30.52µs ticks
+    // Get startup value defined in modem_hal to avoid mis-alignment
+    uint32_t startup_time_ms = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
+    *xosc_cfg                = RAL_XOSC_CFG_TCXO_RADIO_CTRL;
+    *supply_voltage          = LR11XX_SYSTEM_TCXO_CTRL_1_8V;
+    // tick is 30.52µs
+    *startup_time_in_tick = lr11xx_radio_convert_time_in_ms_to_rtc_step( startup_time_ms );
 }
 
 void ral_lr11xx_bsp_get_crc_state( const void* context, bool* crc_is_activated )
@@ -252,6 +248,17 @@ void ral_lr11xx_bsp_get_rssi_calibration_table( const void* context, const uint3
         rssi_calibration_table->gain_tune.g13hp6 = 9;
         rssi_calibration_table->gain_tune.g13hp7 = 9;
     }
+}
+
+void ral_lr11xx_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
+                                           uint8_t* in_out_cad_det_peak )
+{
+    // Function used to fine tune the cad detection peak, update if needed
+}
+
+void ral_lr11xx_bsp_get_rx_boost_cfg( const void* context, bool* rx_boost_is_activated )
+{
+    *rx_boost_is_activated = false;
 }
 
 /*

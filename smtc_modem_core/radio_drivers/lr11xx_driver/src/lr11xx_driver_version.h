@@ -55,8 +55,8 @@ extern "C" {
  */
 
 #define LR11XX_DRIVER_VERSION_MAJOR 2
-#define LR11XX_DRIVER_VERSION_MINOR 1
-#define LR11XX_DRIVER_VERSION_PATCH 1
+#define LR11XX_DRIVER_VERSION_MINOR 2
+#define LR11XX_DRIVER_VERSION_PATCH 0
 
 /*
  * -----------------------------------------------------------------------------
