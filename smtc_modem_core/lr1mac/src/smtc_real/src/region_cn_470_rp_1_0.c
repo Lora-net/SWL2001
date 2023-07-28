@@ -426,14 +426,14 @@ uint32_t region_cn_470_rp_1_0_get_rx1_frequency_channel( smtc_real_t* real, uint
 
 uint32_t region_cn_470_rp_1_0_get_rx_beacon_frequency_channel( smtc_real_t* real, uint32_t gps_time_s )
 {
-    uint8_t index = ( uint32_t )( floorf( gps_time_s / 128 ) ) % 8;
+    uint8_t index = ( uint32_t ) ( floorf( gps_time_s / 128 ) ) % 8;
     return ( BEACON_FREQ_START_CN_470_RP_1_0 + ( ( index % 8 ) * BEACON_STEP_CN_470_RP_1_0 ) );
 }
 
 uint32_t region_cn_470_rp_1_0_get_rx_ping_slot_frequency_channel( smtc_real_t* real, uint32_t gps_time_s,
                                                                   uint32_t dev_addr )
 {
-    uint8_t index = ( dev_addr + ( uint32_t )( floorf( gps_time_s / 128 ) ) ) % 8;
+    uint8_t index = ( dev_addr + ( uint32_t ) ( floorf( gps_time_s / 128 ) ) ) % 8;
     return ( PING_SLOT_FREQ_START_CN_470_RP_1_0 + ( ( index % 8 ) * PING_SLOT_STEP_CN_470_RP_1_0 ) );
 }
 

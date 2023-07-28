@@ -157,10 +157,12 @@ extern "C" {
     #define SMTC_MODEM_HAL_TRACE_PACKARRAY( msg, array, len )                                       \
     do                                                                                              \
     {                                                                                               \
+        SMTC_MODEM_HAL_TRACE_PRINTF("%s ", msg );                  \
         for( uint32_t i = 0; i < ( uint32_t ) len; i++ )                                            \
         {                                                                                           \
             SMTC_MODEM_HAL_TRACE_PRINTF( "%02X", array[i] );                                        \
         }                                                                                           \
+        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );                                                        \
     } while( 0 );
 
     #if (MODEM_HAL_DEEP_DBG_TRACE)

@@ -210,6 +210,7 @@ typedef enum smtc_modem_dl_window_e
     SMTC_MODEM_DL_WINDOW_RXB_MC_GRP2 = 0x0B,
     SMTC_MODEM_DL_WINDOW_RXB_MC_GRP3 = 0x0C,
     SMTC_MODEM_DL_WINDOW_RXBEACON    = 0x0D,
+    SMTC_MODEM_DL_WINDOW_RXR         = 0x0E,
 } smtc_modem_dl_window_t;
 
 /**

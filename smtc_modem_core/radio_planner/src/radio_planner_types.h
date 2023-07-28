@@ -131,7 +131,8 @@ typedef struct rp_radio_params_s
             ralf_params_lora_t     lora;
             ralf_params_lora_cad_t lora_cad;
         };
-        uint32_t timeout_in_ms;
+        uint32_t              timeout_in_ms;
+        ral_lora_cad_params_t cad;
         union
         {
             ral_gfsk_rx_pkt_status_t gfsk_pkt_status;

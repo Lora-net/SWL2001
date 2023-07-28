@@ -139,6 +139,9 @@ typedef enum smtc_se_key_identifier_e
     SMTC_SE_MC_KEY_3,                            //!< Multicast root key index 3
     SMTC_SE_MC_APP_S_KEY_3,                      //!< Multicast Application session key index 3
     SMTC_SE_MC_NWK_S_KEY_3,                      //!< Multicast Network session key index 3
+    SMTC_RELAY_ROOT_WOR_S_KEY,                   //!< Relay Root Session Key
+    SMTC_RELAY_WOR_S_INT_KEY,                    //!< Relay WOR Integrity Session Key
+    SMTC_RELAY_WOR_S_ENC_KEY,                    //!< Relay WOR Encryption Session Key
     SMTC_SE_SLOT_RAND_ZERO_KEY,                  //!< Zero key for slot randomization in class B
     SMTC_SE_NO_KEY,                              //!< No Key
 } smtc_se_key_identifier_t;
@@ -175,7 +178,7 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
  * @param [in] cmac Computed cmac
  * @return Secure element return code as defined in @ref smtc_se_return_code_t
  */
-smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer,
+smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( const uint8_t* mic_bx_buffer, const uint8_t* buffer,
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
                                                             uint32_t* cmac, uint8_t stack_id );
 

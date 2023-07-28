@@ -85,6 +85,11 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
+/**
+ * @brief Crash log size in byte
+ */
+#define CRASH_LOG_SIZE 32
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
@@ -342,6 +347,22 @@ uint8_t smtc_modem_hal_get_fw_delete_status_for_fuota( uint32_t fw_to_delete_ver
  * Alliance package TS006-1.0.0)
  */
 uint32_t smtc_modem_hal_get_next_fw_version_for_fuota( void );
+
+/* ------------ Needed for Cloud  ------------*/
+
+/**
+ * @brief Return temperature in celsius
+ *
+ * @return int8_t temperature in celsius
+ */
+int8_t smtc_modem_hal_get_temperature( void );
+
+/**
+ * @brief Return mcu voltage in mv
+ *
+ * @return uint8_t MCU voltage
+ */
+uint16_t smtc_modem_hal_get_voltage_mv( void );
 
 #ifdef __cplusplus
 }

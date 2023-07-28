@@ -148,6 +148,20 @@ ifeq ($(TARGET_RADIO),nc)
 	$(call echo_error,"No radio selected! Please specified the target radio using TARGET_RADIO=radio_name option")
 else
 ifneq ($(CRYPTO),SOFT)
+ifeq ($(RELAY_RX_ENABLE),yes)
+	$(call echo_error, "------------------------------------------------------------")
+	$(call echo_error, "When relay feature is enable: only soft crypto can be used")	
+	$(call echo_error, "Please use CRYPTO=SOFT option")
+	$(call echo_error, "------------------------------------------------------------")
+	exit 1
+endif
+ifeq ($(RELAY_TX_ENABLE),yes)
+	$(call echo_error, "------------------------------------------------------------")
+	$(call echo_error, "When relay feature is enable: only soft crypto can be used")	
+	$(call echo_error, "Please use CRYPTO=SOFT option")
+	$(call echo_error, "------------------------------------------------------------")
+	exit 1
+endif
 ifneq ($(LBM_NB_OF_STACK),1)
 	$(call echo_error, "----------------------------------------------------------")
 	$(call echo_error, "More than one stack compiled: only soft crypto can be used")
@@ -158,7 +172,7 @@ endif
 ifneq ($(TARGET_RADIO),lr1110)
 ifneq ($(TARGET_RADIO),lr1120)
 	$(call echo_error, "------------------------------------------------------------")
-	$(call echo_error, "sx126x, sx127x and sx128x radio tagets: only soft crypto can be used")
+	$(call echo_error, "sx126x / sx127x / sx128x radio tagets: only soft crypto can be used")
 	$(call echo_error, "Please use CRYPTO=SOFT option")
 	$(call echo_error, "------------------------------------------------------------")
 	exit 1

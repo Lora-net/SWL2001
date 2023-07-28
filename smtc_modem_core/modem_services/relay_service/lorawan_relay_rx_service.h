@@ -1,10 +1,10 @@
-/*!
- * \file      radio_planner_hook_id_defs.h
+/**
+ * @file      lorawan_relay_rx_service.h
  *
- * \brief     Radio planner Hardware Abstraction Layer functions definition
+ * @brief     lorawan_relay_rx_service
  *
  * The Clear BSD License
- * Copyright Semtech Corporation 2021. All rights reserved.
+ * Copyright Semtech Corporation 2023. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the disclaimer
@@ -31,8 +31,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __RADIO_PLANNER_HOOK_ID_DEFS_H__
-#define __RADIO_PLANNER_HOOK_ID_DEFS_H__
+
+#ifndef LORAWAN_RELAY_RX_SERVICE_H
+#define LORAWAN_RELAY_RX_SERVICE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +46,7 @@ extern "C" {
 
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
-
+#include "lr1_stack_mac_layer.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC MACROS -----------------------------------------------------------
@@ -56,55 +57,6 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-#ifndef RP_HOOK_ID_REDEFINE
-enum RP_HOOK_ID_DEF
-{
-    RP_HOOK_ID_SUSPEND = 0,
-#if defined( RELAY_RX )
-    RP_HOOK_ID_RELAY_FORWARD_RXR,
-#endif
-    RP_HOOK_ID_LR1MAC_STACK,
-    RP_HOOK_ID_LBT = RP_HOOK_ID_LR1MAC_STACK + NUMBER_OF_STACKS,
-
-#if defined( ADD_CSMA )
-    RP_HOOK_ID_CAD,
-#endif
-
-#if defined( ADD_CLASS_B )
-    RP_HOOK_ID_CLASS_B_BEACON,
-    RP_HOOK_ID_CLASS_B_PING_SLOT = RP_HOOK_ID_CLASS_B_BEACON + NUMBER_OF_STACKS,
-    RP_HOOK_ID_TEST_MODE         = RP_HOOK_ID_CLASS_B_PING_SLOT + NUMBER_OF_STACKS,
-#else
-    RP_HOOK_ID_TEST_MODE,
-#endif
-
-#if defined( ADD_ALMANAC )
-    RP_HOOK_ID_DIRECT_RP_ACCESS_4_ALMANAC,
-    RP_HOOK_ID_DIRECT_RP_ACCESS = RP_HOOK_ID_DIRECT_RP_ACCESS_4_ALMANAC + NUMBER_OF_STACKS,
-#else
-    RP_HOOK_ID_DIRECT_RP_ACCESS,
-#endif
-
-#if defined( ADD_BLE )
-    RP_HOOK_ID_BLE_RX_BEACON,
-    RP_HOOK_ID_BLE_TX_BEACON,
-#endif
-
-#if defined( RELAY_TX )
-    RP_HOOK_ID_RELAY_TX,
-#endif  // RELAY_TX
-#if defined( RELAY_RX )
-    RP_HOOK_ID_RELAY_RX_CAD,
-#endif  // RELAY_RX
-#if defined( ADD_CLASS_C )
-    RP_HOOK_ID_CLASS_C,
-    RP_HOOK_ID_MAX = RP_HOOK_ID_CLASS_C + NUMBER_OF_STACKS,
-#else
-    RP_HOOK_ID_MAX,
-#endif
-
-};
-#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
@@ -115,10 +67,37 @@ enum RP_HOOK_ID_DEF
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
+/**
+ * @brief Init a the relay RX service
+ *
+ * @param[in]   service_id          Service ID (provided by supervisor)
+ * @param[in]   task_id             Task ID (provided by supervisor)
+ * @param[out]  downlink_callback   Callbak called after RX2
+ * @param[out]  on_lunch_callback   Callback called to launched the service
+ * @param[out]  on_update_callback  Callback called when service has finished
+ * @param[out]  context_callback    Context for every callback
+ */
+void lorawan_relay_rx_services_init( uint8_t* service_id, uint8_t task_id,
+                                     uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
+                                     void ( **on_lunch_callback )( void* ), void ( **on_update_callback )( void* ),
+                                     void** context_callback );
+
+/**
+ * @brief Relay has to forward a LoRaWAN Uplink
+ *
+ * @param[in]   stack_id    Stack ID to use
+ * @param[in]   data        Data to send
+ * @param[in]   data_len    Lenght of data
+ * @param[in]   time_tx     Timestamp to send the data
+ * @param[in]   is_join     True if the forwarded message is a Join Request
+ */
+void lorawan_relay_rx_fwd_uplink( uint8_t stack_id, const uint8_t* data, uint8_t data_len, uint32_t time_tx,
+                                  bool is_join );
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // __RADIO_PLANNER_HOOK_ID_DEFS_H__
+#endif  // LORAWAN_RELAY_RX_SERVICE_H
 
 /* --- EOF ------------------------------------------------------------------ */

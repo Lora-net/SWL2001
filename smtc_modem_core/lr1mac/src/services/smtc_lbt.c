@@ -132,7 +132,7 @@ void smtc_lbt_launch_callback_for_rp( void* rp_void )
             return;
         }
     } while( ( int32_t ) ( carrier_sense_time + rp->radio_params[id].rx.timeout_in_ms -
-                           smtc_modem_hal_get_time_in_ms( ) ) > 0 );
+                          smtc_modem_hal_get_time_in_ms( ) ) > 0 );
 
     rp->status[id] = RP_STATUS_LBT_FREE_CHANNEL;
     rp_radio_irq_callback( rp_void );

@@ -49,6 +49,9 @@
 #include "smtc_lora_cad_bt.h"
 #include "lr1mac_config.h"
 
+#if defined( RELAY_TX )
+#include "relay_tx_api.h"
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -66,11 +69,11 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-#define FAILSAFE_DURATION 300U
+#define FAILSAFE_DURATION 450U
 
 #if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
 static const char* smtc_name_bw[]         = { "BW007", "BW010", "BW015", "BW020", "BW031", "BW041", "BW062",
-                                              "BW125", "BW200", "BW250", "BW400", "BW500", "BW800", "BW1600" };
+                                      "BW125", "BW200", "BW250", "BW400", "BW500", "BW800", "BW1600" };
 static const char* smtc_name_lr_fhss_bw[] = { "BW 39063",  "BW 85938",  "BW 136719", "BW 183594",  "BW 335938",
                                               "BW 386719", "BW 722656", "BW 773438", "BW 1523438", "BW 1574219" };
 static const char* smtc_name_lr_fhss_cr[] = { "CR 5/6", "CR 2/3", "CR 1/2", "CR 1/3" };
@@ -90,6 +93,7 @@ static const char* smtc_name_lr_fhss_cr[] = { "CR 5/6", "CR 2/3", "CR 1/2", "CR 
  */
 static void copy_user_payload( lr1_stack_mac_t* lr1_mac_obj, const uint8_t* data_in, const uint8_t size_in );
 static void lr1mac_mac_update( lr1_stack_mac_t* lr1_mac_obj );
+
 /*
  *-----------------------------------------------------------------------------------
  *--- PUBLIC FUNCTIONS DEFINITIONS --------------------------------------------------
@@ -181,7 +185,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
     if( lr1mac_core_certification_get( lr1_mac_obj ) == false )
     {
         if( ( lr1_mac_obj->join_status == JOINING ) &&
-            ( ( int32_t ) ( lr1_mac_obj->next_time_to_join_seconds - smtc_modem_hal_get_time_in_s( ) ) > 0 ) )
+            ( ( int32_t )( lr1_mac_obj->next_time_to_join_seconds - smtc_modem_hal_get_time_in_s( ) ) > 0 ) )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( "TOO SOON TO JOIN time is  %d time target is : %d\n",
                                          smtc_modem_hal_get_time_in_s( ), lr1_mac_obj->next_time_to_join_seconds );
@@ -191,7 +195,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
 #endif
 
     if( ( lr1_mac_obj->lr1mac_state != LWPSTATE_IDLE ) &&
-        ( ( int32_t ) ( smtc_modem_hal_get_time_in_s( ) - lr1_mac_obj->timestamp_failsafe - FAILSAFE_DURATION ) > 0 ) )
+        ( ( int32_t )( smtc_modem_hal_get_time_in_s( ) - lr1_mac_obj->timestamp_failsafe - FAILSAFE_DURATION ) > 0 ) )
     {
         SMTC_MODEM_HAL_PANIC( "FAILSAFE EVENT OCCUR (lr1mac_state:0x%x)\n", lr1_mac_obj->lr1mac_state );
         lr1_mac_obj->lr1mac_state = LWPSTATE_ERROR;
@@ -263,8 +267,15 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
                     lr1_mac_obj->tx_power, lr1_mac_obj->fcnt_up, lr1_stack_toa_get( lr1_mac_obj ) );
             }
 
+#if defined( RELAY_TX )
+            if( smtc_relay_tx_is_enable( lr1_mac_obj ) == true )
+            {
+                smtc_relay_tx_send_wor( lr1_mac_obj );
+            }
+            else
+#endif
 #if defined( ADD_CSMA )
-            if( ( smtc_lora_cad_bt_get_state( lr1_mac_obj->cad_obj ) == true ) && ( tx_modulation_type == LORA ) )
+                if( ( smtc_lora_cad_bt_get_state( lr1_mac_obj->cad_obj ) == true ) && ( tx_modulation_type == LORA ) )
             {
                 smtc_lora_cad_bt_listen_channel(
                     lr1_mac_obj->cad_obj, lr1_mac_obj->tx_frequency, tx_sf, ( ral_lora_bw_t ) tx_bw,
@@ -275,15 +286,14 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
             else
 #endif  // ADD_CSMA
                 if( smtc_lbt_get_state( lr1_mac_obj->lbt_obj ) == true )
-                {
-                    smtc_lbt_listen_channel( ( lr1_mac_obj->lbt_obj ), lr1_mac_obj->tx_frequency,
-                                             lr1_mac_obj->send_at_time, lr1_mac_obj->rtc_target_timer_ms,
-                                             lr1_stack_toa_get( lr1_mac_obj ) );
-                }
-                else
-                {
-                    lr1_stack_mac_tx_radio_start( lr1_mac_obj );
-                }
+            {
+                smtc_lbt_listen_channel( ( lr1_mac_obj->lbt_obj ), lr1_mac_obj->tx_frequency, lr1_mac_obj->send_at_time,
+                                         lr1_mac_obj->rtc_target_timer_ms, lr1_stack_toa_get( lr1_mac_obj ) );
+            }
+            else
+            {
+                lr1_stack_mac_tx_radio_start( lr1_mac_obj );
+            }
             break;
 
         case RADIOSTATE_TX_FINISHED:
@@ -367,10 +377,11 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
         }
         // Intentional fallthrough
 
-    //**********************************************************************************
-    //                                   STATE RX2
-    //**********************************************************************************
+        //**********************************************************************************
+        //                                   STATE RX2
+        //**********************************************************************************
     case LWPSTATE_RX2:
+#ifndef RELAY_TX
         if( lr1_mac_obj->radio_process_state == RADIOSTATE_RX_FINISHED )
         {
             if( lr1_mac_obj->rp_planner_status == RP_STATUS_RX_PACKET )
@@ -393,6 +404,77 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
             lr1mac_mac_update( lr1_mac_obj );
         }
         break;
+#else
+        // case LWPSTATE_RX2:
+        if( lr1_mac_obj->radio_process_state == RADIOSTATE_RX_FINISHED )
+        {
+            bool has_receive_valid_packet = false;
+            if( lr1_mac_obj->rp_planner_status == RP_STATUS_RX_PACKET )
+            {
+                lr1_mac_obj->rx_down_data.rx_metadata.rx_window = RECEIVE_ON_RX2;
+                lr1_mac_obj->valid_rx_packet                    = lr1_stack_mac_rx_frame_decode( lr1_mac_obj );
+                if( lr1_mac_obj->valid_rx_packet == NO_MORE_VALID_RX_PACKET )
+                {
+                    DBG_PRINT_WITH_LINE( "Receive a bad packet on RX2 for stack_id = %d", lr1_mac_obj->stack_id );
+                }
+                else
+                {
+                    has_receive_valid_packet = true;
+                    DBG_PRINT_WITH_LINE( "Receive a Valid downlink RX2 for stack_id = %d", lr1_mac_obj->stack_id );
+                }
+            }
+            else
+            {
+                DBG_PRINT_WITH_LINE( "RX2 Timeout for stack_id = %d", lr1_mac_obj->stack_id );
+            }
+            if( ( has_receive_valid_packet == false ) && ( smtc_relay_tx_is_enable( lr1_mac_obj ) == true ) )
+            {
+                lr1_mac_obj->lr1mac_state = LWPSTATE_RXR;
+                timer_in_past             = lr1_stack_mac_rx_timer_configure( lr1_mac_obj, RXR );
+            }
+            else
+            {
+                lr1mac_mac_update( lr1_mac_obj );
+            }
+        }
+
+        if( timer_in_past == false )
+        {
+            break;
+        }
+        else
+        {
+            timer_in_past = false;
+        }
+        // Intentional fallthrough
+
+        //**********************************************************************************
+        //                                   STATE RXR
+        //**********************************************************************************
+    case LWPSTATE_RXR:
+        if( lr1_mac_obj->radio_process_state == RADIOSTATE_RX_FINISHED )
+        {
+            if( lr1_mac_obj->rp_planner_status == RP_STATUS_RX_PACKET )
+            {
+                lr1_mac_obj->rx_down_data.rx_metadata.rx_window = RECEIVE_ON_RXR;
+                lr1_mac_obj->valid_rx_packet = lr1_stack_mac_rx_frame_decode( lr1_mac_obj );
+                if( lr1_mac_obj->valid_rx_packet == NO_MORE_VALID_RX_PACKET )
+                {
+                    DBG_PRINT_WITH_LINE( "Receive a bad packet on RXR for Hook Id = %d", myhook_id );
+                }
+                else
+                {
+                    DBG_PRINT_WITH_LINE( "Receive a Valid downlink RXR for Hook Id = %d", myhook_id );
+                }
+            }
+            else
+            {
+                DBG_PRINT_WITH_LINE( "RXR Timeout for Hook Id = %d", myhook_id );
+            }
+            lr1mac_mac_update( lr1_mac_obj );
+        }
+        break;
+#endif
 
     default:
         SMTC_MODEM_HAL_PANIC( "Illegal state in lorawan process\n" );
@@ -785,8 +867,29 @@ void lr1mac_core_context_factory_reset( lr1_stack_mac_t* lr1_mac_obj )
 /**************************************************/
 uint32_t lr1mac_core_next_max_payload_length_get( lr1_stack_mac_t* lr1_mac_obj )
 {
+#if defined( RELAY_TX )
+    uint8_t max = smtc_relay_get_tx_max_payload( lr1_mac_obj );
+    SMTC_MODEM_HAL_TRACE_WARNING( "Relay max payload %d\n", max );
+    max = MIN( max, smtc_real_get_max_payload_size( lr1_mac_obj->real, lr1_mac_obj->tx_data_rate, UP_LINK ) );
+
+    const uint8_t add_byte = lr1_mac_obj->tx_fopts_current_length + FHDROFFSET;
+
+    if( max > add_byte )
+    {
+        max -= add_byte;
+    }
+    else
+    {
+        max = 0;
+    }
+
+    SMTC_MODEM_HAL_TRACE_WARNING( "Final max payload %d\n", max );
+
+    return max;
+#else
     return ( smtc_real_get_max_payload_size( lr1_mac_obj->real, lr1_mac_obj->tx_data_rate, UP_LINK ) -
              lr1_mac_obj->tx_fopts_current_length - FHDROFFSET );
+#endif
 }
 
 /**************************************************/
@@ -938,8 +1041,8 @@ bool lr1mac_core_is_time_valid( lr1_stack_mac_t* lr1_mac_obj )
     uint32_t rtc_s = smtc_modem_hal_get_time_in_s( );
 
     if( ( lr1_mac_obj->timestamp_last_device_time_ans_s != 0 ) &&
-        ( ( int32_t ) ( rtc_s - lr1_mac_obj->timestamp_last_device_time_ans_s -
-                        lr1_mac_obj->device_time_invalid_delay_s ) < 0 ) )
+        ( ( int32_t )( rtc_s - lr1_mac_obj->timestamp_last_device_time_ans_s -
+                       lr1_mac_obj->device_time_invalid_delay_s ) < 0 ) )
     {
         return true;
     }
@@ -1107,7 +1210,7 @@ uint32_t lr1mac_core_get_duration_since_last_downlink_s( lr1_stack_mac_t* lr1_ma
     }
     else
     {
-        return ( ( uint32_t ) ( ~0 ) - tmp_timestamp_s + rtc_s );
+        return ( ( uint32_t )( ~0 ) - tmp_timestamp_s + rtc_s );
     }
 }
 

@@ -39,7 +39,7 @@
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
 #include <string.h>
-#include <stdlib.h>   // abs function
+#include <stdlib.h>  // abs function
 
 #include "main.h"
 

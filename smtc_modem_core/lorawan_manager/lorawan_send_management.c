@@ -253,8 +253,14 @@ static void lorawan_send_management_service_on_update( void* context )
 
 static uint8_t lorawan_send_management_service_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
+#ifdef RELAY_TX
+    if( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX2 ) ||
+        ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX1 ) ||
+        ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXR ) )
+#else
     if( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX2 ) ||
         ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX1 ) )
+#endif
     {
         lorawan_send_management_obj[rx_down_data->stack_id].rx_ack_bit_context = rx_down_data->rx_metadata.rx_ack_bit;
     }

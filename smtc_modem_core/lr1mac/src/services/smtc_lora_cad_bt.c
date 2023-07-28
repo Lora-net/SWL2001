@@ -46,6 +46,7 @@
 #include "smtc_modem_hal.h"
 #include "lr1_stack_mac_layer.h"
 #include "smtc_lora_cad_bt.h"
+#include "smtc_real.h"
 
 /*
  * -----------------------------------------------------------------------------

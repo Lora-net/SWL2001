@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.2.0] 2023-07-28
+
+This version is based on feature branch v4.1.0 of the LoRa Basics Modem.
+
+### Added
+* [lorawan-stack] Add Relay RX feature that follows LoRaWAN® Specification TS011-1.0.0
+* [lorawan-stack] Add Relay TX feature that follows LoRaWAN® Specification TS011-1.0.0
+
 ## [v4.1.0] 2023-07-27
 
 This version is based on feature branch v4.0.1 of the LoRa Basics Modem.

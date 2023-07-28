@@ -391,11 +391,19 @@ void lorawan_alcsync_service_on_update( void* service_id )
 uint8_t lorawan_alcsync_service_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
     // Message must be received only on unicast windows
-    // TODO add RX3 for relay ?
+#ifdef RELAY_TX
+    if( ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RX1 ) &&
+        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RX2 ) &&
+        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXR ) &&
+        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXB ) &&
+        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXC ) )
+#else
     if( ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RX1 ) &&
         ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RX2 ) &&
         ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXB ) &&
         ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXC ) )
+#endif
+
     {
         return MODEM_DOWNLINK_UNCONSUMED;
     }

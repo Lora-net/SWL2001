@@ -215,7 +215,7 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
     return status;
 }
 
-smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer,
+smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( const uint8_t* mic_bx_buffer, const uint8_t* buffer,
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
                                                             uint32_t* cmac, uint8_t stack_id )
 {

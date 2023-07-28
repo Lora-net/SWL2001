@@ -7,6 +7,7 @@ The proposed stack implementation:
 - Supports Class A operation
 - Supports Class B operation (with up to 4 multicast sessions)
 - Supports Class C operation (with up to 4 multicast sessions)
+- Supports Relay operation as relayed end-device or relay itself (refer to [Relay](#relay) )
 - Supports following regions:
 
   - AS_923 (AS923-1, AS923-2, AS923-3, AS923-4)
@@ -296,6 +297,53 @@ smtc_modem_return_code_t smtc_modem_csma_set_parameters( uint8_t stack_id, uint8
 ```
 
 **Note**: This feature is only supported on lr11xx and sx126x radios, activation of this feature on other targets can lead to unwanted behavior or modem panic
+
+## Relay (experimental - read disclaimer note at the bottom)
+**LoRa Basic Modem** proposes an implementation of the [LoRaWAN® Relay Specification TS011-1.0.0](https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay) 
+
+This implementation provides the code for the relayed end-device (refer as Relay TX) and for the relay itself (refer as Relay RX). 
+### Building the Relay RX
+
+To build the Relay RX, you need to add the option **RELAY_RX_ENABLE=yes** in the compile command line. By example:
+```bash
+make full_lr1110 RELAY_RX_ENABLE=yes
+```
+Adding this option to the command line will compile and include all the required file for the relay to be functional. 
+This option will require an additional 2.5 kbytes of RAM and 10 kbytes of FLASH.
+
+On a hardware note, it is strongly recommended to use a TCXO with a Relay RX to avoid RF mismatch between the end-device and the relay itself.
+
+### Application for the Relay RX
+
+The Relay RX doesn't require a specific application, it will start once it received the appropriate MAC command. 
+It is important to note that the Relay RX will wake up very frequently and require a quick access to the radio (through the smtc_modem_run_engine function). Every action that could delay the call of this function may result in aborted scan. 
+
+### Configuration of Relay TX
+
+To add the relay feature to an end-device, you need to add the option **RELAY_TX_ENABLE=yes** in the compile command line. By example:
+```bash
+make full_lr1110 RELAY_TX_ENABLE=yes
+```
+Adding this option to the command line will compile and include all the required file for the end-device to be functional. 
+This option will require an additional 500 bytes of RAM and 5.5 kbytes of FLASH.
+
+### Application for the Relay TX
+
+By default, the end-device is configured in **END-DEVICE CONTROLED** mode (refer to TS011-1.0.0 table 40). 
+In this mode, we have chosen to enable the relay mode right from the start. 
+The end-device will automatically disable the relay mode if it receives a downlink on RX1 or RX2. 
+The end-device will automatically enable the relay mode if it doesn't receive a downlink after 8 uplinks.
+The previous statements are true if the RelayModeActivation is either **DYNAMIC** or **END-DEVICE CONTROLED**. 
+
+### Known limitation for the Relay
+ - This implementation is only compatible with embedded software cryptographic operations. 
+ - Only one component of the relay (RX or TX) could be compiled at the same time.
+ - Default channel only support the index 0. 
+ - SX128x and SX127x are not supported 
+ - Relay TX and Relay RX are not yet compatible with LBT and CSMA.
+ - Relay TX is only working with 1 LoRaWAN stack (stack ID 0)
+
+
 
 ## LoRa Basic Modem known limitations
 
