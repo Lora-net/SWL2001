@@ -184,7 +184,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
     rp_hook_get_id( lr1_mac_obj->rp, ( void* ) ( ( lr1_mac_obj ) ), &myhook_id );
 
 #if !defined( TEST_BYPASS_JOIN_DUTY_CYCLE )
-    if( lr1mac_core_certification_get( lr1_mac_obj ) == false )
+    if( smtc_real_is_dtc_supported( lr1_mac_obj->real ) && lr1mac_core_certification_get( lr1_mac_obj ) == false )
     {
         if( ( lr1_mac_joined_status_get( lr1_mac_obj ) == JOINING ) &&
             ( ( int32_t )( lr1_mac_obj->next_time_to_join_seconds - smtc_modem_hal_get_time_in_s( ) ) > 0 ) )

@@ -668,7 +668,11 @@ void modem_supervisor_add_task_join( void )
     SMTC_MODEM_HAL_TRACE_WARNING( "BYPASS JOIN DUTY CYCLE activated\n" );
     task_join.time_to_execute_s += current_time_s;
 #else
-    if( lorawan_api_modem_certification_is_enabled( ) == false )
+    if( !lorawan_api_is_dtc_supported() )
+    {
+        task_join.time_to_execute_s += current_time_s;
+    }
+    else if( lorawan_api_modem_certification_is_enabled() == false )
     {
         // current time is already taken in count in lr1mac time computation
         task_join.time_to_execute_s += lorawan_api_next_join_time_second_get( );

@@ -226,6 +226,11 @@ void lorawan_api_class_b_d2d_tx_event_callback( smtc_class_b_d2d_t* class_b_d2d_
 }
 #endif
 
+bool lorawan_api_is_dtc_supported(void)
+{
+    return smtc_real_is_dtc_supported( lr1_mac_obj.real );
+}
+
 smtc_real_region_types_t lorawan_api_get_region( void )
 {
     return lr1mac_core_get_region( &lr1_mac_obj );

@@ -100,6 +100,13 @@ typedef enum lorawan_multicast_rc_e
 void lorawan_api_init( radio_planner_t* rp );
 
 /**
+ * @brief Get duty cycle supported for current region
+ *
+ * @return  bool true == yes
+ */
+bool lorawan_api_is_dtc_supported( void );
+
+/**
  * @brief Get the current LoRaWAN region
  *
  * @return smtc_real_region_types_t Current region
