@@ -4,6 +4,135 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.3.0] 2023-12-13
+
+This version is based on feature branch v4.1.0 of the LoRa Basics Modem.
+
+Detailed Modem API changelog can be found [here](lbm_lib/smtc_modem_api/CHANGELOG.md)
+Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELOG.md)
+
+### Added
+
+* [radio] Re-add support of lr1121 radio
+* [service] Add Geolocation services and associated makefile option
+* [service] Add a Store and Forward service and associated makefile option
+* [service] Re-added the following optional LBM services:
+  * Device Management (DM) service and associated makefile option (related with LoRaCloud)
+  * Large File Upload (LFU) service and associated makefile option (related with LoRaCloud)
+  * Stream service and associated makefile option (related with LoRaCloud)
+  * Almanac Update service  and associated makefile option (related with LoRaCloud)
+* [general] Add a new folder `lbm_applications` that contains 3 specific implementation references on sereval MCU
+* [general] Real Time OS compatibility (add hal function `smtc_modem_hal_user_lbm_irq`)
+* [lr11xx-crypto] Re-add suspend/resume guard for lr11xx crypto access
+* [makefile] Add `DEBUG_OPT` option to choose optimization in caseof DEBUG
+
+### Fixed
+
+* Issue [#12](https://github.com/Lora-net/SWL2001/issues/12): Correct ral_xxx_lr_fhss_get_hop_sequence_count prototype to return a ral_status_t and not the count
+* Issue [#13](https://github.com/Lora-net/SWL2001/issues/13): Correct Firmware Management Protocol behavior issue
+* Issue [#14](https://github.com/Lora-net/SWL2001/issues/14): Correct LoRaWAN packages parser missing default case in parser (Remote Multicast Setup V1 and V2, Firmware Management Protocol and Fragmented Data Block Transport V1 and V2 )  
+* Issue [#19](https://github.com/Lora-net/SWL2001/issues/19): check all LoRaWAN packages answer overflows
+* Issue [#20](https://github.com/Lora-net/SWL2001/issues/20): Index of the answer for McGroupStatusReq command is not fixed anymore
+* Issue [#22](https://github.com/Lora-net/SWL2001/issues/22): In Remote Multicast Setup Package V1 and V2, check `lorawan_api_is_frequency_valid` and `lorawan_api_is_datarate_valid` return status according to `status_lorawan_t` enum and not boolean
+
+* [LoRaWAN-context] In case there is no valid stack context in nvm, initialize Join Nonce to -1 so that it can accept first join accept with join nonce equal to 0
+* [LoRaWAN] Add api to configure Gen App Key (used for Remote Multicast Setup package) and do not use by default the App key
+*[lorawan-package] Fix several issues encountered while executing the LoRa Alliance certification on FUOTA V2 related packages
+* [modem-test] Fix issue that lead to modem panic in case a cw test is launched for too long
+* [Duty-cycle] Fix issue where the duty-cycle was not fully disable when a region without duty-cycle constraint was initialized
+
+### Changed
+
+* [general] Change repository organization to ease readability.  
+            Put all LoRa Basics Modem libraray related code in `lbm_lib` folder.  
+            Rename `utilities` folder into `lbm_examples` for generic Lora Basics Modem examples
+* [lorawan-package] Change `lorawan_packages` folder organization to use a dedicated folder for each packages instead of fuota_v1 and fuota_V2
+
+* [lr11xx-driver] Update lr11xx radio driver to v2.4.0 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/lr11xx_driver/CHANGELOG.md))
+* [sx126x-driver] Update sx126x radio driver to v3.2.1 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/sx126x_driver/CHANGELOG.md))
+* [sx128x-driver] Update sx128x radio driver to v1.0.0 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/CHANGELOG.md))
+* [makefile] Set all LBM features options to `no` by default
+* [certification-service] Update certification service to support FUOTA certification
+
+## [v4.1.0] 2023-07-27
+
+This version is based on feature branch v4.0.1 of the LoRa Basics Modem.
+
+Detailed Modem API changelog can be found [here](smtc_modem_api/CHANGELOG.md)
+Detailed Modem HAL changelog can be found [here](smtc_modem_hal/CHANGELOG.md)
+
+### Added
+
+* [lorawan-stack] Add CSMA feature support, corresponding api functions and hw modem commands
+* [lorawan-package] Add support of Firmware Management Protocol package that follows LoRaWAN® Specification TS006-1.0.0
+* [lorawan-package] Add support of Multi-Package Access Protocol package that follows LoRaWAN® Specification TS007-1.0.0
+* [lorawan-package] Add support of Remote Multicast Setup package that follows LoRaWAN® Specification TS005-2.0.0
+* [lorawan-package] Add support of Application Layer Clock Synchronization that follows LoRaWAN® Specification TS003-2.0.0
+* [lorawan-package] Add support of Fragmented Data Block Transport that follows LoRaWAN® Specification TS004-2.0.0
+* [radio] Add support for sx1272 and sx1276 radios for experimental use only
+* [lbm makefile] Add RADIO in options.mk to choose which LoRaWAN regions should be built.
+* [lbm makefile] Add missing options in `make help` output
+* [utilities] Add an makefile option in `app_options.mk` `LBM_BUILD_OPTIONS` to allow updating any LBM lib build options
+* [ral_lr11xx_bsp] Add lr11xx new bsp functions `ral_lr11xx_bsp_get_lora_cad_det_peak` and `ral_lr11xx_bsp_get_rx_boost_cfg`
+* [ral_sx126x_bsp] Add sx126x new bsp functions `ral_sx126x_bsp_get_lora_cad_det_peak`, `ral_sx126x_bsp_get_rx_boost_cfg` and `ral_sx126x_bsp_get_trim_cap`
+* [ral_sx128x_bsp] Add sx128x new bsp function `ral_sx128x_bsp_get_lora_cad_det_peak`
+
+### Fixed
+
+* [AU915/US915] Fix LoRaWAN Link Adr Request channel mask control case 5 missing impact of 500MHz bank
+* [class b multicast] Avoid opening multicast ping slots when the session is stopped
+* [LRFHSS] Correct tx done timestamp with known bit padding delay to avoid issue with following rx windows (principally seen on US and AU regions)
+* [porting tool] Correct porting tool test test_get_time_in_ms to avoid mis-alignment in radio symbol timeout
+* [exti example] In `modem_event_callback`, use stack_id value given by `smtc_modem_get_event` instead of fixed defined one
+* [ALCSync] Fix ALCsync periodic request timing issue
+
+### Changed
+
+* [lr11xx-driver] Update lr11xx radio driver to v2.3.0 version
+* [sx126x-driver] Update sx126x radio driver to v2.2.0 version
+* [radio-ral] Update ral to get cad specific features
+* [Return codes] `smtc_modem_get_pin` and `smtc_modem_derive_keys` now return `SMTC_MODEM_RC_BUSY` in case modem is joining or joined (instead of SMTC_MODEM_RC_FAIL)
+
+## [v4.0.1] 2023-03-16
+
+### Fixed
+
+* [utilities] fix incorrect location of `smtc_modem_is_irq_flag_pending()` check in exti example (shall be done before entering sleep)
+
+## [v4.0.0] 2023-03-10
+
+### General
+
+This version is forked of the master branch v3.2.4 and proposes a major update of the LoRa Basics Modem.
+The purpose is to have a complete and simple LoRaWAN stack implementation, including additional LoRaWAN packages (Application Layer Clock Synchronization, Fragmented Data Block Transport, Remote Multicast Setup).
+Detailed Modem API changelog can be found [here](smtc_modem_api/CHANGELOG.md)
+Detailed Modem HAL changelog can be found [here](smtc_modem_hal/CHANGELOG.md)
+
+### Added
+
+* [makefile]: add `options.mk` file that gathers all lbm build options
+
+### Changed
+
+* [behavior]: Under modem interruption (radio or timer), only the timestamp of the interruption is done (no radio or external peripheral access is done under irq). As a consequence the `smtc_modem_run_engine()` shall be called as soon as possible after any modem interruption (radio or timer)
+* [makefile]: default Regional Parameters option is now RP2_103 (previous was RP2_101)
+* [utilities]:
+  * add `app_options.mk` file that gathers all application build options
+  * [exti-example]:
+    * update example to send periodical uplinks
+    * in case compilation is done using `LR11XX_WITH_CREDENTIALS`, internal credentials won't be overridden
+  * add hardware modem example (folder [hw_modem](utilities/user_app/hw_modem) )
+  * add porting tool example
+  * update smtc_hal_l4 code
+  * update radio_hal code
+  * update smtc_modem_hal.c code to be compliant with latest version of lbm
+
+### Fixed
+
+* Correct size error in `smtc_secure_element_get_pin`
+* [makefile] Remove ARM-specific flag from compilation flag
+* [makefile] Correct `MCU_FLAGS` issue
+
 ## [v3.3.0] 2023-05-31
 
 ### Added

@@ -1,0 +1,49 @@
+@startuml
+
+participant APPLICATION
+participant JOIN_MANAGER
+participant LR1_MAC_STACK_STACK
+participant SEMTECH_RADIO
+participant 0N_AIR
+participant NETWORK_SERVER
+
+
+APPLICATION -> JOIN_MANAGER: <font color=blue><b>smtc_modem_join_network(stack_id)
+note right 
+Join duty cycle as defined in LoRaWAN standard is enabled by default.
+Use compilation flag TEST_BYPASS_JOIN_DUTY_CYCLE to remove it
+To change join dr distribution use the function smtc_modem_adr_set_join_distribution
+end note
+==  STEP 1 : Transmit Join Request ==
+loop <font color=green>Until devices is joined
+alt <font color=green>no Join Accept response
+
+JOIN_MANAGER -> JOIN_MANAGER : Wait Join Duty cycle 
+note right 
+Join duty cycle details are defined in LoRaWAN standard. 
+It allows to not waste battery in case of bad network coverage. 
+end note
+Activate JOIN_MANAGER 
+JOIN_MANAGER ->  NETWORK_SERVER: Transmit Join Request
+Deactivate JOIN_MANAGER
+Activate NETWORK_SERVER#005500 
+LR1_MAC_STACK_STACK -> LR1_MAC_STACK_STACK : Wait a valid join accept on Rx1 or RX2 
+Activate LR1_MAC_STACK_STACK
+LR1_MAC_STACK_STACK -> APPLICATION: <font color=blue><b>  Event
+Deactivate LR1_MAC_STACK_STACK
+note left 
+  with status = SMTC_MODEM_EVENT_JOINFAIL.
+end note
+else <font color=green> Else : Receive a Valid Join Accept
+NETWORK_SERVER -> JOIN_MANAGER: Valid join Accept
+Deactivate NETWORK_SERVER#005500 
+Activate JOIN_MANAGER#000000 
+end
+end
+JOIN_MANAGER -> APPLICATION: <font color=blue><b>  Event
+note left 
+  with status = SMTC_MODEM_EVENT_JOINED.
+end note
+
+
+@enduml

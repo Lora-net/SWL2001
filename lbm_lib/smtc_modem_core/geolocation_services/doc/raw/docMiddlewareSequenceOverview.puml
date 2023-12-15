@@ -1,0 +1,72 @@
+@startuml
+
+participant App
+participant LoRaBasicsModem
+participant mw_gnss_scan
+participant mw_gnss_send
+participant lr11xx_gnss
+
+App -> LoRaBasicsModem ++ : smtc_modem_gnss_scan(mode,delay)
+Activate App #grey
+LoRaBasicsModem -> mw_gnss_scan ++ : mw_gnss_scan_add_task(mode,delay)
+mw_gnss_scan -> LoRaBasicsModem ++ #pink : modem_supervisor_add_task(delay)
+return
+return
+return
+Deactivate App
+
+== Modem Supervisor launch GNSS scan task after delay ==
+
+LoRaBasicsModem -> mw_gnss_scan ++ : mw_gnss_scan_service_on_launch()
+Activate LoRaBasicsModem #grey
+mw_gnss_scan -> LoRaBasicsModem ++ #pink : rp_task_enqueue()
+return
+return
+Deactivate LoRaBasicsModem
+
+== Radio Planner IRQ timer ==
+
+LoRaBasicsModem -> mw_gnss_scan ++ : gnss_rp_task_launch()
+Activate LoRaBasicsModem #grey
+mw_gnss_scan -> lr11xx_gnss ++ : lr11xx_gnss_scan()
+return
+return
+Deactivate LoRaBasicsModem
+
+== Radio Planner IRQ radio SCAN_DONE ==
+
+LoRaBasicsModem -> mw_gnss_scan ++ : gnss_rp_task_done()
+Activate LoRaBasicsModem #grey
+mw_gnss_scan -> lr11xx_gnss ++ : lr11xx_gnss_read_results()
+return
+mw_gnss_scan -> LoRaBasicsModem ++ #pink : increment_event(SMTC_MODEM_EVENT_GNSS_SCAN_DONE)
+return
+LoRaBasicsModem --> App: event_callback(SMTC_MODEM_EVENT_GNSS_SCAN_DONE)
+mw_gnss_scan -> mw_gnss_send ++ : mw_gnss_send_add_task(scan_results)
+mw_gnss_send -> LoRaBasicsModem ++ #pink : modem_supervisor_add_task()
+return
+return
+return
+Deactivate LoRaBasicsModem
+
+== Modem Supervisor launch GNSS send task after delay ==
+
+LoRaBasicsModem -> mw_gnss_send ++ : mw_gnss_send_service_on_launch()
+Activate LoRaBasicsModem #grey
+mw_gnss_send -> LoRaBasicsModem ++ #pink : lorawan_api_payload_send()
+return
+return
+Deactivate LoRaBasicsModem
+
+== LoRaWAN stack TX_DONE ==
+
+LoRaBasicsModem -> mw_gnss_send ++ : mw_gnss_send_service_on_update()
+Activate LoRaBasicsModem #grey
+mw_gnss_send -> LoRaBasicsModem ++ #pink : increment_event(SMTC_MODEM_EVENT_GNSS_TERMINATED)
+return
+LoRaBasicsModem --> App: event_callback(SMTC_MODEM_EVENT_GNSS_TERMINATED)
+return
+Deactivate LoRaBasicsModem
+
+
+@enduml
