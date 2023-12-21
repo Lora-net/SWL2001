@@ -1,0 +1,67 @@
+@startuml
+
+participant APPLICATION
+participant CLASS_B_MANAGER
+participant CLASS_B_STACK
+participant RADIO_SX127x_LR111x
+participant 0N_AIR
+participant NETWORK_SERVER
+participant APPLICATION_SERVER
+
+APPLICATION -> CLASS_B_MANAGER: <font color=blue><b>smtc_modem_set_class(stack_id,SMTC_MODEM_CLASS_B)
+loop <font color=green>Until smtc_modem_set_class(stack_id,SMTC_MODEM_CLASS_A)
+==  STEP 1 : Get Time and Ping slot Info ==
+loop <font color=green>until time valid/ ping slot info valid
+Activate 0N_AIR#005500 
+CLASS_B_MANAGER ->  NETWORK_SERVER: DEVICE_TIME_REQ / PING_SLOT_INFO_REQ
+NETWORK_SERVER ->  CLASS_B_MANAGER: DEVICE_TIME_ANS / PING_SLOT_INFO_ANS
+end
+
+
+== STEP 2 : Search Beacon ==
+loop <font color=green>until get first beacon
+
+CLASS_B_MANAGER ->  RADIO_SX127x_LR111x: Rx Beacon every Beacon period
+0N_AIR ->0N_AIR : wait for Beacon
+NETWORK_SERVER ->  CLASS_B_MANAGER: Receive Valid beacon
+end
+
+Deactivate 0N_AIR
+== STEP 3 : Notify NS :" class B activated" ==
+CLASS_B_MANAGER ->  NETWORK_SERVER:  send empty payload without port to advertise NS that class B is enabled
+CLASS_B_MANAGER -> APPLICATION: <font color=blue><b>  SMTC_MODEM_EVENT_CLASS_B_STATUS
+note left 
+  with status = SMTC_MODEM_EVENT_CLASS_B_READY.
+end note
+== STEP 4 : " class B  is running " ==
+loop <font color=green>until 2H of lost beacon
+CLASS_B_STACK ->0N_AIR : Rx Beacon
+Activate 0N_AIR#00FF00 
+CLASS_B_STACK ->0N_AIR : Rx Ping Slot
+Activate 0N_AIR#000055 
+Deactivate 0N_AIR#000055
+APPLICATION_SERVER ->  NETWORK_SERVER:  App Downlink
+Activate NETWORK_SERVER
+CLASS_B_STACK ->0N_AIR : Rx Ping Slot
+Activate 0N_AIR#000055
+NETWORK_SERVER-> CLASS_B_STACK : Rx downlink on ping slot
+CLASS_B_STACK -> APPLICATION: <font color=blue><b>  SMTC_MODEM_EVENT_DOWNDATA
+note left 
+  with rx_window = RECEIVE_ON_RXB.
+end note
+Deactivate NETWORK_SERVER
+Deactivate 0N_AIR#000055
+CLASS_B_STACK ->0N_AIR : Rx Ping Slot
+Activate 0N_AIR#000055 
+Deactivate 0N_AIR#000055
+CLASS_B_STACK ->0N_AIR : Rx Beacon
+Deactivate 0N_AIR#000500
+end
+== STEP 5 : " Assuming no more beacon for > 2H  Or Rx_windows > 2s" ==
+CLASS_B_MANAGER ->  NETWORK_SERVER:  send empty payload without port to advertise NS that class B is disabled
+CLASS_B_MANAGER -> APPLICATION: <font color=blue><b>  SMTC_MODEM_EVENT_CLASS_B_STATUS
+note left 
+  with status = SMTC_MODEM_EVENT_CLASS_B_NOT_READY.
+end note
+end
+@enduml
