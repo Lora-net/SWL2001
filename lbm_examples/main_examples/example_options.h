@@ -59,11 +59,11 @@ extern "C" {
  */
 #define USER_LORAWAN_DEVICE_EUI                        \
     {                                                  \
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
+        0xFE, 0xFF, 0xFF, 0xFF, 0xFD, 0xFF, 0x00, 0x00 \
     }
 #define USER_LORAWAN_JOIN_EUI                          \
     {                                                  \
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
+        0x00, 0x16, 0xC0, 0x01, 0xFF, 0xFE, 0x00, 0x01 \
     }
 #define USER_LORAWAN_GEN_APP_KEY                                                                       \
     {                                                                                                  \
@@ -78,8 +78,8 @@ extern "C" {
  * @brief Modem Region define
  */
 #ifndef MODEM_EXAMPLE_REGION
-#if !defined( SX128X )
-#define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_EU_868
+#if !defined( SX126X )
+#define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_AS_923_GRP1
 #else
 #define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_WW2G4
 #endif
