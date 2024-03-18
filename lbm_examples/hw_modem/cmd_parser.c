@@ -264,6 +264,8 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_WIFI_SET_PAYLOAD_FORMAT]               = { 1, 1, 1 },
     [CMD_LR11XX_RADIO_READ]                     = { 1, 0, 255 },
     [CMD_LR11XX_RADIO_WRITE]                    = { 1, 0, 255 },
+    [CMD_SET_RTC_OFFSET]                        ={1,4,4},
+    
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
 };
 
@@ -427,6 +429,7 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_WIFI_SET_PAYLOAD_FORMAT]               = "CMD_MODEM_WIFI_SET_PAYLOAD_FORMAT",
     [CMD_LR11XX_RADIO_READ]                     = "CMD_LR11XX_RADIO_READ",
     [CMD_LR11XX_RADIO_WRITE]                    = "CMD_LR11XX_RADIO_WRITE",
+      [CMD_SET_RTC_OFFSET]                       = "CMD_SET_RTC_OFFSET",
 
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
 };
@@ -1018,6 +1021,17 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             cmd_output->buffer[0] = ( uint8_t ) certification_enabled;
             cmd_output->length    = 1;
         }
+        break;
+    }
+    case CMD_SET_RTC_OFFSET :
+    {
+        uint32_t rtc_offset = 0;
+        rtc_offset |= cmd_input->buffer[0] << 24;
+        rtc_offset |= cmd_input->buffer[1] << 16;
+        rtc_offset |= cmd_input->buffer[2] << 8;
+        rtc_offset |= cmd_input->buffer[3];
+        SMTC_HAL_TRACE_PRINTF (" change rtc offset to test wrapping with value = %x\n",rtc_offset);
+        smtc_modem_hal_set_offset_to_test_wrapping( rtc_offset );
         break;
     }
     case CMD_TEST:

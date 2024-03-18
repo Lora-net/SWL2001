@@ -216,15 +216,6 @@ uint32_t hal_rtc_get_time_s( void )
     return rtc_get_calendar_time( &milliseconds );
 }
 
-uint32_t hal_rtc_get_time_100us( void )
-{
-    uint32_t seconds             = 0;
-    uint16_t milliseconds_div_10 = 0;
-
-    seconds = rtc_get_calendar_time( &milliseconds_div_10 );
-
-    return seconds * 10000 + milliseconds_div_10;
-}
 uint32_t hal_rtc_get_time_ms( void )
 {
     uint32_t seconds             = 0;

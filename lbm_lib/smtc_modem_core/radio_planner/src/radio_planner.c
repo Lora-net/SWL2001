@@ -238,8 +238,8 @@ rp_hook_status_t rp_attach_new_radio( radio_planner_t* rp, const ralf_t* radio, 
         SMTC_MODEM_HAL_PANIC( );
         return RP_HOOK_STATUS_ID_ERROR;
     }
-    if( ( radio ==
-          rp->radio_target_attached_to_this_hook[hook_id] ) )  // radio shall not be the same radio as the initial one
+    if( radio ==
+        rp->radio_target_attached_to_this_hook[hook_id] )  // radio shall not be the same radio as the initial one
     {
         SMTC_MODEM_HAL_PANIC( );
         return RP_HOOK_STATUS_ID_ERROR;
@@ -388,7 +388,6 @@ rp_hook_status_t rp_task_abort( radio_planner_t* rp, const uint8_t hook_id )
 #endif
 
         rp->radio_irq_flag                         = true;  // Fake soft IRQ to call user callback
-        rp->irq_timestamp_100us[rp->radio_task_id] = smtc_modem_hal_get_time_in_100us( );
         rp->irq_timestamp_ms[rp->radio_task_id]    = smtc_modem_hal_get_time_in_ms( );
         smtc_modem_hal_user_lbm_irq( );
     }
@@ -1211,7 +1210,6 @@ void rp_radio_irq_callback( void* obj )
 {
     radio_planner_t* rp                        = ( ( radio_planner_t* ) obj );
     rp->radio_irq_flag                         = true;
-    rp->irq_timestamp_100us[rp->radio_task_id] = smtc_modem_hal_get_time_in_100us( );
     rp->irq_timestamp_ms[rp->radio_task_id]    = smtc_modem_hal_get_time_in_ms( );
     smtc_modem_hal_user_lbm_irq( );
 }

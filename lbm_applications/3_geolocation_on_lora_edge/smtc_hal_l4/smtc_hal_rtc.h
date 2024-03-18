@@ -93,16 +93,6 @@ uint32_t hal_rtc_get_time_s( void );
 uint32_t hal_rtc_get_time_ms( void );
 
 /*!
- * Returns the current RTC time in 0.1milliseconds
- *
- * \remark will also be used for d2d
- *
- *
- * retval rtc_time_ms Current RTC time in milliseconds wraps every 4.9 days
- */
-uint32_t hal_rtc_get_time_100us( void );
-
-/*!
  * Sets the rtc wakeup timer for milliseconds parameter. The RTC will generate
  * an IRQ to wakeup the MCU.
  *

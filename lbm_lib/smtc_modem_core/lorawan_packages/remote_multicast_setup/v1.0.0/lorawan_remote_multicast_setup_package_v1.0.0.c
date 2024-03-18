@@ -763,6 +763,8 @@ bool lorawan_remote_multicast_setup_mpa_injector( uint8_t stack_id, uint8_t* pay
         SMTC_MODEM_HAL_PANIC_ON_FAILURE( ctx->remote_multicast_tx_payload_ans_size <= max_payload_out_length );
         *payload_out_length = ctx->remote_multicast_tx_payload_ans_size;
         memcpy( payload_out, ctx->remote_multicast_tx_payload_ans, ctx->remote_multicast_tx_payload_ans_size );
+        
+        lorawan_remote_multicast_setup_add_task( ctx, 0 );
         return true;
     }
     else

@@ -1,4 +1,4 @@
-# Reference Implementation 2: Porting on Nordic NRF25840 Board
+# Implementation reference 2: Porting on Nordic NRF52840 Board
 
 This folder contains implementations of LoRa Basics Modem on some MCU boards and some application examples.
 

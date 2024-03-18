@@ -965,18 +965,8 @@ static uint8_t cloud_dm_service_downlink_handler( lr1_stack_mac_down_data_t* rx_
     {
         ctx->lorawan_last_rssi_get = rx_down_data->rx_metadata.rx_rssi;
         ctx->lorawan_last_snr_get  = rx_down_data->rx_metadata.rx_snr;
+        ctx->last_dl_timestamp_s   = rx_down_data->rx_metadata.timestamp_ms / 1000;
 
-        uint32_t tmp_timestamp_s = rx_down_data->rx_metadata.timestamp_ms / 1000;
-        uint32_t rtc_s           = smtc_modem_hal_get_time_in_s( );
-
-        if( rtc_s >= tmp_timestamp_s )
-        {
-            ctx->last_dl_timestamp_s = rtc_s - tmp_timestamp_s;
-        }
-        else
-        {
-            ctx->last_dl_timestamp_s = ( uint32_t ) ( ~0 ) - tmp_timestamp_s + rtc_s;
-        }
         if( rx_down_data->rx_metadata.is_a_join_accept == true )
         {
             // Update flag to know it is the first dm after join that shall be sent next
@@ -1454,9 +1444,20 @@ static bool dm_status_payload( cloud_dm_t* ctx, uint8_t stack_id, uint8_t* dm_up
             }
             break;
             case DM_INFO_RXTIME: {
-                uint32_t time  = ( smtc_modem_hal_get_time_in_s( ) - ctx->last_dl_timestamp_s ) / 3600;
-                *p_tmp         = time & 0xFF;
-                *( p_tmp + 1 ) = time >> 8;
+                uint32_t time_h = 0;
+                uint32_t rtc_s  = smtc_modem_hal_get_time_in_s( );
+
+                if( rtc_s >= ctx->last_dl_timestamp_s )
+                {
+                    time_h = ( rtc_s - ctx->last_dl_timestamp_s ) / 3600;
+                }
+                else
+                {
+                    time_h = ( uint32_t ) ( ~0UL ) - ctx->last_dl_timestamp_s + rtc_s;
+                }
+
+                *p_tmp         = time_h & 0xFF;
+                *( p_tmp + 1 ) = time_h >> 8;
             }
             break;
             case DM_INFO_FIRMWARE: {

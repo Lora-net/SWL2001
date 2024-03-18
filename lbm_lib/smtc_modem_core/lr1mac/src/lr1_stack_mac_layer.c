@@ -497,7 +497,8 @@ void lr1_stack_mac_tx_radio_start( lr1_stack_mac_t* lr1_mac )
         SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_lr_fhss_get_hop_sequence_count( &lr1_mac->rp->radio->ral,
                                                                              &lr_fhss_param.ral_lr_fhss_params,
                                                                              &nb_max_hop_sequence ) == RAL_STATUS_OK );
-        lr_fhss_param.hop_sequence_id = smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence );
+        lr_fhss_param.hop_sequence_id =
+            smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence - 1 );
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.modulation_type = LR_FHSS_V1_MODULATION_TYPE_GMSK_488;
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.cr              = tx_cr;
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.grid            = smtc_real_lr_fhss_get_grid( lr1_mac->real );

@@ -1192,8 +1192,12 @@ void smtc_real_decrement_dr( smtc_real_t* real, dr_strategy_t adr_mode_select, u
 
     if( *tx_data_rate_adr != smtc_real_get_min_tx_channel_dr( real ) )
     {
-        *tx_data_rate_adr = smtc_real_decrement_dr_simulation( real, *tx_data_rate_adr );
-        return;
+        uint8_t dr_tmp = smtc_real_decrement_dr_simulation( real, *tx_data_rate_adr );
+        if( *tx_data_rate_adr != dr_tmp )
+        {
+            *tx_data_rate_adr = dr_tmp;
+            return;
+        }
     }
 
     //  nb_trans must set to 1 and all default channels re-enabled

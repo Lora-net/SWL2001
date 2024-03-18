@@ -196,6 +196,7 @@ typedef enum host_cmd_id_e
     CMD_LR11XX_RADIO_READ                     = 0x90,
     CMD_LR11XX_RADIO_WRITE                    = 0x91,
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
+    CMD_SET_RTC_OFFSET                        =0x92,
     CMD_MAX
 } host_cmd_id_t;
 

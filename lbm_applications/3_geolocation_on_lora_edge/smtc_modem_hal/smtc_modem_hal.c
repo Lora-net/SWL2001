@@ -135,11 +135,6 @@ uint32_t smtc_modem_hal_get_time_in_ms( void )
     return hal_rtc_get_time_ms( );
 }
 
-uint32_t smtc_modem_hal_get_time_in_100us( void )
-{
-    return hal_rtc_get_time_100us( );
-}
-
 /* ------------ Timer management ------------*/
 
 void smtc_modem_hal_start_timer( const uint32_t milliseconds, void ( *callback )( void* context ), void* context )

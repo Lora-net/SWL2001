@@ -123,7 +123,7 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
-
+static uint32_t offset_to_test_wrapping = 0;
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
@@ -133,7 +133,7 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
-
+static uint32_t  rtc_get_offset_to_test_wrapping (void);
 /*!
  * Converts time in ms to time in wake up timer ticks
  * Assuming WUCKSEL[2:0] = 000: RTCCLK/16 clock is selected
@@ -225,15 +225,6 @@ uint32_t hal_rtc_get_time_s( void )
     return rtc_get_calendar_time( &milliseconds );
 }
 
-uint32_t hal_rtc_get_time_100us( void )
-{
-    uint32_t seconds             = 0;
-    uint16_t milliseconds_div_10 = 0;
-
-    seconds = rtc_get_calendar_time( &milliseconds_div_10 );
-
-    return seconds * 10000 + milliseconds_div_10;
-}
 uint32_t hal_rtc_get_time_ms( void )
 {
     uint32_t seconds             = 0;
@@ -283,7 +274,10 @@ void hal_rtc_wakeup_timer_stop( void )
     LL_RTC_DisableIT_WUT( RTC );
     LL_RTC_WAKEUP_Disable( RTC );
 }
-
+void hal_rtc_set_offset_to_test_wrapping( uint32_t offset )
+{
+    offset_to_test_wrapping = offset;
+}
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -294,7 +288,7 @@ static uint32_t rtc_tick_2_100us( const uint32_t tick )
     uint32_t seconds    = tick >> N_PREDIV_S;
     uint32_t local_tick = tick & PREDIV_S;
 
-    return ( uint32_t )( ( seconds * 10000 ) + ( ( local_tick * 10000 ) >> N_PREDIV_S ) );
+    return ( uint32_t ) ( ( seconds * 10000 ) + ( ( local_tick * 10000 ) >> N_PREDIV_S ) );
 }
 
 static uint32_t rtc_ms_2_wakeup_timer_tick( const uint32_t milliseconds )
@@ -310,9 +304,9 @@ static uint32_t rtc_get_calendar_time( uint16_t* milliseconds_div_10 )
 {
     uint32_t ticks;
 
-    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( );
+    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( ) + ( uint64_t) ((( uint64_t)rtc_get_offset_to_test_wrapping()) << N_PREDIV_S );
 
-    uint32_t seconds = ( uint32_t )( timestamp_in_ticks >> N_PREDIV_S );
+    uint32_t seconds = ( uint32_t ) ( timestamp_in_ticks >> N_PREDIV_S );
 
     ticks = ( uint32_t ) timestamp_in_ticks & PREDIV_S;
 
@@ -339,20 +333,20 @@ static uint64_t rtc_get_timestamp_in_ticks( void )
         sub_seconds = LL_RTC_TIME_GetSubSecond( RTC );
 
         // Get the DR register (Date)
-        uint32_t dr_val = ( uint32_t )( RTC->DR & RTC_DR_RESERVED_MASK );
+        uint32_t dr_val = ( uint32_t ) ( RTC->DR & RTC_DR_RESERVED_MASK );
 
         // Fill the data with the read parameters
-        year  = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t )( ( dr_val & ( RTC_DR_YT | RTC_DR_YU ) ) >> 16U ) );
-        month = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t )( ( dr_val & ( RTC_DR_MT | RTC_DR_MU ) ) >> 8U ) );
-        date  = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t )( dr_val & ( RTC_DR_DT | RTC_DR_DU ) ) );
+        year  = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t ) ( ( dr_val & ( RTC_DR_YT | RTC_DR_YU ) ) >> 16U ) );
+        month = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t ) ( ( dr_val & ( RTC_DR_MT | RTC_DR_MU ) ) >> 8U ) );
+        date  = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t ) ( dr_val & ( RTC_DR_DT | RTC_DR_DU ) ) );
 
         // Get the TR register (Time)
-        uint32_t tr_val = ( uint32_t )( RTC->TR & RTC_TR_RESERVED_MASK );
+        uint32_t tr_val = ( uint32_t ) ( RTC->TR & RTC_TR_RESERVED_MASK );
 
         // Fill the data with the read parameters
-        hours   = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t )( ( tr_val & ( RTC_TR_HT | RTC_TR_HU ) ) >> 16U ) );
-        minutes = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t )( ( tr_val & ( RTC_TR_MNT | RTC_TR_MNU ) ) >> 8U ) );
-        seconds = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t )( tr_val & ( RTC_TR_ST | RTC_TR_SU ) ) );
+        hours   = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t ) ( ( tr_val & ( RTC_TR_HT | RTC_TR_HU ) ) >> 16U ) );
+        minutes = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t ) ( ( tr_val & ( RTC_TR_MNT | RTC_TR_MNU ) ) >> 8U ) );
+        seconds = __LL_RTC_CONVERT_BCD2BIN( ( uint8_t ) ( tr_val & ( RTC_TR_ST | RTC_TR_SU ) ) );
 
     } while( ssr != RTC->SSR );
 
@@ -388,5 +382,8 @@ void RTC_IRQHandler( void )
         LL_EXTI_ClearFlag_0_31( LL_EXTI_LINE_20 );
     }
 }
-
+static uint32_t  rtc_get_offset_to_test_wrapping (void)
+{
+    return offset_to_test_wrapping ;
+}
 /* --- EOF ------------------------------------------------------------------ */

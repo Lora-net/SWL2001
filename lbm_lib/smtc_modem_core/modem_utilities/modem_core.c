@@ -116,6 +116,7 @@ struct
     uint8_t              fifo_buffer[FIFO_LORAWAN_SIZE];
     uint8_t              ( *downlink_services_callback[NUMBER_OF_SERVICES + NUMBER_OF_LORAWAN_MANAGEMENT_TASKS] )(
         lr1_stack_mac_down_data_t* rx_down_data );
+    uint32_t modem_reset_counter;
 } modem_ctx_light;
 
 #define modem_dwn_pkt modem_ctx_light.modem_dwn_pkt
@@ -126,13 +127,8 @@ struct
 #define fifo_ctrl_obj modem_ctx_light.fifo_ctrl_obj
 #define fifo_buffer modem_ctx_light.fifo_buffer
 #define downlink_services_callback modem_ctx_light.downlink_services_callback
+#define modem_reset_counter modem_ctx_light.modem_reset_counter
 
-struct
-{
-    uint32_t modem_reset_counter;
-} smtc_modem_ctx;
-
-#define modem_reset_counter smtc_modem_ctx.modem_reset_counter
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------

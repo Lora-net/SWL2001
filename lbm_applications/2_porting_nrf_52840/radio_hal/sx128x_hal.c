@@ -103,14 +103,10 @@ sx128x_hal_status_t sx128x_hal_write( const void* context, const uint8_t* comman
 
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
-    for( uint16_t i = 0; i < command_length; i++ )
-    {
-        hal_spi_in_out( RADIO_SPI_ID, command[i] );
-    }
-    for( uint16_t i = 0; i < data_length; i++ )
-    {
-        hal_spi_in_out( RADIO_SPI_ID, data[i] );
-    }
+
+    hal_spi_in_out( RADIO_SPI_ID, command, command_length, NULL, 0 );
+    hal_spi_in_out( RADIO_SPI_ID, data, data_length, NULL, 0 );
+
     // Put NSS high as the spi transaction is finished
     hal_gpio_set_value( RADIO_NSS, 1 );
 
@@ -134,14 +130,13 @@ sx128x_hal_status_t sx128x_hal_read( const void* context, const uint8_t* command
 
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
-    for( uint16_t i = 0; i < command_length; i++ )
+    hal_spi_in_out( RADIO_SPI_ID, command, command_length, NULL, 0 );
+
+    if( data_length > 0 )
     {
-        hal_spi_in_out( RADIO_SPI_ID, command[i] );
+        hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
     }
-    for( uint16_t i = 0; i < data_length; i++ )
-    {
-        data[i] = hal_spi_in_out( RADIO_SPI_ID, 0 );
-    }
+
     // Put NSS high as the spi transaction is finished
     hal_gpio_set_value( RADIO_NSS, 1 );
 

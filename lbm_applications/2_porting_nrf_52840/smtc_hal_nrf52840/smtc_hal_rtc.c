@@ -99,7 +99,7 @@ void hal_rtc_init( void )
 uint32_t hal_rtc_get_time_s( void )
 {
     uint32_t tmp_rtc = nrf_drv_rtc_counter_get( &rtc1 );
-    uint64_t tmp     = ( ( uint64_t )( tmp_rtc ) + ( uint64_t )( ( 1 << 24 ) * rtc_wrap_counter ) ) /
+    uint64_t tmp     = ( ( uint64_t ) ( tmp_rtc ) + ( uint64_t ) ( ( 1ULL << 24 ) * ( uint64_t ) rtc_wrap_counter ) ) /
                    NRFX_RTC_DEFAULT_CONFIG_FREQUENCY;
     return ( uint32_t ) tmp;
 }
@@ -107,16 +107,9 @@ uint32_t hal_rtc_get_time_s( void )
 uint32_t hal_rtc_get_time_ms( void )
 {
     uint32_t tmp_rtc = nrf_drv_rtc_counter_get( &rtc1 );
-    uint64_t tmp     = ( ( ( uint64_t )( tmp_rtc ) + ( uint64_t )( ( 1 << 24 ) * rtc_wrap_counter ) ) * 1000 ) /
-                   NRFX_RTC_DEFAULT_CONFIG_FREQUENCY;
-    return ( uint32_t ) tmp;
-}
-
-uint32_t hal_rtc_get_time_100us( void )
-{
-    uint32_t tmp_rtc = nrf_drv_rtc_counter_get( &rtc1 );
-    uint64_t tmp     = ( ( ( uint64_t )( tmp_rtc ) + ( uint64_t )( ( 1 << 24 ) * rtc_wrap_counter ) ) * 10000 ) /
-                   NRFX_RTC_DEFAULT_CONFIG_FREQUENCY;
+    uint64_t tmp =
+        ( ( ( uint64_t ) ( tmp_rtc ) + ( uint64_t ) ( ( 1ULL << 24 ) * ( uint64_t ) rtc_wrap_counter ) ) * 1000 ) /
+        NRFX_RTC_DEFAULT_CONFIG_FREQUENCY;
     return ( uint32_t ) tmp;
 }
 

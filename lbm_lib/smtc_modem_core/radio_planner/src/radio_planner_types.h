@@ -228,7 +228,6 @@ typedef struct rp_task_s
     rp_task_states_t state;
     // absolute Ms
     uint32_t start_time_ms;
-    uint32_t start_time_100us;
     // Have to keep the initial start time to be able to switch asap task to
     // schedule task after long period
     uint32_t start_time_init_ms;

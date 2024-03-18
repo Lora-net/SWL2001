@@ -153,13 +153,13 @@ uint32_t smtc_modem_hal_get_time_in_s( void );
 uint32_t smtc_modem_hal_get_time_in_ms( void );
 
 /**
- * @brief Returns the current time in 0.1 milliseconds
+ * @brief set an offset into the rtc ounter
  *
- * @remark Used for class B ping slot openings.
+ * @remark Used for debug purpose such as wrapping issue.
  *
- * @return uint32_t Current time in 100µs (wraps every 4,9 days)
+ * @return
  */
-uint32_t smtc_modem_hal_get_time_in_100us( void );
+void smtc_modem_hal_set_offset_to_test_wrapping( const uint32_t offset_to_test_wrapping );
 
 /* ------------ Timer management ------------*/
 

@@ -57,7 +57,7 @@ extern "C" {
  */
 #define LORA_BASICS_MODEM_FW_VERSION_MAJOR 4
 #define LORA_BASICS_MODEM_FW_VERSION_MINOR 3
-#define LORA_BASICS_MODEM_FW_VERSION_PATCH 0
+#define LORA_BASICS_MODEM_FW_VERSION_PATCH 1
 
 /*
  * -----------------------------------------------------------------------------

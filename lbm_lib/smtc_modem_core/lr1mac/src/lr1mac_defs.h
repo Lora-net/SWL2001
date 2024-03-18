@@ -447,7 +447,6 @@ typedef struct smtc_ping_slot_parameters_e
     uint16_t ping_period;  // Period of the end-device receiver wake-up expressed in number of slots:
     uint8_t  ping_number;  // Number of ping slot in a beacon window
     uint32_t ping_offset_time;
-    uint32_t ping_offset_time_100us;
 } smtc_ping_slot_parameters_t;
 
 typedef struct lr1mac_rx_session_param_s

@@ -208,7 +208,7 @@ void smtc_ping_slot_mac_rp_callback( smtc_ping_slot_t* ping_slot_obj );
  * @return uint32_t
  */
 
-uint32_t smtc_ping_slot_compute_first_slot( uint32_t beacon_time_received_100us, uint32_t beacon_reserved_ms,
+uint32_t smtc_ping_slot_compute_first_slot( uint32_t beacon_time_received_ms, uint32_t beacon_reserved_ms,
                                             uint32_t beacon_epoch_time, uint32_t dev_addr, uint16_t ping_period,
                                             uint8_t stack_id );
 

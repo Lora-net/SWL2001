@@ -35,91 +35,81 @@
 #define __RTC_UTILITIES_H__
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-/*
- * -----------------------------------------------------------------------------
- * --- DEPENDENCIES ------------------------------------------------------------
- */
+    /*
+     * -----------------------------------------------------------------------------
+     * --- DEPENDENCIES ------------------------------------------------------------
+     */
 
-#include <stdint.h>   // C99 types
-#include <stdbool.h>  // bool type
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC MACROS -----------------------------------------------------------
- */
+#include <stdint.h>  // C99 types
+#include <stdbool.h> // bool type
+    /*
+     * -----------------------------------------------------------------------------
+     * --- PUBLIC MACROS -----------------------------------------------------------
+     */
 
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC CONSTANTS --------------------------------------------------------
- */
+    /*
+     * -----------------------------------------------------------------------------
+     * --- PUBLIC CONSTANTS --------------------------------------------------------
+     */
 
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC TYPES ------------------------------------------------------------
- */
+    /*
+     * -----------------------------------------------------------------------------
+     * --- PUBLIC TYPES ------------------------------------------------------------
+     */
 
-/*
- * -----------------------------------------------------------------------------
- * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
- */
+    /*
+     * -----------------------------------------------------------------------------
+     * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
+     */
 
-/*!
- *  Initializes the MCU RTC peripheral
- */
-void hal_rtc_init( void );
+    /*!
+     *  Initializes the MCU RTC peripheral
+     */
+    void hal_rtc_init(void);
 
-/*!
- * Returns the current RTC time in seconds
- *
- * \remark Used for scheduling autonomous retransmissions (i.e: NbTrans),
- *         transmitting MAC answers, basically any delay without accurate time
- *         constraints. It is also used to measure the time spent inside the
- *         LoRaWAN process for the integrated failsafe.
- *
- * retval rtc_time_s Current RTC time in seconds
- */
-uint32_t hal_rtc_get_time_s( void );
+    /*!
+     * Returns the current RTC time in seconds
+     *
+     * \remark Used for scheduling autonomous retransmissions (i.e: NbTrans),
+     *         transmitting MAC answers, basically any delay without accurate time
+     *         constraints. It is also used to measure the time spent inside the
+     *         LoRaWAN process for the integrated failsafe.
+     *
+     * retval rtc_time_s Current RTC time in seconds
+     */
+    uint32_t hal_rtc_get_time_s(void);
 
-/*!
- * Returns the current RTC time in milliseconds
- *
- * \remark Used to timestamp radio events (i.e: end of TX), will also be used
- * for ClassB
- *
- * retval rtc_time_ms Current RTC time in milliseconds wraps every 49 days
- */
-uint32_t hal_rtc_get_time_ms( void );
+    /*!
+     * Returns the current RTC time in milliseconds
+     *
+     * \remark Used to timestamp radio events (i.e: end of TX), will also be used
+     * for ClassB
+     *
+     * retval rtc_time_ms Current RTC time in milliseconds wraps every 49 days
+     */
+    uint32_t hal_rtc_get_time_ms(void);
 
+    /*!
+     * Sets the rtc wakeup timer for milliseconds parameter. The RTC will generate
+     * an IRQ to wakeup the MCU.
+     *
+     * \param[IN] milliseconds Number of seconds before wakeup
+     */
+    void hal_rtc_wakeup_timer_set_ms(const int32_t milliseconds);
 
-/*!
- * Returns the current RTC time in 0.1milliseconds
- *
- * \remark will also be used for d2d
- * 
- *
- * retval rtc_time_ms Current RTC time in milliseconds wraps every 4.9 days
- */
-uint32_t hal_rtc_get_time_100us( void );
-
-/*!
- * Sets the rtc wakeup timer for milliseconds parameter. The RTC will generate
- * an IRQ to wakeup the MCU.
- *
- * \param[IN] milliseconds Number of seconds before wakeup
- */
-void hal_rtc_wakeup_timer_set_ms( const int32_t milliseconds );
-
-/*!
- * Stop the rtc wakeup timer
- */
-void hal_rtc_wakeup_timer_stop( void );
+    /*!
+     * Stop the rtc wakeup timer
+     */
+    void hal_rtc_wakeup_timer_stop(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // __RTC_UTILITIES_H__
+#endif // __RTC_UTILITIES_H__
 
 /* --- EOF ------------------------------------------------------------------ */

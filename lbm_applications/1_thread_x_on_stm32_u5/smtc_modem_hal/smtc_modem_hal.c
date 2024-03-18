@@ -134,10 +134,6 @@ uint32_t smtc_modem_hal_get_time_in_ms(void)
     return hal_rtc_get_time_ms();
 }
 
-uint32_t smtc_modem_hal_get_time_in_100us(void)
-{
-    return hal_rtc_get_time_100us();
-}
 void smtc_modem_hal_user_lbm_irq(void)
 {
     threadx_user_lbm_irq();

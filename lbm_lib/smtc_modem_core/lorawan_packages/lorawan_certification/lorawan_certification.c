@@ -225,8 +225,16 @@ void lorawan_certification_services_init( uint8_t* service_id, uint8_t task_id,
     ctx->stack_id       = CURRENT_STACK;
     ctx->enabled        = lorawan_api_modem_certification_is_enabled( CURRENT_STACK );
 
-    SMTC_MODEM_HAL_TRACE_INFO( "LoRaWAN Certification is %s on stack %d \n",
-                               ( ctx->enabled == true ? "enabled" : "disabled" ), ctx->stack_id );
+    if( ctx->enabled == true )
+    {
+        SMTC_MODEM_HAL_TRACE_WARNING( "***********************************************\n" );
+        SMTC_MODEM_HAL_TRACE_WARNING( "  LoRaWAN CERTIFICATION is ENABLED on stack %d\n", ctx->stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "***********************************************\n" );
+    }
+    else
+    {
+        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRaWAN Certification is disabled on stack %d\n", ctx->stack_id );
+    }
 
     lorawan_certification_init( ctx );
 

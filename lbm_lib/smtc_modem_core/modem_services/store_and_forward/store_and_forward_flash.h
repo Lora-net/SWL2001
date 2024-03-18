@@ -114,7 +114,7 @@ store_and_forward_flash_rc_t store_and_forward_flash_set_state( uint8_t         
                                                                 store_and_forward_flash_state_t enabled );
 
 /**
- * @brief Get the state of the store and foarward service
+ * @brief Get the state of the store and forward service
  *
  * @param [in] stack_id Stack identifier
  * @return store_and_forward_flash_state_t

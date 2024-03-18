@@ -35,7 +35,7 @@
   Facilitates porting with the following required MCU hardware resources:
   - 1 HW timer.
   - 1 SPI interface.
-  - Minimum 40KB of FLASH memory allowing an end-device to run in Class A mode for a single region; each additional region adds 1.5KB.
+  - Minimum 40 KB of FLASH is required to operate in Class A with a single region (EX:EU868). Each additional region adds approximately 1.5 KB.
   - Minimum 6KB of RAM memory.
   - 48B of non-volatile memory to store LoRaWAN and modem context.
     Up to 512B of non-volatile memory if a software-emulated secure-element is used.
@@ -85,6 +85,7 @@ For example, to build LoRa Basics Modem for an STM32L4 MCU the following MCU_FLA
 ### Regions
 
 Support for one or more of the following regions can be selected at compile time:
+
 - AS_923 - AS923MHz ISM Band. Group selection is performed at runtime through the API.
 - AU_915 - AU915-928MHz ISM Band.
 - CN_470 - CN470-510MHz Band.
@@ -198,6 +199,7 @@ Before initiating a join procedure, set LoRaWAN parameters using the following f
 
 Once parameters are set, start joining a LoRaWAN network by calling `smtc_modem_join_network()`.
 The user is informed of the procedure's progress via two events:
+
 - `SMTC_MODEM_EVENT_JOINED`: Join accept received; the join procedure is complete.
 - `SMTC_MODEM_EVENT_JOINFAIL`: Nothing received after the join request; the join procedure continues.
 
@@ -235,6 +237,7 @@ Once connected to a LoRaWAN network, configure parameters:
 - Number of transmissions for each unconfirmed uplink with `smtc_modem_set_nb_trans()`
 
 Retrieve information about the connection:
+
 - Duty cycle limitation status with `smtc_modem_get_duty_cycle_status()`
 - Maximum size of the next uplink with `smtc_modem_get_next_tx_max_payload()`
 - Available datarates with `smtc_modem_get_enabled_datarates()`
@@ -284,6 +287,7 @@ To change the ping slot periodicity (default is 7, meaning a ping slot every 128
 
 Up to 4 multicast groups can be configured by calling `smtc_modem_multicast_set_grp_config()` with the following parameters
 for each group to be configured:
+
 - Group ID
 - Address
 - Network session key
@@ -294,6 +298,7 @@ To retrieve the group address of a specific group ID, use `smtc_modem_multicast_
 #### LoRaWAN Multicast in Class B
 
 In Class B mode, when multicast groups are configured, initiate each session by calling `smtc_modem_multicast_class_b_start_session()` with the following parameters:
+
 - Group ID
 - Frequency
 - Datarate
@@ -306,10 +311,10 @@ To halt all Class B multicast sessions, use `smtc_modem_multicast_class_b_stop_a
 #### LoRaWAN Multicast in Class C
 
 In Class C mode, when multicast groups are configured, initiate each session with `smtc_modem_multicast_class_c_start_session()` and provide:
+
 - Group ID
 - Frequency
 - Datarate
-
 
 Class C multicast downlinks are available by fetching downlink data with `smtc_modem_get_downlink_data()` after the event `SMTC_MODEM_EVENT_DOWNDATA` triggered. The window metadata value with `SMTC_MODEM_DL_WINDOW_RXC_MC_GRPx`(x being the multicast group ID).
 It is possible to read back the status of the current session by calling `smtc_modem_multicast_class_c_get_session_status()`.
@@ -329,6 +334,7 @@ Initiate LoRaWAN-specific Mac requests with `smtc_modem_trig_lorawan_mac_request
 
 Use `smtc_modem_trig_lorawan_mac_request()` with the `SMTC_MODEM_LORAWAN_MAC_REQ_LINK_CHECK` bit mask to generate a LoRaWAN Link Check Request uplink.  
 Transmission status is available through the `SMTC_MODEM_EVENT_LINK_CHECK` event:
+
 - `SMTC_MODEM_EVENT_MAC_REQUEST_NOT_ANSWERED`: No answer received from the network.
 - `SMTC_MODEM_EVENT_MAC_REQUEST_ANSWERED`: Valid answer received; data can be fetched using `smtc_modem_get_lorawan_link_check_data()`.
 
@@ -336,6 +342,7 @@ Transmission status is available through the `SMTC_MODEM_EVENT_LINK_CHECK` event
 
 Use `smtc_modem_trig_lorawan_mac_request()` with the `SMTC_MODEM_LORAWAN_MAC_REQ_DEVICE_TIME` bit mask to generate a LoRaWAN Device Time Request uplink.  
 Transmission status is available through the `SMTC_MODEM_EVENT_LORAWAN_MAC_TIME` event:
+
 - `SMTC_MODEM_EVENT_MAC_REQUEST_NOT_ANSWERED`: No answer received from the network.
 - `SMTC_MODEM_EVENT_MAC_REQUEST_ANSWERED`: Valid answer received; time can be fetched using `smtc_modem_get_lorawan_mac_time()`.
 
@@ -343,6 +350,7 @@ Transmission status is available through the `SMTC_MODEM_EVENT_LORAWAN_MAC_TIME`
 
 Use `smtc_modem_trig_lorawan_mac_request()` with the `SMTC_MODEM_LORAWAN_MAC_REQ_PING_SLOT_INFO` bit mask to generate a LoRaWAN Ping Slot Info Request uplink.  
 Transmission status is available through the `SMTC_MODEM_EVENT_CLASS_B_PING_SLOT_INFO` event:
+
 - `SMTC_MODEM_EVENT_MAC_REQUEST_NOT_ANSWERED`: No answer received from the network.
 - `SMTC_MODEM_EVENT_MAC_REQUEST_ANSWERED`: Network acknowledged the request.
 
@@ -397,6 +405,7 @@ To activate it during project compilation, set the `LBM_FUOTA` flag to `yes` and
 Multi-Package Access is not automaticaly added to compilation even if `LBM_FUOTA` flag is set to `yes`. User shall set `LBM_FUOTA_ENABLE_MPA` to yes to use it.
 
 Additionally, provide the following compilation fields:
+
 - `FUOTA_MAXIMUM_NB_OF_FRAGMENTS`
 - `FUOTA_MAXIMUM_SIZE_OF_FRAGMENTS`
 - `FUOTA_MAXIMUM_FRAG_REDUNDANCY`
@@ -406,6 +415,7 @@ Class B, Class C, multicast, and the previously mentioned packages are automatic
 #### Prerequisites before starting a FUOTA session
 
 Two essential functions must be implemented for the FUOTA service:
+
 - `smtc_modem_hal_context_store` for the `CONTEXT_FUOTA` parameter
 - `smtc_modem_hal_context_restore` function
 
@@ -441,6 +451,7 @@ When all Class C multicast sessions are completed, the stack remains in Class C 
 The process is similar to that described for Class C with the exception that Class B activation process will generate some dedicated events (see Class B section for details).
 
 In normal operation, the user should receive the following events successively:
+
 - `SMTC_MODEM_EVENT_NEW_MULTICAST_SESSION_CLASS_B`
 - `SMTC_MODEM_EVENT_LORAWAN_FUOTA_DONE`
 - `SMTC_MODEM_EVENT_NO_MORE_MULTICAST_SESSION_CLASS_B`
@@ -449,6 +460,7 @@ In normal operation, the user should receive the following events successively:
 
 The user can stream data, allowing LoRa Basics™ Modem to handle maximum transmission size limits.
 Before initiating a stream, the user must set several parameters using `smtc_modem_stream_init()`:
+
 - LoRaWAN FPort
 - Encryption mode
 - Redundancy ratio
@@ -462,6 +474,7 @@ The event `SMTC_MODEM_EVENT_STREAM_DONE` is triggered when the last byte of the 
 Empower your application with the Large File Upload service in LoRa Basics Modem, allowing you to transmit files of up to 8180 bytes seamlessly, with the modem managing maximum transmission size limits.
 
 Before initiating a file upload, set the required parameters by invoking `smtc_modem_file_upload_init()`:
+
 - Application index
 - Encryption mode
 - File to be sent and its size
@@ -470,6 +483,7 @@ Before initiating a file upload, set the required parameters by invoking `smtc_m
 Once configured, commence the transfer with `smtc_modem_file_upload_start()`. If needed, the transfer can be aborted using `smtc_modem_file_upload_reset()`.
 
 The event `SMTC_MODEM_EVENT_UPLOAD_DONE` is triggered when:
+
 - The LoRa Cloud Modem & Geolocation Services acknowledges the reception with a dedicated downlink message
 (status set to `SMTC_MODEM_EVENT_UPLOAD_DONE_SUCCESSFUL`)
 - No acknowledgment is received after the last upload (status set to `SMTC_MODEM_EVENT_UPLOAD_DONE_ABORTED`)
@@ -481,6 +495,7 @@ The event `SMTC_MODEM_EVENT_UPLOAD_DONE` is triggered when:
 The device management service allows sending periodic information reports. Enable this service using `smtc_modem_dm_enable()`.
 
 Before initiating a periodic information report, set various parameters (order does not matter):
+
 - LoRaWAN FPort, with `smtc_modem_dm_set_fport()`
 - Fields to be reported, with `smtc_modem_dm_set_periodic_info_fields()`
 - (Optional) User data to be reported, with `smtc_modem_dm_set_user_data()` - useful only if `SMTC_MODEM_DM_FIELD_APP_STATUS` is part of the user_data parameter given to `smtc_modem_dm_set_periodic_info_fields()`
@@ -491,6 +506,7 @@ Request a device management information report, distinct from periodic reports, 
 #### Downlink requests
 
 The cloud service may send requests to the modem on the device management port. Four kinds of requests can be received:
+
 - **Reset request**: Requests a reset (a `SMTC_MODEM_EVENT_RESET` event will be triggered once the modem resets)
 - **Rejoin**: Asks the modem to leave and rejoin the network (a new `SMTC_MODEM_EVENT_JOINED` or `SMTC_MODEM_EVENT_JOINFAIL` will be triggered afterward)
 - **Mute**: ask the modem to mute itself permanently or during a specified number of days (a `SMTC_MODEM_EVENT_MUTE` event is triggered)
@@ -532,6 +548,7 @@ In the provided example on the STM32L4 MCU (under the lbm_examples folder), LPTI
 - [charge] Values returned by `smtc_modem_get_charge()` for regions CN470 and CN470_RP1 are not accurate.
 - [charge] Values returned by `smtc_modem_get_charge()` for the LR-FHSS based datarates are not accurate.
 - [charge] Values returned by `smtc_modem_get_charge()` for sx127x radios are not accurate.
+- [charge] Values returned by `smtc_modem_get_charge()` do not count CSMA and LBT power consumption.
 - [LBT-CSMA] Avoid combining LBT and CSMA features, as doing so may result in unpredictable stack behavior.
 - [modem-status] The joining bit status is exclusively set during the LoRaWAN join transaction (i.e., TX/RX1/RX2) and remains unset between join attempts.
 - [file upload] DAS may encounter difficulties reconstructing small files (less than 13 bytes) when the modem operates in the US915 region and utilizes DR0 data rate.

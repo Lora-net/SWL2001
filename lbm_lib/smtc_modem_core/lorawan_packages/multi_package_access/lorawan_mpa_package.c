@@ -179,6 +179,7 @@ typedef enum mpa_multi_pack_buffer_req_status_e
 {
     MPA_MULTI_PACK_BUFFER_REQ_NOT_RCV = 0x00,
     MPA_MULTI_PACK_BUFFER_REQ_OK      = 0x01,
+    MPA_MULTI_PACK_BUFFER_REQ_PENDING = 0x02,
     MPA_MULTI_PACK_BUFFER_REQ_ERROR   = 0xFF,
 } mpa_multi_pack_buffer_req_status_t;
 
@@ -199,7 +200,9 @@ typedef struct lorawan_mpa_package_s
     mpa_multi_pack_buffer_req_status_t mpa_multi_pack_buffer_req_status;
     uint8_t                            start_byte;
     uint8_t                            stop_byte;
-
+    uint8_t                            start_byte_pending;
+    uint8_t                            stop_byte_pending;
+    uint8_t                            nb_cmd_parsed;
 } lorawan_mpa_package_ctx_t;
 
 /* -----------------------------------------------------------------------------
@@ -546,14 +549,17 @@ static mpa_status_t mpa_package_parser( lorawan_mpa_package_ctx_t* ctx, uint8_t*
     uint8_t mpa_package_rx_buffer_index = 0;
     uint8_t ans_index                   = 0;
 
-    uint8_t pkg_id_tmp;
-    uint8_t pkg_id_tmp_previous = MPA_ID;
+    uint8_t                            pkg_id_tmp;
+    uint8_t                            pkg_id_tmp_previous                  = MPA_ID;
+    mpa_multi_pack_buffer_req_status_t mpa_multi_pack_buffer_req_status_bkp = ctx->mpa_multi_pack_buffer_req_status;
 
     *increment_event = false;
 
     ctx->mpa_multi_pack_buffer_req_status = MPA_MULTI_PACK_BUFFER_REQ_NOT_RCV;
 
     SMTC_MODEM_HAL_TRACE_ARRAY( "MPA rcv buff", mpa_package_rx_buffer, mpa_package_rx_buffer_length );
+
+    ctx->nb_cmd_parsed = 0;
 
     while( ( mpa_package_rx_buffer_length - MPA_TOKEN_SIZE ) > mpa_package_rx_buffer_index )
     {
@@ -577,6 +583,8 @@ static mpa_status_t mpa_package_parser( lorawan_mpa_package_ctx_t* ctx, uint8_t*
             return MPA_STATUS_ERROR;
         }
 
+        ctx->nb_cmd_parsed++;
+
         if( mpa_service_push_payload_to_targeted_package[pkg_id_tmp & 0x7F](
                 ctx->stack_id, &mpa_package_rx_buffer[mpa_package_rx_buffer_index], &nb_bytes_read_payload_in,
                 rx_window, tmp_tx_ans, &payload_out_length, sizeof( tmp_tx_ans ), rx_timestamp_ms ) == false )
@@ -585,7 +593,8 @@ static mpa_status_t mpa_package_parser( lorawan_mpa_package_ctx_t* ctx, uint8_t*
         }
 
         // Copy temp answer payload only if mpa_tx_payload_ans is not yet full
-        if( ( ans_index + payload_out_length ) <= sizeof( ctx->mpa_tx_payload_ans ) )
+        if( ( ( ans_index + payload_out_length ) < sizeof( ctx->mpa_tx_payload_ans ) ) &&
+            ( payload_out_length <= sizeof( tmp_tx_ans ) ) )
         {
             memcpy( &ctx->mpa_tx_payload_ans[ans_index], tmp_tx_ans, payload_out_length );  // Copy all answers
             ans_index += payload_out_length;
@@ -593,6 +602,21 @@ static mpa_status_t mpa_package_parser( lorawan_mpa_package_ctx_t* ctx, uint8_t*
 
         // Go to the next command_id or packet_id
         mpa_package_rx_buffer_index += nb_bytes_read_payload_in;
+    }
+
+    if( ctx->mpa_multi_pack_buffer_req_status == MPA_MULTI_PACK_BUFFER_REQ_PENDING )
+    {
+        if( ctx->nb_cmd_parsed == 1 )
+        {  // MultiPackBufferReq is the only command present
+            ctx->mpa_multi_pack_buffer_req_status = MPA_MULTI_PACK_BUFFER_REQ_OK;
+            ctx->start_byte                       = ctx->start_byte_pending;
+            ctx->stop_byte                        = ctx->stop_byte_pending;
+        }
+        else
+        {  // Ignore downlink
+            ctx->mpa_multi_pack_buffer_req_status = mpa_multi_pack_buffer_req_status_bkp;
+            return MPA_STATUS_OK;
+        }
     }
 
     if( ctx->mpa_multi_pack_buffer_req_status == MPA_MULTI_PACK_BUFFER_REQ_NOT_RCV )
@@ -664,7 +688,7 @@ static bool mpa_package_parser_internal( uint8_t stack_id, uint8_t* payload_in, 
     SMTC_MODEM_HAL_TRACE_WARNING( "MPA CiD 0x%02x\n", payload_in[mpa_package_rx_buffer_index] );
 
     uint8_t cmd_id = payload_in[mpa_package_rx_buffer_index];
-    if( cmd_id > sizeof( mpa_req_cmd_size ) )
+    if( cmd_id >= sizeof( mpa_req_cmd_size ) )
     {
         return false;
     }
@@ -697,32 +721,26 @@ static bool mpa_package_parser_internal( uint8_t stack_id, uint8_t* payload_in, 
         break;
     }
     case MPA_MULTI_PACK_BUFFER_REQ: {
-        uint8_t start_byte = payload_in[mpa_package_rx_buffer_index + 1];
-        uint8_t stop_byte  = payload_in[mpa_package_rx_buffer_index + 2];
+        ctx->start_byte_pending = payload_in[mpa_package_rx_buffer_index + 1];
+        ctx->stop_byte_pending  = payload_in[mpa_package_rx_buffer_index + 2];
 
-        ctx->mpa_multi_pack_buffer_req_status = MPA_MULTI_PACK_BUFFER_REQ_OK;
+        ctx->mpa_multi_pack_buffer_req_status = MPA_MULTI_PACK_BUFFER_REQ_PENDING;
 
         // Start byte is greater than the payload answer
-        if( start_byte > ( ctx->mpa_tx_payload_ans_size - 1 ) )
+        if( ctx->start_byte_pending > ( ctx->mpa_tx_payload_ans_size - 1 ) )
         {
             ctx->mpa_multi_pack_buffer_req_status = MPA_MULTI_PACK_BUFFER_REQ_ERROR;
         }
 
         // Stop byte is smaller than the start byte
-        if( stop_byte < start_byte )
+        if( ctx->stop_byte_pending < ctx->start_byte_pending )
         {
             ctx->mpa_multi_pack_buffer_req_status = MPA_MULTI_PACK_BUFFER_REQ_ERROR;
         }
 
-        if( stop_byte > MPA_SIZE_ANS_MAX - MPA_FRAG_HDR_SIZE - MPA_TOKEN_SIZE )
+        if( ctx->stop_byte_pending > MPA_SIZE_ANS_MAX - MPA_FRAG_HDR_SIZE - MPA_TOKEN_SIZE )
         {
-            stop_byte = MPA_SIZE_ANS_MAX - MPA_FRAG_HDR_SIZE - MPA_TOKEN_SIZE;
-        }
-
-        if( ctx->mpa_multi_pack_buffer_req_status == MPA_MULTI_PACK_BUFFER_REQ_OK )
-        {
-            ctx->start_byte = start_byte;
-            ctx->stop_byte  = stop_byte;
+            ctx->stop_byte_pending = MPA_SIZE_ANS_MAX - MPA_FRAG_HDR_SIZE - MPA_TOKEN_SIZE;
         }
         break;
     }
