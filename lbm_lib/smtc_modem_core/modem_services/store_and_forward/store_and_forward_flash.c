@@ -498,7 +498,7 @@ static void store_and_forward_flash_service_on_launch( void* service_id )
 
     bool     is_crc_ok    = false;
     int32_t  fetch_status = -1;
-    uint32_t rtc_ms       = smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS;
+    uint32_t rtc_ms       = smtc_modem_hal_get_time_in_ms( )  ;
 
     // TODO check payload len and adjust the datarate with custom profile
     // uint8_t max_payload = lorawan_api_next_max_payload_length_get( stack_id );
@@ -573,7 +573,7 @@ static void store_and_forward_flash_service_on_launch( void* service_id )
         }
 #endif
 
-        status_lorawan_t send_status = lorawan_api_payload_send(
+        status_lorawan_t send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
             entry.fport, true, entry.data, entry.data_len,
             ( store_and_forward_flash_obj[idx].sending_with_ack == true ) ? CONF_DATA_UP : UNCONF_DATA_UP, rtc_ms,
             stack_id );

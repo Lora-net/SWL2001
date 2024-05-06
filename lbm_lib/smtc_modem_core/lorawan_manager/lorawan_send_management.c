@@ -48,6 +48,7 @@
 #include "modem_core.h"
 #include "modem_event_utilities.h"
 #include "smtc_duty_cycle.h"
+#include "modem_tx_protocol_manager.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -78,8 +79,6 @@
 #ifndef MODEM_MAX_RANDOM_DELAY_MS
 #define MODEM_MAX_RANDOM_DELAY_MS 3000
 #endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 
 /*
  * -----------------------------------------------------------------------------
@@ -135,7 +134,7 @@ static uint8_t lorawan_send_management_service_downlink_handler( lr1_stack_mac_d
  */
 void lorawan_send_management_services_init( uint8_t* service_id, uint8_t task_id,
                                             uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                            void    ( **on_launch_callback )( void* ),
+                                            void ( **on_launch_callback )( void* ),
                                             void ( **on_update_callback )( void* ), void** context_callback )
 {
     *downlink_callback  = lorawan_send_management_service_downlink_handler;
@@ -197,13 +196,13 @@ static void lorawan_send_management_service_on_launch( void* context )
     stask_manager*   task_manager                                         = ( stask_manager* ) context;
     lorawan_send_management_obj[STACK_ID_CURRENT_TASK].rx_ack_bit_context = 0;
 
-    send_status = lorawan_api_payload_send(
-        lorawan_send_management_obj[STACK_ID_CURRENT_TASK].fport,
+    send_status = tx_protocol_manager_request(
+        TX_PROTOCOL_TRANSMIT_LORA, lorawan_send_management_obj[STACK_ID_CURRENT_TASK].fport,
         lorawan_send_management_obj[STACK_ID_CURRENT_TASK].fport_present,
         lorawan_send_management_obj[STACK_ID_CURRENT_TASK].payload,
         lorawan_send_management_obj[STACK_ID_CURRENT_TASK].payload_length,
         ( lorawan_send_management_obj[STACK_ID_CURRENT_TASK].packet_type == true ) ? CONF_DATA_UP : UNCONF_DATA_UP,
-        smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, STACK_ID_CURRENT_TASK );
+        smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
 
     if( send_status == OKLORAWAN )
     {
@@ -230,7 +229,8 @@ static void lorawan_send_management_service_on_update( void* context )
 
     if( task_manager->modem_task[CURRENT_TASK_ID].task_enabled == true )
     {
-        if( task_manager->modem_task[CURRENT_TASK_ID].task_context == true )
+        if( ( task_manager->modem_task[CURRENT_TASK_ID].task_context == true ) &&
+            ( tx_protocol_manager_tx_is_aborted( ) == false ) )
         {
             if( lorawan_send_management_obj[STACK_ID_CURRENT_TASK].rx_ack_bit_context == 1 )
             {
@@ -251,10 +251,20 @@ static void lorawan_send_management_service_on_update( void* context )
 
 static uint8_t lorawan_send_management_service_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
+#ifdef RELAY_TX
+    if( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX2 ) ||
+        ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX1 ) ||
+        ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXR ) )
+#else
     if( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX2 ) ||
         ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX1 ) )
+#endif
     {
-        lorawan_send_management_obj[rx_down_data->stack_id].rx_ack_bit_context = rx_down_data->rx_metadata.rx_ack_bit;
+        if( lorawan_send_management_obj[rx_down_data->stack_id].rx_ack_bit_context != 1 )
+        {
+            lorawan_send_management_obj[rx_down_data->stack_id].rx_ack_bit_context =
+                rx_down_data->rx_metadata.rx_ack_bit;
+        }
     }
 
     return MODEM_DOWNLINK_UNCONSUMED;

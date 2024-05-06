@@ -241,9 +241,9 @@ void stream_service_on_launch( void* service_id )
     // TODO Is this enough to ensure we send everything?
     if( ( stream_rc == STREAM_OK ) && ( fragment_size > 0 ) )
     {
-        stream_ctx[idx].send_status = lorawan_api_payload_send(
+        stream_ctx[idx].send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
             stream_ctx[idx].port, true, stream_payload, fragment_size + tx_buff_offset, UNCONF_DATA_UP,
-            smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, stream_ctx[idx].stack_id );
+            smtc_modem_hal_get_time_in_ms( )  , stream_ctx[idx].stack_id );
     }
     else
     {

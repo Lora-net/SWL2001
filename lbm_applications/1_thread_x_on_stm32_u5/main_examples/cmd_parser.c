@@ -1224,15 +1224,27 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     case CMD_LORAWAN_GET_LOST_CONNECTION_COUNTER:
     {
         uint16_t lost_connection_cnt = 0;
+        uint32_t lost_connection_since_s = 0;
 
         cmd_output->return_code =
-            rc_lut[smtc_modem_lorawan_get_lost_connection_counter( STACK_ID, &lost_connection_cnt )];
-        if( cmd_output->return_code == CMD_RC_OK )
-        {
-            cmd_output->buffer[0] = ( lost_connection_cnt >> 8 ) & 0xff;
-            cmd_output->buffer[1] = ( lost_connection_cnt & 0xff );
+            rc_lut[smtc_modem_lorawan_get_lost_connection_counter(STACK_ID, &lost_connection_cnt)];
 
-            cmd_output->length = 2;
+        if (cmd_output->return_code == CMD_RC_OK)
+        {
+            cmd_output->return_code =
+                rc_lut[smtc_modem_lorawan_get_lost_connection_counter_since_s(STACK_ID, &lost_connection_since_s)];
+        }
+        if (cmd_output->return_code == CMD_RC_OK)
+        {
+            cmd_output->buffer[0] = (lost_connection_cnt >> 8) & 0xff;
+            cmd_output->buffer[1] = (lost_connection_cnt & 0xff);
+
+            cmd_output->buffer[2] = (lost_connection_since_s >> 24) & 0xff;
+            cmd_output->buffer[3] = (lost_connection_since_s >> 16) & 0xff;
+            cmd_output->buffer[4] = (lost_connection_since_s >> 8) & 0xff;
+            cmd_output->buffer[5] = (lost_connection_since_s & 0xff);
+
+            cmd_output->length = 6;
         }
         break;
     }

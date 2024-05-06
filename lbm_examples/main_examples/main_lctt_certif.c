@@ -56,7 +56,7 @@
 #include "modem_pinout.h"
 
 #include <string.h>
-
+#include "smtc_modem_relay_api.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -224,7 +224,10 @@ static void send_uplink_counter_on_port( uint8_t port );
  * @brief Example enable/disable certification mode by pushing blue button
  *
  */
-void main_lctt_certif( void )
+#if defined( USE_RELAY_TX )
+static smtc_modem_relay_tx_config_t relay_config = { 0 };
+#endif
+void                                main_lctt_certif( void )
 {
     uint32_t sleep_time_ms = 0;
 
@@ -317,6 +320,14 @@ static void modem_event_callback( void )
 #endif
             // Set user region
             ASSERT_SMTC_MODEM_RC( smtc_modem_set_region( stack_id, MODEM_EXAMPLE_REGION ) );
+            #if defined( USE_RELAY_TX )
+            relay_config.second_ch_enable = false;
+            relay_config.activation       = SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLED;
+            relay_config.number_of_miss_wor_ack_to_switch_in_nosync_mode = 1;
+            relay_config.smart_level                                     = 5;
+            relay_config.backoff                                         = 4;
+            ASSERT_SMTC_MODEM_RC( smtc_modem_relay_tx_enable( stack_id, &relay_config ) );
+            #endif
             ASSERT_SMTC_MODEM_RC( smtc_modem_get_certification_mode( stack_id, &certif_running ) );
             if( certif_running == false )
             {

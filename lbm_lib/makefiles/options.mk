@@ -6,7 +6,7 @@
 RADIO ?= nc
 
 # MCU - Must be provided by user
-MCU_FLAGS =? nc
+MCU_FLAGS ?= nc
 
 # Prefix for all build directories
 BUILD_ROOT = build
@@ -95,7 +95,7 @@ FUOTA_MAXIMUM_FRAG_REDUNDANCY ?= nc
 # In case FUOTA is allowed, allow the use of Firmware Management Package
 LBM_FUOTA_ENABLE_FMP ?= yes
 # In case FUOTA is allowed, llow the use of Multi-Package Access Package
-LBM_FUOTA_ENABLE_MPA ?= no
+LBM_FUOTA_ENABLE_MPA ?= yes
 
 #-----------------------------------------------------------------------------
 # LoRaCloud related options

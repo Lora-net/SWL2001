@@ -76,7 +76,7 @@
  *
  * @returns RAL interrupt status
  */
-static ral_irq_t ral_llcc68_convert_irq_flags_to_ral( llcc68_irq_mask_t llcc68_irq );
+ral_irq_t ral_llcc68_convert_irq_flags_to_ral( llcc68_irq_mask_t llcc68_irq );
 
 /**
  * @brief Convert interrupt flags from RAL context to LLCC68 context
@@ -85,7 +85,7 @@ static ral_irq_t ral_llcc68_convert_irq_flags_to_ral( llcc68_irq_mask_t llcc68_i
  *
  * @returns LLCC68 interrupt status
  */
-static llcc68_irq_mask_t ral_llcc68_convert_irq_flags_from_ral( ral_irq_t ral_irq );
+llcc68_irq_mask_t ral_llcc68_convert_irq_flags_from_ral( ral_irq_t ral_irq );
 
 /**
  * @brief Convert GFSK modulation parameters from RAL context to LLCC68 context
@@ -95,8 +95,8 @@ static llcc68_irq_mask_t ral_llcc68_convert_irq_flags_from_ral( ral_irq_t ral_ir
  *
  * @returns Operation status
  */
-static ral_status_t ral_llcc68_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
-                                                                 llcc68_mod_params_gfsk_t*    radio_mod_params );
+ral_status_t ral_llcc68_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
+                                                          llcc68_mod_params_gfsk_t*    radio_mod_params );
 
 /**
  * @brief Convert GFSK packet parameters from RAL context to LLCC68 context
@@ -106,8 +106,8 @@ static ral_status_t ral_llcc68_convert_gfsk_mod_params_from_ral( const ral_gfsk_
  *
  * @returns Operation status
  */
-static ral_status_t ral_llcc68_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
-                                                                 llcc68_pkt_params_gfsk_t*    radio_pkt_params );
+ral_status_t ral_llcc68_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
+                                                          llcc68_pkt_params_gfsk_t*    radio_pkt_params );
 
 /**
  * @brief Convert LoRa modulation parameters from RAL context to LLCC68 context
@@ -117,8 +117,8 @@ static ral_status_t ral_llcc68_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
  *
  * @returns Operation status
  */
-static ral_status_t ral_llcc68_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
-                                                                 llcc68_mod_params_lora_t*    radio_mod_params );
+ral_status_t ral_llcc68_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
+                                                          llcc68_mod_params_lora_t*    radio_mod_params );
 
 /**
  * @brief Convert LoRa packet parameters from RAL context to LLCC68 context
@@ -128,8 +128,8 @@ static ral_status_t ral_llcc68_convert_lora_mod_params_from_ral( const ral_lora_
  *
  * @returns Operation status
  */
-static ral_status_t ral_llcc68_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
-                                                                 llcc68_pkt_params_lora_t*    radio_pkt_params );
+ral_status_t ral_llcc68_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
+                                                          llcc68_pkt_params_lora_t*    radio_pkt_params );
 
 /**
  * @brief Convert LoRa CAD parameters from RAL context to LLCC68 context
@@ -139,8 +139,8 @@ static ral_status_t ral_llcc68_convert_lora_pkt_params_from_ral( const ral_lora_
  *
  * @returns Operation status
  */
-static ral_status_t ral_llcc68_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
-                                                                 llcc68_cad_params_t*         radio_lora_cad_params );
+ral_status_t ral_llcc68_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
+                                                          llcc68_cad_params_t*         radio_lora_cad_params );
 
 /*
  * -----------------------------------------------------------------------------
@@ -769,9 +769,8 @@ ral_status_t ral_llcc68_lr_fhss_get_time_on_air_in_ms( const void* context, cons
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_llcc68_lr_fhss_get_hop_sequence_count( const void*                 context,
-                                                        const ral_lr_fhss_params_t* lr_fhss_params,
-                                                        unsigned int*               hop_sequence_count )
+ral_status_t ral_llcc68_lr_fhss_get_hop_sequence_count( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                        unsigned int* hop_sequence_count )
 {
     ( void ) context;             // Unused parameter
     ( void ) lr_fhss_params;      // Unused parameter
@@ -931,7 +930,7 @@ ral_status_t ral_llcc68_get_lora_cad_det_peak( const void* context, ral_lora_sf_
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-static ral_irq_t ral_llcc68_convert_irq_flags_to_ral( llcc68_irq_mask_t llcc68_irq )
+ral_irq_t ral_llcc68_convert_irq_flags_to_ral( llcc68_irq_mask_t llcc68_irq )
 {
     ral_irq_t ral_irq = RAL_IRQ_NONE;
 
@@ -975,7 +974,7 @@ static ral_irq_t ral_llcc68_convert_irq_flags_to_ral( llcc68_irq_mask_t llcc68_i
     return ral_irq;
 }
 
-static llcc68_irq_mask_t ral_llcc68_convert_irq_flags_from_ral( ral_irq_t ral_irq )
+llcc68_irq_mask_t ral_llcc68_convert_irq_flags_from_ral( ral_irq_t ral_irq )
 {
     llcc68_irq_mask_t llcc68_irq_mask = LLCC68_IRQ_NONE;
 
@@ -1020,8 +1019,8 @@ static llcc68_irq_mask_t ral_llcc68_convert_irq_flags_from_ral( ral_irq_t ral_ir
     return llcc68_irq_mask;
 }
 
-static ral_status_t ral_llcc68_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
-                                                                 llcc68_mod_params_gfsk_t*    radio_mod_params )
+ral_status_t ral_llcc68_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
+                                                          llcc68_mod_params_gfsk_t*    radio_mod_params )
 {
     ral_status_t status       = RAL_STATUS_ERROR;
     uint8_t      bw_dsb_param = 0;
@@ -1072,8 +1071,8 @@ static ral_status_t ral_llcc68_convert_gfsk_mod_params_from_ral( const ral_gfsk_
     return status;
 }
 
-static ral_status_t ral_llcc68_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
-                                                                 llcc68_pkt_params_gfsk_t*    radio_pkt_params )
+ral_status_t ral_llcc68_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
+                                                          llcc68_pkt_params_gfsk_t*    radio_pkt_params )
 {
     radio_pkt_params->preamble_len_in_bits = ral_pkt_params->preamble_len_in_bits;
 
@@ -1209,8 +1208,8 @@ static ral_status_t ral_llcc68_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_llcc68_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
-                                                                 llcc68_mod_params_lora_t*    radio_mod_params )
+ral_status_t ral_llcc68_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
+                                                          llcc68_mod_params_lora_t*    radio_mod_params )
 {
     if( ral_mod_params->sf == RAL_LORA_SF12 )
     {
@@ -1284,8 +1283,8 @@ static ral_status_t ral_llcc68_convert_lora_mod_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_llcc68_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
-                                                                 llcc68_pkt_params_lora_t*    radio_pkt_params )
+ral_status_t ral_llcc68_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
+                                                          llcc68_pkt_params_lora_t*    radio_pkt_params )
 {
     radio_pkt_params->preamble_len_in_symb = ral_pkt_params->preamble_len_in_symb;
 
@@ -1314,8 +1313,8 @@ static ral_status_t ral_llcc68_convert_lora_pkt_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_llcc68_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
-                                                                 llcc68_cad_params_t*         radio_lora_cad_params )
+ral_status_t ral_llcc68_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
+                                                          llcc68_cad_params_t*         radio_lora_cad_params )
 {
     switch( ral_lora_cad_params->cad_symb_nb )
     {

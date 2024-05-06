@@ -57,7 +57,7 @@
 #define CURRENT_STACK ( task_id / NUMBER_OF_TASKS )
 #define NUMBER_MAX_OF_ALMANAC_OBJ 1  // modify in case of multiple obj
 
-#define MODEM_TASK_DELAY_MS ( smtc_modem_hal_get_random_nb_in_range( 200, 3000 ) )
+
 /**
  * @brief Check is the index is valid before accessing ALCSync object
  *
@@ -173,9 +173,9 @@ void almanac_service_on_launch( void* context )
     dm_port = DM_PORT;
 #endif
 
-    lorawan_api_payload_send( dm_port, true, &almanac_obj.almanac_status_from_lr11xx[1],
+    tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, dm_port, true, &almanac_obj.almanac_status_from_lr11xx[1],
                               SERVICE_LR11XX_GNSS_CONTEXT_STATUS_LENGTH - 1, UNCONF_DATA_UP,
-                              smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, almanac_obj.stack_id );
+                              smtc_modem_hal_get_time_in_ms( )  , almanac_obj.stack_id );
     if( almanac_obj.up_count > 0 )
     {
         almanac_obj.up_count--;

@@ -110,15 +110,6 @@
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
-#ifndef MODEM_MIN_RANDOM_DELAY_MS
-#define MODEM_MIN_RANDOM_DELAY_MS 200
-#endif
-
-#ifndef MODEM_MAX_RANDOM_DELAY_MS
-#define MODEM_MAX_RANDOM_DELAY_MS 3000
-#endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 
 /**
  * @brief Minimal number of detected access point in a scan result to consider the scan valid
@@ -351,9 +342,9 @@ static void mw_wifi_send_service_on_launch( void* context_callback )
 
     if( mw_wifi_send_obj.send_mode == SMTC_MODEM_SEND_MODE_UPLINK )
     {
-        send_status = lorawan_api_payload_send(
+        send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
             mw_wifi_send_obj.fport, true, wifi_result_buffer, wifi_result_buffer_size, UNCONF_DATA_UP,
-            smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, mw_wifi_send_obj.stack_id );
+            smtc_modem_hal_get_time_in_ms( )  , mw_wifi_send_obj.stack_id );
 
         if( send_status == OKLORAWAN )
         {
@@ -364,7 +355,7 @@ static void mw_wifi_send_service_on_launch( void* context_callback )
         else
         {
             task_manager->modem_task[mw_wifi_send_obj.task_id].task_context = false;
-            SMTC_MODEM_HAL_TRACE_ERROR( "Wi-Fi Tx: lorawan_api_payload_send() failed.\n" );
+            SMTC_MODEM_HAL_TRACE_ERROR( "Wi-Fi Tx: tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,) failed.\n" );
         }
     }
     else

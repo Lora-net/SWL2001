@@ -18,10 +18,6 @@ Semtech chosen radio board:
 - lr1121 (EVK board)
 - sx1261 (SX1261MB2xAS)
 - sx1262 (SX1262MB2xAS)
-- sx1268 (SX1262MB2xAS)
-- sx128x (EVK board)
-- sx1272 (SX1272MB2DAS)
-- sx1276 (SX1276MB1MAS)
 
 ## Getting Started
 
@@ -76,6 +72,25 @@ Build command example for lr1110 radio
 make lr1110 MODEM_APP=LCTT_CERTIF
 ```
 
+### Relay TX
+
+This example provides an application where the relay TX feature is enabled.
+
+This exemple reuse the Periodical Uplink main exemple. 
+
+The end-device is configured in **DYNAMIC** mode (refer to TS011-1.0.0 table 40). After the reset, the end-device will enable the relay tx feature and add a WOR frame before every LoRaWAN uplink. The relay feature will be automatically disable if the end-device receive a downlink on RX1 or RX2. 
+
+In this exemple, the CSMA is compiled and enabled by default.
+
+LoRaWAN credentials shall be provided in [example_options.h](main_examples/example_options.h)
+
+Build command example for lr1110 radio
+
+```bash
+
+make full_lr1110 MODEM_APP=RELAY_TX ALLOW_RELAY_TX=yes 
+```
+
 ### MCU Porting
 
  All MCU specific code can be found under following folders:
@@ -96,3 +111,5 @@ Any smtc_modem_hal function will be mapped with corresponding mcu porting functi
 ## Fuota support
 
 Once the Fuota services are enabled (refer to the main readme for instructions on how to activate Fuota), the periodical example is sufficient to launch a Fuota campaign. However, you will need to enable the flag `ALLOW_FUOTA` to "yes" in the `app_options.mk` file.
+
+

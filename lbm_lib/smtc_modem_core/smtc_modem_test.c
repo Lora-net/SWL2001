@@ -53,7 +53,8 @@
 #include "smtc_duty_cycle.h"
 #include "smtc_modem_hal.h"
 #include "smtc_secure_element.h"
-
+#include "smtc_lbt.h"
+#include "smtc_lora_cad_bt.h"
 #include "ralf.h"
 #include "radio_planner.h"
 

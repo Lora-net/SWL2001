@@ -55,7 +55,7 @@
 #define STACK_ID_CURRENT_TASK \
     ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].stack_id
 #define CURRENT_TASK_ID ( ( stask_manager* ) context )->next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
-
+#define NAP 0
 /**
  * @brief Check is the index is valid before accessing the object
  *
@@ -70,15 +70,6 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-#ifndef MODEM_MIN_RANDOM_DELAY_MS
-#define MODEM_MIN_RANDOM_DELAY_MS 200
-#endif
-
-#ifndef MODEM_MAX_RANDOM_DELAY_MS
-#define MODEM_MAX_RANDOM_DELAY_MS 3000
-#endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 
 /*
  * -----------------------------------------------------------------------------
@@ -121,15 +112,15 @@ static uint8_t lorawan_join_management_service_downlink_handler( lr1_stack_mac_d
  *
  * @param stack_id
  */
-static void lorawan_join_internal_add_task( uint8_t stack_id );
-
+static void    lorawan_join_internal_add_task( uint8_t stack_id );
+static uint8_t nap = 0;
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
 void lorawan_join_management_services_init( uint8_t* service_id, uint8_t task_id,
                                             uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                            void    ( **on_launch_callback )( void* ),
+                                            void ( **on_launch_callback )( void* ),
                                             void ( **on_update_callback )( void* ), void** context_callback )
 {
     *downlink_callback  = lorawan_join_management_service_downlink_handler;
@@ -168,7 +159,9 @@ static void lorawan_join_management_service_on_launch( void* context )
     }
     else
     {
-        lorawan_api_join( smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
+        lorawan_api_set_join_status( STACK_ID_CURRENT_TASK, JOINING );
+        tx_protocol_manager_request( TX_PROTOCOL_JOIN_LORA, NAP, NAP, &nap, NAP, NAP, smtc_modem_hal_get_time_in_ms( ),
+                                     STACK_ID_CURRENT_TASK );
     }
 }
 
@@ -182,10 +175,11 @@ static void lorawan_join_management_service_on_update( void* context )
     }
     else
     {
+        lorawan_api_set_join_status( STACK_ID_CURRENT_TASK, JOINING );
         if( task_manager->modem_task[CURRENT_TASK_ID].task_enabled == true )
         {
-            increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_JOINFAIL, 0, STACK_ID_CURRENT_TASK );
             lorawan_join_internal_add_task( STACK_ID_CURRENT_TASK );
+            increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_JOINFAIL, 0, STACK_ID_CURRENT_TASK );
         }
     }
 
@@ -213,7 +207,8 @@ static void lorawan_join_internal_add_task( uint8_t stack_id )
     SMTC_MODEM_HAL_TRACE_WARNING( "BYPASS JOIN DUTY CYCLE activated\n" );
     task_join.time_to_execute_s += current_time_s;
 #else
-    if( lorawan_api_modem_certification_is_enabled( stack_id ) == true )
+    if( ( lorawan_api_modem_certification_is_enabled( stack_id ) == true ) ||
+        ( lorawan_api_join_duty_cycle_backoff_bypass_get( stack_id ) == true ) )
     {
         task_join.time_to_execute_s += current_time_s;
     }

@@ -98,12 +98,23 @@ enum RP_HOOK_ID_DEF
     RP_HOOK_ID_BLE_TX_BEACON,
 #endif
 
+#if defined( RELAY_TX )
+    RP_HOOK_ID_RELAY_TX,
+#if defined( ADD_CLASS_C )
+    RP_HOOK_ID_CLASS_C = RP_HOOK_ID_RELAY_TX + NUMBER_OF_STACKS,
+    RP_HOOK_ID_MAX     = RP_HOOK_ID_CLASS_C + NUMBER_OF_STACKS,
+#else
+    RP_HOOK_ID_MAX = RP_HOOK_ID_RELAY_TX + NUMBER_OF_STACKS,
+#endif
+
+#else
 #if defined( ADD_CLASS_C )
     RP_HOOK_ID_CLASS_C,
     RP_HOOK_ID_MAX = RP_HOOK_ID_CLASS_C + NUMBER_OF_STACKS,
 #else
     RP_HOOK_ID_MAX,
 #endif
+#endif  // RELAY_TX
 
 };
 #endif

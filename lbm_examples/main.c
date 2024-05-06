@@ -92,6 +92,8 @@ int main( void )
     main_porting_tests( );
 #elif MAKEFILE_APP == LCTT_CERTIF
     main_lctt_certif( );
+#elif MAKEFILE_APP == RELAY_TX
+    main_periodical_uplink( );
 #else
 #error "Unknown application" ## MAKEFILE_APP
 #endif
@@ -99,5 +101,5 @@ int main( void )
 
 /*
  * -----------------------------------------------------------------------------
- * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
+ * --- PRIVATE FUNCTIONS DEFINITI   ON --------------------------------------------
  */

@@ -50,6 +50,11 @@
 #include "lr1mac_config.h"
 #include "smtc_modem_crypto.h"
 
+#if defined( RELAY_TX )
+#include "relay_tx_api.h"
+#include "relay_tx_mac_parser.h"
+#include "relay_def.h"
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -66,9 +71,13 @@
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 #if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if defined( RELAY_TX )
+static const char* smtc_name_rx_windows[] = { "RX1", "RX2", "RXR" };
+#else
 static const char* smtc_name_rx_windows[] = { "RX1", "RX2" };
-static const char* smtc_name_bw[]         = { "BW007", "BW010", "BW015", "BW020", "BW031", "BW041", "BW062",
-                                              "BW125", "BW200", "BW250", "BW400", "BW500", "BW800", "BW1600" };
+#endif
+static const char* smtc_name_bw[] = { "BW007", "BW010", "BW015", "BW020", "BW031", "BW041", "BW062",
+                                      "BW125", "BW200", "BW250", "BW400", "BW500", "BW800", "BW1600" };
 #endif
 
 /*
@@ -136,6 +145,7 @@ void lr1_stack_mac_session_init( lr1_stack_mac_t* lr1_mac )
     lr1_mac->fcnt_up                             = 0;
     lr1_mac->retry_join_cpt                      = 0;
     lr1_mac->no_rx_packet_count_in_mobile_mode   = 0;
+    lr1_mac->no_rx_packet_since_s                = smtc_modem_hal_get_time_in_s( );
     lr1_mac->no_rx_packet_count                  = 0;
     lr1_mac->adr_ack_cnt                         = 0;
     lr1_mac->tx_fopts_current_length             = 0;
@@ -161,35 +171,6 @@ void lr1_stack_mac_region_init( lr1_stack_mac_t* lr1_mac, smtc_real_region_types
 {
     // Initialize the region with all defaults parameters
     smtc_real_init( lr1_mac->real, region_type );
-
-    // Listen Before talk initialization
-    smtc_lbt_init( lr1_mac->lbt_obj, lr1_mac->rp, RP_HOOK_ID_LBT,
-                   ( void ( * )( void* ) ) lr1_stack_mac_tx_radio_free_lbt, lr1_mac,
-                   ( void ( * )( void* ) ) lr1_stack_mac_radio_busy_lbt, lr1_mac,
-                   ( void ( * )( void* ) ) lr1_stack_mac_radio_abort_lbt, lr1_mac );
-
-    if( real_const.const_lbt_supported == true )
-    {
-        smtc_lbt_set_parameters( lr1_mac->lbt_obj, smtc_real_get_lbt_duration_ms( lr1_mac->real ),
-                                 smtc_real_get_lbt_threshold_dbm( lr1_mac->real ),
-                                 smtc_real_get_lbt_bw_hz( lr1_mac->real ) );
-        smtc_lbt_set_state( lr1_mac->lbt_obj, true );
-    }
-#if defined( ADD_CSMA )
-    smtc_lora_cad_bt_init( lr1_mac->cad_obj, lr1_mac->rp, RP_HOOK_ID_CAD,
-                           ( void ( * )( void* ) ) lr1_stack_mac_tx_radio_free_lbt, lr1_mac,
-                           ( void ( * )( void* ) ) lr1_stack_mac_radio_busy_lbt, lr1_mac,
-                           ( void ( * )( void* ) ) lr1_stack_mac_radio_busy_cad_keep_channel, lr1_mac,
-                           ( void ( * )( void* ) ) lr1_stack_mac_radio_abort_lbt, lr1_mac );
-
-#if defined( ENABLE_CSMA_BY_DEFAULT )
-    // Do not enable CSMA for region with LBT while both could be not
-    if( real_const.const_lbt_supported == false )
-    {
-        smtc_lora_cad_bt_set_state( lr1_mac->cad_obj, true );
-    }
-#endif  // ENABLE_CSMA_BY_DEFAULT
-#endif  // ADD_CSMA
 }
 
 void lr1_stack_mac_region_config( lr1_stack_mac_t* lr1_mac )
@@ -261,31 +242,7 @@ void lr1_stack_mac_tx_frame_encrypt( lr1_stack_mac_t* lr1_mac )
     }
     lr1_mac->tx_payload_size = lr1_mac->tx_payload_size + 4;
 }
-void lr1_stack_mac_tx_radio_free_lbt( lr1_stack_mac_t* lr1_mac )
-{
-    lr1_mac->radio_process_state = RADIOSTATE_TX_ON;
-    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + lr1_mac->rp->margin_delay +
-                                   smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
-    lr1_mac->send_at_time = true;
-    lr1_stack_mac_tx_radio_start( lr1_mac );
-}
-void lr1_stack_mac_radio_busy_lbt( lr1_stack_mac_t* lr1_mac )
-{
-    lr1_mac->radio_process_state = RADIOSTATE_IDLE;
-    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + lr1_mac->rp->margin_delay;
-    smtc_real_get_next_channel( lr1_mac->real, lr1_mac->tx_data_rate, &lr1_mac->tx_frequency, &lr1_mac->rx1_frequency,
-                                &lr1_mac->nb_available_tx_channel );
-}
-void lr1_stack_mac_radio_busy_cad_keep_channel( lr1_stack_mac_t* lr1_mac )
-{
-    lr1_mac->radio_process_state = RADIOSTATE_IDLE;
-    lr1_mac->rtc_target_timer_ms = smtc_modem_hal_get_time_in_ms( ) + lr1_mac->rp->margin_delay;
-}
-void lr1_stack_mac_radio_abort_lbt( lr1_stack_mac_t* lr1_mac )
-{
-    lr1_mac->lr1mac_state        = LWPSTATE_IDLE;
-    lr1_mac->radio_process_state = RADIOSTATE_ABORTED_BY_RP;
-}
+
 void lr1_stack_mac_tx_lora_launch_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
@@ -296,7 +253,7 @@ void lr1_stack_mac_tx_lora_launch_callback_for_rp( void* rp_void )
     SMTC_MODEM_HAL_PANIC_ON_FAILURE(
         ral_set_pkt_payload( &( rp->radio->ral ), rp->payload[id], rp->payload_buffer_size[id] ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
         // Do nothing
     }
@@ -317,7 +274,7 @@ void lr1_stack_mac_tx_gfsk_launch_callback_for_rp( void* rp_void )
     SMTC_MODEM_HAL_PANIC_ON_FAILURE(
         ral_set_pkt_payload( &( rp->radio->ral ), rp->payload[id], rp->payload_buffer_size[id] ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
     // At this time only tcxo startup delay is remaining
@@ -346,7 +303,7 @@ void lr1_stack_mac_tx_lr_fhss_launch_callback_for_rp( void* rp_void )
                                  rp->radio_params[id].tx.lr_fhss.hop_sequence_id, rp->payload[id],
                                  rp->payload_buffer_size[id] ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
         // Do nothing
     }
@@ -367,7 +324,7 @@ void lr1_stack_mac_rx_lora_launch_callback_for_rp( void* rp_void )
         ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT | RAL_IRQ_RX_HDR_ERROR |
                                                          RAL_IRQ_RX_CRC_ERROR ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
     // At this time only tcxo startup delay is remaining
@@ -388,7 +345,7 @@ void lr1_stack_mac_rx_gfsk_launch_callback_for_rp( void* rp_void )
         ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT | RAL_IRQ_RX_CRC_ERROR ) ==
         RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
     // At this time only tcxo startup delay is remaining
@@ -568,6 +525,11 @@ void lr1_stack_mac_rx_radio_start( lr1_stack_mac_t* lr1_mac, const rx_win_type_t
     case RX2:
         rx_frequency = lr1_mac->rx2_frequency;
         break;
+#if defined( RELAY_TX )
+    case RXR:
+        smtc_relay_tx_get_rxr_param( lr1_mac->stack_id, lr1_mac->tx_data_rate, NULL, &rx_frequency );
+        break;
+#endif
     default:
         SMTC_MODEM_HAL_PANIC( "RX windows unknow\n" );
         break;
@@ -654,9 +616,9 @@ void lr1_stack_mac_rx_radio_start( lr1_stack_mac_t* lr1_mac, const rx_win_type_t
         .launch_task_callbacks = ( radio_params.pkt_type == RAL_PKT_TYPE_LORA )
                                      ? lr1_stack_mac_rx_lora_launch_callback_for_rp
                                      : lr1_stack_mac_rx_gfsk_launch_callback_for_rp,
-        .state                 = RP_TASK_STATE_SCHEDULE,
-        .start_time_ms         = time_to_start,
-        .duration_time_ms      = lr1_mac->rx_timeout_symb_in_ms,
+        .state            = RP_TASK_STATE_SCHEDULE,
+        .start_time_ms    = time_to_start,
+        .duration_time_ms = lr1_mac->rx_timeout_symb_in_ms,
     };
 
     if( rp_task_enqueue( lr1_mac->rp, &rp_task, lr1_mac->rx_down_data.rx_payload, 255, &radio_params ) ==
@@ -728,16 +690,22 @@ void lr1_stack_mac_rp_callback( lr1_stack_mac_t* lr1_mac )
     case RP_STATUS_RX_TIMEOUT: {
 #ifndef BSP_LR1MAC_DISABLE_FINE_TUNE
         uint32_t rx_timestamp_calibration = tcurrent_ms;
-        uint32_t rx_delay_ms;
+        uint32_t rx_delay_ms              = 0;
 
         if( lr1_mac->current_win == RX1 )
         {
             rx_delay_ms = lr1_mac->rx1_delay_s;
         }
-        else
+        else if( lr1_mac->current_win == RX2 )
         {
             rx_delay_ms = lr1_mac->rx1_delay_s + 1;
         }
+#if defined( RELAY_TX )
+        else if( lr1_mac->current_win == RXR )
+        {
+            rx_delay_ms = RXR_WINDOWS_DELAY_S;
+        }
+#endif
         rx_delay_ms *= 1000;
 
         int32_t error_fine_tune = rx_timestamp_calibration -
@@ -820,6 +788,13 @@ bool lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
         lr1_mac->rx_data_rate = lr1_mac->rx2_data_rate;
         break;
 
+#if defined( RELAY_TX )
+    case RXR:
+        delay_ms = RXR_WINDOWS_DELAY_S;
+        smtc_relay_tx_get_rxr_param( lr1_mac->stack_id, lr1_mac->tx_data_rate, &lr1_mac->rx_data_rate, NULL );
+        break;
+#endif
+
     default:
         is_type_ok = false;
         SMTC_MODEM_HAL_PANIC( "RX windows unknow\n" );
@@ -854,9 +829,22 @@ bool lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
                                   +smtc_modem_hal_get_board_delay_ms( ) +
                                   lr1_mac->fine_tune_board_setting_delay_ms[lr1_mac->rx_data_rate];
 
+#if defined( RELAY_TX )
+        uint32_t crystal_error = lr1_mac->crystal_error;
+        if( type == RXR )
+        {
+            crystal_error += smtc_relay_tx_get_crystal_error( lr1_mac->stack_id );
+        }
+        smtc_real_get_rx_window_parameters( lr1_mac->real, lr1_mac->rx_data_rate, delay_ms, &lr1_mac->rx_window_symb,
+                                            &lr1_mac->rx_timeout_symb_in_ms, &lr1_mac->rx_timeout_ms, 0,
+                                            crystal_error );
+
+#else
+
         smtc_real_get_rx_window_parameters( lr1_mac->real, lr1_mac->rx_data_rate, delay_ms, &lr1_mac->rx_window_symb,
                                             &lr1_mac->rx_timeout_symb_in_ms, &lr1_mac->rx_timeout_ms, 0,
                                             lr1_mac->crystal_error );
+#endif
         smtc_real_get_rx_start_time_offset_ms( lr1_mac->real, lr1_mac->rx_data_rate, board_delay_ms,
                                                lr1_mac->rx_window_symb, &lr1_mac->rx_offset_ms );
 
@@ -865,7 +853,7 @@ bool lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
             lr1_mac->rx_timeout_symb_in_ms, lr1_mac->rx_window_symb, board_delay_ms );
 
         int32_t talarm_ms =
-            delay_ms + ( int32_t ) ( lr1_mac->isr_tx_done_radio_timestamp - tcurrent_ms ) + lr1_mac->rx_offset_ms;
+            delay_ms + ( int32_t )( lr1_mac->isr_tx_done_radio_timestamp - tcurrent_ms ) + lr1_mac->rx_offset_ms;
         if( talarm_ms < 0 )
         {
             lr1_mac->radio_process_state = RADIOSTATE_RX_FINISHED;
@@ -917,6 +905,7 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
         {
             lr1_mac->no_rx_packet_count_in_mobile_mode = 0;
             lr1_mac->no_rx_packet_count                = 0;
+            lr1_mac->no_rx_packet_since_s              = smtc_modem_hal_get_time_in_s( );
             rx_packet_type                             = JOIN_ACCEPT_PACKET;
             lr1_mac->rx_down_data.rx_payload_size      = lr1_mac->rx_down_data.rx_payload_size - MICSIZE;
         }
@@ -979,6 +968,13 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
             {
                 lr1_mac->rx_down_data.rx_metadata.rx_frequency_hz = lr1_mac->rx2_frequency;
             }
+#if defined( RELAY_TX )
+            else if( lr1_mac->current_win == RXR )
+            {
+                smtc_relay_tx_get_rxr_param( lr1_mac->stack_id, lr1_mac->tx_data_rate, NULL,
+                                             &lr1_mac->rx_down_data.rx_metadata.rx_frequency_hz );
+            }
+#endif
             else
             {
                 SMTC_MODEM_HAL_PANIC( "Rx Window invalid\n" );
@@ -1078,6 +1074,7 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
         lr1_mac->adr_ack_cnt                         = 0;  // reset adr counter, receive a valid frame.
         lr1_mac->no_rx_packet_count_in_mobile_mode   = 0;
         lr1_mac->no_rx_packet_count                  = 0;
+        lr1_mac->no_rx_packet_since_s                = smtc_modem_hal_get_time_in_s( );
         lr1_mac->tx_fopts_current_length             = 0;  // reset the fopts of the sticky set in payload
         lr1_mac->tx_fopts_lengthsticky = 0;  // reset the fopts of the sticky cmd received on a valid frame
                                              // if received on RX1 or RX2
@@ -1132,13 +1129,13 @@ void lr1_stack_mac_update( lr1_stack_mac_t* lr1_mac )
 
         lr1_mac->retry_join_cpt++;
 
-        if( current_time_s < ( lr1_mac->first_join_timestamp + 3600 ) )
+        if( current_time_s + ( ( lr1_stack_toa_get( lr1_mac ) ) / 10 ) < ( lr1_mac->first_join_timestamp + 3600 ) )
         {
             // during first hour after first join try => duty cycle of 1/100 ie 36s over 1 hour
             lr1_mac->next_time_to_join_seconds = current_time_s + ( lr1_stack_toa_get( lr1_mac ) ) / 10;
             // ts=cur_ts+(toa_s*100) = cur_ts + (toa_ms / 1000) * 100 = cur_ts + toa_ms/10
         }
-        else if( current_time_s < ( lr1_mac->first_join_timestamp + 36000 + 3600 ) )
+        else if( current_time_s + ( lr1_stack_toa_get( lr1_mac ) ) < ( lr1_mac->first_join_timestamp + 36000 + 3600 ) )
         {
             // during the 10 hours following first hour after first join try => duty cycle of 1/1000 ie 36s over 10
             // hours
@@ -1344,10 +1341,22 @@ status_lorawan_t lr1_stack_mac_cmd_parse( lr1_stack_mac_t* lr1_mac )
             beacon_freq_req_parser( lr1_mac );
             break;
 
+#if defined( RELAY_TX )
+        default: {
+            const bool mac_is_known = relay_tx_mac_parser( lr1_mac );
+            if( mac_is_known == false )
+            {
+                lr1_mac->nwk_payload_size = 0;
+                SMTC_MODEM_HAL_TRACE_PRINTF( " Unknown mac command %02x\n", cmd_identifier );
+            }
+        }
+        break;
+#else
         default:
             lr1_mac->nwk_payload_size = 0;
             SMTC_MODEM_HAL_TRACE_PRINTF( " Unknown mac command %02x\n", cmd_identifier );
             break;
+#endif
         }
     }
 
@@ -1381,8 +1390,8 @@ void lr1_stack_mac_join_request_build( lr1_stack_mac_t* lr1_mac )
         lr1_mac->tx_payload[1 + i] = join_eui[7 - i];
         lr1_mac->tx_payload[9 + i] = dev_eui[7 - i];
     }
-    lr1_mac->tx_payload[17]  = ( uint8_t ) ( ( lr1_mac->dev_nonce & 0x00FF ) );
-    lr1_mac->tx_payload[18]  = ( uint8_t ) ( ( lr1_mac->dev_nonce & 0xFF00 ) >> 8 );
+    lr1_mac->tx_payload[17]  = ( uint8_t )( ( lr1_mac->dev_nonce & 0x00FF ) );
+    lr1_mac->tx_payload[18]  = ( uint8_t )( ( lr1_mac->dev_nonce & 0xFF00 ) >> 8 );
     lr1_mac->tx_payload_size = 19;
     uint32_t mic;
     //    FcntUp = 1;
@@ -1670,13 +1679,13 @@ static void mac_header_set( lr1_stack_mac_t* lr1_mac )
 
 static void frame_header_set( lr1_stack_mac_t* lr1_mac )
 {
-    lr1_mac->tx_payload[1] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0x000000FF ) );
-    lr1_mac->tx_payload[2] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0x0000FF00 ) >> 8 );
-    lr1_mac->tx_payload[3] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0x00FF0000 ) >> 16 );
-    lr1_mac->tx_payload[4] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0xFF000000 ) >> 24 );
+    lr1_mac->tx_payload[1] = ( uint8_t )( ( lr1_mac->dev_addr & 0x000000FF ) );
+    lr1_mac->tx_payload[2] = ( uint8_t )( ( lr1_mac->dev_addr & 0x0000FF00 ) >> 8 );
+    lr1_mac->tx_payload[3] = ( uint8_t )( ( lr1_mac->dev_addr & 0x00FF0000 ) >> 16 );
+    lr1_mac->tx_payload[4] = ( uint8_t )( ( lr1_mac->dev_addr & 0xFF000000 ) >> 24 );
     lr1_mac->tx_payload[5] = lr1_mac->tx_fctrl;
-    lr1_mac->tx_payload[6] = ( uint8_t ) ( ( lr1_mac->fcnt_up & 0x000000FF ) );
-    lr1_mac->tx_payload[7] = ( uint8_t ) ( ( lr1_mac->fcnt_up & 0x0000FF00 ) >> 8 );
+    lr1_mac->tx_payload[6] = ( uint8_t )( ( lr1_mac->fcnt_up & 0x000000FF ) );
+    lr1_mac->tx_payload[7] = ( uint8_t )( ( lr1_mac->fcnt_up & 0x0000FF00 ) >> 8 );
 
     if( lr1_mac->tx_fport == PORTNWK )
     {
@@ -2339,7 +2348,7 @@ static status_lorawan_t device_time_ans_parser( lr1_stack_mac_t* lr1_mac )
         lr1_mac->seconds_since_epoch |= ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 3] << 16 );
         lr1_mac->seconds_since_epoch |= ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 4] << 24 );
 
-        lr1_mac->fractional_second = ( uint32_t ) ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 5] * 1000 ) >> 8;
+        lr1_mac->fractional_second = ( uint32_t )( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 5] * 1000 ) >> 8;
 
         SMTC_MODEM_HAL_TRACE_PRINTF( "SecondsSinceEpoch %u, FractionalSecond %u\n", lr1_mac->seconds_since_epoch,
                                      lr1_mac->fractional_second );

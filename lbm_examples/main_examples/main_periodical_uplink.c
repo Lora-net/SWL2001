@@ -54,7 +54,7 @@
 #include "smtc_hal_watchdog.h"
 
 #include "modem_pinout.h"
-
+#include "smtc_modem_relay_api.h"
 #include <string.h>
 
 /*
@@ -156,7 +156,13 @@ static const uint8_t user_app_key[16]     = USER_LORAWAN_APP_KEY;
 /**
  * @brief Periodical uplink alarm delay in seconds
  */
+#ifndef PERIODICAL_UPLINK_DELAY_S
 #define PERIODICAL_UPLINK_DELAY_S 60
+#endif
+
+#ifndef DELAY_FIRST_MSG_AFTER_JOIN
+#define DELAY_FIRST_MSG_AFTER_JOIN 60
+#endif
 
 /*
  * -----------------------------------------------------------------------------
@@ -175,6 +181,9 @@ static uint8_t                  rx_remaining    = 0;      // Remaining downlink 
 static volatile bool user_button_is_press = false;  // Flag for button status
 static uint32_t      uplink_counter       = 0;      // uplink raising counter
 
+#if defined( USE_RELAY_TX )
+static smtc_modem_relay_tx_config_t relay_config = { 0 };
+#endif
 /**
  * @brief Internal credentials
  */
@@ -241,7 +250,7 @@ void main_periodical_uplink( void )
     // Init done: enable interruption
     hal_mcu_enable_irq( );
 
-    SMTC_HAL_TRACE_INFO( "Periodical uplink example is starting \n" );
+    SMTC_HAL_TRACE_INFO( "Periodical uplink (%d sec) example is starting \n", PERIODICAL_UPLINK_DELAY_S );
 
     while( 1 )
     {
@@ -314,7 +323,36 @@ static void modem_event_callback( void )
 #endif
             // Set user region
             ASSERT_SMTC_MODEM_RC( smtc_modem_set_region( stack_id, MODEM_EXAMPLE_REGION ) );
-            // Schedule a Join LoRaWAN network
+// Schedule a Join LoRaWAN network
+#if defined( USE_RELAY_TX )
+            // by default when relay mode is activated , CSMA is also activated by default to at least protect the WOR
+            // transmission
+            // if you want to disable the csma please uncomment the next line
+            // ASSERT_SMTC_MODEM_RC(smtc_modem_csma_set_state (stack_id,false));
+
+            relay_config.second_ch_enable = false;
+
+            // The RelayModeActivation field indicates how the end-device SHOULD manage the relay mode.
+            relay_config.activation = SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DYNAMIC;
+
+            // number_of_miss_wor_ack_to_switch_in_nosync_mode  field indicates that the
+            // relay mode SHALL be restart in no sync mode when it does not receive a WOR ACK frame after
+            // number_of_miss_wor_ack_to_switch_in_nosync_mode consecutive uplinks.
+            relay_config.number_of_miss_wor_ack_to_switch_in_nosync_mode = 3;
+
+            // smart_level field indicates that the
+            // relay mode SHALL be enabled if the end-device does not receive a valid downlink after smart_level
+            // consecutive uplinks.
+            relay_config.smart_level = 8;
+
+            // The BackOff field indicates how the end-device SHALL behave when it does not receive
+            // a WOR ACK frame.
+            // BackOff Description
+            // 0 Always send a LoRaWAN uplink
+            // 1..63 Send a LoRaWAN uplink after X WOR frames without a WOR ACK
+            relay_config.backoff = 4;
+            ASSERT_SMTC_MODEM_RC( smtc_modem_relay_tx_enable( stack_id, &relay_config ) );
+#endif
             ASSERT_SMTC_MODEM_RC( smtc_modem_join_network( stack_id ) );
             break;
 
@@ -333,7 +371,7 @@ static void modem_event_callback( void )
             // Send first periodical uplink on port 101
             send_uplink_counter_on_port( 101 );
             // start periodical uplink alarm
-            ASSERT_SMTC_MODEM_RC( smtc_modem_alarm_start_timer( PERIODICAL_UPLINK_DELAY_S ) );
+            ASSERT_SMTC_MODEM_RC( smtc_modem_alarm_start_timer( DELAY_FIRST_MSG_AFTER_JOIN ) );
             break;
 
         case SMTC_MODEM_EVENT_TXDONE:
@@ -427,7 +465,15 @@ static void modem_event_callback( void )
         case SMTC_MODEM_EVENT_MUTE:
             SMTC_HAL_TRACE_INFO( "Event received: MUTE\n" );
             break;
-
+        case SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC:  //!< Relay TX dynamic mode has enable or disable the WOR protocol
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_DYNAMIC\n" );
+            break;
+        case SMTC_MODEM_EVENT_RELAY_TX_MODE:  //!< Relay TX activation has been updated
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_MODE\n" );
+            break;
+        case SMTC_MODEM_EVENT_RELAY_TX_SYNC:  //!< Relay TX synchronisation has changed
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_SYNC\n" );
+            break;
         default:
             SMTC_HAL_TRACE_ERROR( "Unknown event %u\n", current_event.event_type );
             break;

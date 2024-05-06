@@ -250,6 +250,7 @@ void FragDecoderInit( uint16_t fragNb, uint8_t fragSize, FragDecoderCallbacks_t*
 
     FragDecoder.Status.FragNbLost   = 0;
     FragDecoder.Status.FragNbLastRx = 0;
+    FragDecoder.Status.MissingFrag  = fragNb;
 }
 
 uint32_t FragDecoderGetMaxFileSize( void )
@@ -298,6 +299,7 @@ int32_t FragDecoderProcess( uint16_t fragCounter, uint8_t* rawData )
             // the case : all the M(FragNb) first rows have been transmitted with no error
             return FragDecoder.Status.FragNbLost;
         }
+        FragDecoder.Status.MissingFrag = FragDecoder.FragNb - fragCounter + FragDecoder.Status.FragNbLost;
     }
     else
     {
@@ -377,7 +379,7 @@ int32_t FragDecoderProcess( uint16_t fragCounter, uint8_t* rawData )
                 SetParity( firstOneInRow, FragDecoder.S, 1 );
                 FragDecoder.M2BLine++;
             }
-
+            FragDecoder.Status.MissingFrag = FragDecoder.Status.FragNbLost - FragDecoder.M2BLine;
             if( FragDecoder.M2BLine == FragDecoder.Status.FragNbLost )
             {
                 // Then last step diagonalized

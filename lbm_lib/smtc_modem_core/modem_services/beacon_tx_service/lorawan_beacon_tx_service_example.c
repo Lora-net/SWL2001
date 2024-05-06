@@ -48,6 +48,7 @@
 #include "lorawan_api.h"
 #include "radio_planner.h"
 #include "radio_planner_hook_id_defs.h"
+#include "modem_tx_protocol_manager.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -114,7 +115,7 @@ static void start_user_beacon( void );
  */
 void lorawan_beacon_tx_example_service_init( uint8_t* service_id, uint8_t task_id,
                                              uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                             void    ( **on_launch_callback )( void* ),
+                                             void ( **on_launch_callback )( void* ),
                                              void ( **on_update_callback )( void* ), void** context_callback )
 {
     IS_VALID_OBJECT_ID( *service_id );
@@ -138,7 +139,9 @@ void lorawan_beacon_tx_example_service_on_launch( void* context_callback )
     {
         uint8_t cid_buffer[]     = { DEVICE_TIME_REQ };
         uint8_t cid_request_size = 1;  // request only ping slot if time is already valid
-        lorawan_api_send_stack_cid_req( cid_buffer, cid_request_size, lorawan_beacon_tx_example_obj.stack_id );
+
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+                                     smtc_modem_hal_get_time_in_ms( ), lorawan_beacon_tx_example_obj.stack_id );
     }
 }
 

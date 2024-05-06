@@ -53,7 +53,7 @@
 #include "lorawan_alcsync.h"
 #include "lorawan_class_b_management.h"
 #include "lorawan_remote_multicast_setup_package.h"
-
+#include "modem_tx_protocol_manager.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -370,8 +370,8 @@ void lorawan_remote_multicast_setup_package_service_on_launch( void* ctx_service
         SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_remote_multicast_setup_package launch ANS_CMD_TASK \n" );
         SMTC_MODEM_HAL_TRACE_ARRAY( "ans = ", ctx->remote_multicast_tx_payload_ans,
                                     ctx->remote_multicast_tx_payload_ans_size )
-        lorawan_api_payload_send(
-            REMOTE_MULTICAST_SETUP_PORT, true, ctx->remote_multicast_tx_payload_ans,
+        tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_LORA, REMOTE_MULTICAST_SETUP_PORT, true, ctx->remote_multicast_tx_payload_ans,
             ctx->remote_multicast_tx_payload_ans_size, UNCONF_DATA_UP,
             smtc_modem_hal_get_time_in_ms( ) + smtc_modem_hal_get_random_nb_in_range( 0, ctx->fragmentation_ans_delay ),
             ctx->stack_id );
@@ -386,8 +386,9 @@ void lorawan_remote_multicast_setup_package_service_on_launch( void* ctx_service
         ctx->request_time_sync             = false;
         cid_from_device_t cid_buffer[]     = { DEVICE_TIME_REQ };
         uint8_t           cid_request_size = 1;
-        lorawan_api_send_stack_cid_req( cid_buffer, cid_request_size, stack_id );
 
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+                                     smtc_modem_hal_get_time_in_ms( ), stack_id );
         ctx->task_ctx_mask &= ~( 1 << REQUEST_TIME_SYNC_TASK );
     }
 

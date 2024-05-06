@@ -46,7 +46,7 @@ extern "C" {
 #include "radio_planner.h"
 #include "lr1_stack_mac_layer.h"
 #include "modem_services_config.h"
-
+#include "modem_tx_protocol_manager.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------

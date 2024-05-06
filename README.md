@@ -14,6 +14,11 @@
 - Geolocation with LoRa Edge chips
 - LoRaCloud features such as Stream, Large File Upload, Device Management or Almanac Update
 
+## Prerequisites
+
+The ARM GCC tool chain must be setup under your development environment.
+LBM library code has been developped using GNU Arm Embedded Toolchain 10-2020-q4-major 10.2.1 20201103 (release)
+
 ## LoRa Basics Modem library
 
 LBM library code can be found in folder [lbm_lib](lbm_lib/).  

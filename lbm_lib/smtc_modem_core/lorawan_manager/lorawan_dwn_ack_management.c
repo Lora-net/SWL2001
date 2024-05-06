@@ -167,14 +167,16 @@ static void lorawan_dwn_ack_management_on_update( void* context )
 
 static uint8_t lorawan_dwn_ack_management_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
-    // in class b or class c LoRaWAN standard require to transmit the ack bit within a delay < 8s
-    if( ( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXB ) ||
+    if( ( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX1 ) ||
+          ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX2 ) ||
+          ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXB ) ||
           ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXC ) ) &&
         ( rx_down_data->rx_metadata.tx_ack_bit == true ) )
     {
-        // time to execute is set to 5 secondes to answer before 8 secondes as required in lorawan but also let a
-        // chance to a user tx to start before
-        lorawan_dwn_ack_add_task( rx_down_data->stack_id, smtc_modem_hal_get_time_in_s( ) + 5 );
+        // time to execute is set to 0 secondes to answer before 8 secondes as required in lorawan and because
+        // tx randomness could be up to 6s (+ TOA)
+
+        lorawan_dwn_ack_add_task( rx_down_data->stack_id, smtc_modem_hal_get_time_in_s( ) );
     }
     return MODEM_DOWNLINK_UNCONSUMED;
 }

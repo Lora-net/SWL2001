@@ -169,9 +169,9 @@ void hw_modem_process_cmd( void )
         {
             crc = crc ^ modem_received_buff[i];
         }
-        uint8_t       calculated_crc = crc;
-        uint8_t       cmd_crc        = modem_received_buff[cmd_length + 2];
-        host_cmd_id_t cmd_id         = ( host_cmd_id_t ) modem_received_buff[0];
+        uint8_t calculated_crc = crc;
+        uint8_t cmd_crc        = modem_received_buff[cmd_length + 2];
+        uint8_t cmd_id         = modem_received_buff[0];
 
         if( calculated_crc != cmd_crc )
         {

@@ -161,6 +161,13 @@ ifeq ($(RADIO),nc)
 	$(call echo_error,"No radio selected! Please specified the target radio  using RADIO=radio_name option")
 else
 ifneq ($(CRYPTO),SOFT)
+ifeq ($(RELAY_TX_ENABLE),yes)
+	$(call echo_error, "------------------------------------------------------------")
+	$(call echo_error, "When relay feature is enable: only soft crypto can be used")	
+	$(call echo_error, "Please use CRYPTO=SOFT option")
+	$(call echo_error, "------------------------------------------------------------")
+	exit 1
+endif
 ifneq ($(NB_OF_STACK),1)
 	$(call echo_error, "----------------------------------------------------------")
 	$(call echo_error, "More than one stack compiled: only soft crypto can be used")

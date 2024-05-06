@@ -354,7 +354,7 @@ static void store_and_forward_service_on_launch( void* service_id )
         return;
     }
 
-    uint32_t rtc_ms = smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS;
+    uint32_t rtc_ms = smtc_modem_hal_get_time_in_ms( )  ;
 
     // TODO check payload len and adjust the datarate with custom profile
     uint8_t max_payload = lorawan_api_next_max_payload_length_get( stack_id );
@@ -376,7 +376,7 @@ static void store_and_forward_service_on_launch( void* service_id )
 
     if( store_and_forward_obj[idx].sending_data_len > 0 )
     {
-        status_lorawan_t send_status = lorawan_api_payload_send(
+        status_lorawan_t send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
             store_and_forward_obj[idx].sending_metadata.fport, true, store_and_forward_obj[idx].sending_data,
             store_and_forward_obj[idx].sending_data_len,
             ( store_and_forward_obj[idx].sending_metadata.confirmed == true ) ? CONF_DATA_UP : UNCONF_DATA_UP, rtc_ms,

@@ -31,8 +31,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __RADIO_PLANNER_STATS_H__
-#define __RADIO_PLANNER_STATS_H__
+#ifndef RADIO_PLANNER_STATS_H
+#define RADIO_PLANNER_STATS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,12 +45,13 @@ extern "C" {
 
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
+#include <string.h>   // for memset
+
+#include "radio_planner_types.h"
 
 #if defined( RP_STAT_PRINT_ENBALE )
 #include "smtc_modem_hal_dbg_trace.h"
 #endif  // RP_STAT_PRINT_ENBALE
-
-#include <string.h>  // for memset
 
 /*
  * -----------------------------------------------------------------------------
@@ -73,6 +74,7 @@ extern "C" {
 typedef struct rp_stats_s
 {
     uint32_t tx_last_toa_ms[RP_NB_HOOKS];
+    uint32_t rx_last_toa_ms[RP_NB_HOOKS];
     uint32_t tx_consumption_ms[RP_NB_HOOKS];
     uint32_t rx_consumption_ms[RP_NB_HOOKS];
     uint32_t none_consumption_ms[RP_NB_HOOKS];
@@ -157,7 +159,8 @@ static inline void rp_stats_update( rp_stats_t* rp_stats, uint32_t timestamp, ui
     }
     if( rp_stats->rx_timestamp != 0 )
     {
-        computed_time = timestamp - rp_stats->rx_timestamp;
+        computed_time                     = timestamp - rp_stats->rx_timestamp;
+        rp_stats->rx_last_toa_ms[hook_id] = computed_time;
         rp_stats->rx_consumption_ms[hook_id] += computed_time;
         rp_stats->rx_total_consumption_ms += computed_time;
 
@@ -248,6 +251,6 @@ static inline void rp_stats_print( rp_stats_t* rp_stats )
 }
 #endif
 
-#endif  // __RADIO_PLANNER_STATS_H__
+#endif  // RADIO_PLANNER_STATS_H
 
 /* --- EOF ------------------------------------------------------------------ */

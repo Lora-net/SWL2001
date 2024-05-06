@@ -39,10 +39,13 @@
 #include "stddef.h"
 #include "smtc_modem_hal.h"
 #include "lr1_stack_mac_layer.h"
-
+static smtc_lbt_t lbt_obj_declare[NUMBER_OF_STACKS];
+#define LBT_SNIFF_DURATION_MS_DEFAULT ( 5 )
+#define LBT_THRESHOLD_DBM_DEFAULT ( int16_t )( -80 )
+#define LBT_BW_HZ__DEFAULT ( 200000 )
 void smtc_lbt_init( smtc_lbt_t* lbt_obj, radio_planner_t* rp, uint8_t lbt_id_rp,
-                    void ( *free_callback )( void* free_context ), void* free_context,
-                    void ( *busy_callback )( void* busy_context ), void* busy_context,
+                    void ( *free_callback )( void* free_context ), void*   free_context,
+                    void ( *busy_callback )( void* busy_context ), void*   busy_context,
                     void ( *abort_callback )( void* abort_context ), void* abort_context )
 {
     if( ( free_callback == NULL ) || ( busy_callback == NULL ) || ( abort_callback == NULL ) )
@@ -62,9 +65,9 @@ void smtc_lbt_init( smtc_lbt_t* lbt_obj, radio_planner_t* rp, uint8_t lbt_id_rp,
     lbt_obj->rssi_nb_of_meas    = 0;
     lbt_obj->is_at_time         = false;
     lbt_obj->enabled            = false;
-    lbt_obj->listen_duration_ms = 0;
-    lbt_obj->threshold          = 0;
-    lbt_obj->bw_hz              = 0;
+    lbt_obj->listen_duration_ms = LBT_SNIFF_DURATION_MS_DEFAULT;
+    lbt_obj->threshold          = LBT_THRESHOLD_DBM_DEFAULT;
+    lbt_obj->bw_hz              = LBT_BW_HZ__DEFAULT;
     rp_release_hook( rp, lbt_id_rp );
     rp_hook_init( rp, lbt_id_rp, ( void ( * )( void* ) )( smtc_lbt_rp_callback ), lbt_obj );
 }
@@ -118,6 +121,7 @@ void smtc_lbt_launch_callback_for_rp( void* rp_void )
     while( ( int32_t ) ( carrier_sense_time + LAP_OF_TIME_TO_GET_A_RSSI_VALID - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {  // delay LAP_OF_TIME_TO_GET_A_RSSI_VALID ms
     }
+    rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
     do
     {
         SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_get_rssi_inst( &( rp->radio->ral ), &rssi_tmp ) == RAL_STATUS_OK );
@@ -126,16 +130,18 @@ void smtc_lbt_launch_callback_for_rp( void* rp_void )
         ( ( smtc_lbt_t* ) rp->hooks[id] )->rssi_nb_of_meas++;
         if( rssi_tmp >= rp->radio_params[id].lbt_threshold )
         {
-            SMTC_MODEM_HAL_TRACE_PRINTF( "lbt rssi: %d dBm\n", rssi_tmp );
+            //   SMTC_MODEM_HAL_TRACE_PRINTF( "lbt rssi: %d dBm\n", rssi_tmp );
             rp->status[id] = RP_STATUS_LBT_BUSY_CHANNEL;
             rp_radio_irq_callback( rp_void );
+            rp_callback( rp_void );
             return;
         }
     } while( ( int32_t ) ( carrier_sense_time + rp->radio_params[id].rx.timeout_in_ms -
                            smtc_modem_hal_get_time_in_ms( ) ) > 0 );
-
+    // SMTC_MODEM_HAL_TRACE_PRINTF( "lbt rssi: %d thre= %d dBm\n", rssi_tmp, rp->radio_params[id].lbt_threshold );
     rp->status[id] = RP_STATUS_LBT_FREE_CHANNEL;
     rp_radio_irq_callback( rp_void );
+    rp_callback( rp_void );
 }
 
 void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_time, uint32_t target_time_ms,
@@ -197,8 +203,8 @@ void smtc_lbt_listen_channel( smtc_lbt_t* lbt_obj, uint32_t freq, bool is_at_tim
     }
     else
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "  Listen Frequency = %u during %d ms \n", freq,
-                                     lbt_obj->listen_duration_ms - LAP_OF_TIME_TO_GET_A_RSSI_VALID );
+        //    SMTC_MODEM_HAL_TRACE_PRINTF( "Listen Frequency = %u during %d ms \n", freq,
+        //                                lbt_obj->listen_duration_ms - LAP_OF_TIME_TO_GET_A_RSSI_VALID );
     }
 }
 
@@ -228,5 +234,17 @@ void smtc_lbt_rp_callback( smtc_lbt_t* lbt_obj )
     else
     {
         lbt_obj->abort_callback( lbt_obj->abort_context );
+    }
+}
+
+smtc_lbt_t* smtc_lbt_get_obj( uint8_t stack_id )
+{
+    if( stack_id < NUMBER_OF_STACKS )
+    {
+        return ( &lbt_obj_declare[stack_id] );
+    }
+    else
+    {
+        return NULL;
     }
 }

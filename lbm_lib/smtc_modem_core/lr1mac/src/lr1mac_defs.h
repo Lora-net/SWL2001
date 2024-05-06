@@ -155,6 +155,11 @@ typedef enum lr1mac_states_e
     LWPSTATE_SEND,
     LWPSTATE_RX1,
     LWPSTATE_RX2,
+
+#if defined( RELAY_TX )
+    LWPSTATE_RXR,
+#endif
+
     LWPSTATE_TX_WAIT,
     LWPSTATE_INVALID,
     LWPSTATE_ERROR,
@@ -327,6 +332,9 @@ typedef enum rx_win_type_e
 {
     RX1 = 0,
     RX2,
+#if defined( RELAY_TX )
+    RXR,
+#endif
 } rx_win_type_t;
 
 /**
@@ -424,6 +432,10 @@ typedef enum receive_win_s
     RECEIVE_ON_RXB_MC_GRP3 = 12,
 #endif
     RECEIVE_ON_RXBEACON = 13,
+
+#if defined( RELAY_TX )
+    RECEIVE_ON_RXR = 14,
+#endif
 } receive_win_t;
 
 typedef struct lr1mac_down_metadata_s

@@ -59,6 +59,7 @@ MTHREAD_FLAG = -j
 endif
 
 -include makefiles/regions.mk
+-include makefiles/relay.mk
 
 #-----------------------------------------------------------------------------
 # Update target name wrt. compilation options
@@ -258,6 +259,7 @@ SMTC_MODEM_CORE_C_SOURCES += \
 	smtc_modem_core/modem_utilities/fifo_ctrl.c\
 	smtc_modem_core/modem_utilities/modem_core.c \
 	smtc_modem_core/modem_supervisor/modem_supervisor_light.c\
+	smtc_modem_core/modem_supervisor/modem_tx_protocol_manager.c\
 	smtc_modem_core/lorawan_packages/lorawan_certification/lorawan_certification.c\
 	smtc_modem_core/lorawan_manager/lorawan_join_management.c\
 	smtc_modem_core/lorawan_manager/lorawan_send_management.c\
@@ -478,12 +480,14 @@ LBM_C_INCLUDES += \
 	-Ismtc_modem_core/modem_services/store_and_forward
 endif
 
+
+
 #-----------------------------------------------------------------------------
 # Gather everything
 #-----------------------------------------------------------------------------
 
-LBM_CFLAGS += $(LBM_C_DEFS)
-LBM_CFLAGS += $(LBM_C_INCLUDES)
+LBM_CFLAGS += $(LBM_C_DEFS) $(RELAY_C_DEFS)
+LBM_CFLAGS += $(LBM_C_INCLUDES) $(RELAY_C_INCLUDES)
 LBM_CFLAGS += -fno-builtin $(MCU_FLAGS) $(EXTRAFLAGS) $(LBM_OPT) $(WFLAG) -MMD -MP -MF"$(@:%.o=%.d)"
 LBM_CFLAGS += -falign-functions=4
 LBM_CFLAGS += -std=c17
@@ -495,6 +499,7 @@ LBM_C_SOURCES = \
 	$(RADIO_PLANNER_C_SOURCES) \
 	$(SMTC_MODEM_CORE_C_SOURCES) \
 	$(SMTC_MODEM_CRYPTO_C_SOURCES) \
+	$(RELAY_C_SOURCES) \
 	$(LR1MAC_C_SOURCES)
 
 MODEM_ASM_SOURCES = $(BOARD_ASM_SOURCES)

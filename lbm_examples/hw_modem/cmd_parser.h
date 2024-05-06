@@ -196,7 +196,14 @@ typedef enum host_cmd_id_e
     CMD_LR11XX_RADIO_READ                     = 0x90,
     CMD_LR11XX_RADIO_WRITE                    = 0x91,
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
-    CMD_SET_RTC_OFFSET                        =0x92,
+    CMD_SET_RTC_OFFSET = 0x92,
+#if defined( USE_RELAY_TX )
+    CMD_SET_RELAY_CONFIG = 0x93,
+    CMD_GET_RELAY_CONFIG = 0x94,
+#endif
+    CMD_GET_SUSPEND_RADIO_COMMUNICATIONS   = 0x95,
+    CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF = 0x96,
+    CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF = 0x97,
     CMD_MAX
 } host_cmd_id_t;
 

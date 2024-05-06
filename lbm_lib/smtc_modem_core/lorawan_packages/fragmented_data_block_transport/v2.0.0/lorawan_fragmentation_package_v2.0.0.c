@@ -298,8 +298,8 @@ void lorawan_fragmentation_package_service_on_launch( void* service_id )
 {
     if( lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans_size > 0 )
     {
-        lorawan_api_payload_send(
-            FRAGMENTATION_PORT, true,
+        tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_LORA, FRAGMENTATION_PORT, true,
             lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans,
             lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans_size,
             UNCONF_DATA_UP,
@@ -568,7 +568,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                     ctx->fragmentation_tx_payload_ans[ans_index++] = FRAGMENTATION_SESSION_STATUS_ANS;
                     ctx->fragmentation_tx_payload_ans[ans_index++] = status;
 
-                    if( frag_session_data[frag_index].frag_decoder_process_status == FRAG_SESSION_ONGOING )
+                    if( frag_session_data[frag_index].frag_decoder_process_status != FRAG_SESSION_NOT_STARTED )
                     {
                         uint16_t nb_frag_received = frag_session_data[frag_index].frag_decoder_status.FragNbRx -
                                                     frag_session_data[frag_index].frag_decoder_status.FragNbLost;

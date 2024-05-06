@@ -8,15 +8,26 @@
 - **Class B**: Supports Class B operation (with up to 4 multicast sessions)
 - **Class C**: Supports Class C operation (with up to 4 multicast sessions)
 - **Region Support**:
-  - AS_923 (AS923-1, AS923-2, AS923-3, AS923-4)
-  - AU_915
-  - CN_470
-  - CN_470_RP_1_0
-  - EU_868
-  - IN_865
-  - KR_920
-  - RU_864
-  - US_915
+  - AS923 (AS923-1, AS923-2, AS923-3, AS923-4)
+    - `SMTC_MODEM_REGION_AS_923_GRP1`
+    - `SMTC_MODEM_REGION_AS_923_GRP2`
+    - `SMTC_MODEM_REGION_AS_923_GRP3`
+    - `SMTC_MODEM_REGION_AS_923_GRP4`
+  - AU915
+    - `SMTC_MODEM_REGION_AU_915`
+  - CN470
+    - `SMTC_MODEM_REGION_CN_470`
+    - `SMTC_MODEM_REGION_CN_470_RP_1_0`
+  - EU868
+    - `SMTC_MODEM_REGION_EU_868`
+  - IN865
+    - `SMTC_MODEM_REGION_IN_865`
+  - KR920
+    - `SMTC_MODEM_REGION_KR_920`
+  - RU864
+    - `SMTC_MODEM_REGION_RU_864`
+  - US915
+    - `SMTC_MODEM_REGION_US_915`
 
   **Note**: In addition the proposed implementation also provides a 2.4 GHz global ISM band (WW2G4) region support.
 
@@ -110,7 +121,7 @@ The selection of the Cryptographic Engine to use is done through the CRYPTO para
 
 ### LoRa Basics Modem Features Selection
 
-The user can choose wich feature to embed in LoRa Basics Modem by updating [options.mk](makefiles/options.mk).
+The user can choose which feature to embed in LoRa Basics Modem by updating [options.mk](makefiles/options.mk).
 
 **LoRaWAN Stack related options**:
 
@@ -250,8 +261,6 @@ LoRa Alliance Technical Recommandations can be read at [TR0013](https://resource
 
 To enable CSMA during compilation, set the option `LBM_CSMA=yes` in the Makefile.
 By default, CSMA is activated at modem startup if the compilation option `USE_CSMA_BY_DEFAULT=yes` is configured.
-
-However, it's important to note that CSMA cannot be enabled when the current region mandates the use of Listen-Before-Talk (LBT).
 
 Toggle the CSMA feature on or off using the function `smtc_modem_csma_set_state()`.
 For tailored optimization to specific use cases, configure CSMA parameters with the function `smtc_modem_csma_set_parameters()`.
@@ -438,8 +447,6 @@ After completion, the user receives an event `SMTC_MODEM_EVENT_LORAWAN_FUOTA_DON
 
 #### Remark
 
-The fragmentation session for FUOTA may be terminated, but not the Class C multicast session. The latter remains active until the session timeout. Of course, the user can end the session themselves when they receive the SMTC_MODEM_EVENT_LORAWAN_FUOTA_DONE event. They can also leave the multicast session active until the session timeout. At this point, they will be notified by the event `"SMTC_MODEM_EVENT_NO_MORE_MULTICAST_SESSION_CLASS_C,"` and they will receive an event `"SMTC_MODEM_EVENT_NEW_MULTICAST_SESSION_CLASS_C"` at the start of the session, with the associated group_id present in the status of this event.
-
 The fragmentation session for FUOTA may end, but not the Class C multicast session. The latter remains active until the session timeout. The user can end the session when they receive the `SMTC_MODEM_EVENT_LORAWAN_FUOTA_DONE` event. Alternatively, they can let the multicast session continue until the timeout, receiving an event `SMTC_MODEM_EVENT_NO_MORE_MULTICAST_SESSION_CLASS_C`.  At the session start, they will receive an event `SMTC_MODEM_EVENT_NEW_MULTICAST_SESSION_CLASS_C` with the associated group_id present in the status.
 
 #### Special case
@@ -543,15 +550,33 @@ Additionally, it requires the use of an additional low-power timer to handle som
 
 In the provided example on the STM32L4 MCU (under the lbm_examples folder), LPTIM2 is used with the disadvantage of preventing the use of STOP2 low power mode.
 
+## Relay
+
+**LoRa Basic Modem** proposes an implementation of the [LoRaWAN® Relay Specification TS011-1.0.0](https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay)
+
+This implementation provides the code for the relayed end-device refered as Relay TX
+
+### Relay TX
+
+To build the relay TX feature you need to define "RELAY_TX_ENABLE=yes"
+
+This option will require an additional 500 bytes of RAM and 5.5 Kbytes of FLASH.
+
+### Known limitation for the Relay TX
+
+- This implementation is only compatible with embedded software cryptographic operations.
+- SX128x and SX127x are not supported
+- With relayTx feature enable, if a modem cannot send a WOR due to DutyCycle restriction in the band, the uplink is not send neither event if there is DutyCycle time still available.
+- If geoloc services wifi scan and the wifi scan uplink is aborted by lbt or relay link, the extra data from wifi terminated event return nb_scan_sent at 1.
+
 ## LoRa Basic Modem known limitations
 
 - [charge] Values returned by `smtc_modem_get_charge()` for regions CN470 and CN470_RP1 are not accurate.
 - [charge] Values returned by `smtc_modem_get_charge()` for the LR-FHSS based datarates are not accurate.
 - [charge] Values returned by `smtc_modem_get_charge()` for sx127x radios are not accurate.
-- [charge] Values returned by `smtc_modem_get_charge()` do not count CSMA and LBT power consumption.
-- [LBT-CSMA] Avoid combining LBT and CSMA features, as doing so may result in unpredictable stack behavior.
 - [modem-status] The joining bit status is exclusively set during the LoRaWAN join transaction (i.e., TX/RX1/RX2) and remains unset between join attempts.
 - [file upload] DAS may encounter difficulties reconstructing small files (less than 13 bytes) when the modem operates in the US915 region and utilizes DR0 data rate.
+- On fixed channel plan regions (ex:US915) if LBT is enabled and a channel is constantly jammed, the modem will use the 7 others channels then it will try to send on the jammed channel. As the modem cannot send on this channel, it will not remove this channel from the usable channel list and did not re-enable all other channels. Resulting in modem stuck.
 
 ## Disclaimer
 

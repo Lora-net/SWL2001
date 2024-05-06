@@ -222,7 +222,7 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
     return status;
 }
 
-smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer,
+smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( const uint8_t* mic_bx_buffer, const uint8_t* buffer,
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
                                                             uint32_t* cmac, uint8_t stack_id )
 {
@@ -482,13 +482,20 @@ smtc_se_return_code_t smtc_secure_element_store_context( uint8_t stack_id )
 {
     // Note: Multistack is not suported in lr11xx crypto element
 
+    lr11xx_ce_context_nvm_t ctx_old = { 0 };
+    smtc_modem_hal_context_restore( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx_old, sizeof( ctx_old ) );
+
     lr11xx_ce_context_nvm_t ctx = {
         .data = lr11xx_ce_data,
     };
+
     ctx.crc = lr11xx_ce_crc( ( uint8_t* ) &ctx, sizeof( ctx ) - sizeof( ctx.crc ) );
 
-    smtc_modem_hal_context_store( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
-    smtc_secure_element_restore_context( stack_id );
+    if( ctx.crc != ctx_old.crc )
+    {
+        smtc_modem_hal_context_store( CONTEXT_SECURE_ELEMENT, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
+        smtc_secure_element_restore_context( stack_id );
+    }
     return SMTC_SE_RC_SUCCESS;
 }
 

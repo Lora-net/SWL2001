@@ -59,7 +59,9 @@
 #include "radio_utilities.h"
 
 #include <string.h>  //for memset
-
+#if defined( USE_RELAY_TX )
+#include "smtc_modem_relay_api.h"
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -227,6 +229,7 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_DM_GET_USER_DATA]                      = { 1, 0, 0 },
     [CMD_GET_STATUS]                            = { 1, 0, 0 },
     [CMD_SUSPEND_RADIO_COMMUNICATIONS]          = { 1, 1, 1 },
+    [CMD_GET_SUSPEND_RADIO_COMMUNICATIONS]      = { 1, 0, 0 },
     [CMD_DM_HANDLE_ALCSYNC]                     = { 1, 1, 1 },
     [CMD_SET_APPKEY]                            = { 1, 16, 16 },
     [CMD_GET_ADR_PROFILE]                       = { 1, 0, 0 },
@@ -264,9 +267,15 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_WIFI_SET_PAYLOAD_FORMAT]               = { 1, 1, 1 },
     [CMD_LR11XX_RADIO_READ]                     = { 1, 0, 255 },
     [CMD_LR11XX_RADIO_WRITE]                    = { 1, 0, 255 },
-    [CMD_SET_RTC_OFFSET]                        ={1,4,4},
-    
+
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
+    [CMD_SET_RTC_OFFSET]                        ={1,4,4},
+#if defined( USE_RELAY_TX )
+    [CMD_SET_RELAY_CONFIG]                      ={1,10,24},
+    [CMD_GET_RELAY_CONFIG]                      ={1,0,0},
+#endif  // ADD_RELAY_TX_CMD
+    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = { 1, 0, 0 },
+    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = { 1, 1, 1 },
 };
 
 /**
@@ -392,6 +401,7 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_DM_GET_USER_DATA]                     = "CMD_DM_GET_USER_DATA",
     [CMD_GET_STATUS]                           = "CMD_GET_STATUS",
     [CMD_SUSPEND_RADIO_COMMUNICATIONS]         = "CMD_SUSPEND_RADIO_COMMUNICATIONS",
+    [CMD_GET_SUSPEND_RADIO_COMMUNICATIONS]     = "CMD_GET_SUSPEND_RADIO_COMMUNICATIONS",
     [CMD_DM_HANDLE_ALCSYNC]                    = "CMD_DM_HANDLE_ALCSYNC",
     [CMD_SET_APPKEY]                           = "CMD_SET_APPKEY",
     [CMD_GET_ADR_PROFILE]                      = "CMD_GET_ADR_PROFILE",
@@ -429,9 +439,15 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_WIFI_SET_PAYLOAD_FORMAT]               = "CMD_MODEM_WIFI_SET_PAYLOAD_FORMAT",
     [CMD_LR11XX_RADIO_READ]                     = "CMD_LR11XX_RADIO_READ",
     [CMD_LR11XX_RADIO_WRITE]                    = "CMD_LR11XX_RADIO_WRITE",
-      [CMD_SET_RTC_OFFSET]                       = "CMD_SET_RTC_OFFSET",
+    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = "CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
+    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = "CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
 
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
+    [CMD_SET_RTC_OFFSET] = "CMD_SET_RTC_OFFSET",
+#if defined( USE_RELAY_TX )
+    [CMD_SET_RELAY_CONFIG] = "CMD_SET_RELAY_CONFIG",
+    [CMD_GET_RELAY_CONFIG] = "CMD_GET_RELAY_CONFIG",
+#endif
 };
 #endif
 
@@ -550,7 +566,9 @@ static const uint8_t events_lut[SMTC_MODEM_EVENT_MAX] = {
     [SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE]         = 0x22,
     [SMTC_MODEM_EVENT_WIFI_SCAN_DONE]                    = 0x23,
     [SMTC_MODEM_EVENT_WIFI_TERMINATED]                   = 0x24,
-
+    [SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC]                  = 0x30,
+    [SMTC_MODEM_EVENT_RELAY_TX_MODE]                     = 0x31,
+    [SMTC_MODEM_EVENT_RELAY_TX_SYNC]                     = 0x32,
 
 };
 
@@ -729,6 +747,14 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         case SMTC_MODEM_EVENT_WIFI_TERMINATED:
             cmd_output->length = 2;
             break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC:
+        case SMTC_MODEM_EVENT_RELAY_TX_MODE:
+        case SMTC_MODEM_EVENT_RELAY_TX_SYNC:
+            cmd_output->buffer[2] = current_event.event_data.relay_tx.status;
+            cmd_output->length    = 3;
+            break;
+
         default:
             cmd_output->length = 0;
             break;
@@ -1023,17 +1049,69 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         }
         break;
     }
-    case CMD_SET_RTC_OFFSET :
+    case CMD_SET_RTC_OFFSET:
     {
         uint32_t rtc_offset = 0;
         rtc_offset |= cmd_input->buffer[0] << 24;
         rtc_offset |= cmd_input->buffer[1] << 16;
         rtc_offset |= cmd_input->buffer[2] << 8;
         rtc_offset |= cmd_input->buffer[3];
-        SMTC_HAL_TRACE_PRINTF (" change rtc offset to test wrapping with value = %x\n",rtc_offset);
+        SMTC_HAL_TRACE_PRINTF( " change rtc offset to test wrapping with value = %x\n", rtc_offset );
         smtc_modem_hal_set_offset_to_test_wrapping( rtc_offset );
         break;
     }
+
+#if defined( USE_RELAY_TX )
+    case CMD_SET_RELAY_CONFIG:
+    {
+        smtc_modem_relay_tx_config_t user_relay_config = { 0 };
+
+        user_relay_config.second_ch.freq_hz |= cmd_input->buffer[0] << 24;
+        user_relay_config.second_ch.freq_hz |= cmd_input->buffer[1] << 16;
+        user_relay_config.second_ch.freq_hz |= cmd_input->buffer[2] << 8;
+        user_relay_config.second_ch.freq_hz |= cmd_input->buffer[3];
+
+        user_relay_config.second_ch.ack_freq_hz |= cmd_input->buffer[4] << 24;
+        user_relay_config.second_ch.ack_freq_hz |= cmd_input->buffer[5] << 16;
+        user_relay_config.second_ch.ack_freq_hz |= cmd_input->buffer[6] << 8;
+        user_relay_config.second_ch.ack_freq_hz |= cmd_input->buffer[7];
+
+        user_relay_config.second_ch.dr     = cmd_input->buffer[8];
+        user_relay_config.second_ch_enable = cmd_input->buffer[9];
+
+        user_relay_config.backoff                                         = cmd_input->buffer[10];
+        user_relay_config.activation                                      = cmd_input->buffer[11];
+        user_relay_config.smart_level                                     = cmd_input->buffer[12];
+        user_relay_config.number_of_miss_wor_ack_to_switch_in_nosync_mode = cmd_input->buffer[13];
+        smtc_modem_relay_tx_enable( STACK_ID, &user_relay_config );
+
+        break;
+    }
+    case CMD_GET_RELAY_CONFIG:
+    {
+        smtc_modem_relay_tx_config_t user_relay_config = { 0 };
+        smtc_modem_relay_tx_get_config( STACK_ID, &user_relay_config );
+        cmd_output->buffer[0] = ( user_relay_config.second_ch.freq_hz >> 24 ) & 0xFF;
+        cmd_output->buffer[1] = ( user_relay_config.second_ch.freq_hz >> 16 ) & 0xFF;
+        cmd_output->buffer[2] = ( user_relay_config.second_ch.freq_hz >> 8 ) & 0xFF;
+        cmd_output->buffer[3] = ( user_relay_config.second_ch.freq_hz & 0xFF );
+
+        cmd_output->buffer[4] = ( user_relay_config.second_ch.ack_freq_hz >> 24 ) & 0xFF;
+        cmd_output->buffer[5] = ( user_relay_config.second_ch.ack_freq_hz >> 16 ) & 0xFF;
+        cmd_output->buffer[6] = ( user_relay_config.second_ch.ack_freq_hz >> 8 ) & 0xFF;
+        cmd_output->buffer[7] = ( user_relay_config.second_ch.ack_freq_hz & 0xFF );
+        cmd_output->buffer[8] = user_relay_config.second_ch.dr;
+        cmd_output->buffer[9] = user_relay_config.second_ch_enable;
+
+        cmd_output->buffer[10]  = user_relay_config.backoff;
+        cmd_output->buffer[11]  = user_relay_config.activation;
+        cmd_output->buffer[12]  = user_relay_config.smart_level;
+        cmd_output->buffer[13]  = user_relay_config.number_of_miss_wor_ack_to_switch_in_nosync_mode;
+        cmd_output->length      = 14;
+        cmd_output->return_code = CMD_RC_OK;
+        break;
+    }
+#endif
     case CMD_TEST:
     {
         cmd_tst_input_t    cmd_tst_input;
@@ -1377,16 +1455,28 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     }
     case CMD_LORAWAN_GET_LOST_CONNECTION_COUNTER:
     {
-        uint16_t lost_connection_cnt = 0;
+        uint16_t lost_connection_cnt     = 0;
+        uint32_t lost_connection_since_s = 0;
 
         cmd_output->return_code =
             rc_lut[smtc_modem_lorawan_get_lost_connection_counter( STACK_ID, &lost_connection_cnt )];
+
+        if( cmd_output->return_code == CMD_RC_OK )
+        {
+            cmd_output->return_code =
+                rc_lut[smtc_modem_lorawan_get_lost_connection_counter_since_s( STACK_ID, &lost_connection_since_s )];
+        }
         if( cmd_output->return_code == CMD_RC_OK )
         {
             cmd_output->buffer[0] = ( lost_connection_cnt >> 8 ) & 0xff;
             cmd_output->buffer[1] = ( lost_connection_cnt & 0xff );
 
-            cmd_output->length = 2;
+            cmd_output->buffer[2] = ( lost_connection_since_s >> 24 ) & 0xff;
+            cmd_output->buffer[3] = ( lost_connection_since_s >> 16 ) & 0xff;
+            cmd_output->buffer[4] = ( lost_connection_since_s >> 8 ) & 0xff;
+            cmd_output->buffer[5] = ( lost_connection_since_s & 0xff );
+
+            cmd_output->length = 6;
         }
         break;
     }
@@ -1743,6 +1833,14 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         }
         break;
     }
+    case CMD_GET_SUSPEND_RADIO_COMMUNICATIONS:
+    {
+        bool suspend;
+        cmd_output->return_code = rc_lut[smtc_modem_get_suspend_radio_communications( STACK_ID, &suspend )];
+        cmd_output->buffer[0]   = suspend;
+        cmd_output->length      = 1;
+        break;
+    }
     case CMD_SUSPEND_RADIO_COMMUNICATIONS:
     {
         cmd_output->return_code = rc_lut[smtc_modem_suspend_radio_communications( cmd_input->buffer[0] )];
@@ -1756,6 +1854,23 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     case CMD_SET_APPKEY:
     {
         cmd_output->return_code = rc_lut[smtc_modem_set_appkey( STACK_ID, &cmd_input->buffer[0] )];
+        break;
+    }
+    case CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF:
+    {
+        bool enabled            = true;
+        cmd_output->return_code = rc_lut[smtc_modem_get_join_duty_cycle_backoff_bypass( STACK_ID, &enabled )];
+        if( cmd_output->return_code == CMD_RC_OK )
+        {
+            cmd_output->buffer[0] = enabled;
+            cmd_output->length    = 1;
+        }
+        break;
+    }
+    case CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF:
+    {
+        cmd_output->return_code =
+            rc_lut[smtc_modem_set_join_duty_cycle_backoff_bypass( STACK_ID, cmd_input->buffer[0] )];
         break;
     }
 #if defined( STM32L476xx )

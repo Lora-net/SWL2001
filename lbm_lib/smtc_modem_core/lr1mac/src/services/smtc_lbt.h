@@ -151,6 +151,15 @@ void smtc_lbt_rp_callback( smtc_lbt_t* lbt_obj );
  * @param rp_void pointer to lbt_obj itself
  */
 void smtc_lbt_launch_callback_for_rp( void* rp_void );
+
+/**
+ * @brief return the lbt obj pointer with stack id as parameter
+ * task
+ *
+ * @param stack_id  stack_id
+ * @return the lbt_obj object pointer 
+ */
+smtc_lbt_t* smtc_lbt_get_obj (uint8_t stack_id );
 #ifdef __cplusplus
 }
 #endif

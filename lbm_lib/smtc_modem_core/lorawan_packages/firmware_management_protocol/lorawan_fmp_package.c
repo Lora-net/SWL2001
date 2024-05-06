@@ -52,6 +52,7 @@
 #include "lorawan_fmp_package.h"
 #include "modem_core.h"
 #include "smtc_modem_api.h"
+#include "modem_tx_protocol_manager.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -290,10 +291,12 @@ void lorawan_fmp_package_service_on_launch( void* service_id )
         SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch ANS_CMD_TASK n" );
         if( ctx->fmp_tx_payload_ans_size > 0 )
         {
-            lorawan_api_payload_send(
-                FMP_PORT, true, ctx->fmp_tx_payload_ans, ctx->fmp_tx_payload_ans_size, UNCONF_DATA_UP,
+            tx_protocol_manager_request(
+                TX_PROTOCOL_TRANSMIT_LORA, FMP_PORT, true, ctx->fmp_tx_payload_ans, ctx->fmp_tx_payload_ans_size,
+                UNCONF_DATA_UP,
                 smtc_modem_hal_get_time_in_ms( ) + smtc_modem_hal_get_random_nb_in_range( 0, ctx->fmp_ans_delay ),
                 ctx->stack_id );
+            ctx->fmp_task_ctx_mask &= ~( ANS_CMD_TASK_MASK );
             ctx->fmp_tx_payload_ans_size = 0;
         }
     }
@@ -304,7 +307,8 @@ void lorawan_fmp_package_service_on_launch( void* service_id )
         ctx->request_time_sync             = false;
         cid_from_device_t cid_buffer[]     = { DEVICE_TIME_REQ };
         uint8_t           cid_request_size = 1;
-        lorawan_api_send_stack_cid_req( cid_buffer, cid_request_size, stack_id );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+                                     smtc_modem_hal_get_time_in_ms( ), stack_id );
     }
     else if( ( ctx->fmp_task_ctx_mask & REQUEST_REBOOT_TASK_MASK ) == REQUEST_REBOOT_TASK_MASK )
     {
@@ -319,7 +323,6 @@ void lorawan_fmp_package_service_on_update( void* service_id )
     switch( ctx->fmp_current_task_ctx )
     {
     case ANS_CMD_TASK_MASK: {
-        ctx->fmp_task_ctx_mask &= ~( ANS_CMD_TASK_MASK );
         break;
     }
     case REQUEST_TIME_SYNC_TASK_MASK: {

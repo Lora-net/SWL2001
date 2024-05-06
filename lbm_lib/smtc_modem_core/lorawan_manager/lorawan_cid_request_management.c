@@ -47,6 +47,7 @@
 #include "lorawan_api.h"
 #include "modem_core.h"
 #include "modem_event_utilities.h"
+#include "modem_tx_protocol_manager.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -181,7 +182,8 @@ static void lorawan_cid_request_management_on_launch( void* context )
 
     if( ( cid_request_size > 0 ) && ( cid_request_size <= MAX_NUMBER_OF_CIQ_REQUEST ) )
     {
-        lorawan_api_send_stack_cid_req( cid_buffer, cid_request_size, STACK_ID_CURRENT_TASK );
+        tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+                                  smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
     }
 }
 

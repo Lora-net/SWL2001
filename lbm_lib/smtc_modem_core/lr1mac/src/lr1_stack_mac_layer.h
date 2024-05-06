@@ -44,8 +44,7 @@ extern "C" {
 #include "lr1mac_defs.h"
 #include "smtc_real_defs.h"
 #include "radio_planner.h"
-#include "smtc_lbt.h"
-#include "smtc_lora_cad_bt.h"
+
 
 /*
  * -----------------------------------------------------------------------------
@@ -74,9 +73,6 @@ typedef struct lr1_stack_mac_down_data_s
 typedef struct lr1_stack_mac_s
 {
     smtc_real_t*        real;  // Region Abstraction Layer
-    smtc_lbt_t*         lbt_obj;
-    smtc_lora_cad_bt_t* cad_obj;
-
     void ( *push_callback )( lr1_stack_mac_down_data_t* );
     void* push_context;
 
@@ -175,6 +171,7 @@ typedef struct lr1_stack_mac_s
     dr_strategy_t adr_mode_select;
     dr_strategy_t adr_mode_select_tmp;
     uint16_t      no_rx_packet_reset_threshold;
+    uint32_t      no_rx_packet_since_s;
     uint16_t      no_rx_packet_count;
     uint16_t      no_rx_packet_count_in_mobile_mode;
 
@@ -205,8 +202,9 @@ typedef struct lr1_stack_mac_s
     uint8_t              nwk_payload_index;
     lr1mac_states_t      lr1mac_state;
     uint32_t             rtc_target_timer_ms;
-    uint8_t              send_at_time;
+    bool                 send_at_time;
     bool                 available_link_adr;
+    bool                 is_join_duty_cycle_backoff_bypass_enabled;
     uint8_t              is_lorawan_modem_certification_enabled;
     uint32_t             crystal_error;
 
@@ -303,35 +301,7 @@ void lr1_stack_mac_tx_frame_encrypt( lr1_stack_mac_t* lr1_mac );
  * \param [OUT] return
  */
 void lr1_stack_mac_tx_radio_start( lr1_stack_mac_t* lr1_mac );
-/*!
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void lr1_stack_mac_tx_radio_free_lbt( lr1_stack_mac_t* lr1_mac );
 
-/*!
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void lr1_stack_mac_radio_busy_lbt( lr1_stack_mac_t* lr1_mac );
-/*!
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void lr1_stack_mac_radio_busy_cad_keep_channel( lr1_stack_mac_t* lr1_mac );
-/*!
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void lr1_stack_mac_radio_abort_lbt( lr1_stack_mac_t* lr1_mac );
 /*!
  * \brief
  * \remark
@@ -469,6 +439,10 @@ void lr1_stack_mac_rx_lora_launch_callback_for_rp( void* rp_void );
 void lr1_stack_mac_rx_gfsk_launch_callback_for_rp( void* rp_void );
 void lr1_stack_mac_tx_ack_bit_set( lr1_stack_mac_t* lr1_mac, bool enable );
 bool lr1_stack_mac_tx_ack_bit_get( lr1_stack_mac_t* lr1_mac );
+
+
+
+
 
 #ifdef __cplusplus
 }

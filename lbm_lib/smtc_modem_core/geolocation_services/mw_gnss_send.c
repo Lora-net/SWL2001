@@ -117,8 +117,6 @@
 #ifndef MODEM_MAX_RANDOM_DELAY_MS
 #define MODEM_MAX_RANDOM_DELAY_MS 3000
 #endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 
 /**
  * @brief LoRaWAN port used for uplinks of the GNSS scan results
@@ -312,8 +310,8 @@ static void mw_gnss_send_service_on_launch( void* context_callback )
 
     if( mw_gnss_send_obj.send_mode == SMTC_MODEM_SEND_MODE_UPLINK )
     {
-        send_status = lorawan_api_payload_send( port, true, tx_buffer, tx_buffer_size, UNCONF_DATA_UP,
-                                                smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS,
+        send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, port, true, tx_buffer, tx_buffer_size, UNCONF_DATA_UP,
+                                                smtc_modem_hal_get_time_in_ms( ) ,
                                                 mw_gnss_send_obj.stack_id );
 
         /* Set result in task_context for later check */
@@ -326,7 +324,7 @@ static void mw_gnss_send_service_on_launch( void* context_callback )
         else
         {
             task_manager->modem_task[mw_gnss_send_obj.task_id].task_context = false;
-            SMTC_MODEM_HAL_TRACE_ERROR( "GNSS Tx [%d]: lorawan_api_payload_send() failed.\n",
+            SMTC_MODEM_HAL_TRACE_ERROR( "GNSS Tx [%d]: tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,) failed.\n",
                                         mw_gnss_send_obj.nb_scans_sent );
         }
     }

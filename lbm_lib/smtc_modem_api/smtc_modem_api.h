@@ -147,6 +147,7 @@ typedef enum smtc_modem_class_e
     SMTC_MODEM_CLASS_A = 0x00,  //!< Modem class A
     SMTC_MODEM_CLASS_B = 0x01,  //!< Modem class B
     SMTC_MODEM_CLASS_C = 0x02,  //!< Modem class C
+    SMTC_MODEM_CLASS_MAX,
 } smtc_modem_class_t;
 
 /**
@@ -215,6 +216,7 @@ typedef enum smtc_modem_dl_window_e
     SMTC_MODEM_DL_WINDOW_RXB_MC_GRP2 = 0x0B,
     SMTC_MODEM_DL_WINDOW_RXB_MC_GRP3 = 0x0C,
     SMTC_MODEM_DL_WINDOW_RXBEACON    = 0x0D,
+    SMTC_MODEM_DL_WINDOW_RXR         = 0x0E,
 } smtc_modem_dl_window_t;
 
 /**
@@ -348,6 +350,9 @@ typedef enum smtc_modem_event_type_e
     SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE,
     SMTC_MODEM_EVENT_WIFI_SCAN_DONE,
     SMTC_MODEM_EVENT_WIFI_TERMINATED,
+    SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC,  //!< Relay TX dynamic mode has enable or disable the WOR protocol
+    SMTC_MODEM_EVENT_RELAY_TX_MODE,     //!< Relay TX activation has been updated 
+    SMTC_MODEM_EVENT_RELAY_TX_SYNC,     //!< Relay TX synchronisation has changed
     SMTC_MODEM_EVENT_MAX,
 } smtc_modem_event_type_t;
 
@@ -477,6 +482,11 @@ typedef struct smtc_modem_event_s
         {
             smtc_modem_event_mute_status_t status;
         } mute;
+        struct
+        {
+            uint8_t status;
+        } relay_tx;
+
     } event_data;
 } smtc_modem_event_t;
 
@@ -489,6 +499,22 @@ typedef struct smtc_modem_event_s
  * -----------------------------------------------------------------------------
  * ----------- BASIC MODEM FUNCTIONS -------------------------------------------
  */
+
+/**
+ * @brief Get the current LoRaWAN region
+ *
+ * @param [in]  stack_id Stack identifier
+ * @param [out] region_list        List of region builded in firmware
+ * @param [out] number_of_region   Number of region in list
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                Command executed without errors
+ * @retval SMTC_MODEM_RC_INVALID           \p region is NULL
+ * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_get_list_region( uint8_t stack_id, uint8_t* region_list,
+                                                     uint8_t* number_of_region );
 
 /**
  * @brief Set the LoRaWAN region
@@ -768,10 +794,56 @@ smtc_modem_return_code_t smtc_modem_lorawan_get_lost_connection_counter( uint8_t
                                                                          uint16_t* lost_connection_cnt );
 
 /**
+ * @brief Get the current value of the lost connection counter
+ *
+ * @remark The counter is incremented after any uplink and is only reset when a valid downlink is received from Network
+ * Server
+ *
+ * @param [in]  stack_id            Stack identifier
+
+ * @param [out] lost_connection_s   Lost connection in second since last downlink
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                Command executed without errors
+ * @retval SMTC_MODEM_RC_INVALID           \p lost_connection_cnt is NULL
+ * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_lorawan_get_lost_connection_counter_since_s( uint8_t   stack_id,
+                                                                                 uint32_t* lost_connection_s );
+
+/**
+ * @brief Get the status to bypass the join_duty-cycle backoff
+ *
+ * @remark  The LoRaWAN certification_set enable/disable the backoff bypass
+ *
+ * @param [in]  stack_id                    Stack identifier
+ * @param [out] enable                      True if bypass enabled
+ * @return smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_get_join_duty_cycle_backoff_bypass( uint8_t stack_id, bool* enable );
+
+/**
+ * @brief Set the status to bypass the join_duty-cycle backoff
+ * @remark  The LoRaWAN certification_set enable/disable the backoff bypass
+ *
+ * @param [in] stack_id                     Stack identifier
+ * @param [in] enable                       True to bypass
+ * @return smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_set_join_duty_cycle_backoff_bypass( uint8_t stack_id, bool enable );
+
+/**
  * @brief Get the status of the LoRaWAN certification service
  *
- * @param [in]  stack_id Stack identifier
- * @param [out] enable True if the certification is enabled, else False
+ * @param [in]  stack_id            Stack identifier
+ * @param [out] enable              True if the certification is enabled, else False
  * @return smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK                Command executed without errors
  * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
@@ -847,6 +919,18 @@ smtc_modem_return_code_t smtc_modem_request_empty_uplink( uint8_t stack_id, bool
 smtc_modem_return_code_t smtc_modem_leave_network( uint8_t stack_id );
 
 /**
+ * @brief Get the radio communications suspend status
+ *
+ * @param [in] stack_id     Stack identifier
+ * @param [out] suspend     Get the suspend status (true: suspend communications / false: resume communications)
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK            Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY          Modem is currently in test mode
+ */
+smtc_modem_return_code_t smtc_modem_get_suspend_radio_communications( uint8_t stack_id, bool* suspend );
+
+/**
  * @brief Suspend the radio communications initiated by the modem
  *
  * @param [in] suspend The configuration to be applied (true: suspend communications / false: resume communications)
@@ -856,6 +940,7 @@ smtc_modem_return_code_t smtc_modem_leave_network( uint8_t stack_id );
  * @retval SMTC_MODEM_RC_BUSY          Modem is currently in test mode
  */
 smtc_modem_return_code_t smtc_modem_suspend_radio_communications( bool suspend );
+
 
 /**
  * @brief Set and start the alarm timer (up to 864000s ie 10 days)
@@ -931,6 +1016,19 @@ smtc_modem_return_code_t smtc_modem_get_next_tx_max_payload( uint8_t stack_id, u
  * @retval SMTC_MODEM_RC_BUSY          Modem is currently in test mode
  */
 smtc_modem_return_code_t smtc_modem_get_duty_cycle_status( uint8_t stack_id, int32_t* duty_cycle_status_ms );
+
+/**
+ * @brief Get Configured LoRaWAN network type to private or public
+ *
+ * @param [in]  stack_id      Stack identifier
+ * @param [in]  network_type  Configuration (true: public network / false: private network)
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_get_network_type( uint8_t stack_id, bool* network_type );
 
 /**
  * @brief Configure LoRaWAN network type to private or public
@@ -1080,6 +1178,17 @@ smtc_modem_return_code_t smtc_modem_get_adr_ack_limit_delay( uint8_t stack_id, u
  * -----------------------------------------------------------------------------
  * ----------- BOARD MANAGEMENT MODEM FUNCTIONS --------------------------------
  */
+
+/**
+ * @brief Get modem crystal error
+ *
+ * @param [out] crystal_error_ppm Crystal error in ppm
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK            Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY          Modem is currently in test mode
+ */
+smtc_modem_return_code_t smtc_modem_get_crystal_error_ppm( uint32_t* crystal_error_ppm );
 
 /**
  * @brief Set modem crystal error
@@ -1236,6 +1345,15 @@ smtc_modem_return_code_t smtc_modem_csma_get_parameters( uint8_t stack_id, uint8
 smtc_modem_return_code_t smtc_modem_get_charge( uint32_t* charge_mah );
 
 /**
+ * @brief Get the Radio Planner statistics in array
+ *
+ * @param stats_array
+ * @param stats_array_length
+ * @return smtc_modem_return_code_t
+ */
+smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array, uint8_t* stats_array_length );
+
+/**
  * @brief Reset the total charge counter of the modem
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
@@ -1248,6 +1366,20 @@ smtc_modem_return_code_t smtc_modem_reset_charge( void );
  * -----------------------------------------------------------------------------
  * ----------- CLASS B/C MODEM FUNCTIONS ---------------------------------------
  */
+
+/**
+ * @brief Get the LoRaWAN class
+ *
+ * @param [in] stack_id      Stack identifier
+ * @param [out] lorawan_class LoRaWAN class to be configured
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_FAIL              Modem is not joined
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_get_class( uint8_t stack_id, smtc_modem_class_t* lorawan_class );
 
 /**
  * @brief Set the LoRaWAN class

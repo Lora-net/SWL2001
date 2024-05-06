@@ -112,7 +112,7 @@ void rp_radio_irq_callback( void* obj );
 /**
  * @brief rp_callback radio call by the upper layer to avoid code execution under it
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  */
 
 void rp_callback( radio_planner_t* rp );

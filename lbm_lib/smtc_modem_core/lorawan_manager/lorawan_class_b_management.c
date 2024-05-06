@@ -98,15 +98,6 @@
 #define NUMBER_MAX_OF_CLASS_B_MANAGEMENT_OBJ NUMBER_OF_STACKS
 #define PERIOD_CLASS_B_MANAGEMENT_CHECK_S 130
 
-#ifndef MODEM_MIN_RANDOM_DELAY_MS
-#define MODEM_MIN_RANDOM_DELAY_MS 200
-#endif
-
-#ifndef MODEM_MAX_RANDOM_DELAY_MS
-#define MODEM_MAX_RANDOM_DELAY_MS 3000
-#endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -251,14 +242,15 @@ static void lorawan_class_b_management_service_on_launch( void* context )
     }
     if( cid_request_size > 0 )
     {
-        lorawan_api_send_stack_cid_req( cid_buffer, cid_request_size, STACK_ID_CURRENT_TASK );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+                                     smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
     }
     else if( lorawan_class_b_management_obj[STACK_ID_CURRENT_TASK].previous_tx_class_b_bit !=
              lorawan_class_b_management_obj[STACK_ID_CURRENT_TASK].current_tx_class_b_bit )
     {
         // send empty payload without port to advertise NS if class B is enabled or disabled
-        lorawan_api_payload_send( 1, false, NULL, 0, UNCONF_DATA_UP,
-                                  smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, STACK_ID_CURRENT_TASK );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, 1, false, NULL, 0, UNCONF_DATA_UP,
+                                     smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
     }
 }
 

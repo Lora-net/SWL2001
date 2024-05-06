@@ -44,7 +44,7 @@
 #include "smtc_modem_hal_dbg_trace.h"
 
 #include "lr1mac_core.h"
-#include "smtc_lbt.h"
+
 #include "smtc_duty_cycle.h"
 #if defined( ADD_CSMA )
 #include "smtc_lora_cad_bt.h"
@@ -69,10 +69,7 @@ static struct
 {
     lr1_stack_mac_t lr1_mac_obj[NUMBER_OF_STACKS];
     smtc_real_t     real_obj[NUMBER_OF_STACKS];
-    smtc_lbt_t      lbt_obj;
-#if defined( ADD_CSMA )
-    smtc_lora_cad_bt_t cad_obj[NUMBER_OF_STACKS];
-#endif  // ADD_CSMA
+
 #if defined( ADD_CLASS_C )
     lr1mac_class_c_t class_c_obj[NUMBER_OF_STACKS];
 #endif  // ADD_CLASS_C
@@ -91,11 +88,6 @@ static struct
 lorawan_down_metadata_t lorawan_down_metadata;
 
 #define lr1_mac_obj lr1mac_core_context.lr1_mac_obj
-#define lbt_obj lr1mac_core_context.lbt_obj
-
-#if defined( ADD_CSMA )
-#define cad_obj lr1mac_core_context.cad_obj
-#endif  // ADD_CSMA
 
 #define real_obj lr1mac_core_context.real_obj
 #define class_c_obj lr1mac_core_context.class_c_obj
@@ -111,14 +103,9 @@ void lorawan_api_init( radio_planner_t* rp, uint8_t stack_id,
                        void ( *lr1mac_downlink_callback )( lr1_stack_mac_down_data_t* push_context ) )
 {
     PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-// init lr1mac core
-#if defined( ADD_CSMA )
-    lr1mac_core_init( &lr1_mac_obj[stack_id], &real_obj[stack_id], &lbt_obj, &cad_obj[stack_id], rp,
-                      ACTIVATION_MODE_OTAA, lr1mac_downlink_callback, &stack_id );
-#else
-    lr1mac_core_init( &lr1_mac_obj[stack_id], &real_obj[stack_id], &lbt_obj, NULL, rp, ACTIVATION_MODE_OTAA,
-                      lr1mac_downlink_callback, &stack_id );
-#endif  // ADD_CSMA
+
+    lr1mac_core_init( &lr1_mac_obj[stack_id], &real_obj[stack_id], rp, ACTIVATION_MODE_OTAA, lr1mac_downlink_callback,
+                      &stack_id );
 
 #if defined( ADD_CLASS_C ) || defined( ADD_CLASS_B )
     lr1mac_rx_session_param_t* multicast_rx_sessions    = NULL;
@@ -203,7 +190,7 @@ status_lorawan_t lorawan_api_set_region( smtc_real_region_types_t region_type, u
 }
 
 status_lorawan_t lorawan_api_payload_send( uint8_t fport, bool fport_enabled, const uint8_t* data, uint8_t data_len,
-                                           uint8_t packet_type, uint32_t target_time_ms, uint8_t stack_id )
+                                           lr1mac_layer_param_t packet_type, uint32_t target_time_ms, uint8_t stack_id )
 {
     PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
     return lr1mac_core_payload_send( &lr1_mac_obj[stack_id], fport, fport_enabled, data, data_len, packet_type,
@@ -211,18 +198,19 @@ status_lorawan_t lorawan_api_payload_send( uint8_t fport, bool fport_enabled, co
 }
 
 status_lorawan_t lorawan_api_payload_send_at_time( uint8_t fport, bool fport_enabled, const uint8_t* data,
-                                                   uint8_t data_len, uint8_t packet_type, uint32_t target_time_ms,
-                                                   uint8_t stack_id )
+                                                   uint8_t data_len, lr1mac_layer_param_t packet_type,
+                                                   uint32_t target_time_ms, uint8_t stack_id )
 {
     PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
     return lr1mac_core_payload_send_at_time( &lr1_mac_obj[stack_id], fport, fport_enabled, data, data_len, packet_type,
                                              target_time_ms );
 }
 
-status_lorawan_t lorawan_api_send_stack_cid_req( uint8_t* cid_req_list, uint8_t cid_req_list_size, uint8_t stack_id )
+status_lorawan_t lorawan_api_send_stack_cid_req( uint8_t* cid_req_list, uint8_t cid_req_list_size,
+                                                 uint32_t target_time_ms, uint8_t stack_id )
 {
     PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    return lr1mac_core_send_stack_cid_req( &lr1_mac_obj[stack_id], cid_req_list, cid_req_list_size );
+    return lr1mac_core_send_stack_cid_req( &lr1_mac_obj[stack_id], cid_req_list, cid_req_list_size, target_time_ms );
 }
 
 status_lorawan_t lorawan_api_join( uint32_t target_time_ms, uint8_t stack_id )
@@ -713,6 +701,22 @@ uint16_t lorawan_api_get_current_no_rx_packet_cnt( uint8_t stack_id )
     return lr1mac_core_get_current_no_rx_packet_cnt( &lr1_mac_obj[stack_id] );
 }
 
+uint32_t lorawan_api_get_current_no_rx_packet_cnt_since_s( uint8_t stack_id )
+{
+    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
+    return lr1mac_core_get_current_no_rx_packet_cnt_since_s( &lr1_mac_obj[stack_id] );
+}
+
+bool lorawan_api_join_duty_cycle_backoff_bypass_get( uint8_t stack_id )
+{
+    return lr1mac_core_join_duty_cycle_backoff_bypass_get( &lr1_mac_obj[stack_id] );
+}
+
+void lorawan_api_join_duty_cycle_backoff_bypass_set( uint8_t stack_id, bool enable )
+{
+    lr1mac_core_join_duty_cycle_backoff_bypass_set( &lr1_mac_obj[stack_id], enable );
+}
+
 void lorawan_api_modem_certification_set( uint8_t enable, uint8_t stack_id )
 {
     PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
@@ -843,63 +847,6 @@ status_lorawan_t lorawan_api_get_device_time_req_status( uint8_t stack_id )
     return lr1_mac_core_get_device_time_req_status( &lr1_mac_obj[stack_id] );
 }
 
-void lorawan_api_lbt_set_parameters( uint32_t listen_duration_ms, int16_t threshold_dbm, uint32_t bw_hz,
-                                     uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    smtc_lbt_set_parameters( &lbt_obj, listen_duration_ms, threshold_dbm, bw_hz );
-}
-
-void lorawan_api_lbt_get_parameters( uint32_t* listen_duration_ms, int16_t* threshold_dbm, uint32_t* bw_hz,
-                                     uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    smtc_lbt_get_parameters( &lbt_obj, listen_duration_ms, threshold_dbm, bw_hz );
-}
-
-void lorawan_api_lbt_set_state( bool enable, uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    smtc_lbt_set_state( &lbt_obj, enable );
-}
-
-bool lorawan_api_lbt_get_state( uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    return smtc_lbt_get_state( &lbt_obj );
-}
-
-#if defined( ADD_CSMA )
-smtc_lora_cad_status_t lorawan_api_lora_cad_bt_set_parameters( uint8_t nb_bo_max, bool bo_enabled,
-                                                               uint8_t max_ch_change, uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    return smtc_lora_cad_bt_set_parameters( &cad_obj[stack_id], nb_bo_max, bo_enabled, max_ch_change );
-}
-
-void lorawan_api_lora_cad_bt_get_parameters( uint8_t* max_ch_change, bool* bo_enabled, uint8_t* nb_bo_max,
-                                             uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    smtc_lora_cad_bt_get_parameters( &cad_obj[stack_id], max_ch_change, bo_enabled, nb_bo_max );
-}
-
-void lorawan_api_lora_cad_bt_set_state( bool enable, uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    if( real_obj[stack_id].real_const.const_lbt_supported == false )
-    {
-        smtc_lora_cad_bt_set_state( &cad_obj[stack_id], enable );
-    }
-}
-
-bool lorawan_api_lora_cad_bt_get_state( uint8_t stack_id )
-{
-    PANIC_IF_STACK_ID_TOO_HIGH( stack_id );
-    return smtc_lora_cad_bt_get_state( &cad_obj[stack_id] );
-}
-#endif  // ADD_CSMA
-
 #if defined( ADD_CLASS_B )
 void lorawan_api_class_b_enabled( bool enable, uint8_t stack_id )
 {
@@ -1020,6 +967,30 @@ status_lorawan_t lorawan_api_is_datarate_valid( uint8_t stack_id, uint8_t dr )
 void lorawan_api_core_abort( uint8_t stack_id )
 {
     lr1mac_core_abort( &lr1_mac_obj[stack_id] );
+}
+status_lorawan_t lorawan_api_update_join_channel( uint8_t stack_id )
+{
+    return ( lr1mac_core_update_join_channel( &lr1_mac_obj[stack_id] ) );
+}
+status_lorawan_t lorawan_api_update_next_tx_channel( uint8_t stack_id )
+{
+    return ( lr1mac_core_update_next_tx_channel( &lr1_mac_obj[stack_id] ) );
+}
+uint32_t lorawan_api_get_time_of_nwk_ans( uint8_t stack_id )
+{
+    return lr1mac_core_get_time_of_nwk_ans( &lr1_mac_obj[stack_id] );
+}
+void lorawan_api_set_time_of_nwk_ans( uint8_t stack_id, uint32_t target_time )
+{
+    lr1mac_core_set_time_of_nwk_ans( &lr1_mac_obj[stack_id], target_time );
+}
+void lorawan_api_set_next_tx_at_time( uint8_t stack_id, bool is_send_at_time )
+{
+    lr1mac_core_set_next_tx_at_time( &lr1_mac_obj[stack_id], is_send_at_time );
+}
+void lorawan_api_set_join_status( uint8_t stack_id, join_status_t join_status )
+{
+    lr1mac_core_set_join_status( &lr1_mac_obj[stack_id], join_status );
 }
 /*
  * -----------------------------------------------------------------------------

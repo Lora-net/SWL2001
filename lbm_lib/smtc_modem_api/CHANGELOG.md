@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.5.0] 2024-05-06
+
+### Added
+* All events and API defined in the v4.4.0
+
+## [v4.4.0] 2023-12-21
+
+### Added
+* Add `smtc_modem_relay_tx_disable` function to disable the relay tx feature (disable the WOR frame)
+* Add `smtc_modem_relay_tx_enable` function to enable the relay tx feature (enable the WOR frame)
+* Add `smtc_modem_relay_tx_get_activation_mode` function to get the current relay tx mode activation
+* Add `smtc_modem_relay_tx_get_sync_status` function to get the current synchronisation status with a relay rx
+* Add `smtc_modem_relay_tx_is_enable` function to get if the relay tx feature is currently enable
+* Add relay tx event 
+  * `SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC` : Relay TX dynamic mode has enable or disable the WOR protocol
+  * `SMTC_MODEM_EVENT_RELAY_TX_MODE` : Relay TX activation has been updated via a MAC command
+  * `SMTC_MODEM_EVENT_RELAY_TX_SYNC` : Relay TX synchronisation has changed
+
 ## [v4.3.0] 2023-12-15
 
 ### Added

@@ -53,15 +53,13 @@
  *
  * @param lr1_mac_obj             // lr1mac object
  * @param real                    // Regional Abstraction Layer object
- * @param lbt_obj                 // Listen Before Talk object
- * @param cad_obj                 // LORA CAD Before Talk object
  * @param rp                      // Radio Planner object
  * @param otaa_abp_conf           // Activation mode, only OTAA is supported
  * @param push_callback           // Callback to push received downlink
  * @param push_context            // Context concerning the downlink data
  */
-void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_real_t* real, smtc_lbt_t* lbt_obj,
-                       smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, lr1mac_activation_mode_t otaa_abp_conf,
+void lr1mac_core_init( lr1_stack_mac_t* lr1_mac_obj, smtc_real_t* real,
+                        radio_planner_t* rp, lr1mac_activation_mode_t otaa_abp_conf,
                        void ( *push_callback )( lr1_stack_mac_down_data_t* push_context ), void* stack_id );
 
 /**
@@ -264,7 +262,7 @@ join_status_t lr1_mac_joined_status_get( lr1_stack_mac_t* lr1_mac_obj );
  * @return status_lorawan_t
  */
 status_lorawan_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t fPort, bool fport_enabled,
-                                           const uint8_t* dataIn, uint8_t sizeIn, uint8_t PacketType,
+                                           const uint8_t* dataIn, uint8_t sizeIn, lr1mac_layer_param_t PacketType,
                                            uint32_t target_time_ms );
 
 /**
@@ -280,7 +278,7 @@ status_lorawan_t lr1mac_core_payload_send( lr1_stack_mac_t* lr1_mac_obj, uint8_t
  * @return status_lorawan_t
  */
 status_lorawan_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
-                                                   const uint8_t* data_in, uint8_t size_in, uint8_t packet_type,
+                                                   const uint8_t* data_in, uint8_t size_in, lr1mac_layer_param_t packet_type,
                                                    uint32_t target_time_ms );
 
 /**
@@ -291,10 +289,11 @@ status_lorawan_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj,
  * @param lr1_mac_obj
  * @param cid_req_list         List of LoRaWAN Commands ID
  * @param cid_req_list_size    Number of Commands ID in list
+ * @param target_time_ms  RTC time to send the packet
  * @return status_lorawan_t
  */
 status_lorawan_t lr1mac_core_send_stack_cid_req( lr1_stack_mac_t* lr1_mac_obj, uint8_t* cid_req_list,
-                                                 uint8_t cid_req_list_size );
+                                                 uint8_t cid_req_list_size, uint32_t target_time_ms );
 
 /**
  * @brief Get the Tx power set in stack
@@ -416,6 +415,15 @@ void lr1mac_core_reset_no_rx_packet_in_mobile_mode_cnt( lr1_stack_mac_t* lr1_mac
 uint16_t lr1mac_core_get_current_no_rx_packet_cnt( lr1_stack_mac_t* lr1_mac_obj );
 
 /**
+ * @brief Get the current value of internal duration in second since "tx without rx"
+ *
+ * @remark This value is reset when a downlink happened
+ *
+ * @return uint32_t
+ */
+uint32_t lr1mac_core_get_current_no_rx_packet_cnt_since_s( lr1_stack_mac_t* lr1_mac_obj );
+
+/**
  * @brief stack receive a link adr request
  *
  * @remark reset the flag automatically each time the upper layer call this function
@@ -425,6 +433,23 @@ uint16_t lr1mac_core_get_current_no_rx_packet_cnt( lr1_stack_mac_t* lr1_mac_obj 
  * @return false
  */
 bool lr1mac_core_available_link_adr_get( lr1_stack_mac_t* lr1_mac_obj );
+
+/**
+ * @brief Get status of bypass join duty cycle backoff
+ *
+ * @param lr1_mac_obj
+ * @return true bypass enabled
+ * @return false bypass not enabled
+ */
+bool lr1mac_core_join_duty_cycle_backoff_bypass_get( lr1_stack_mac_t* lr1_mac_obj );
+
+/**
+ * @brief Bypass join duty cycle backoff
+ *
+ * @param lr1_mac_obj
+ * @param enable        true: bypass duty-cycle spec
+ */
+void lr1mac_core_join_duty_cycle_backoff_bypass_set( lr1_stack_mac_t* lr1_mac_obj, bool enable );
 
 /**
  * @brief Set the certification mode
@@ -596,4 +621,51 @@ void lr1mac_core_set_no_rx_windows( lr1_stack_mac_t* lr1_mac_obj, uint8_t disabl
  */
 uint8_t lr1mac_core_get_no_rx_windows( lr1_stack_mac_t* lr1_mac_obj );
 
+/**
+ * @brief Prepare next join , update next channel 
+ *
+ * @param lr1_mac_obj
+ * @return status_lorawan_t
+ */
+status_lorawan_t lr1mac_core_update_join_channel( lr1_stack_mac_t* lr1_mac_obj );
+
+/**
+ * @brief Prepare next transmission , update next channel 
+ *
+ * @param lr1_mac_obj
+ * @return status_lorawan_t
+ */
+status_lorawan_t lr1mac_core_update_next_tx_channel( lr1_stack_mac_t* lr1_mac_obj );
+
+
+/**
+ * @brief In case of transmission initiated by the stack itself (nwk ans or retransmission) , this function return the
+ * schedule time of this next transmission
+ *
+ * @param [in] lr1_mac_obj 
+ * @return uint32_t return target time of next transmission in ms
+ */
+uint32_t lr1mac_core_get_time_of_nwk_ans( lr1_stack_mac_t* lr1_mac_obj );
+/**
+ * @brief In case of transmission initiated by the stack itself (nwk ans or retransmission) , update the
+ * schedule time of this next transmission
+ *
+ * @param [in] lr1_mac_obj 
+ * @param [in] uint32_t  target time of next transmission in ms
+ */
+void lr1mac_core_set_time_of_nwk_ans( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_time );
+/**
+ * @brief update the next transmission to start at time or asap;
+ *
+ *  @param [in] lr1_mac_obj 
+ * @param [in] bool  is_send_at_time :  true to transmit at time
+ */
+void lr1mac_core_set_next_tx_at_time(  lr1_stack_mac_t* lr1_mac_obj, bool is_send_at_time );
+/**
+ * @brief update the internal join_status;
+ *
+ *  @param [in] lr1_mac_obj 
+ * @param [in] join_status_t join_status
+ */
+void lr1mac_core_set_join_status( lr1_stack_mac_t* lr1_mac_obj, join_status_t join_status );
 #endif

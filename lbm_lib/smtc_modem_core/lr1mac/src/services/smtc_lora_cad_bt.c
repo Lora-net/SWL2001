@@ -104,11 +104,11 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
-static void smtc_cad_bt_launch_radio_callback_for_rp( void* rp_void );
-static void smtc_lora_cad_bt_rp_callback( smtc_lora_cad_bt_t* cad_obj );
-static void smtc_lora_cad_bt_reset_to_difs_phase( smtc_lora_cad_bt_t* cad_obj );
-static void smtc_lora_cad_bt_channel_is_free( smtc_lora_cad_bt_t* cad_obj );
-
+static void               smtc_cad_bt_launch_radio_callback_for_rp( void* rp_void );
+static void               smtc_lora_cad_bt_rp_callback( smtc_lora_cad_bt_t* cad_obj );
+static void               smtc_lora_cad_bt_reset_to_difs_phase( smtc_lora_cad_bt_t* cad_obj );
+static void               smtc_lora_cad_bt_channel_is_free( smtc_lora_cad_bt_t* cad_obj );
+static smtc_lora_cad_bt_t cad_obj_declare[NUMBER_OF_STACKS];
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -116,9 +116,9 @@ static void smtc_lora_cad_bt_channel_is_free( smtc_lora_cad_bt_t* cad_obj );
 
 void smtc_lora_cad_bt_init( smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, uint8_t cad_id_rp,
                             void ( *ch_free_callback )( void* ch_free_context ), void* ch_free_context,
-                            void  ( *ch_busy_callback_update_channel )( void* ch_busy_context_update_channel ),
+                            void ( *ch_busy_callback_update_channel )( void* ch_busy_context_update_channel ),
                             void* ch_busy_context_update_channel,
-                            void  ( *ch_free_callback_on_back_off )( void* ch_free_context_on_back_off ),
+                            void ( *ch_free_callback_on_back_off )( void* ch_free_context_on_back_off ),
                             void* ch_free_context_on_back_off, void ( *abort_callback )( void* abort_context ),
                             void* abort_context )
 {
@@ -201,7 +201,7 @@ bool smtc_lora_cad_bt_get_state( smtc_lora_cad_bt_t* cad_obj )
 void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq_hz, uint8_t sf,
                                       ral_lora_bw_t bandwidth, bool is_at_time, uint32_t target_time_ms,
                                       uint32_t symbol_duration_us, uint32_t tx_duration_ms,
-                                      uint8_t nb_available_channel )
+                                      uint8_t nb_available_channel, bool invert_iq_is_on )
 {
     // SMTC_MODEM_HAL_TRACE_PRINTF( "smtc_lora_cad_bt_listen_channel\n" );
     if( cad_obj->is_cad_running == true )
@@ -282,7 +282,7 @@ void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq
     lora_cad_param.ral_lora_cad_params.cad_det_peak_in_symb = cad_obj->detect_peak_offset + cad_det_peak;
 
     lora_cad_param.rf_freq_in_hz   = freq_hz;
-    lora_cad_param.invert_iq_is_on = false;  // false listen uplink to detect collision
+    lora_cad_param.invert_iq_is_on = invert_iq_is_on;
     lora_cad_param.sf              = sf;
     lora_cad_param.bw              = bandwidth;
 
@@ -300,16 +300,14 @@ void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq
     rp_task.duration_time_ms           = listen_duration_ms + tx_duration_ms;
     rp_task.launch_task_callbacks      = smtc_cad_bt_launch_radio_callback_for_rp;
     rp_task.schedule_task_low_priority = false;
-
+    rp_task.start_time_ms = target_time_ms - listen_duration_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
     if( is_at_time == true )
     {
-        rp_task.start_time_ms = target_time_ms - listen_duration_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
-        rp_task.state         = RP_TASK_STATE_SCHEDULE;
+        rp_task.state = RP_TASK_STATE_SCHEDULE;
     }
     else
     {
-        rp_task.start_time_ms = target_time_ms;
-        rp_task.state         = RP_TASK_STATE_ASAP;
+        rp_task.state = RP_TASK_STATE_ASAP;
     }
 
     if( rp_task_enqueue( cad_obj->rp, &rp_task, NULL, 0, &radio_params ) != RP_HOOK_STATUS_OK )
@@ -324,10 +322,22 @@ void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq
 
         if( cad_obj->cad_state == SMTC_LORA_CAD_DIFS )
         {
-            SMTC_MODEM_HAL_TRACE_PRINTF(
-                "symb_duration_us %u, TOA:%u, listen_duration_ms %u, task_duration:%u, is_at_time:%d\n",
-                symbol_duration_us, tx_duration_ms, listen_duration_ms, rp_task.duration_time_ms, is_at_time );
+            // SMTC_MODEM_HAL_TRACE_PRINTF(
+            //    "symb_duration_us %u, TOA:%u, listen_duration_ms %u, task_duration:%u, is_at_time:%d\n",
+            //    symbol_duration_us, tx_duration_ms, listen_duration_ms, rp_task.duration_time_ms, is_at_time );
         }
+    }
+}
+
+smtc_lora_cad_bt_t* smtc_cad_get_obj( uint8_t stack_id )
+{
+    if( stack_id < NUMBER_OF_STACKS )
+    {
+        return ( &cad_obj_declare[stack_id] );
+    }
+    else
+    {
+        return NULL;
     }
 }
 
@@ -348,6 +358,8 @@ static void smtc_cad_bt_launch_radio_callback_for_rp( void* rp_void )
 
     smtc_modem_hal_start_radio_tcxo( );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_lora_cad( &( rp->radio->ral ) ) == RAL_STATUS_OK );
+
+    rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }
 
 static void smtc_lora_cad_bt_rp_callback( smtc_lora_cad_bt_t* cad_obj )

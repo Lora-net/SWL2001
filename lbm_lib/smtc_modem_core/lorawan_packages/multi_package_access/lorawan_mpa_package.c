@@ -415,7 +415,7 @@ void lorawan_mpa_package_service_on_launch( void* service_id )
 
             SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_mpa_package launch ANS_CMD_TASK n" );
             SMTC_MODEM_HAL_TRACE_ARRAY( "MPA ans", tmp_ans, tmp_ans_size );
-            if( lorawan_api_payload_send(
+            if( tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
                     MPA_PORT, true, tmp_ans, tmp_ans_size, UNCONF_DATA_UP,
                     smtc_modem_hal_get_time_in_ms( ) + smtc_modem_hal_get_random_nb_in_range( 0, 2000 ),
                     ctx->stack_id ) == OKLORAWAN )

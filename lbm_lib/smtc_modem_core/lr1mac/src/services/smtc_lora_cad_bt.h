@@ -185,11 +185,22 @@ bool smtc_lora_cad_bt_get_state( smtc_lora_cad_bt_t* cad_obj );
  * @param symbol_duration_us    duration of one symbols regarding ths SF and the bandwidth
  * @param tx_duration_ms        duration of the transmission if channel is free ( allow to book the radio planer )
  * @param nb_available_channel  the number of available channels in region for max_change
+ * @param invert_iq_is_on       target iq invert 
  */
 void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq_hz, uint8_t sf,
                                       ral_lora_bw_t bandwidth, bool is_at_time, uint32_t target_time_ms,
                                       uint32_t symbol_duration_us, uint32_t tx_duration_ms,
-                                      uint8_t nb_available_channel );
+                                      uint8_t nb_available_channel, bool invert_iq_is_on );
+
+/**
+ * @brief return the cad obj pointer with stack id as parameter
+ * task
+ *
+ * @param stack_id  stack_id
+ * @return smtc_lora_cad_bt_t object pointer 
+ */
+smtc_lora_cad_bt_t* smtc_cad_get_obj( uint8_t stack_id );
+
 
 #ifdef __cplusplus
 }

@@ -51,6 +51,14 @@ extern "C" {
 #include "lorawan_beacon_tx_service_example.h"
 #endif
 
+#ifdef RELAY_RX
+#include "lorawan_relay_rx_service.h"
+#endif
+
+#ifdef RELAY_TX
+#include "lorawan_relay_tx_service.h"
+#endif
+
 #if defined( ADD_LBM_GEOLOCATION )
 #include "mw_gnss_scan.h"
 #include "mw_gnss_send.h"
@@ -105,6 +113,12 @@ typedef struct modem_service_config_s
 
 static modem_service_config_t modem_service_config[] = {
     { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_certification_services_init },
+#ifdef RELAY_RX
+    { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_relay_rx_services_init },
+#endif
+#ifdef RELAY_TX
+    { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_relay_tx_services_init },
+#endif
 #ifdef ADD_SMTC_ALC_SYNC
     { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_alcsync_services_init },
 #endif

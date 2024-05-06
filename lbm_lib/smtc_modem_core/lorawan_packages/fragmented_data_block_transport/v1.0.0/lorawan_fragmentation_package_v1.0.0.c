@@ -279,7 +279,7 @@ void lorawan_fragmentation_package_service_on_launch( void* service_id )
 {
     if( lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans_size > 0 )
     {
-        lorawan_api_payload_send(
+        tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
             FRAGMENTATION_PORT, true,
             lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans,
             lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans_size,
@@ -515,7 +515,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                                         frag_session_data[frag_index].frag_decoder_status.FragNbLost;
 
             if( ( participants == 1 ) ||
-                ( ( participants == 0 ) && ( frag_session_data[frag_index].frag_decoder_status.FragNbLost > 0 ) ) )
+                ( ( participants == 0 ) && ( frag_session_data[frag_index].frag_decoder_status.MissingFrag > 0 ) ) )
             {
                 if( ( ans_index + FRAGMENTATION_SESSION_STATUS_ANS_SIZE ) <= max_payload_size )
                 {
@@ -524,7 +524,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                     ctx->fragmentation_tx_payload_ans[ans_index++] =
                         ( frag_index << 6 ) | ( ( nb_frag_received >> 8 ) & 0x3F );
                     ctx->fragmentation_tx_payload_ans[ans_index++] =
-                        frag_session_data[frag_index].frag_decoder_status.FragNbLost;
+                         frag_session_data[frag_index].frag_decoder_status.MissingFrag;
                     ctx->fragmentation_tx_payload_ans[ans_index++] =
                         frag_session_data[frag_index].frag_decoder_status.MatrixError & 0x01;
 

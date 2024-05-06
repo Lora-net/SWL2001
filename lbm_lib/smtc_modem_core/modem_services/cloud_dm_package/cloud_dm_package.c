@@ -742,8 +742,8 @@ static void cloud_dm_service_on_launch( void* service_id )
                                info_bitfield_periodic_join, &cloud_dm_obj[idx].next_dm_opcode_periodic );
 
         status_lorawan_t send_status =
-            lorawan_api_payload_send( cloud_dm_obj[idx].dm_port, true, payload, payload_length, UNCONF_DATA_UP,
-                                      smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, stack_id );
+            tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, cloud_dm_obj[idx].dm_port, true, payload, payload_length, UNCONF_DATA_UP,
+                                      smtc_modem_hal_get_time_in_ms( )  , stack_id );
 
         if( send_status == OKLORAWAN )
         {
@@ -808,16 +808,16 @@ static void cloud_dm_service_on_launch( void* service_id )
         else if( cloud_dm_obj[idx].up_count != 0 )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( "UL for DL opportunities\n" );
-            lorawan_api_payload_send( cloud_dm_obj[idx].dm_port, false, NULL, 0, UNCONF_DATA_UP,
-                                      smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, stack_id );
+            tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, cloud_dm_obj[idx].dm_port, false, NULL, 0, UNCONF_DATA_UP,
+                                      smtc_modem_hal_get_time_in_ms( )  , stack_id );
         }
         // else nothing to do
 
         if( payload_length > 0 )
         {
             status_lorawan_t send_status =
-                lorawan_api_payload_send( cloud_dm_obj[idx].dm_port, true, payload, payload_length, UNCONF_DATA_UP,
-                                          smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, stack_id );
+                tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, cloud_dm_obj[idx].dm_port, true, payload, payload_length, UNCONF_DATA_UP,
+                                          smtc_modem_hal_get_time_in_ms( )  , stack_id );
             if( send_status == OKLORAWAN )
             {
                 SMTC_MODEM_HAL_TRACE_ARRAY( "payload DM ", payload, payload_length );

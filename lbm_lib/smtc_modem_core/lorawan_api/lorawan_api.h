@@ -138,7 +138,8 @@ status_lorawan_t lorawan_api_set_region( smtc_real_region_types_t region_type, u
  * @return status_lorawan_t The status of the operation
  */
 status_lorawan_t lorawan_api_payload_send( uint8_t fport, bool fport_enabled, const uint8_t* data, uint8_t data_len,
-                                           uint8_t packet_type, uint32_t target_time_ms, uint8_t stack_id );
+                                           lr1mac_layer_param_t packet_type, uint32_t target_time_ms,
+                                           uint8_t stack_id );
 
 /**
  * @brief
@@ -152,8 +153,8 @@ status_lorawan_t lorawan_api_payload_send( uint8_t fport, bool fport_enabled, co
  * @return status_lorawan_t The status of the operation
  */
 status_lorawan_t lorawan_api_payload_send_at_time( uint8_t fport, bool fport_enabled, const uint8_t* data,
-                                                   uint8_t data_len, uint8_t packet_type, uint32_t target_time_ms,
-                                                   uint8_t stack_id );
+                                                   uint8_t data_len, lr1mac_layer_param_t packet_type,
+                                                   uint32_t target_time_ms, uint8_t stack_id );
 
 /**
  * @brief Send a LoRaWAN cid request
@@ -161,9 +162,11 @@ status_lorawan_t lorawan_api_payload_send_at_time( uint8_t fport, bool fport_ena
  * @param [in] cid_req_list  Commands ID list requested by the User LINK_CHECK_REQ, DEVICE_TIME_REQ or
  *                           PING_SLOT_INFO_REQ
  * @param [in] cid_req_list_size  Number of command in list
+ * @param [in] target_time_ms RTC time when the packet shall be sent
  * @return status_lorawan_t The status of the operation
  */
-status_lorawan_t lorawan_api_send_stack_cid_req( uint8_t* cid_req_list, uint8_t cid_req_list_size, uint8_t stack_id );
+status_lorawan_t lorawan_api_send_stack_cid_req( uint8_t* cid_req_list, uint8_t cid_req_list_size,
+                                                 uint32_t target_time_ms, uint8_t stack_id );
 
 /**
  * @brief Send a join request
@@ -697,6 +700,34 @@ void lorawan_api_reset_no_rx_packet_in_mobile_mode_cnt( uint8_t stack_id );
 uint16_t lorawan_api_get_current_no_rx_packet_cnt( uint8_t stack_id );
 
 /**
+ * @brief Get the current value of internal duration in second since "tx without rx"
+ *
+ * @remark This value is reset when a downlink happened
+ *
+ * @return uint32_t
+ */
+uint32_t lorawan_api_get_current_no_rx_packet_cnt_since_s( uint8_t stack_id );
+
+/**
+ * @brief Get the Bypass join backoff duty-cycle status
+ * @remark  The LoRaWAN certification_set enable/disable the backoff bypass
+ *
+ * @param stack_id
+ * @return true     bypassed is enabled
+ * @return false    bypassed is not enabled
+ */
+bool lorawan_api_join_duty_cycle_backoff_bypass_get( uint8_t stack_id );
+
+/**
+ * @brief Bypass join backoff duty-cycle
+ * @remark  The LoRaWAN certification_set enable/disable the backoff bypass
+ *
+ * @param stack_id
+ * @param [in] enable    true to bypass
+ */
+void lorawan_api_join_duty_cycle_backoff_bypass_set( uint8_t stack_id, bool enable );
+
+/**
  * @brief Certification: Set the status of the Modem LoRaWAN certification
  * @remark  To authorized LoRaWAN certification in modem
  *
@@ -860,77 +891,6 @@ status_lorawan_t lorawan_api_get_link_check_ans( uint8_t* margin, uint8_t* gw_cn
 status_lorawan_t lorawan_api_get_device_time_req_status( uint8_t stack_id );
 
 /**
- * @brief Set the LBT parameters
- *
- * @param [in] listen_duration_ms   duration of the listen task
- * @param [in] threshold_dbm        threshold in dbm to decide if the channel is free or busy
- * @param [in] bw_hz                bandwith in hertz to listen a channel
- */
-void lorawan_api_lbt_set_parameters( uint32_t listen_duration_ms, int16_t threshold_dbm, uint32_t bw_hz,
-                                     uint8_t stack_id );
-
-/**
- * @brief Get the configured lbt parameters
- *
- * @param [out] listen_duration_ms  duration of the listen task
- * @param [out] threshold_dbm       threshold in dbm
- * @param [out] bw_hz               bandwith in hertz
- */
-void lorawan_api_lbt_get_parameters( uint32_t* listen_duration_ms, int16_t* threshold_dbm, uint32_t* bw_hz,
-                                     uint8_t stack_id );
-
-/**
- * @brief  Enable/Disable LBT service
- *
- * @param [in] enable true to enable lbt service, false to disable it
- */
-void lorawan_api_lbt_set_state( bool enable, uint8_t stack_id );
-
-/**
- * @brief Return the current enabled state of the lbt service
- *
- * @return true if service is currently enabled
- * @return false  if service is currently disabled
- */
-bool lorawan_api_lbt_get_state( uint8_t stack_id );
-
-/**
- * @brief Set the LoRa CAD before talk parameters
- *
- * @param [in] max_ch_change Number of channel changed before send the packet in ALOHA mode
- * @param [in] bo_enabled Enable the back off to run multiple little CAD before transmit
- * @param [in] nb_bo_max Set the number max of multiple little CAD
- * @return smtc_lora_cad_status_t
- */
-smtc_lora_cad_status_t lorawan_api_lora_cad_bt_set_parameters( uint8_t nb_bo_max, bool bo_enabled,
-                                                               uint8_t max_ch_change, uint8_t stack_id );
-
-/**
- * @brief Get the configured LoRa CAD parameters
- *
- * @param [out] max_ch_change Number of channel changed before send the packet in ALOHA mode
- * @param [out] bo_enabled Is back off enable to run multiple little CAD before transmit
- * @param [out] nb_bo_max Get the number max of multiple little CAD
- */
-void lorawan_api_lora_cad_bt_get_parameters( uint8_t* max_ch_change, bool* bo_enabled, uint8_t* nb_bo_max,
-                                             uint8_t stack_id );
-
-/**
- * @brief Enable/Disable CAD before talk service
- *
- * @param [in] enable true to enable cad before talk service, false to disable it
- */
-void lorawan_api_lora_cad_bt_set_state( bool enable, uint8_t stack_id );
-
-/**
- * @brief Return the current enabled state of the CAD before talk service
- *
- * @return true if service is currently enabled
- * @return false if service is currently disabled
- */
-bool lorawan_api_lora_cad_bt_get_state( uint8_t stack_id );
-
-/**
  * @brief Enable the class B
  *
  * @param [in] enable true to enable class B, false to disable
@@ -1063,6 +1023,55 @@ status_lorawan_t lorawan_api_is_datarate_valid( uint8_t stack_id, uint8_t dr );
  */
 void lorawan_api_core_abort( uint8_t stack_id );
 
+/**
+ * @brief Prepare next join , update next channel
+ *
+ * @param [in] stack_id Stack identifier
+ * @return status_lorawan_t
+ */
+status_lorawan_t lorawan_api_update_join_channel( uint8_t stack_id );
+
+/**
+ * @brief Prepare next transmission , update next channel
+ *
+ * @param [in] stack_id Stack identifier
+ * @return status_lorawan_t
+ */
+status_lorawan_t lorawan_api_update_next_tx_channel( uint8_t stack_id );
+
+/**
+ * @brief In case of transmission initiated by the stack itself (nwk ans or retransmission) , this function return the
+ * schedule time of this next transmission
+ *
+ * @param [in] stack_id Stack identifier
+ * @return uint32_t return target time of next transmission in ms
+ */
+uint32_t lorawan_api_get_time_of_nwk_ans( uint8_t stack_id );
+
+/**
+ * @brief In case of transmission initiated by the stack itself (nwk ans or retransmission) , update the
+ * schedule time of this next transmission
+ *
+ * @param [in] stack_id Stack identifier
+ * @param [in] uint32_t  target time of next transmission in ms
+ */
+void lorawan_api_set_time_of_nwk_ans( uint8_t stack_id, uint32_t target_time );
+
+/**
+ * @brief update the next transmission to start at time or asap;
+ *
+ * @param [in] stack_id Stack identifier
+ * @param [in] bool  is_send_at_time :  true to transmit at time
+ */
+void lorawan_api_set_next_tx_at_time( uint8_t stack_id, bool is_send_at_time );
+
+/**
+ * @brief update the internal join status;
+ *
+ * @param [in] stack_id Stack identifier
+ * @param [in] join_status_t  join_status
+ */
+void lorawan_api_set_join_status(uint8_t stack_id, join_status_t  join_status );
 #ifdef __cplusplus
 }
 #endif

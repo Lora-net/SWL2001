@@ -52,7 +52,7 @@
 #ifdef ADD_FUOTA
 #include "lorawan_fragmentation_package.h"
 #endif
-
+#include "modem_tx_protocol_manager.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -95,15 +95,6 @@
         }                                       \
     } while( 0 )
 
-#ifndef MODEM_MIN_RANDOM_DELAY_MS
-#define MODEM_MIN_RANDOM_DELAY_MS 100
-#endif
-
-#ifndef MODEM_MAX_RANDOM_DELAY_MS
-#define MODEM_MAX_RANDOM_DELAY_MS 500
-#endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
@@ -206,7 +197,7 @@ static void lorawan_certification_build_beacon_rx_status_ind( lorawan_certificat
 
 void lorawan_certification_services_init( uint8_t* service_id, uint8_t task_id,
                                           uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                          void    ( **on_launch_callback )( void* ),
+                                          void ( **on_launch_callback )( void* ),
                                           void ( **on_update_callback )( void* ), void** context_callback )
 {
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
@@ -331,17 +322,19 @@ static void lorawan_certification_service_on_launch( void* service_id )
     switch( lorawan_certification_obj[idx].is_tx_requested )
     {
     case LORAWAN_CERTIFICATION_TX_CERTIF_REQ: {
-        status_lorawan = lorawan_api_payload_send(
-            LORAWAN_CERTIFICATION_FPORT, ( lorawan_certification_obj[idx].tx_buffer_length == 0 ) ? false : true,
+        status_lorawan = tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_LORA, LORAWAN_CERTIFICATION_FPORT,
+            ( lorawan_certification_obj[idx].tx_buffer_length == 0 ) ? false : true,
             lorawan_certification_obj[idx].tx_buffer, lorawan_certification_obj[idx].tx_buffer_length,
             ( lorawan_certification_obj[idx].frame_type == false ) ? UNCONF_DATA_UP : CONF_DATA_UP,
             timestamp_launch_ms[idx], lorawan_certification_obj[idx].stack_id );
         break;
     }
     case LORAWAN_CERTIFICATION_TX_MAC_REQ: {
-        status_lorawan = lorawan_api_send_stack_cid_req( lorawan_certification_obj[idx].cid_req_list,
-                                                         lorawan_certification_obj[idx].cid_req_list_size,
-                                                         lorawan_certification_obj[idx].stack_id );
+        status_lorawan = tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_CID, 0, false, lorawan_certification_obj[idx].cid_req_list,
+            lorawan_certification_obj[idx].cid_req_list_size, 0, smtc_modem_hal_get_time_in_ms( ),
+            lorawan_certification_obj[idx].stack_id );
         lorawan_certification_obj[idx].cid_req_list_size = 0;
         break;
     }
@@ -355,8 +348,8 @@ static void lorawan_certification_service_on_launch( void* service_id )
     case LORAWAN_CERTIFICATION_NO_TX_REQ:
     default: {
         uint8_t buffer_tx_tmp[] = { 0x11, 0x12, 0x13, 0x14 };
-        status_lorawan          = lorawan_api_payload_send(
-            1, true, buffer_tx_tmp, sizeof( buffer_tx_tmp ),
+        status_lorawan          = tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_LORA, 1, true, buffer_tx_tmp, sizeof( buffer_tx_tmp ),
             ( lorawan_certification_obj[idx].frame_type == false ) ? UNCONF_DATA_UP : CONF_DATA_UP,
             timestamp_launch_ms[idx], lorawan_certification_obj[idx].stack_id );
         break;

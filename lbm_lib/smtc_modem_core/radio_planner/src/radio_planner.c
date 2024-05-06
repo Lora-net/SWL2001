@@ -67,7 +67,7 @@
 /**
  * @brief rp_task_free to free a task
  *
- * @param rp  pointer to the radioplaner object itself
+ * @param rp  pointer to the radioplanner object itself
  * @param task pointer to the task that function free
  */
 static void rp_task_free( const radio_planner_t* rp, rp_task_t* task );
@@ -75,15 +75,15 @@ static void rp_task_free( const radio_planner_t* rp, rp_task_t* task );
 /**
  * @brief rp_task_update_time update task time
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param now the current time in ms
  */
 static void rp_task_update_time( radio_planner_t* rp, uint32_t now );
 
 /**
- * @brief rp_task_arbiter the core of the radio planer
+ * @brief rp_task_arbiter the core of the radio planner
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param caller_func_name input just for print
  */
 static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name );
@@ -91,29 +91,29 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
 /**
  * @brief rp_irq_get_status get the radio status after irq
  *
- * @param  pointer to the radioplaner object itself
+ * @param  pointer to the radioplanner object itself
  * @param hook_id id of the targeted hook
  */
 static void rp_irq_get_status( radio_planner_t* rp, const uint8_t hook_id );
 
 /**
- * @brief rp_task_compute_ranking compute the ranking of the different tasks inside the radio planer
+ * @brief rp_task_compute_ranking compute the ranking of the different tasks inside the radio planner
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  */
 static void rp_task_compute_ranking( radio_planner_t* rp );
 
 /**
  * @brief rp_task_launch_current call  the launch callback of the new running task
  *
- * @param rp  pointer to the radioplaner object itself
+ * @param rp  pointer to the radioplanner object itself
  */
 static void rp_task_launch_current( radio_planner_t* rp );
 
 /**
  * @brief rp_task_select_next select the next most priority task
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param now the current time in ms
  * @return uint8_t
  */
@@ -122,7 +122,7 @@ static uint8_t rp_task_select_next( radio_planner_t* rp, const uint32_t now );
 /**
  * @brief rp_task_get_next return if there is a task to schedule or no more task
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param duration return the delay to the next task (to set the timer)
  * @param task_id return the task id of the next task to launch
  * @param now the current time
@@ -142,16 +142,16 @@ static uint8_t rp_task_find_highest_priority( uint8_t* vector, uint8_t length );
 /**
  * @brief rp_get_pkt_payload get the receive payload
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param task the task containing the received payload
  * @return rp_hook_status_t
  */
 rp_hook_status_t rp_get_pkt_payload( radio_planner_t* rp, const rp_task_t* task );
 
 /**
- * @brief rp_set_alarm configure the radio planer timer
+ * @brief rp_set_alarm configure the radio planner timer
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param alarm_in_ms delay in ms (relative value)
  */
 static void rp_set_alarm( radio_planner_t* rp, const uint32_t alarm_in_ms );
@@ -159,20 +159,20 @@ static void rp_set_alarm( radio_planner_t* rp, const uint32_t alarm_in_ms );
 /**
  * @brief rp_timer_irq function call by the timer callback
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  */
 static void rp_timer_irq( radio_planner_t* rp );
 
 /**
  * @brief rp_task_call_aborted excute the callback of the aborted tasks
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  */
 static void rp_task_call_aborted( radio_planner_t* rp );
 /**
  * @brief rp_consumption_statistics_updated compute the statistic (power consumption)
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param hook_id hook id on which statistics are perform
  * @param time the current time in ms
  */
@@ -181,14 +181,14 @@ static void rp_consumption_statistics_updated( radio_planner_t* rp, const uint8_
 /**
  * @brief rp_timer_irq_callback timer callback
  *
- * @param obj pointer to the radioplaner object itself
+ * @param obj pointer to the radioplanner object itself
  */
 static void rp_timer_irq_callback( void* obj );
 
 /**
  * @brief rp_hook_callback call the callback associated to the id
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param id target hook id
  */
 static void rp_hook_callback( radio_planner_t* rp, uint8_t id );
@@ -196,7 +196,7 @@ static void rp_hook_callback( radio_planner_t* rp, uint8_t id );
 /**
  * @brief rp_task_print debug print function for rp
  *
- * @param rp pointer to the radioplaner object itself
+ * @param rp pointer to the radioplanner object itself
  * @param task target task to print
  */
 static void rp_task_print( const radio_planner_t* rp, const rp_task_t* task );
@@ -940,7 +940,7 @@ static uint8_t rp_task_select_next( radio_planner_t* rp, const uint32_t now )
             {
                 if( rp->tasks[rank].state == RP_TASK_STATE_ASAP )
                 {
-                    rp->tasks[rank].start_time_ms = hook_time_to_exe_tmp + hook_duration_tmp + 100;
+                    rp->tasks[rank].start_time_ms = hook_time_to_exe_tmp + hook_duration_tmp + RP_MCU_FAIRNESS_DELAY_MS;
                 }
             }
         }

@@ -235,7 +235,7 @@ void smtc_beacon_sniff_init( smtc_lr1_beacon_t* lr1_beacon_obj, smtc_ping_slot_t
     lr1_beacon_obj->push_callback                  = push_callback;
     lr1_beacon_obj->push_context                   = &( lr1_mac->rx_down_data );
     lr1_beacon_obj->dpll_frequency                 = BEACON_PERIOD_MS;
-    lr1_beacon_obj->listen_beacon_rate             = NUMBER_OF_STACKS;
+    lr1_beacon_obj->listen_beacon_rate             = NUMBER_OF_STACKS * DEFAULT_LISTEN_BEACON_RATE;
 
     rp_release_hook( lr1_beacon_obj->rp, lr1_beacon_obj->beacon_sniff_id_rp );
     rp_hook_init( lr1_beacon_obj->rp, lr1_beacon_obj->beacon_sniff_id_rp,

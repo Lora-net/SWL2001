@@ -280,7 +280,7 @@ static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hf_vreg[] = 
  *
  * @returns RAL interrupt status
  */
-static ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t lr11xx_irq );
+ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t lr11xx_irq );
 
 /**
  * @brief Convert interrupt flags from RAL context to LR11XX context
@@ -289,7 +289,7 @@ static ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t l
  *
  * @returns LR11XX interrupt status
  */
-static lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t ral_irq );
+lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t ral_irq );
 
 /**
  * @brief Convert GFSK modulation parameters from RAL context to LR11XX context
@@ -299,8 +299,8 @@ static lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t
  *
  * @returns Operation status
  */
-static ral_status_t ral_lr11xx_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t*    ral_mod_params,
-                                                                 lr11xx_radio_mod_params_gfsk_t* radio_mod_params );
+ral_status_t ral_lr11xx_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t*    ral_mod_params,
+                                                          lr11xx_radio_mod_params_gfsk_t* radio_mod_params );
 
 /**
  * @brief Convert GFSK packet parameters from RAL context to LR11XX context
@@ -310,8 +310,8 @@ static ral_status_t ral_lr11xx_convert_gfsk_mod_params_from_ral( const ral_gfsk_
  *
  * @returns Operation status
  */
-static ral_status_t ral_lr11xx_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t*    ral_pkt_params,
-                                                                 lr11xx_radio_pkt_params_gfsk_t* radio_pkt_params );
+ral_status_t ral_lr11xx_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t*    ral_pkt_params,
+                                                          lr11xx_radio_pkt_params_gfsk_t* radio_pkt_params );
 
 /**
  * @brief Convert LoRa modulation parameters from RAL context to LR11XX context
@@ -321,8 +321,8 @@ static ral_status_t ral_lr11xx_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
  *
  * @returns Operation status
  */
-static ral_status_t ral_lr11xx_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t*    ral_mod_params,
-                                                                 lr11xx_radio_mod_params_lora_t* radio_mod_params );
+ral_status_t ral_lr11xx_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t*    ral_mod_params,
+                                                          lr11xx_radio_mod_params_lora_t* radio_mod_params );
 
 /**
  * @brief Convert LoRa packet parameters from RAL context to LR11XX context
@@ -332,8 +332,8 @@ static ral_status_t ral_lr11xx_convert_lora_mod_params_from_ral( const ral_lora_
  *
  * @returns Operation status
  */
-static ral_status_t ral_lr11xx_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t*    ral_pkt_params,
-                                                                 lr11xx_radio_pkt_params_lora_t* radio_pkt_params );
+ral_status_t ral_lr11xx_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t*    ral_pkt_params,
+                                                          lr11xx_radio_pkt_params_lora_t* radio_pkt_params );
 
 /**
  * @brief Convert LoRa CAD parameters from RAL context to LR11XX context
@@ -343,8 +343,8 @@ static ral_status_t ral_lr11xx_convert_lora_pkt_params_from_ral( const ral_lora_
  *
  * @returns Operation status
  */
-static ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
-                                                                 lr11xx_radio_cad_params_t*   radio_lora_cad_params );
+ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
+                                                          lr11xx_radio_cad_params_t*   radio_lora_cad_params );
 
 /**
  * @brief Convert LR-FHSS parameters from RAL context to LR11XX context
@@ -352,8 +352,8 @@ static ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_
  * @param [in] ral_lr_fhss_params     RAL LR-FHSS parameters
  * @param [out] radio_lr_fhss_params  Radio LR-FHSS parameters
  */
-static void ral_lr11xx_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
-                                                        lr11xx_lr_fhss_params_t*    radio_lr_fhss_params );
+void ral_lr11xx_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
+                                                 lr11xx_lr_fhss_params_t*    radio_lr_fhss_params );
 
 /*
  * -----------------------------------------------------------------------------
@@ -442,7 +442,7 @@ ral_status_t ral_lr11xx_wakeup( const void* context )
 ral_status_t ral_lr11xx_set_sleep( const void* context, const bool retain_config )
 {
     ral_status_t status = RAL_STATUS_ERROR;
-    bool lfclk_is_running;
+    bool         lfclk_is_running;
 
     ral_lr11xx_bsp_get_lfclk_cfg_in_sleep( context, &lfclk_is_running );
 
@@ -1052,9 +1052,8 @@ ral_status_t ral_lr11xx_lr_fhss_get_time_on_air_in_ms( const void* context, cons
     return RAL_STATUS_OK;
 }
 
-ral_status_t ral_lr11xx_lr_fhss_get_hop_sequence_count( const void*                 context,
-                                                        const ral_lr_fhss_params_t* lr_fhss_params,
-                                                        unsigned int*               hop_sequence_count )
+ral_status_t ral_lr11xx_lr_fhss_get_hop_sequence_count( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                        unsigned int* hop_sequence_count )
 {
     lr11xx_lr_fhss_params_t lr11xx_params;
     ral_lr11xx_convert_lr_fhss_params_from_ral( lr_fhss_params, &lr11xx_params );
@@ -1377,7 +1376,7 @@ ral_status_t ral_lr11xx_get_lora_cad_det_peak( const void* context, ral_lora_sf_
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-static ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t lr11xx_irq_status )
+ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t lr11xx_irq_status )
 {
     ral_irq_t ral_irq = RAL_IRQ_NONE;
 
@@ -1433,7 +1432,7 @@ static ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t l
     return ral_irq;
 }
 
-static lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t ral_irq )
+lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t ral_irq )
 {
     lr11xx_system_irq_mask_t lr11xx_irq_status = LR11XX_SYSTEM_IRQ_NONE;
 
@@ -1489,8 +1488,8 @@ static lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t
     return lr11xx_irq_status;
 }
 
-static ral_status_t ral_lr11xx_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t*    ral_mod_params,
-                                                                 lr11xx_radio_mod_params_gfsk_t* radio_mod_params )
+ral_status_t ral_lr11xx_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t*    ral_mod_params,
+                                                          lr11xx_radio_mod_params_gfsk_t* radio_mod_params )
 {
     ral_status_t           status = RAL_STATUS_ERROR;
     lr11xx_radio_gfsk_bw_t bw_dsb_param;
@@ -1541,8 +1540,8 @@ static ral_status_t ral_lr11xx_convert_gfsk_mod_params_from_ral( const ral_gfsk_
     return status;
 }
 
-static ral_status_t ral_lr11xx_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t*    ral_pkt_params,
-                                                                 lr11xx_radio_pkt_params_gfsk_t* radio_pkt_params )
+ral_status_t ral_lr11xx_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t*    ral_pkt_params,
+                                                          lr11xx_radio_pkt_params_gfsk_t* radio_pkt_params )
 {
     radio_pkt_params->preamble_len_in_bits = ral_pkt_params->preamble_len_in_bits;
 
@@ -1688,8 +1687,8 @@ static ral_status_t ral_lr11xx_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_lr11xx_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t*    ral_mod_params,
-                                                                 lr11xx_radio_mod_params_lora_t* radio_mod_params )
+ral_status_t ral_lr11xx_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t*    ral_mod_params,
+                                                          lr11xx_radio_mod_params_lora_t* radio_mod_params )
 {
     radio_mod_params->sf = ( lr11xx_radio_lora_sf_t ) ral_mod_params->sf;
 
@@ -1768,8 +1767,8 @@ static ral_status_t ral_lr11xx_convert_lora_mod_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_lr11xx_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t*    ral_pkt_params,
-                                                                 lr11xx_radio_pkt_params_lora_t* radio_pkt_params )
+ral_status_t ral_lr11xx_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t*    ral_pkt_params,
+                                                          lr11xx_radio_pkt_params_lora_t* radio_pkt_params )
 {
     radio_pkt_params->preamble_len_in_symb = ral_pkt_params->preamble_len_in_symb;
 
@@ -1800,8 +1799,8 @@ static ral_status_t ral_lr11xx_convert_lora_pkt_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
-                                                                 lr11xx_radio_cad_params_t*   radio_lora_cad_params )
+ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_cad_params_t* ral_lora_cad_params,
+                                                          lr11xx_radio_cad_params_t*   radio_lora_cad_params )
 {
     switch( ral_lora_cad_params->cad_symb_nb )
     {
@@ -1868,8 +1867,8 @@ static ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static void ral_lr11xx_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
-                                                        lr11xx_lr_fhss_params_t*    radio_lr_fhss_params )
+void ral_lr11xx_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
+                                                 lr11xx_lr_fhss_params_t*    radio_lr_fhss_params )
 {
     *radio_lr_fhss_params = ( lr11xx_lr_fhss_params_t ){
         .lr_fhss_params = ral_lr_fhss_params->lr_fhss_params,

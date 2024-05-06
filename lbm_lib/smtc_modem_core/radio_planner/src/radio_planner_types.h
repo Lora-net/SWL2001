@@ -104,7 +104,7 @@ extern "C" {
 /*!
  *
  */
-#define RP_MCU_FAIRNESS_DELAY_MS                    200
+#define RP_MCU_FAIRNESS_DELAY_MS                    10
 
 /*!
  *
@@ -142,6 +142,7 @@ typedef struct rp_radio_params_s
             ralf_params_lora_cad_t lora_cad;
         };
         uint32_t timeout_in_ms;
+        ral_lora_cad_params_t cad;
         union
         {
             ral_gfsk_rx_pkt_status_t gfsk_pkt_status;

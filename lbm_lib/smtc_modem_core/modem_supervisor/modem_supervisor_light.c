@@ -51,6 +51,7 @@
 #include "smtc_modem_test_api.h"
 #include "smtc_duty_cycle.h"
 #include "modem_event_utilities.h"
+#include "modem_tx_protocol_manager.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -255,9 +256,15 @@ uint32_t modem_supervisor_engine( void )
 {
     uint32_t sleep_time       = 0;
     uint32_t sleep_time_alarm = 0;
-
-    sleep_time       = supervisor_run_lorawan_engine( STACK_ID_CURRENT_TASK );
+    sleep_time = tx_protocol_manager_is_busy ();
     sleep_time_alarm = supervisor_check_user_alarm( );
+    if( sleep_time > 0 )
+    {
+        sleep_time = MIN( sleep_time, sleep_time_alarm * 1000 );
+        return ( sleep_time );
+    }    
+    sleep_time       = supervisor_run_lorawan_engine( STACK_ID_CURRENT_TASK );
+ 
 
     if( sleep_time > 0 )
     {
@@ -292,7 +299,7 @@ uint32_t modem_supervisor_engine( void )
         task_manager.modem_task[task_manager.next_task_id].priority = TASK_FINISH;
     }
     uint32_t alarm                 = modem_get_user_alarm( );
-    uint32_t user_alarm_in_seconds = MODEM_MAX_ALARM_S / 1000;
+    int32_t user_alarm_in_seconds = MODEM_MAX_ALARM_S / 1000;
     if( alarm != 0 )
     {
         user_alarm_in_seconds = ( int32_t ) ( alarm - smtc_modem_hal_get_time_in_s( ) );
@@ -361,6 +368,7 @@ static uint32_t supervisor_run_lorawan_engine( uint8_t stack_id )
 
     if( lorawan_state == LWPSTATE_TX_WAIT )
     {
+         tx_protocol_manager_lr1mac_stand_alone_tx ();
         sleep_time = ( LR1MAC_PERIOD_RETRANS_MS );
     }
     else if( ( lorawan_state != LWPSTATE_IDLE ) && ( lorawan_state != LWPSTATE_ERROR ) )

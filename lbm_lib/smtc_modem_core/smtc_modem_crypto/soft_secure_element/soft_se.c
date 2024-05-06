@@ -63,7 +63,7 @@
 /*!
  * Number of keys supported in soft secure element
  */
-#define SOFT_SE_NUMBER_OF_KEYS 23
+#define SOFT_SE_NUMBER_OF_KEYS 26
 
 /*!
  * JoinAccept frame maximum size
@@ -267,6 +267,30 @@
         },                                                                                                           \
         {                                                                                                            \
             /*!                                                                                                      \
+             * Relay WOR Session key (Dynamically updated)                                                           \
+             */                                                                                                      \
+            .key_id    = SMTC_RELAY_ROOT_WOR_S_KEY,                                                                  \
+            .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                           0x00 },                                                                                   \
+        },                                                                                                           \
+        {                                                                                                            \
+            /*!                                                                                                      \
+             * Relay WOR Integrity session key (Dynamically updated)                                                 \
+             */                                                                                                      \
+            .key_id    = SMTC_RELAY_WOR_S_INT_KEY,                                                                   \
+            .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                           0x00 },                                                                                   \
+        },                                                                                                           \
+        {                                                                                                            \
+            /*!                                                                                                      \
+             * Relay WOR Encryption session key (Dynamically updated)                                                \
+             */                                                                                                      \
+            .key_id    = SMTC_RELAY_WOR_S_ENC_KEY,                                                                   \
+            .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                           0x00 },                                                                                   \
+        },                                                                                                           \
+        {                                                                                                            \
+            /*!                                                                                                      \
              * All zeros key. (ClassB usage)(constant)                                                               \
              */                                                                                                      \
             .key_id    = SMTC_SE_SLOT_RAND_ZERO_KEY,                                                                 \
@@ -353,7 +377,7 @@ static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, sof
  * @param [out] cmac Computed cmac
  * @return smtc_se_return_code_t
  */
-static smtc_se_return_code_t compute_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer, uint16_t size,
+static smtc_se_return_code_t compute_cmac( const uint8_t* mic_bx_buffer, const uint8_t* buffer, uint16_t size,
                                            smtc_se_key_identifier_t key_id, uint32_t* cmac, uint8_t stack_id );
 
 /**
@@ -420,7 +444,7 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
     return SMTC_SE_RC_ERROR_INVALID_KEY_ID;
 }
 
-smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer,
+smtc_se_return_code_t smtc_secure_element_compute_aes_cmac( const uint8_t* mic_bx_buffer, const uint8_t* buffer,
                                                             uint16_t size, smtc_se_key_identifier_t key_id,
                                                             uint32_t* cmac, uint8_t stack_id )
 {
@@ -725,7 +749,7 @@ static smtc_se_return_code_t get_key_by_id( smtc_se_key_identifier_t key_id, sof
     return SMTC_SE_RC_ERROR_INVALID_KEY_ID;
 }
 
-static smtc_se_return_code_t compute_cmac( uint8_t* mic_bx_buffer, const uint8_t* buffer, uint16_t size,
+static smtc_se_return_code_t compute_cmac( const uint8_t* mic_bx_buffer, const uint8_t* buffer, uint16_t size,
                                            smtc_se_key_identifier_t key_id, uint32_t* cmac, uint8_t stack_id )
 {
     if( ( buffer == NULL ) || ( cmac == NULL ) )

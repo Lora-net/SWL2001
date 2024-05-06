@@ -110,7 +110,7 @@
 #define ENDIAN_n2b32( x ) ( x )
 #endif
 
-#define MODEM_TASK_DELAY_MS ( smtc_modem_hal_get_random_nb_in_range( 200, 3000 ) )
+
 
 /*
  * -----------------------------------------------------------------------------
@@ -465,16 +465,16 @@ static void lfu_service_on_launch( void* service_id )
         dm_port = DM_PORT;
 #endif
         lfu_ctx[idx].send_status =
-            lorawan_api_payload_send( dm_port, true, file_upload_chunk_payload, file_upload_chunk_size, UNCONF_DATA_UP,
-                                      smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, lfu_ctx[idx].stack_id );
+            tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, dm_port, true, file_upload_chunk_payload, file_upload_chunk_size, UNCONF_DATA_UP,
+                                      smtc_modem_hal_get_time_in_ms( )  , lfu_ctx[idx].stack_id );
     }
     else
     {
         // something prevents fragment to be constructed (max payload size < 11 due to mac answers in fopts and
         // shall be uplinked first)
         lfu_ctx[idx].send_status =
-            lorawan_api_payload_send( 0, false, NULL, 0, UNCONF_DATA_UP,
-                                      smtc_modem_hal_get_time_in_ms( ) + MODEM_TASK_DELAY_MS, lfu_ctx[idx].stack_id );
+            tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, 0, false, NULL, 0, UNCONF_DATA_UP,
+                                      smtc_modem_hal_get_time_in_ms( )  , lfu_ctx[idx].stack_id );
     }
 }
 

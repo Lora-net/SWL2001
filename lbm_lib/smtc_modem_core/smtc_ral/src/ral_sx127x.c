@@ -76,7 +76,7 @@
  *
  * @returns RAL interrupt status
  */
-static ral_irq_t ral_sx127x_convert_irq_flags_to_ral( sx127x_irq_mask_t sx127x_irq );
+ral_irq_t ral_sx127x_convert_irq_flags_to_ral( sx127x_irq_mask_t sx127x_irq );
 
 /**
  * @brief Convert interrupt flags from RAL context to SX127x context
@@ -85,7 +85,7 @@ static ral_irq_t ral_sx127x_convert_irq_flags_to_ral( sx127x_irq_mask_t sx127x_i
  *
  * @returns SX127x interrupt status
  */
-static sx127x_irq_mask_t ral_sx127x_convert_irq_flags_from_ral( ral_irq_t ral_irq );
+sx127x_irq_mask_t ral_sx127x_convert_irq_flags_from_ral( ral_irq_t ral_irq );
 
 /**
  * @brief Convert GFSK modulation parameters from RAL context to SX127x context
@@ -95,8 +95,8 @@ static sx127x_irq_mask_t ral_sx127x_convert_irq_flags_from_ral( ral_irq_t ral_ir
  *
  * @returns Operation status
  */
-static ral_status_t ral_sx127x_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
-                                                                 sx127x_gfsk_mod_params_t*    radio_mod_params );
+ral_status_t ral_sx127x_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
+                                                          sx127x_gfsk_mod_params_t*    radio_mod_params );
 
 /**
  * @brief Convert GFSK packet parameters from RAL context to SX127x context
@@ -106,8 +106,8 @@ static ral_status_t ral_sx127x_convert_gfsk_mod_params_from_ral( const ral_gfsk_
  *
  * @returns Operation status
  */
-static ral_status_t ral_sx127x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
-                                                                 sx127x_gfsk_pkt_params_t*    radio_pkt_params );
+ral_status_t ral_sx127x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
+                                                          sx127x_gfsk_pkt_params_t*    radio_pkt_params );
 
 /**
  * @brief Convert LoRa modulation parameters from RAL context to SX127x context
@@ -117,8 +117,8 @@ static ral_status_t ral_sx127x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
  *
  * @returns Operation status
  */
-static ral_status_t ral_sx127x_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
-                                                                 sx127x_lora_mod_params_t*    radio_mod_params );
+ral_status_t ral_sx127x_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
+                                                          sx127x_lora_mod_params_t*    radio_mod_params );
 
 /**
  * @brief Convert LoRa packet parameters from RAL context to SX127x context
@@ -128,8 +128,8 @@ static ral_status_t ral_sx127x_convert_lora_mod_params_from_ral( const ral_lora_
  *
  * @returns Operation status
  */
-static ral_status_t ral_sx127x_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
-                                                                 sx127x_lora_pkt_params_t*    radio_pkt_params );
+ral_status_t ral_sx127x_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
+                                                          sx127x_lora_pkt_params_t*    radio_pkt_params );
 
 /**
  * @brief Convert LoRa coding rate value from SX127x context to RAL context
@@ -139,7 +139,7 @@ static ral_status_t ral_sx127x_convert_lora_pkt_params_from_ral( const ral_lora_
  *
  * @returns Operation status
  */
-static ral_status_t ral_sx127x_convert_lora_cr_to_ral( const sx127x_lora_cr_t radio_cr, ral_lora_cr_t* ral_cr );
+ral_status_t ral_sx127x_convert_lora_cr_to_ral( const sx127x_lora_cr_t radio_cr, ral_lora_cr_t* ral_cr );
 
 /*
  * -----------------------------------------------------------------------------
@@ -656,9 +656,8 @@ ral_status_t ral_sx127x_lr_fhss_get_time_on_air_in_ms( const void* context, cons
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_sx127x_lr_fhss_get_hop_sequence_count( const void*                 context,
-                                                        const ral_lr_fhss_params_t* lr_fhss_params,
-                                                        unsigned int*               hop_sequence_count )
+ral_status_t ral_sx127x_lr_fhss_get_hop_sequence_count( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                        unsigned int* hop_sequence_count )
 {
     ( void ) context;             // Unused parameter
     ( void ) lr_fhss_params;      // Unused parameter
@@ -741,7 +740,7 @@ ral_status_t ral_sx127x_get_lora_cad_det_peak( const void* context, ral_lora_sf_
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-static ral_irq_t ral_sx127x_convert_irq_flags_to_ral( sx127x_irq_mask_t sx127x_irq )
+ral_irq_t ral_sx127x_convert_irq_flags_to_ral( sx127x_irq_mask_t sx127x_irq )
 {
     ral_irq_t ral_irq = RAL_IRQ_NONE;
 
@@ -785,7 +784,7 @@ static ral_irq_t ral_sx127x_convert_irq_flags_to_ral( sx127x_irq_mask_t sx127x_i
     return ral_irq;
 }
 
-static sx127x_irq_mask_t ral_sx127x_convert_irq_flags_from_ral( ral_irq_t ral_irq )
+sx127x_irq_mask_t ral_sx127x_convert_irq_flags_from_ral( ral_irq_t ral_irq )
 {
     sx127x_irq_mask_t sx127x_irq_mask = SX127X_IRQ_NONE;
 
@@ -830,8 +829,8 @@ static sx127x_irq_mask_t ral_sx127x_convert_irq_flags_from_ral( ral_irq_t ral_ir
     return sx127x_irq_mask;
 }
 
-static ral_status_t ral_sx127x_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
-                                                                 sx127x_gfsk_mod_params_t*    radio_mod_params )
+ral_status_t ral_sx127x_convert_gfsk_mod_params_from_ral( const ral_gfsk_mod_params_t* ral_mod_params,
+                                                          sx127x_gfsk_mod_params_t*    radio_mod_params )
 {
     radio_mod_params->br_in_bps    = ral_mod_params->br_in_bps;
     radio_mod_params->fdev_in_hz   = ral_mod_params->fdev_in_hz;
@@ -866,8 +865,8 @@ static ral_status_t ral_sx127x_convert_gfsk_mod_params_from_ral( const ral_gfsk_
     }
 }
 
-static ral_status_t ral_sx127x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
-                                                                 sx127x_gfsk_pkt_params_t*    radio_pkt_params )
+ral_status_t ral_sx127x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_pkt_params_t* ral_pkt_params,
+                                                          sx127x_gfsk_pkt_params_t*    radio_pkt_params )
 {
     radio_pkt_params->preamble_len_in_bytes = ral_pkt_params->preamble_len_in_bits >> 3;
 
@@ -983,8 +982,8 @@ static ral_status_t ral_sx127x_convert_gfsk_pkt_params_from_ral( const ral_gfsk_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_sx127x_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
-                                                                 sx127x_lora_mod_params_t*    radio_mod_params )
+ral_status_t ral_sx127x_convert_lora_mod_params_from_ral( const ral_lora_mod_params_t* ral_mod_params,
+                                                          sx127x_lora_mod_params_t*    radio_mod_params )
 {
     radio_mod_params->sf = ( sx127x_lora_sf_t ) ral_mod_params->sf;
 
@@ -1053,8 +1052,8 @@ static ral_status_t ral_sx127x_convert_lora_mod_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_sx127x_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
-                                                                 sx127x_lora_pkt_params_t*    radio_pkt_params )
+ral_status_t ral_sx127x_convert_lora_pkt_params_from_ral( const ral_lora_pkt_params_t* ral_pkt_params,
+                                                          sx127x_lora_pkt_params_t*    radio_pkt_params )
 {
     radio_pkt_params->preamble_len_in_symb = ral_pkt_params->preamble_len_in_symb;
 
@@ -1083,7 +1082,7 @@ static ral_status_t ral_sx127x_convert_lora_pkt_params_from_ral( const ral_lora_
     return RAL_STATUS_OK;
 }
 
-static ral_status_t ral_sx127x_convert_lora_cr_to_ral( const sx127x_lora_cr_t radio_cr, ral_lora_cr_t* ral_cr )
+ral_status_t ral_sx127x_convert_lora_cr_to_ral( const sx127x_lora_cr_t radio_cr, ral_lora_cr_t* ral_cr )
 {
     switch( radio_cr )
     {

@@ -133,6 +133,7 @@ static const char alc_sync_bad_size_str[] = "ALC Sync payload bad size";
 #define APP_TIME_ANS_TIME_CORRECTION_BYTE ( 0 )
 #define APP_TIME_ANS_TOKEN_BYTE ( 4 )
 
+#define ALC_SYNC_DELAY_BEFORE_SEND_S ( 5 )
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -315,6 +316,16 @@ static void alc_sync_decode_force_device_resync_req( lorawan_alcsync_ctx_t* ctx,
 static int32_t alcsync_get_signed_random_nb_in_range( const int32_t val_1, const int32_t val_2 );
 
 static uint32_t alcsync_build_ans_payload( uint8_t idx );
+
+/**
+ * @brief Return the true is the rx_window is multicast
+ *
+ * @param rx_window
+ * @return true
+ * @return false
+ */
+static bool is_received_on_multicast_window( receive_win_t rx_window );
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -375,9 +386,9 @@ void lorawan_alcsync_service_on_launch( void* service_id )
             tx_payload_size = lorawan_alcsync_ctx[idx].tx_payload_index;
         }
 
-        send_status =
-            lorawan_api_payload_send_at_time( lorawan_alcsync_ctx[idx].fport, true, tx_payload, tx_payload_size,
-                                              UNCONF_DATA_UP, time_tmp * 1000, lorawan_alcsync_ctx[idx].stack_id );
+        send_status = tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA_AT_TIME, lorawan_alcsync_ctx[idx].fport,
+                                                   true, tx_payload, tx_payload_size, UNCONF_DATA_UP, time_tmp * 1000,
+                                                   lorawan_alcsync_ctx[idx].stack_id );
 
         if( send_status == OKLORAWAN )
         {
@@ -418,8 +429,10 @@ void lorawan_alcsync_service_on_update( void* service_id )
         else
         {
             // Follow the normal periodicity to relaunch the service
-            task_alc_sync.time_to_execute_s = timestamp_launch[idx] + lorawan_alcsync_ctx[idx].periodicity_s +
-                                              alcsync_get_signed_random_nb_in_range( -30, 30 );
+            task_alc_sync.time_to_execute_s =
+                timestamp_launch[idx] + lorawan_alcsync_ctx[idx].periodicity_s +
+                alcsync_get_signed_random_nb_in_range( ( -25 - ALC_SYNC_DELAY_BEFORE_SEND_S ),
+                                                       ( 25 - ALC_SYNC_DELAY_BEFORE_SEND_S ) );
         }
 
         modem_supervisor_add_task( &task_alc_sync );
@@ -435,11 +448,7 @@ void lorawan_alcsync_service_on_update( void* service_id )
 uint8_t lorawan_alcsync_service_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
     // Message must be received only on unicast windows
-    // TODO add RX3 for relay ?
-    if( ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RX1 ) &&
-        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RX2 ) &&
-        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXB ) &&
-        ( rx_down_data->rx_metadata.rx_window != RECEIVE_ON_RXC ) )
+    if( is_received_on_multicast_window( rx_down_data->rx_metadata.rx_window ) == true )
     {
         return MODEM_DOWNLINK_UNCONSUMED;
     }
@@ -516,8 +525,7 @@ bool lorawan_alcsync_mpa_injector( uint8_t stack_id, uint8_t* payload_in, uint8_
                                    const uint8_t max_payload_out_length, uint32_t rx_timestamp_ms )
 
 {
-    if( ( rx_window != RECEIVE_ON_RX1 ) && ( rx_window != RECEIVE_ON_RX2 ) && ( rx_window != RECEIVE_ON_RXB ) &&
-        ( rx_window != RECEIVE_ON_RXC ) )
+    if( is_received_on_multicast_window( rx_window ) == true )
     {
         *payload_out_length = 0;
         return false;
@@ -906,7 +914,7 @@ static int32_t alcsync_get_signed_random_nb_in_range( const int32_t val_1, const
 }
 static uint32_t alcsync_build_ans_payload( uint8_t idx )
 {
-    uint32_t time_tmp = smtc_modem_hal_get_time_in_s( ) + 2;
+    uint32_t time_tmp = smtc_modem_hal_get_time_in_s( ) + ALC_SYNC_DELAY_BEFORE_SEND_S;
 
     // Reset uplink buffer
     lorawan_alcsync_ctx[idx].tx_payload_index = 0;
@@ -938,4 +946,17 @@ static uint32_t alcsync_build_ans_payload( uint8_t idx )
     }
     return time_tmp;
 }
+
+static bool is_received_on_multicast_window( receive_win_t rx_window )
+{
+#if defined( SMTC_MULTICAST )
+    if( ( ( rx_window >= RECEIVE_ON_RXC_MC_GRP0 ) && ( rx_window <= RECEIVE_ON_RXC_MC_GRP3 ) ) ||
+        ( ( rx_window >= RECEIVE_ON_RXB_MC_GRP0 ) && ( rx_window <= RECEIVE_ON_RXB_MC_GRP3 ) ) )
+    {
+        return true;
+    }
+#endif
+    return false;
+}
+
 /* --- EOF ------------------------------------------------------------------ */
