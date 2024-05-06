@@ -97,11 +97,6 @@
 #include "smtc_modem_geolocation_api.h"
 #endif
 
-#if defined( RELAY_TX )
-#include "smtc_modem_relay_api.h"
-#include "relay_tx_api.h"
-#endif
-
 #if defined( ADD_SMTC_STORE_AND_FORWARD )
 #include "store_and_forward_flash.h"
 #endif
@@ -2639,61 +2634,6 @@ static void modem_load_appkey_context( void )
         smtc_modem_hal_context_restore( CONTEXT_KEY_MODEM, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
     }
 }
-#endif
-
-#ifdef RELAY_TX
-smtc_modem_return_code_t smtc_modem_relay_tx_get_activation_mode( uint8_t                                stack_id,
-                                                                  smtc_modem_relay_tx_activation_mode_t* mode )
-{
-    lr1_stack_mac_t*  lr1_ptr = lorawan_api_stack_mac_get( stack_id );
-    relay_tx_config_t config;
-
-    smtc_relay_tx_get_config( lr1_ptr, &config );
-    *mode = ( smtc_modem_relay_tx_activation_mode_t ) config.activation;
-    return SMTC_MODEM_RC_OK;
-}
-
-smtc_modem_return_code_t smtc_modem_relay_tx_get_sync_status( uint8_t                            stack_id,
-                                                              smtc_modem_relay_tx_sync_status_t* status )
-{
-    lr1_stack_mac_t* lr1_ptr = lorawan_api_stack_mac_get( stack_id );
-    *status                  = ( smtc_modem_relay_tx_sync_status_t ) smtc_relay_tx_get_sync_status( lr1_ptr );
-    return SMTC_MODEM_RC_OK;
-}
-
-smtc_modem_return_code_t smtc_modem_relay_tx_is_enable( uint8_t stack_id, bool* is_enable )
-{
-    lr1_stack_mac_t* lr1_ptr = lorawan_api_stack_mac_get( stack_id );
-    *is_enable               = smtc_relay_tx_is_enable( lr1_ptr );
-    return SMTC_MODEM_RC_OK;
-}
-
-smtc_modem_return_code_t smtc_modem_relay_tx_enable( uint8_t stack_id, uint8_t backoff_level )
-{
-    lr1_stack_mac_t*  lr1_ptr = lorawan_api_stack_mac_get( stack_id );
-    relay_tx_config_t config;
-
-    smtc_relay_tx_get_config( lr1_ptr, &config );
-
-    config.backoff = backoff_level;
-
-    if( smtc_relay_tx_update_config( lr1_ptr, &config ) != true )
-    {
-        return SMTC_MODEM_RC_FAIL;
-    }
-
-    smtc_relay_tx_enable( lr1_ptr );
-    return SMTC_MODEM_RC_OK;
-}
-
-smtc_modem_return_code_t smtc_modem_relay_tx_disable( uint8_t stack_id )
-{
-    lr1_stack_mac_t* lr1_ptr = lorawan_api_stack_mac_get( stack_id );
-
-    smtc_relay_tx_disable( lr1_ptr );
-    return SMTC_MODEM_RC_OK;
-}
-
 #endif
 
 /* --- EOF ------------------------------------------------------------------ */

@@ -349,9 +349,6 @@ typedef enum smtc_modem_event_type_e
     SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE,
     SMTC_MODEM_EVENT_WIFI_SCAN_DONE,
     SMTC_MODEM_EVENT_WIFI_TERMINATED,
-    SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC,  //!< Relay TX dynamic mode has enable or disable the WOR protocol
-    SMTC_MODEM_EVENT_RELAY_TX_MODE,     //!< Relay TX activation has been updated via a MAC command
-    SMTC_MODEM_EVENT_RELAY_TX_SYNC,     //!< Relay TX synchronisation has changed
     SMTC_MODEM_EVENT_MAX,
 } smtc_modem_event_type_t;
 

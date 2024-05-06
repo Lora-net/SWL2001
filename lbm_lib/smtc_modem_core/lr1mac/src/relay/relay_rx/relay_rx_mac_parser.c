@@ -136,6 +136,7 @@ static bool relay_mac_manage_fwd_list_parser( lr1_stack_mac_t* lr1_mac, relay_cm
  */
 static uint32_t concatenate_byte_lsb_to_uint32( const uint8_t* buffer );
 
+static uint32_t get_symbol_time_ms( smtc_real_t* real, uint8_t dr );
 /*
  *-----------------------------------------------------------------------------------
  *--- PRIVATE VARIABLES -------------------------------------------------------------
@@ -218,10 +219,13 @@ static bool relay_mac_update_config_relay_parser( lr1_stack_mac_t* lr1_mac, rela
     }
     else
     {
-        relay_config_t config = { 0 };
+        relay_config_t config        = { 0 };
+        uint32_t       cad_period_ms = 1000;
+        uint8_t        second_ch_idx = TAKE_N_BITS_FROM( settings_relay, 7, 2 );
 
         // Parse CAD Period
         config.cad_period = TAKE_N_BITS_FROM( settings_relay, 10, 3 );
+
         if( config.cad_period >= WOR_CAD_PERIOD_RFU )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( "CAD period : wrong value \n" );
@@ -230,6 +234,7 @@ static bool relay_mac_update_config_relay_parser( lr1_stack_mac_t* lr1_mac, rela
         else
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( "CAD period : %s\n", cad_period_str[config.cad_period] );
+            cad_period_ms = wor_convert_cad_period_in_ms( config.cad_period ) >> second_ch_idx;
         }
 
         uint8_t default_chx_idx = TAKE_N_BITS_FROM( settings_relay, 9, 1 );
@@ -245,10 +250,17 @@ static bool relay_mac_update_config_relay_parser( lr1_stack_mac_t* lr1_mac, rela
             SMTC_MODEM_HAL_TRACE_PRINTF( "Default channel : Index %d (DR %d - WOR %d Hz - ACK %d Hz)\n",
                                          default_chx_idx, config.channel_cfg[0].dr, config.channel_cfg[0].freq_hz,
                                          config.channel_cfg[0].ack_freq_hz );
+
+            const uint32_t symb_toa = 2 * get_symbol_time_ms( lr1_mac->real, config.channel_cfg[0].dr ) + 10;
+
+            if( cad_period_ms < symb_toa )
+            {
+                SMTC_MODEM_HAL_TRACE_PRINTF( "CAD period too short \n" );
+                ack_ret = CLEAR_BIT( ack_ret, RELAY_CID_CONFIG_RELAY_ACK_BIT_CAD_PERIOD );
+            }
         }
 
         // Parse second channel index
-        uint8_t second_ch_idx = TAKE_N_BITS_FROM( settings_relay, 7, 2 );
 
         if( second_ch_idx == 0 )
         {
@@ -271,10 +283,24 @@ static bool relay_mac_update_config_relay_parser( lr1_stack_mac_t* lr1_mac, rela
             config.channel_cfg[1].dr = TAKE_N_BITS_FROM( settings_relay, 3, 4 );
             SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel DR: %d \n", config.channel_cfg[1].dr );
 
-            if( smtc_real_get_modulation_type_from_datarate( lr1_mac->real, config.channel_cfg[1].dr ) != LORA )
+            if( smtc_real_is_tx_dr_valid( lr1_mac->real, config.channel_cfg[1].dr ) != OKLORAWAN )
             {
                 SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel DR: Invalid value\n" );
                 ack_ret = CLEAR_BIT( ack_ret, RELAY_CID_CONFIG_RELAY_ACK_BIT_SECOND_CH_DR );
+            }
+            else if( smtc_real_get_modulation_type_from_datarate( lr1_mac->real, config.channel_cfg[1].dr ) != LORA )
+            {
+                SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel DR: Non LORA\n" );
+                ack_ret = CLEAR_BIT( ack_ret, RELAY_CID_CONFIG_RELAY_ACK_BIT_SECOND_CH_DR );
+            }
+            else
+            {
+                const uint32_t symb_toa = 2 * get_symbol_time_ms( lr1_mac->real, config.channel_cfg[1].dr ) + 10;
+                if( cad_period_ms < symb_toa )
+                {
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "CAD period 2 too short \n" );
+                    ack_ret = CLEAR_BIT( ack_ret, RELAY_CID_CONFIG_RELAY_ACK_BIT_CAD_PERIOD );
+                }
             }
 
             uint8_t ack_offset_khz_idx = TAKE_N_BITS_FROM( settings_relay, 0, 3 );
@@ -538,4 +564,39 @@ static uint32_t concatenate_byte_lsb_to_uint32( const uint8_t* buffer )
 {
     return ( uint32_t )( ( ( uint32_t ) buffer[0] ) + ( ( uint32_t ) buffer[1] << 8 ) +
                          ( ( uint32_t ) buffer[2] << 16 ) + ( ( uint32_t ) buffer[3] << 24 ) );
+}
+
+static uint32_t get_symbol_time_ms( smtc_real_t* real, uint8_t dr )
+{
+    uint8_t            sf;
+    lr1mac_bandwidth_t bw;
+    smtc_real_lora_dr_to_sf_bw( real, dr, &sf, &bw );
+
+    uint32_t toa_symb = 1 << sf;
+
+    switch( bw )
+    {
+    case BW125:
+        toa_symb = toa_symb / 125;
+        break;
+    case BW250:
+        toa_symb = toa_symb / 250;
+        break;
+    case BW500:
+        toa_symb = toa_symb / 500;
+        break;
+    case BW800:
+        toa_symb = toa_symb / 800;
+        break;
+    case BW1600:
+        toa_symb = toa_symb / 1600;
+        break;
+
+    default:
+        break;
+    }
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "TOA symbol DR%d : %d ms\n", dr, toa_symb );
+
+    return toa_symb;
 }

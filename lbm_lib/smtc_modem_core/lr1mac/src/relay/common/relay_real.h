@@ -72,9 +72,9 @@ extern "C" {
  *
  * @param[in] real      Regional Abstraction Layer object
  * @param[in] idx       Value of the default index (0 or 1)
- * @param[out] datarate datarate of default channel
- * @param[out] freq_wor frequency of WOR (in Hz) of default channel
- * @param[out] freq_ack frequency or WOR ACK (in Hz) of default channel
+ * @param[out] datarate Datarate of default channel
+ * @param[out] freq_wor Frequency of WOR (in Hz) of default channel
+ * @param[out] freq_ack Frequency or WOR ACK (in Hz) of default channel
  * @return status_lorawan_t
  */
 status_lorawan_t smtc_relay_get_default_channel_config( smtc_real_t* real, const uint8_t idx, uint8_t* datarate,

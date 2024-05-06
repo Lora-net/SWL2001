@@ -92,8 +92,6 @@ int main( void )
     main_porting_tests( );
 #elif MAKEFILE_APP == LCTT_CERTIF
     main_lctt_certif( );
-#elif MAKEFILE_APP == RELAY_TX
-    main_periodical_uplink_relay_tx( );
 #elif MAKEFILE_APP == RELAY_RX
     main_periodical_uplink( );
 #else

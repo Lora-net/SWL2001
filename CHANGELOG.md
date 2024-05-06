@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.6.0] 2024-05-06
+This version is based on feature branch v4.4.0 - feature relay of the LoRa Basics Modem.
+This version only implement the relay itself (refer as relay RX) and is not fully validated.
+To implement the relayed end-device (refer as relay TX), refer to LBM v4.5.0.
+
+
+### Added
+* [relay] Refuse CAD period if it is not compatible with CAD parameter
+* [relay] Avoid CAD during a LoRaWAN transmission
+* [relay] Add forward limit check for WOR ACK
+* [relay] Add certification command
+
+
+### Fixed
+* [relay] Issue [#49](https://github.com/Lora-net/SWL2001/issues/49) Antenna switch is done properly
+* [relay] TCXO startup is now take into account
+* [relay] BW250 is now working
+* [relay] Rework MIC WOR ACK
+* [relay] Fix power level for TX on RXR
+* [relay] The relay RX don't forward payload too big
+
+### Removed
+* [relay] All files and code refering to Relay TX. Use LBM v4.5.0 for a relayed end-device
+
+
 ## [v4.4.0] 2023-12-21
 
 This version is based on feature branch v4.3.0 of the LoRa Basics Modem.

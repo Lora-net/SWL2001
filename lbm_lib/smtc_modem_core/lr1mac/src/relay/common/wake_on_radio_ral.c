@@ -129,11 +129,22 @@ void wor_ral_init_cad( smtc_real_t* real, uint8_t dr, wor_cad_periodicity_t cad_
 #if defined( LR11XX_TRANSCEIVER )
 
     const uint8_t det_peak_bw500[] = { 65, 70, 77, 85, 78, 80, 79, 82 };
+    const uint8_t det_peak_bw250[] = { 60, 61, 64, 72, 63, 71, 73, 75 };
     const uint8_t det_peak_bw125[] = { 56, 52, 52, 58, 58, 62, 66, 68 };
+#else
+    // following value from "SX126X CAD performance evaluation V2_1.pdf"
+    const uint8_t det_peak_bw125[] = { 21, 22, 22, 22, 23, 24, 25, 28 };
+    const uint8_t det_peak_bw250[] = { 21, 22, 22, 22, 23, 24, 25, 28 };
+    const uint8_t det_peak_bw500[] = { 21, 22, 22, 23, 23, 24, 26, 30 };
+#endif
 
     if( ( bw == BW500 ) && ( sf >= 5 ) )
     {
         param->cad_det_peak_in_symb = det_peak_bw500[sf - 5];
+    }
+    else if( ( bw == BW250 ) && ( sf >= 5 ) )
+    {
+        param->cad_det_peak_in_symb = det_peak_bw250[sf - 5];
     }
     else if( ( bw == BW125 ) && ( sf >= 5 ) )
     {
@@ -141,26 +152,8 @@ void wor_ral_init_cad( smtc_real_t* real, uint8_t dr, wor_cad_periodicity_t cad_
     }
     else
     {
-        SMTC_MODEM_HAL_PANIC( );
+        SMTC_MODEM_HAL_PANIC( "DR%d SF%d BW%d \n", dr, sf, bw );
     }
-#else
-    // following value from "SX126X CAD performance evaluation V2_1.pdf"
-    const uint8_t det_peak_bw125[] = { 22, 22, 23, 24, 25, 28 };
-    const uint8_t det_peak_bw500[] = { 22, 23, 23, 24, 26, 30 };
-
-    if( ( bw == BW500 ) && ( sf >= 7 ) )
-    {
-        param->cad_det_peak_in_symb = det_peak_bw500[sf - 7];
-    }
-    else if( ( bw == BW125 ) && ( sf >= 7 ) )
-    {
-        param->cad_det_peak_in_symb = det_peak_bw125[sf - 7];
-    }
-    else
-    {
-        SMTC_MODEM_HAL_PANIC( );
-    }
-#endif
 
     param->cad_det_min_in_symb = 10;
     param->cad_timeout_in_ms   = wor_convert_cad_period_in_ms( cad_period ) + wor_toa_ms;
@@ -178,6 +171,10 @@ void wor_ral_init_cad( smtc_real_t* real, uint8_t dr, wor_cad_periodicity_t cad_
         if( bw == BW500 )
         {
             param->cad_symb_nb = ( sf == RAL_LORA_SF12 ) ? RAL_LORA_CAD_08_SYMB : RAL_LORA_CAD_04_SYMB;
+        }
+        else if( bw == BW250 )
+        {
+            param->cad_symb_nb = ( sf <= RAL_LORA_SF8 ) ? RAL_LORA_CAD_08_SYMB : RAL_LORA_CAD_04_SYMB;
         }
         else if( bw == BW125 )
         {
@@ -205,7 +202,7 @@ void wor_ral_init_rx_msg( smtc_real_t* real, uint8_t max_payload, uint8_t dr, ui
         lora->symb_nb_timeout = 10 + 1000 * smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) / symb_time_us;
         lora->rf_freq_in_hz   = freq_hz;
 
-        lora->pkt_params.pld_len_in_bytes = 255;
+        lora->pkt_params.pld_len_in_bytes = max_payload;
         lora->mod_params.cr               = smtc_real_get_coding_rate( real );
         lora->mod_params.sf               = ( ral_lora_sf_t ) sf;
         lora->mod_params.bw               = ( ral_lora_bw_t ) bw;
@@ -284,50 +281,10 @@ void wor_ral_init_tx_ack( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, uint8
     }
 }
 
-void wor_ral_init_rx_ack( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, uint8_t max_payload,
-                          rp_radio_params_t* param )
-{
-    const modulation_type_t modulation_type = smtc_real_get_modulation_type_from_datarate( real, dr );
-    if( modulation_type == LORA )
-    {
-        uint8_t             sf;
-        lr1mac_bandwidth_t  bw;
-        ralf_params_lora_t* lora = &param->rx.lora;
-
-        smtc_real_lora_dr_to_sf_bw( real, dr, &sf, &bw );
-
-        lora->sync_word         = smtc_real_get_sync_word( real );
-        lora->symb_nb_timeout   = 10;
-        lora->rf_freq_in_hz     = freq_hz;
-        lora->output_pwr_in_dbm = smtc_real_clamp_output_power_eirp_vs_freq_and_dr(
-            real, smtc_real_get_default_max_eirp( real ), freq_hz, dr );
-        ;
-
-        lora->mod_params.cr   = smtc_real_get_coding_rate( real );
-        lora->mod_params.sf   = ( ral_lora_sf_t ) sf;
-        lora->mod_params.bw   = ( ral_lora_bw_t ) bw;
-        lora->mod_params.ldro = ral_compute_lora_ldro( lora->mod_params.sf, lora->mod_params.bw );
-
-        lora->pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
-        lora->pkt_params.pld_len_in_bytes     = max_payload;
-        lora->pkt_params.crc_is_on            = true;
-        lora->pkt_params.invert_iq_is_on      = true;
-        lora->pkt_params.preamble_len_in_symb = smtc_real_get_preamble_len( real, lora->mod_params.sf );
-
-        param->pkt_type = RAL_PKT_TYPE_LORA;
-    }
-    else
-    {
-        SMTC_MODEM_HAL_PANIC( "MODULATION NOT SUPPORTED\n" );
-    }
-}
-
 void wor_ral_callback_start_cad( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     const uint8_t    id = rp->radio_task_id;
-
-    smtc_modem_hal_start_radio_tcxo( );
 
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ralf_setup_lora( rp->radio, &rp->radio_params[id].rx.lora ) == RAL_STATUS_OK );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE(
@@ -341,6 +298,9 @@ void wor_ral_callback_start_cad( void* rp_void )
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
+    smtc_modem_hal_set_ant_switch( false );
 
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_lora_cad( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     rp_stats_set_rx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
@@ -350,10 +310,8 @@ void wor_ral_callback_start_tx( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    smtc_modem_hal_start_radio_tcxo( );
 
     // No need to manage FSK as WOR & WOR ACK are LORA only
-
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ralf_setup_lora( rp->radio, &rp->radio_params[id].tx.lora ) == RAL_STATUS_OK );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_TX_DONE ) == RAL_STATUS_OK );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE(
@@ -364,6 +322,9 @@ void wor_ral_callback_start_tx( void* rp_void )
     {
         // Do nothing
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
+    smtc_modem_hal_set_ant_switch( true );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_tx( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     rp_stats_set_tx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
     // SMTC_MODEM_HAL_TRACE_MSG( "End TX\n" );
@@ -373,8 +334,6 @@ void wor_ral_callback_start_rx( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-
-    smtc_modem_hal_start_radio_tcxo( );
 
     if( rp->radio_params[id].pkt_type == RAL_PKT_TYPE_LORA )
     {
@@ -397,6 +356,9 @@ void wor_ral_callback_start_rx( void* rp_void )
     while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
+    // At this time only tcxo startup delay is remaining
+    smtc_modem_hal_start_radio_tcxo( );
+    smtc_modem_hal_set_ant_switch( false );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_rx( &( rp->radio->ral ), rp->radio_params[id].rx.timeout_in_ms ) ==
                                      RAL_STATUS_OK );
 

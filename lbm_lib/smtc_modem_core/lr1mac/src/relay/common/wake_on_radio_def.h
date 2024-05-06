@@ -43,13 +43,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#define WOR_ACK_UPLINK_GET_TOFFSET( a ) ( ( uint16_t )( ( a ) &0x07FF ) )
-#define WOR_ACK_UPLINK_GET_CADP( a ) ( ( uint8_t )( ( ( a ) >> 11 ) & 0x0007 ) )
-#define WOR_ACK_UPLINK_GET_XTAL( a ) ( ( uint8_t )( ( ( a ) >> 14 ) & 0x0003 ) )
-#define WOR_ACK_UPLINK_GET_GTW_DR( a ) ( ( uint8_t )( ( ( a ) >> 16 ) & 0x000F ) )
-#define WOR_ACK_UPLINK_GET_FWD( a ) ( ( uint8_t )( ( ( a ) >> 20 ) & 0x0003 ) )
-#define WOR_ACK_UPLINK_GET_CAD_RX( a ) ( ( uint8_t )( ( ( a ) >> 22 ) & 0x0003 ) )
-
 #define WOR_ACK_UPLINK_SET_TOFFSET( a ) ( ( uint32_t )( ( a ) &0x07FF ) )
 #define WOR_ACK_UPLINK_SET_CADP( a ) ( ( uint32_t )( ( ( a ) &0x0007 ) << 11 ) )
 #define WOR_ACK_UPLINK_SET_XTAL( a ) ( ( uint32_t )( ( ( a ) &0x0003 ) << 14 ) )

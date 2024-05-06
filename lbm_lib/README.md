@@ -117,6 +117,7 @@ The user can choose wich feature to embed in LoRa Basics Modem by updating [opti
 - LBM_CLASS_C: Enable compilation of class C feature
 - LBM_MULTICAST: Enable compilation of LoRaWAN mutlicast feature
 - LBM_CSMA: Enable compilation of CSMA feature
+- RELAY_RX_ENABLE : Enable compilation of Relay RX feature
 
 **LoRaWAN packages related options**:
 
@@ -527,11 +528,17 @@ Additionally, it requires the use of an additional low-power timer to handle som
 
 In the provided example on the STM32L4 MCU (under the lbm_examples folder), LPTIM2 is used with the disadvantage of preventing the use of STOP2 low power mode.
 
-## Relay (experimental)
+## Relay 
 **LoRa Basic Modem** proposes an implementation of the [LoRaWAN® Relay Specification TS011-1.0.0](https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay) 
 
-This implementation provides the code for the relayed end-device (refer as Relay TX) and for the relay itself (refer as Relay RX). 
-### Relay RX
+This implementation provides the code for the relay itself (refer as Relay RX). 
+
+
+### Relay TX
+
+Not supported. Use LBM v4.5.0 for a relayed end-device
+
+### Relay RX (experimental)
 
 To build the relay RX feature you need to define "RELAY_RX_ENABLE=yes"
 
@@ -541,18 +548,11 @@ On a hardware note, it is strongly recommended to use a TCXO with a Relay RX to 
 
 It is important to note that the Relay RX will wake up very frequently and require a quick access to the radio (through the `smtc_modem_run_engine` function). Every action that could delay the call of this function may result in aborted scan. 
 
-### Relay TX
-
-To build the relay TX feature you need to define "RELAY_TX_ENABLE=yes"
-
-This option will require an additional 500 bytes of RAM and 5.5 kbytes of FLASH.
-
-### Known limitation for the Relay RX and TX
+### Known limitation for the Relay RX
  - This implementation is only compatible with embedded software cryptographic operations. 
  - Only one component of the relay (RX or TX) could be compiled at the same time.
  - SX128x and SX127x are not supported 
- - Relay TX and Relay RX are not yet compatible with LBT and CSMA.
- - Relay TX is only working with 1 LoRaWAN stack (stack ID 0)
+ - Relay RX is not yet compatible with LBT and CSMA.
 
 ## LoRa Basic Modem known limitations
 

@@ -102,9 +102,6 @@ enum RP_HOOK_ID_DEF
     RP_HOOK_ID_BLE_TX_BEACON,
 #endif
 
-#if defined( RELAY_TX )
-    RP_HOOK_ID_RELAY_TX,
-#endif  // RELAY_TX
 #if defined( RELAY_RX )
     RP_HOOK_ID_RELAY_RX_CAD,
 #endif  // RELAY_RX

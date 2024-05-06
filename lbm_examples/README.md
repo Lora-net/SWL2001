@@ -72,6 +72,11 @@ Build command example for lr1110 radio
 make lr1110 MODEM_APP=LCTT_CERTIF
 ```
 
+### Relay TX
+
+Use LBM v4.5.0 for a relayed end-device
+
+
 ### Relay RX
 
 This example provides an application where the relay RX feature is enabled. This example is based on the periodical uplink example but send an uplink every 1 hours (instead of 1 min).
@@ -86,18 +91,6 @@ Build command example for lr1110 radio
 make full_lr1110 MODEM_APP=RELAY_RX
 ```
 
-### Relay TX
-
-This example provides an application where the relay TX feature is enabled and is based on the periodical uplink example but display relay tx event. 
-
-The end-device is configured in **END-DEVICE CONTROLED** mode (refer to TS011-1.0.0 table 40) and will send WOR message before every LoRaWAN uplink.
-
-LoRaWAN credentials shall be provided in [example_options.h](main_examples/example_options.h)
-
-Build command example for lr1110 radio
-
-```bash
-make full_lr1110 MODEM_APP=RELAY_TX
 ```
 
 ### MCU Porting

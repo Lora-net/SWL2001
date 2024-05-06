@@ -91,7 +91,7 @@ typedef struct relay_cmd_parser_s
     uint8_t        valid_req_ret;
 } relay_cmd_parser_t;
 
-typedef struct relay_tx_cid_info_s
+typedef struct relay_cid_info_s
 {
     uint8_t cid_req;
     uint8_t cid_req_min_size;

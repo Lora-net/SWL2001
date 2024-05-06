@@ -206,7 +206,7 @@ static void lorawan_certification_build_beacon_rx_status_ind( lorawan_certificat
 
 void lorawan_certification_services_init( uint8_t* service_id, uint8_t task_id,
                                           uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                          void    ( **on_launch_callback )( void* ),
+                                          void ( **on_launch_callback )( void* ),
                                           void ( **on_update_callback )( void* ), void** context_callback )
 {
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
@@ -803,6 +803,11 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         SMTC_MODEM_HAL_TRACE_ERROR( "Not implemented\n" );
 #endif
         break;
+
+    case LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_REQ:
+        SMTC_MODEM_HAL_TRACE_ERROR( "RELAY_TX not implemented\n" );
+        break;
+
     case LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ:
         if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ_SIZE )
         {

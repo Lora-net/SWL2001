@@ -107,18 +107,6 @@ void wor_ral_init_tx_ack( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, uint8
                           rp_radio_params_t* param );
 
 /**
- * @brief Fill rp_radio_params_t struct to receive a WOR ACK
- *
- * @param[in]   real        Regional Abstraction Layer object
- * @param[in]   dr          Datarate of the WOR ACK
- * @param[in]   freq_hz     Frequency of the WOR ACK
- * @param[in]   max_payload Len of the WOR ACK
- * @param[out]  param       Radio parameter structure with WOR ACK
- */
-void wor_ral_init_rx_ack( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, uint8_t max_payload,
-                          rp_radio_params_t* param );
-
-/**
  * @brief Function called by RP to start the CAD
  *
  * @param rp_void radio planner pointer

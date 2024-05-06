@@ -8,6 +8,7 @@
 - Fragmented Data Block Transport
 - Firmware Management Protocol (FMP)
 - Multi-Package Access (MPA)
+- Relay RX
 
 **LoRa Basic Modem** offers extended services:  
 - LoRaWAN certification process

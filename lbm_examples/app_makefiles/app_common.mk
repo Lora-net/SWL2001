@@ -214,6 +214,12 @@ COMMON_C_DEFS += \
 LBM_BUILD_OPTIONS += LBM_FUOTA=yes LBM_FUOTA_VERSION=$(FUOTA_VERSION)
 endif
 
+
+ifeq ($(ALLOW_RELAY_RX),yes)
+LBM_BUILD_OPTIONS += RELAY_RX_ENABLE=yes
+BUILD_TARGET := $(BUILD_TARGET)_relay_rx
+endif
+
 ifeq ($(ALLOW_STORE_AND_FORWARD),yes)
 COMMON_C_DEFS += \
 	-DUSE_STORE_AND_FORWARD
@@ -270,13 +276,6 @@ endif
 ifeq ($(MODEM_APP),PERIODICAL_UPLINK)
 APP_C_SOURCES += \
 	main_examples/main_periodical_uplink.c
-endif
-
-ifeq ($(MODEM_APP),RELAY_TX)
-APP_C_SOURCES += \
-	main_examples/main_periodical_uplink_relay_tx.c
-
-LBM_BUILD_OPTIONS += RELAY_TX_ENABLE=yes
 endif
 
 ifeq ($(MODEM_APP),RELAY_RX)

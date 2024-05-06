@@ -151,7 +151,6 @@ typedef struct relay_infos_s
     uint16_t                      t_offset;
     wor_ack_cad_to_rx_t           cad_to_rx;
     wor_ack_ppm_error_t           error_ppm;
-
 } relay_infos_t;
 
 /*
@@ -217,7 +216,8 @@ static void config_cad_to_rx_wor( const relay_config_t* config, relay_infos_t* i
  * @param[in]   wor             Infos from the WOR
  * @param[in]   timestamp_wor   Timestamp when WOR has been received
  */
-static void config_enqueue_rx_msg( const relay_config_t* config, const wor_infos_t* wor, const uint32_t timestamp_wor );
+static void config_enqueue_rx_msg( const relay_config_t* config, const wor_infos_t* wor,
+                                   const uint32_t timestamp_lr1_ul );
 
 /**
  * @brief Program the emission of the WOR ACK
@@ -407,7 +407,7 @@ bool relay_start( void )
 {
     if( relay_info.state != CAD_STATE_INIT )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "Failed to start CAD (%d)\n", relay_info.state );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "Start CAD status (%d)\n", relay_info.state );
         return false;
     }
 
@@ -463,10 +463,10 @@ void relay_fwd_dl( uint8_t stack_id, const uint8_t* buffer, uint8_t len )
 
         smtc_real_lora_dr_to_sf_bw( real, dl_dr, &sf, &bw );
 
-        lora_param->rf_freq_in_hz = dl_freq;
-        lora_param->sync_word     = smtc_real_get_sync_word( real );
-        lora_param->output_pwr_in_dbm =
-            smtc_real_clamp_output_power_eirp_vs_freq_and_dr( real, 14, lora_param->rf_freq_in_hz, dl_dr );
+        lora_param->rf_freq_in_hz     = dl_freq;
+        lora_param->sync_word         = smtc_real_get_sync_word( real );
+        lora_param->output_pwr_in_dbm = smtc_real_clamp_output_power_eirp_vs_freq_and_dr(
+            real, smtc_real_get_default_max_eirp( real ), lora_param->rf_freq_in_hz, dl_dr );
 
         lora_param->mod_params.sf   = ( ral_lora_sf_t ) sf;
         lora_param->mod_params.bw   = ( ral_lora_bw_t ) bw;
@@ -495,13 +495,13 @@ void relay_fwd_dl( uint8_t stack_id, const uint8_t* buffer, uint8_t len )
 
         ralf_params_gfsk_t* gfsk_param = &radio_params.tx.gfsk;
 
-        gfsk_param->whitening_seed = GFSK_WHITENING_SEED;
-        gfsk_param->crc_seed       = GFSK_CRC_SEED;
-        gfsk_param->crc_polynomial = GFSK_CRC_POLYNOMIAL;
-        gfsk_param->rf_freq_in_hz  = relay_config.channel_cfg[relay_info.current_ch_idx].freq_hz;
-        gfsk_param->sync_word      = smtc_real_get_gfsk_sync_word( real );
-        gfsk_param->output_pwr_in_dbm =
-            smtc_real_clamp_output_power_eirp_vs_freq_and_dr( real, 14, gfsk_param->rf_freq_in_hz, dl_dr );
+        gfsk_param->whitening_seed    = GFSK_WHITENING_SEED;
+        gfsk_param->crc_seed          = GFSK_CRC_SEED;
+        gfsk_param->crc_polynomial    = GFSK_CRC_POLYNOMIAL;
+        gfsk_param->rf_freq_in_hz     = relay_config.channel_cfg[relay_info.current_ch_idx].freq_hz;
+        gfsk_param->sync_word         = smtc_real_get_gfsk_sync_word( real );
+        gfsk_param->output_pwr_in_dbm = smtc_real_clamp_output_power_eirp_vs_freq_and_dr(
+            real, smtc_real_get_default_max_eirp( real ), gfsk_param->rf_freq_in_hz, dl_dr );
 
         gfsk_param->pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
         gfsk_param->pkt_params.pld_len_in_bytes      = len;
@@ -580,12 +580,12 @@ bool relay_update_config( const relay_config_t* config )
     }
 
     // Memorise if relay is running to restart it (or not) at the end
-    bool relay_is_running = false;
-    if( relay_info.state > CAD_STATE_INIT )
-    {
-        relay_stop( false );
-        relay_is_running = true;
-    }
+    // bool relay_is_running = false;
+    // if( relay_info.state > CAD_STATE_INIT )
+    // {
+    //     relay_stop( false );
+    //     relay_is_running = true;
+    // }
 
     // All parameters are valid -> save config
     relay_config = *config;
@@ -609,10 +609,6 @@ bool relay_update_config( const relay_config_t* config )
     if( relay_info.state == CAD_STATE_NO_CFG )
     {
         relay_info.state = CAD_STATE_INIT;
-    }
-    else if( relay_is_running == true )
-    {
-        relay_start( );
     }
 
     return true;
@@ -986,8 +982,30 @@ static void manage_fsm( const uint32_t irq_timestamp_ms, const bool cad_success,
             {
                 fwd_msg = check_forward_filter_joinreq( relay_info.buffer + 1, relay_info.buffer + 9 );
             }
-            // Standard uplink has already been check to forward (or not) when WOR MIC is check
 
+            uint16_t max_relayed_len =
+                smtc_real_get_max_payload_size( relay_info.lr1mac->real, relay_info.lr1mac->tx_data_rate, UP_LINK );
+
+            if( max_relayed_len > RELAY_OVERHEAD_FORWARD )
+            {
+                max_relayed_len -= RELAY_OVERHEAD_FORWARD;
+            }
+            else
+            {
+                max_relayed_len = 0;
+            }
+
+            if( relay_info.buffer_length > max_relayed_len )
+            {
+                fwd_msg = false;
+            }
+
+            if( ( relay_info.buffer_length + RELAY_OVERHEAD_FORWARD ) > 255 )
+            {
+                fwd_msg = false;
+            }
+
+            // Standard uplink has already been check to forward (or not) when WOR MIC is check
             const int16_t rx_correct_us =
                 ral_compute_rx_done_correction( get_ul_dr( &relay_wor_info ), relay_info.buffer_length );
             relay_info.rx_uplink_timestamp_ms = irq_timestamp_ms - ( rx_correct_us / 1000 );
@@ -1018,7 +1036,7 @@ static void config_enqueue_next_cad( const relay_config_t* config, relay_infos_t
     }
 
     const int32_t duty_cycle_ms = modem_duty_cycle_get_status( RELAY_STACK_ID );
-    uint32_t      actual_ms     = smtc_modem_hal_get_time_in_ms( ) + 25;
+    uint32_t      actual_ms     = smtc_modem_hal_get_time_in_ms( ) + 10;
     if( duty_cycle_ms > 0 )  // No DTC available until X ms -> move "now" to a time where DTC is OK
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "DTC - wait %d ms to re-enable relay\n", duty_cycle_ms );
@@ -1058,8 +1076,8 @@ static void config_enqueue_next_cad( const relay_config_t* config, relay_infos_t
         .type                       = RP_TASK_TYPE_CAD_TO_RX,
         .state                      = RP_TASK_STATE_SCHEDULE,
         .schedule_task_low_priority = true,
-        .duration_time_ms           = 1,
-        .start_time_ms              = info->next_cad_ms,
+        .duration_time_ms           = 20000,
+        .start_time_ms              = info->next_cad_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ),
         .launch_task_callbacks      = wor_ral_callback_start_cad,
     };
 
@@ -1078,7 +1096,7 @@ static void config_cad_to_rx_wor( const relay_config_t* config, relay_infos_t* i
     const wor_cad_periodicity_t   cad_period  = ( info->current_ch_idx != 0 ) ? config->cad_period : WOR_CAD_PERIOD_1S;
     const relay_channel_config_t* channel_cfg = &config->channel_cfg[info->current_ch_idx];
 
-    ral_lora_cad_params_t cad_param;
+    ral_lora_cad_params_t cad_param = { 0 };
 
     wor_ral_init_cad( relay_info.lr1mac->real, channel_cfg->dr, cad_period, false,
                       relay_info.wor_toa_ms[info->current_ch_idx], &cad_param );
@@ -1091,7 +1109,8 @@ static void config_cad_to_rx_wor( const relay_config_t* config, relay_infos_t* i
     info->state = CAD_STATE_WAIT_WOR_COMPLETION;
 }
 
-static void config_enqueue_rx_msg( const relay_config_t* config, const wor_infos_t* wor, const uint32_t timestamp_wor )
+static void config_enqueue_rx_msg( const relay_config_t* config, const wor_infos_t* wor,
+                                   const uint32_t timestamp_lr1_ul )
 {
     const uint8_t  ul_dr   = get_ul_dr( &relay_wor_info );
     const uint32_t ul_freq = get_ul_freq( &relay_wor_info );
@@ -1117,7 +1136,7 @@ static void config_enqueue_rx_msg( const relay_config_t* config, const wor_infos
     rp_task_t rx_task = {
         .hook_id               = RP_HOOK_ID_RELAY_RX_CAD,
         .state                 = RP_TASK_STATE_SCHEDULE,
-        .start_time_ms         = timestamp_wor - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ),
+        .start_time_ms         = timestamp_lr1_ul - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ),
         .launch_task_callbacks = wor_ral_callback_start_rx,
     };
 
@@ -1156,7 +1175,16 @@ static void config_enqueue_ack( const relay_config_t* config, const wor_infos_t*
 {
     // SMTC_MODEM_HAL_TRACE_MSG( "Prepare ACK \n" );
 
-    const uint32_t delay_dc = lr1_stack_network_next_free_duty_cycle_ms_get( info->lr1mac );
+    bool fwd_ok = true;
+
+    if( modem_duty_cycle_get_status( RELAY_STACK_ID ) > 0 )
+    {
+        fwd_ok = false;
+    }
+    else if( check_fwd_limitation( wor, devaddr_idx ) == false )
+    {
+        fwd_ok = false;
+    }
 
     const wor_ack_infos_t ack = {
         .dr_relay_gtw = info->lr1mac->tx_data_rate,
@@ -1164,16 +1192,18 @@ static void config_enqueue_ack( const relay_config_t* config, const wor_infos_t*
         .period       = config->cad_period,
         .relay_ppm    = info->error_ppm,
         .cad_to_rx    = info->cad_to_rx,
-        .relay_fwd    = ( delay_dc == 0 ? WOR_ACK_FORWARD_OK : WOR_ACK_FORWARD_RETRY_30MIN ),
+        .relay_fwd    = ( fwd_ok == true ? WOR_ACK_FORWARD_OK : WOR_ACK_FORWARD_RETRY_60MIN ),
     };
 
     const relay_channel_config_t* channel_cfg = &config->channel_cfg[info->current_ch_idx];
 
     const wor_ack_mic_info_t mic_info = {
-        .dev_addr     = device_list_dev_addr[devaddr_idx].dev_addr,
-        .wfcnt        = device_list_dev_addr[devaddr_idx].wfcnt32,
-        .datarate     = channel_cfg->dr,
-        .frequency_hz = channel_cfg->ack_freq_hz,
+        .dev_addr             = device_list_dev_addr[devaddr_idx].dev_addr,
+        .wfcnt                = device_list_dev_addr[devaddr_idx].wfcnt32,
+        .wor_datarate         = channel_cfg->dr,
+        .wor_frequency_hz     = channel_cfg->freq_hz,
+        .wor_ack_datarate     = channel_cfg->dr,
+        .wor_ack_frequency_hz = channel_cfg->ack_freq_hz,
     };
 
     info->buffer_length =
@@ -1185,7 +1215,7 @@ static void config_enqueue_ack( const relay_config_t* config, const wor_infos_t*
                          &radio_params );
 
     const rp_task_t rp_task = {
-        .start_time_ms         = time_rx + DELAY_WOR_TO_WORACK_MS,
+        .start_time_ms         = time_rx + DELAY_WOR_TO_WORACK_MS - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ),
         .hook_id               = RP_HOOK_ID_RELAY_RX_CAD,
         .state                 = RP_TASK_STATE_SCHEDULE,
         .launch_task_callbacks = wor_ral_callback_start_tx,
@@ -1394,14 +1424,32 @@ static int16_t ral_compute_rx_done_correction( uint8_t datarate, uint16_t payloa
 
 static bool check_fwd_limitation( const wor_infos_t* wor, uint8_t device_idx )
 {
+    static bool     is_first_init  = true;
     static uint32_t relay_fwd_time = 0;
     const uint32_t  current_hour   = smtc_modem_hal_get_time_in_ms( ) / 3600000;
+
+    if( is_first_init == true )
+    {
+        is_first_init  = false;
+        relay_fwd_time = current_hour;
+    }
 
     // SMTC_MODEM_HAL_TRACE_PRINTF( "Check FWD Limit %d vs %d\n", relay_fwd_time, current_hour );
     if( current_hour != relay_fwd_time )
     {
-        const uint16_t diff_hour = current_hour - relay_fwd_time;
-        relay_fwd_time           = current_hour;
+        uint16_t diff_hour = 0;
+        if( current_hour > relay_fwd_time )
+        {
+            diff_hour = current_hour - relay_fwd_time;
+        }
+        else
+        {
+            // 1193 is 0xFFFFFFFF/3600000
+            // There is no +1 as 1193 is 167s from the max of 0xFFFFFFFF
+            diff_hour = current_hour + 1193 - relay_fwd_time;
+        }
+
+        relay_fwd_time = current_hour;
 
         for( uint8_t i = 0; i < LIMIT__LAST_ELT; i++ )
         {
@@ -1549,6 +1597,7 @@ static void relay_rxr_tx_launch_callback( void* rp_void )
     }
     // At this time only tcxo startup delay is remaining
     smtc_modem_hal_start_radio_tcxo( );
+    smtc_modem_hal_set_ant_switch( true );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_tx( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     rp_stats_set_tx_timestamp( &rp->stats, smtc_modem_hal_get_time_in_ms( ) );
 }

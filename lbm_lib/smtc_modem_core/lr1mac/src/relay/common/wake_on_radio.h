@@ -156,8 +156,10 @@ typedef struct wor_ack_mic_info_s
 {
     uint32_t dev_addr;
     uint32_t wfcnt;
-    uint8_t  datarate;
-    uint32_t frequency_hz;
+    uint8_t  wor_datarate;
+    uint32_t wor_frequency_hz;
+    uint8_t  wor_ack_datarate;
+    uint32_t wor_ack_frequency_hz;
 } wor_ack_mic_info_t;
 
 /*
@@ -167,16 +169,6 @@ typedef struct wor_ack_mic_info_s
 
 //-----------------------
 // WOR frame function
-/**
- * @brief Generate WOR payload to be send
- *
- * MIC is computed, doesn't need to add it
- *
- * @param[out]  buffer  Buffer to fill with WOR frame
- * @param[in]   wor     WOR infos to put in buffer
- * @return uint8_t      Length of ouput buffer
- */
-uint8_t wor_generate_wor( uint8_t* buffer, const wor_infos_t* wor );
 
 /**
  * @brief Compute MIC for WOR payload
@@ -250,38 +242,8 @@ uint8_t wor_generate_ack( uint8_t* buffer, const wor_ack_infos_t* ack, const wor
 uint32_t wor_compute_mic_ack( const wor_ack_mic_info_t* mic_info, const uint8_t* ack_uplink_enc,
                               const uint8_t* wor_s_int_key );
 
-/**
- * @brief Decode WOR ACK data
- *
- * @param[in]   buffer          Input buffer with WOR ACK frame
- * @param[in]   mic_infos       Info required to compute MIC
- * @param[out]  ack             WOR ACK infos to filled
- * @param[in]   wor_s_enc_key   WOR Session Encryption Key
- */
-void wor_decrypt_ack( const uint8_t* buffer, const wor_ack_mic_info_t* mic_infos, wor_ack_infos_t* ack,
-                      const uint8_t wor_s_enc_key[16] );
-
-/**
- * @brief Extract MIC from the WOR ACK payload
- *
- * Only used in relay TX to check MIC
- *
- * @param[in]   buffer  Input buffer with WOR ACK frame
- * @return uint32_t     MIC value
- */
-uint32_t wor_extract_mic_ack( const uint8_t* buffer );
-
 //-----------------------
 // Generic WOR function
-
-/**
- * @brief Allow a ED to derived relay session key from its network session key
- *
- * Only used in relay TX.
- * Key are stored directly in crypto module.
- * @param[in]   dev_addr    DevAddr of the ED
- */
-void wor_derive_root_skey( uint32_t dev_addr );
 
 /**
  * @brief Allow a relay RX to derive integrity and encryption key from root key

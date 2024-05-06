@@ -547,9 +547,7 @@ static const uint8_t events_lut[SMTC_MODEM_EVENT_MAX] = {
     [SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE]         = 0x22,
     [SMTC_MODEM_EVENT_WIFI_SCAN_DONE]                    = 0x23,
     [SMTC_MODEM_EVENT_WIFI_TERMINATED]                   = 0x24,
-    [SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC]                  = 0x30,
-    [SMTC_MODEM_EVENT_RELAY_TX_MODE]                     = 0x31,
-    [SMTC_MODEM_EVENT_RELAY_TX_SYNC]                     = 0x32,
+
 
 };
 
@@ -726,11 +724,9 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         case SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE:
         case SMTC_MODEM_EVENT_WIFI_SCAN_DONE:
         case SMTC_MODEM_EVENT_WIFI_TERMINATED:
-        case SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC:
-        case SMTC_MODEM_EVENT_RELAY_TX_MODE:
-        case SMTC_MODEM_EVENT_RELAY_TX_SYNC:
             cmd_output->length = 2;
             break;
+
         default:
             cmd_output->length = 0;
             break;

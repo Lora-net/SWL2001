@@ -96,6 +96,8 @@ extern "C" {
 
 #define LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ_SIZE 2
 
+#define LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_SIZE 2
+
 #define LORAWAN_CERTIFICATION_FPORT 224
 /*
  * -----------------------------------------------------------------------------
@@ -125,6 +127,7 @@ typedef enum lorawan_certification_cid_dut_e
     LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND = 0x41,
     LORAWAN_CERTIFICATION_BEACON_CNT_ANS       = 0x42,
     LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_ANS = 0x52,
+    LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_ANS  = 0x53,
     LORAWAN_CERTIFICATION_DUT_VERSION_ANS      = 0x7F,
 } lorawan_certification_cid_dut_t;
 
@@ -153,6 +156,7 @@ typedef enum lorawan_certification_cid_tcl_e
     LORAWAN_CERTIFICATION_BEACON_CNT_REQ               = 0x42,
     LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ           = 0x43,
     LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ         = 0x52,
+    LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_REQ          = 0x53,
     LORAWAN_CERTIFICATION_TX_CW_REQ                    = 0x7D,
     LORAWAN_CERTIFICATION_DUT_FPORT_224_DISABLE_REQ    = 0x7E,
     LORAWAN_CERTIFICATION_DUT_VERSION_REQ              = 0x7F,
@@ -292,7 +296,7 @@ typedef struct lorawan_certification_s
  */
 void lorawan_certification_services_init( uint8_t* service_id, uint8_t task_id,
                                           uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                          void    ( **on_launch_callback )( void* ),
+                                          void ( **on_launch_callback )( void* ),
                                           void ( **on_update_callback )( void* ), void** context_callback );
 
 ////////////////////////////////////////////////////////

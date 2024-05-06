@@ -39,6 +39,9 @@ APP_TRACE ?= yes
 # LR11xx option to use crc
 USE_LR11XX_CRC_SPI ?= no
 
+# Allow relay 
+ALLOW_RELAY_RX ?= no
+
 #-----------------------------------------------------------------------------
 # LBM options management
 #-----------------------------------------------------------------------------

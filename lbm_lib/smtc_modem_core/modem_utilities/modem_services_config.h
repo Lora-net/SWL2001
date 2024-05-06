@@ -55,10 +55,6 @@ extern "C" {
 #include "lorawan_relay_rx_service.h"
 #endif
 
-#ifdef RELAY_TX
-#include "lorawan_relay_tx_service.h"
-#endif
-
 #if defined( ADD_LBM_GEOLOCATION )
 #include "mw_gnss_scan.h"
 #include "mw_gnss_send.h"
@@ -104,7 +100,7 @@ typedef struct modem_service_config_s
     uint8_t service_id;  // Start to 0 for new type of services, increment this number for multiple instantiation of the
                          // same type of service
     uint8_t stack_id;    // The linked LoRaWAN stack to this service
-    void    ( *callbacks_init_service )( uint8_t* service_id, uint8_t task_id,
+    void ( *callbacks_init_service )( uint8_t* service_id, uint8_t task_id,
                                       uint8_t ( **callback )( lr1_stack_mac_down_data_t* ),
                                       void ( **callback_on_launch )( void* ), void ( **callback_on_update )( void* ),
                                       void** callback_context );
@@ -115,9 +111,6 @@ static modem_service_config_t modem_service_config[] = {
     { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_certification_services_init },
 #ifdef RELAY_RX
     { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_relay_rx_services_init },
-#endif
-#ifdef RELAY_TX
-    { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_relay_tx_services_init },
 #endif
 #ifdef ADD_SMTC_ALC_SYNC
     { .service_id = 0, .stack_id = 0, .callbacks_init_service = lorawan_alcsync_services_init },
