@@ -334,6 +334,9 @@ static void modem_event_callback( void )
             send_uplink_counter_on_port( 101 );
             // start periodical uplink alarm
             ASSERT_SMTC_MODEM_RC( smtc_modem_alarm_start_timer( PERIODICAL_UPLINK_DELAY_S ) );
+            // init sync
+            ASSERT_SMTC_MODEM_RC( smtc_modem_start_alcsync_service( stack_id ) );
+
             break;
 
         case SMTC_MODEM_EVENT_TXDONE:
