@@ -39,7 +39,7 @@
 
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
-#include "lorawan_template.h"
+#include "service_template.h"
 #include "modem_core.h"
 #include "modem_supervisor_light.h"
 #include "smtc_modem_api.h"
