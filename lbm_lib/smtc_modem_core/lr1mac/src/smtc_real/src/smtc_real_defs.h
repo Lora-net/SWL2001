@@ -59,7 +59,7 @@ extern "C" {
 #if defined( REGION_AU_915 )
 #include "region_au_915_defs.h"
 #endif
-#if defined( REGION_WW2G4 )
+#if defined( REGION_WW_2G4 )
 #include "region_ww2g4_defs.h"
 #endif
 #if defined( REGION_CN_470 )
@@ -122,7 +122,7 @@ typedef enum smtc_real_region_types_e
 #if defined( REGION_CN_470 )
     SMTC_REAL_REGION_CN_470 = 5,
 #endif
-#if defined( REGION_WW2G4 )
+#if defined( REGION_WW_2G4 )
     SMTC_REAL_REGION_WW2G4 = 6,
 #endif
 #if defined( REGION_AS_923 )

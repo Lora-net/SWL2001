@@ -44,7 +44,7 @@
 #include "smtc_lbt.h"
 #include "lr1mac_config.h"
 
-#if defined( REGION_WW2G4 )
+#if defined( REGION_WW_2G4 )
 #include "region_ww2g4.h"
 #endif
 #if defined( REGION_EU_868 )
@@ -74,7 +74,7 @@
 #if defined( REGION_RU_864 )
 #include "region_ru_864.h"
 #endif
-#if !defined( REGION_WW2G4 ) && !defined( REGION_EU_868 ) && !defined( REGION_AS_923 ) && !defined( REGION_US_915 ) && \
+#if !defined( REGION_WW_2G4 ) && !defined( REGION_EU_868 ) && !defined( REGION_AS_923 ) && !defined( REGION_US_915 ) && \
     !defined( REGION_AU_915 ) && !defined( REGION_CN_470 ) && !defined( REGION_CN_470_RP_1_0 ) &&                      \
     !defined( REGION_IN_865 ) && !defined( REGION_KR_920 ) && !defined( REGION_RU_864 )
 #error "Unknown region selected..."
