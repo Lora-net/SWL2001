@@ -39,6 +39,7 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "smtc_modem_hal_dbg_trace.h"
 #include "circularfs.h"
