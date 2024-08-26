@@ -49,3 +49,5 @@ Under `lbm_applications` folder, one will find 3 specific applications that are 
 - A LBM porting on Nordic NRF52840 ([lbm_applications/2_porting_nrf_52840/README.md](lbm_applications/2_porting_nrf_52840/README.md))  
 - A Geolocation application running on Lora Edge ([lbm_applications/3_geolocation_on_lora_edge/README.md](lbm_applications/3_geolocation_on_lora_edge/README.md)) 
 
+An integration in Zephyr OS is available in another repository, instructions to download this integration and LoRa Basics Modem
+are available at [LBM_Zephyr](https://github.com/lora-net/LBM_Zephyr/blob/main/README.md).
