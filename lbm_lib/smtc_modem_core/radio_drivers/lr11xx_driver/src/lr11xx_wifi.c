@@ -568,12 +568,12 @@ uint32_t lr11xx_wifi_get_consumption_nah( lr11xx_system_reg_mode_t regulator, lr
                                 ( ( float ) timing.rx_correlation_us * LR11XX_WIFI_CORRELATION_NA );
 
     wifi_scan_consumption_nah = wifi_scan_consumption_nah /
-                                ( 3600000000.0 - ( ( float ) timing.rx_capture_us + ( float ) timing.demodulation_us +
+                                ( 3600000000.0f - ( ( float ) timing.rx_capture_us + ( float ) timing.demodulation_us +
                                                    ( float ) timing.rx_correlation_us ) );
 
     if( regulator == LR11XX_SYSTEM_REG_MODE_LDO )
     {
-        wifi_scan_consumption_nah *= 2.0;
+        wifi_scan_consumption_nah *= 2.0f;
     }
 
     return ( uint32_t ) wifi_scan_consumption_nah;

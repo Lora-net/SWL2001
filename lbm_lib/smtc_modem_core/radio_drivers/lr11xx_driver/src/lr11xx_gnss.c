@@ -970,37 +970,37 @@ void lr11xx_gnss_compute_power_consumption(
     uint32_t* power_consumption_nah, uint32_t* power_consumption_nwh )
 {
     float e_init =
-        ( ( float ) instantaneous_power_consumption_ua->init_ua / 1000.0 * ( float ) cumulative_timing->init ) /
-        32768.0;
+        ( ( float ) instantaneous_power_consumption_ua->init_ua / 1000.0f * ( float ) cumulative_timing->init ) /
+        32768.0f;
 
-    float e_gps_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_capture_ua / 1000.0 *
+    float e_gps_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_capture_ua / 1000.0f *
                               ( float ) cumulative_timing->phase1_gps_capture ) +
-                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0 *
+                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0f *
                               ( float ) cumulative_timing->multiscan_gps_capture ) ) /
-                          32768.0;
+                          32768.0f;
 
-    float e_gps_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_process_ua / 1000.0 *
+    float e_gps_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_gps_process_ua / 1000.0f *
                               ( float ) cumulative_timing->phase1_gps_process ) +
-                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0 *
+                            ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0f *
                               ( float ) cumulative_timing->multiscan_gps_process ) ) /
-                          32768.0;
+                          32768.0f;
 
-    float e_gps_sleep_32k = ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 *
+    float e_gps_sleep_32k = ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0f *
                               ( float ) cumulative_timing->multiscan_gps_sleep_32k ) /
-                            32768.0;
+                            32768.0f;
 
     float e_tot_gps = e_gps_capture + e_gps_process + e_gps_sleep_32k;
 
-    float e_beidou_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_capture_ua / 1000.0 *
+    float e_beidou_capture = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_capture_ua / 1000.0f *
                                  ( float ) cumulative_timing->phase1_beidou_capture ) +
-                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0 *
+                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0f *
                                  ( float ) cumulative_timing->multiscan_beidou_capture ) ) /
-                             32768.0;
-    float e_beidou_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_process_ua / 1000.0 *
+                             32768.0f;
+    float e_beidou_process = ( ( ( float ) instantaneous_power_consumption_ua->phase1_beidou_process_ua / 1000.0f *
                                  ( float ) cumulative_timing->phase1_beidou_process ) +
-                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0 *
+                               ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0f *
                                  ( float ) cumulative_timing->multiscan_beidou_process ) ) /
-                             32768.0;
+                             32768.0f;
     float e_beidou_sleep_32k =
         ( instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 * cumulative_timing->multiscan_beidou_sleep_32k ) /
         32768.0;
@@ -1010,31 +1010,31 @@ void lr11xx_gnss_compute_power_consumption(
     float e_demod = 0;
     if( cumulative_timing->constellation_demod == 0 )  // Demodulation has been done on GPS constellation
     {
-        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0 *
+        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_capture_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_capture ) +
-                    ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->multiscan_gps_process_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_process ) +
-                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32k ) +
-                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32m ) ) /
-                  32768.0;
+                  32768.0f;
     }
     else  // Domulation has been done on Beidou constellation
     {
-        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0 *
+        e_demod = ( ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_capture_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_capture ) +
-                    ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->multiscan_beidou_process_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_process ) +
-                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->sleep_32k_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32k ) +
-                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0 *
+                    ( ( float ) instantaneous_power_consumption_ua->demod_sleep_32m_ua / 1000.0f *
                       ( float ) cumulative_timing->demod_sleep_32m ) ) /
-                  32768.0;
+                  32768.0f;
     }
 
     float power_consumption_uah_tmp = ( ( e_init + e_tot_gps + e_tot_beidou + e_demod ) * 1000 ) /
-                                      ( 3600.0 - ( ( float ) cumulative_timing->total / 32768.0 ) );
+                                      ( 3600.0f - ( ( float ) cumulative_timing->total / 32768.0f ) );
 
     *power_consumption_nah = ( uint32_t )( power_consumption_uah_tmp * 1000 );
     *power_consumption_nwh =

@@ -777,10 +777,10 @@ void circularfs_dump( struct circularfs* fs )
                 break;
             }
 
-            SMTC_MODEM_HAL_TRACE_PRINTF( "%s", description );
+            // SMTC_MODEM_HAL_TRACE_PRINTF( "%s", description );
         }
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
+        // SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
     }
 #endif  // MODEM_HAL_DBG_TRACE
 }

@@ -404,7 +404,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
             {
                 DBG_PRINT_WITH_LINE( "RX2 Timeout for stack_id = %d", lr1_mac_obj->stack_id );
             }
-            
+
             if( ( has_receive_valid_packet == false ) && ( smtc_relay_tx_is_enable( lr1_mac_obj->stack_id ) == true ) )
             {
                 lr1_mac_obj->lr1mac_state = LWPSTATE_RXR;
@@ -1002,8 +1002,8 @@ bool lr1mac_core_convert_rtc_to_gps_epoch_time( lr1_stack_mac_t* lr1_mac_obj, ui
 
     tmp_seconds_since_epoch = lr1_mac_obj->seconds_since_epoch + tmp_s;
 
-    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "tx: %u, rx:%u, diff:%u\n", lr1_mac->timestamp_tx_done_device_time_req_ms,
-                                       lr1_mac->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "tx: %u, rx:%u, diff:%u\n", lr1_mac_obj->timestamp_tx_done_device_time_req_ms,
+                                       lr1_mac_obj->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "DeviceTime GPS : %u.%u s\n", tmp_seconds_since_epoch, tmp_fractional_second );
 
     *seconds_since_epoch = tmp_seconds_since_epoch;
