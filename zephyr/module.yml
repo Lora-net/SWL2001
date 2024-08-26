@@ -1,0 +1,7 @@
+
+build:
+  # Path to the Kconfig file that will be sourced into Zephyr Kconfig tree under
+  # Zephyr > Modules > example-application. Path is relative from root of this
+  # repository.
+  kconfig-ext: true
+  cmake-ext: true
