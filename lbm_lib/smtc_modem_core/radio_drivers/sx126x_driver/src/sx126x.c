@@ -1413,8 +1413,15 @@ sx126x_status_t sx126x_add_registers_to_retention_list( const void* context, con
 
     if( status == SX126X_STATUS_OK )
     {
-        const uint8_t initial_nb_of_registers = buffer[0];
-        uint8_t*      register_list           = &buffer[1];
+        uint8_t initial_nb_of_registers = buffer[0];
+        uint8_t*      register_list     = &buffer[1];
+
+        // sanity check - in case invalid value read -> set to zero
+        if(initial_nb_of_registers > SX126X_MAX_NB_REG_IN_RETENTION)
+        {
+            initial_nb_of_registers = 0;
+            buffer[0] = 0;
+        }
 
         for( uint8_t index = 0; index < register_nb; index++ )
         {
