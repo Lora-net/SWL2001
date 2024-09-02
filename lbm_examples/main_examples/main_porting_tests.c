@@ -183,7 +183,7 @@ static ralf_params_lora_t tx_lora_param = { .sync_word                       = S
                                             .pkt_params.invert_iq_is_on      = false,
                                             .pkt_params.preamble_len_in_symb = 8 };
 #if( ENABLE_TEST_FLASH != 0 )
-static const char* name_context_type[] = { "MODEM", "LR1MAC", "DEVNONCE", "SECURE_ELEMENT" };
+static const char* name_context_type[] = { "MODEM", "KEY_MODEM", "LORAWAN_STACK", "FUOTA", "SECURE_ELEMENT", "STORE_AND_FORWARD" };
 #endif
 
 /*
