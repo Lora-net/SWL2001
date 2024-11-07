@@ -1002,8 +1002,8 @@ bool lr1mac_core_convert_rtc_to_gps_epoch_time( lr1_stack_mac_t* lr1_mac_obj, ui
 
     tmp_seconds_since_epoch = lr1_mac_obj->seconds_since_epoch + tmp_s;
 
-    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "tx: %u, rx:%u, diff:%u\n", lr1_mac->timestamp_tx_done_device_time_req_ms,
-                                       lr1_mac->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "tx: %u, rx:%u, diff:%u\n", lr1_mac_obj->timestamp_tx_done_device_time_req_ms,
+                                       lr1_mac_obj->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "DeviceTime GPS : %u.%u s\n", tmp_seconds_since_epoch, tmp_fractional_second );
 
     *seconds_since_epoch = tmp_seconds_since_epoch;
