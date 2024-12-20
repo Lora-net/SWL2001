@@ -117,7 +117,7 @@ typedef enum
  */
 void lorawan_fragmentation_package_services_init( uint8_t* service_id, uint8_t task_id,
                                                   uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                                  void    ( **on_launch_callback )( void* ),
+                                                  void ( **on_launch_callback )( void* ),
                                                   void ( **on_update_callback )( void* ), void** context_callback );
 
 /**
@@ -178,6 +178,14 @@ bool lorawan_fragmentation_package_service_mpa_injector( uint8_t stack_id, uint8
                                                          uint8_t* payload_out, uint8_t* payload_out_length,
                                                          const uint8_t max_payload_out_length,
                                                          uint32_t      rx_timestamp_ms );
+
+/**
+ * @brief Get the downloaded file size
+ *
+ * @param stack_id   The requested stack_id
+ * @param file_size  The file size in bytes
+ */
+void lorawan_fragmentation_package_get_file_size( uint8_t stack_id, uint32_t* file_size );
 
 #ifdef __cplusplus
 }

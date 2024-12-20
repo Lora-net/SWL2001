@@ -531,7 +531,7 @@ modulation_type_t region_cn_470_get_modulation_type_from_datarate( uint8_t datar
 
 void region_cn_470_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    if( in_dr <= 6 )
+    if( in_dr <= DR6 )
     {
         *out_sf = datarates_to_sf_cn_470[in_dr];
         *out_bw = datarates_to_bandwidths_cn_470[in_dr];
@@ -544,7 +544,7 @@ void region_cn_470_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_band
 
 void region_cn_470_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate )
 {
-    if( in_dr == 7 )
+    if( in_dr == DR7 )
     {
         *out_bitrate = 50;  // Kbit
     }

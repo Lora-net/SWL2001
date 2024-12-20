@@ -111,7 +111,19 @@ lr11xx_hal_status_t lr11xx_hal_write( const void* context, const uint8_t* comman
     hal_gpio_set_value( RADIO_NSS, 0 );
 
     hal_spi_in_out( RADIO_SPI_ID, command, command_length, NULL, 0 );
-    hal_spi_in_out( RADIO_SPI_ID, data, data_length, NULL, 0 );
+    // data write to the radio could be more than 255 bytes but not more than 512 bytes
+    if( data_length > 255 )
+    {
+        hal_spi_in_out( RADIO_SPI_ID, data, 255, NULL, 0 );
+        hal_spi_in_out( RADIO_SPI_ID, &data[255], data_length - 255, NULL, 0 );
+    }
+    else
+    {
+        if( data_length > 0 )
+        {
+            hal_spi_in_out( RADIO_SPI_ID, data, data_length, NULL, 0 );
+        }
+    }
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
     // Add crc byte at the end of the transaction
@@ -167,8 +179,16 @@ lr11xx_hal_status_t lr11xx_hal_read( const void* context, const uint8_t* command
 #else
         hal_spi_in_out( RADIO_SPI_ID, 0, 0, NULL, 0 );
 #endif
-
-        hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
+        // data read from the radio could be more than 255 bytes but not more than 512 bytes
+        if( data_length > 255 )
+        {
+            hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, 255 );
+            hal_spi_in_out( RADIO_SPI_ID, 0, 0, &data[255], data_length - 255 );
+        }
+        else
+        {
+            hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
+        }
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
         // read crc sent by lr11xx at the end of the transaction
@@ -199,7 +219,17 @@ lr11xx_hal_status_t lr11xx_hal_direct_read( const void* context, uint8_t* data, 
 
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
-    hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
+
+    // data read from the radio could be more than 255 bytes but not more than 512 bytes
+    if( data_length > 255 )
+    {
+        hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, 255 );
+        hal_spi_in_out( RADIO_SPI_ID, 0, 0, &data[255], data_length - 255 );
+    }
+    else
+    {
+        hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
+    }
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
     // read crc sent by lr11xx by sending one more NOP

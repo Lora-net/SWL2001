@@ -97,7 +97,7 @@
 #ifndef WIFI_SCAN_DEEP_DBG_TRACE
 #define WIFI_SCAN_DEEP_DBG_TRACE MODEM_HAL_FEATURE_OFF
 #endif
-#if( WIFI_SCAN_DEEP_DBG_TRACE )
+#if ( WIFI_SCAN_DEEP_DBG_TRACE )
 #define WIFI_SCAN_TRACE_PRINTF_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ )
 #define WIFI_SCAN_TRACE_ARRAY_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_ARRAY( __VA_ARGS__ )
 #else
@@ -391,7 +391,7 @@ static void wifi_rp_task_launch( void* context )
 
     if( mw_radio_configure_for_scan( modem_get_radio_ctx( ) ) == false )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "gnss_rp_task_launch: mw_radio_configure_for_scan() failed\n" );
+        SMTC_MODEM_HAL_TRACE_ERROR( "wifi_rp_task_launch: mw_radio_configure_for_scan() failed\n" );
         rp_task_abort( modem_get_rp( ), RP_HOOK_ID_DIRECT_RP_ACCESS_WIFI );
         return;
     }

@@ -178,7 +178,7 @@ int32_t lr11xx_rttof_distance_raw_to_meter( lr11xx_radio_lora_bw_t rttof_bw,
     }
 
     int32_t retval = raw_distance;
-    if( raw_distance >= ( 1 << ( bitcnt - 1 ) ) )
+    if( raw_distance >= (uint32_t)( 1 << ( bitcnt - 1 ) ) )
     {
         retval -= ( 1 << bitcnt );
     }

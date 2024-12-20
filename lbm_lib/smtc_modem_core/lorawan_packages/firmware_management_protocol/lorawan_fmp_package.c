@@ -53,6 +53,7 @@
 #include "modem_core.h"
 #include "smtc_modem_api.h"
 #include "modem_tx_protocol_manager.h"
+#include "lorawan_cid_request_management.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -186,8 +187,8 @@ typedef struct lorawan_fmp_package_s
     uint32_t                    fmp_fw_to_delete_version;
     uint32_t                    fmp_task_ctx_mask;
     fmp_supervisor_task_types_t fmp_current_task_ctx;
-    bool                        request_time_sync;
-    bool                        enabled;
+    // bool                        request_time_sync;
+    bool enabled;
 } lorawan_fmp_package_ctx_t;
 
 typedef enum
@@ -280,8 +281,7 @@ void lorawan_fmp_package_services_init( uint8_t* service_id, uint8_t task_id,
 
 void lorawan_fmp_package_service_on_launch( void* service_id )
 {
-    lorawan_fmp_package_ctx_t* ctx      = ( lorawan_fmp_package_ctx_t* ) service_id;
-    uint8_t                    stack_id = ctx->stack_id;
+    lorawan_fmp_package_ctx_t* ctx = ( lorawan_fmp_package_ctx_t* ) service_id;
 
     ctx->fmp_current_task_ctx = EMPTY_TASK_MASK;
 
@@ -300,16 +300,16 @@ void lorawan_fmp_package_service_on_launch( void* service_id )
             ctx->fmp_tx_payload_ans_size = 0;
         }
     }
-    else if( ( ctx->fmp_task_ctx_mask & REQUEST_TIME_SYNC_TASK_MASK ) == REQUEST_TIME_SYNC_TASK_MASK )
-    {
-        ctx->fmp_current_task_ctx = REQUEST_TIME_SYNC_TASK_MASK;
-        SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch REQUEST_TIME_SYNC_TASK n" );
-        ctx->request_time_sync             = false;
-        cid_from_device_t cid_buffer[]     = { DEVICE_TIME_REQ };
-        uint8_t           cid_request_size = 1;
-        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
-                                     smtc_modem_hal_get_time_in_ms( ), stack_id );
-    }
+    // else if( ( ctx->fmp_task_ctx_mask & REQUEST_TIME_SYNC_TASK_MASK ) == REQUEST_TIME_SYNC_TASK_MASK )
+    // {
+    //     ctx->fmp_current_task_ctx = REQUEST_TIME_SYNC_TASK_MASK;
+    //     SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch REQUEST_TIME_SYNC_TASK n" );
+    //     ctx->request_time_sync             = false;
+    //     cid_from_device_t cid_buffer[]     = { DEVICE_TIME_REQ };
+    //     uint8_t           cid_request_size = 1;
+    //     tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+    //                                  smtc_modem_hal_get_time_in_ms( ), ctx->stack_id );
+    // }
     else if( ( ctx->fmp_task_ctx_mask & REQUEST_REBOOT_TASK_MASK ) == REQUEST_REBOOT_TASK_MASK )
     {
         ctx->fmp_current_task_ctx = REQUEST_REBOOT_TASK_MASK;
@@ -322,15 +322,17 @@ void lorawan_fmp_package_service_on_update( void* service_id )
     lorawan_fmp_package_ctx_t* ctx = ( lorawan_fmp_package_ctx_t* ) service_id;
     switch( ctx->fmp_current_task_ctx )
     {
-    case ANS_CMD_TASK_MASK: {
+    case ANS_CMD_TASK_MASK:
+    {
         break;
     }
-    case REQUEST_TIME_SYNC_TASK_MASK: {
-        // by choice of implementation time is requested only one time
-        ctx->fmp_task_ctx_mask &= ~( REQUEST_TIME_SYNC_TASK_MASK );
-        break;
-    }
-    case REQUEST_REBOOT_TASK_MASK: {
+    // case REQUEST_TIME_SYNC_TASK_MASK: {
+    //     // by choice of implementation time is requested only one time
+    //     ctx->fmp_task_ctx_mask &= ~( REQUEST_TIME_SYNC_TASK_MASK );
+    //     break;
+    // }
+    case REQUEST_REBOOT_TASK_MASK:
+    {
         if( ( int ) ( ctx->fmp_rtc_target_time_for_reboot - smtc_modem_hal_get_time_in_s( ) ) < 2 )
         {
             increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_FIRMWARE_MANAGEMENT,
@@ -365,7 +367,7 @@ uint8_t lorawan_fmp_package_service_downlink_handler( lr1_stack_mac_down_data_t*
 
     if( stack_id >= NUMBER_OF_FMP_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -426,7 +428,7 @@ bool lorawan_fmp_mpa_injector( uint8_t stack_id, uint8_t* payload_in, uint8_t* n
 
     if( stack_id >= NUMBER_OF_FMP_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return false;
     }
 
@@ -538,7 +540,8 @@ static fmp_status_t fmp_package_parser( lorawan_fmp_package_ctx_t* ctx, uint8_t*
     {
         switch( fmp_package_rx_buffer[fmp_package_rx_buffer_index] )
         {
-        case FMP_PKG_VERSION_REQ: {
+        case FMP_PKG_VERSION_REQ:
+        {
             IS_VALID_PKG_CMD( FMP_PKG_VERSION_REQ_SIZE );
             fmp_package_rx_buffer_index += FMP_PKG_VERSION_REQ_SIZE;
             if( ( ans_index + FMP_PKG_VERSION_ANS_SIZE ) <= max_payload_size )
@@ -552,7 +555,8 @@ static fmp_status_t fmp_package_parser( lorawan_fmp_package_ctx_t* ctx, uint8_t*
             break;
         }
 
-        case FMP_DEV_VERSION_REQ: {
+        case FMP_DEV_VERSION_REQ:
+        {
             IS_VALID_PKG_CMD( FMP_DEV_VERSION_REQ_SIZE );
             fmp_package_rx_buffer_index += FMP_DEV_VERSION_REQ_SIZE;
             if( ( ans_index + FMP_DEV_VERSION_ANS_SIZE ) <= max_payload_size )
@@ -573,7 +577,8 @@ static fmp_status_t fmp_package_parser( lorawan_fmp_package_ctx_t* ctx, uint8_t*
             }
             break;
         }
-        case FMP_DEV_REBOOT_TIME_REQ: {
+        case FMP_DEV_REBOOT_TIME_REQ:
+        {
             IS_VALID_PKG_CMD( FMP_DEV_REBOOT_TIME_REQ_SIZE );
             uint32_t fmp_reboot_time = fmp_package_rx_buffer[fmp_package_rx_buffer_index + 1] +
                                        ( fmp_package_rx_buffer[fmp_package_rx_buffer_index + 2] << 8 ) +
@@ -653,12 +658,15 @@ static fmp_status_t fmp_package_parser( lorawan_fmp_package_ctx_t* ctx, uint8_t*
 
                         ctx->fmp_task_ctx_mask |= ANS_CMD_TASK_MASK;
                     }
-                    ctx->fmp_task_ctx_mask |= REQUEST_TIME_SYNC_TASK_MASK;
+                    // ctx->fmp_task_ctx_mask |= REQUEST_TIME_SYNC_TASK_MASK;
+                    smtc_modem_lorawan_mac_request_mask_t cid_request_mask = SMTC_MODEM_LORAWAN_MAC_REQ_DEVICE_TIME;
+                    lorawan_cid_request_add_task( stack_id, cid_request_mask, 1 );
                 }
             }
             break;
         }
-        case FMP_DEV_REBOOT_COUNT_DOWN_REQ: {
+        case FMP_DEV_REBOOT_COUNT_DOWN_REQ:
+        {
             IS_VALID_PKG_CMD( FMP_DEV_REBOOT_COUNT_DOWN_REQ_SIZE );
             uint32_t fmp_count_down = fmp_package_rx_buffer[fmp_package_rx_buffer_index + 1] +
                                       ( fmp_package_rx_buffer[fmp_package_rx_buffer_index + 2] << 8 ) +
@@ -708,7 +716,8 @@ static fmp_status_t fmp_package_parser( lorawan_fmp_package_ctx_t* ctx, uint8_t*
             }
             break;
         }
-        case FMP_DEV_UPGRADE_IMAGE_REQ: {
+        case FMP_DEV_UPGRADE_IMAGE_REQ:
+        {
             IS_VALID_PKG_CMD( FMP_DEV_UPGRADE_IMAGE_REQ_SIZE );
             fmp_package_rx_buffer_index += FMP_DEV_UPGRADE_IMAGE_REQ_SIZE;
 
@@ -726,13 +735,13 @@ static fmp_status_t fmp_package_parser( lorawan_fmp_package_ctx_t* ctx, uint8_t*
                     ctx->fmp_tx_payload_ans[ans_index++] = ( next_fw_verion >> 8 ) & 0xFF;
                     ctx->fmp_tx_payload_ans[ans_index++] = ( next_fw_verion >> 16 ) & 0xFF;
                     ctx->fmp_tx_payload_ans[ans_index++] = ( next_fw_verion >> 24 ) & 0xFF;
-
-                    ctx->fmp_task_ctx_mask |= ANS_CMD_TASK_MASK;
                 }
+                ctx->fmp_task_ctx_mask |= ANS_CMD_TASK_MASK;
             }
             break;
         }
-        case FMP_DEV_DELETE_IMAGE_REQ: {
+        case FMP_DEV_DELETE_IMAGE_REQ:
+        {
             IS_VALID_PKG_CMD( FMP_DEV_DELETE_IMAGE_REQ_SIZE );
             ctx->fmp_fw_to_delete_version = fmp_package_rx_buffer[fmp_package_rx_buffer_index + 1] +
                                             ( fmp_package_rx_buffer[fmp_package_rx_buffer_index + 2] << 8 ) +

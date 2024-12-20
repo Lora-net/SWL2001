@@ -158,6 +158,8 @@ typedef struct wor_ack_mic_info_s
     uint32_t wfcnt;
     uint8_t  datarate;
     uint32_t frequency_hz;
+    uint8_t  wor_datarate;
+    uint32_t wor_frequency_hz;
 } wor_ack_mic_info_t;
 
 /*
@@ -262,6 +264,68 @@ uint8_t wor_convert_ppm( const wor_ack_ppm_error_t ppm );
  */
 uint8_t wor_convert_cadtorx( const wor_ack_cad_to_rx_t cad_to_rx );
 
+/**
+ * @brief Function called by RP to start the CAD
+ *
+ * @param rp_void radio planner pointer
+ */
+void wor_ral_callback_start_cad( void* rp_void );
+
+/**
+ * @brief Allow a relay RX to derive integrity and encryption key from root key
+ *
+ * @param[in]   root_wor_s_key  Root WOR session key
+ * @param[in]   dev_addr        DevAddr of the ED
+ * @param[out]  wor_s_int_key   WOR Session Integrity Key
+ * @param[out]  wor_s_enc_key   WOR Session Encryption Key
+ */
+void wor_derive_keys( const uint8_t root_wor_s_key[16], uint32_t dev_addr, uint8_t wor_s_int_key[16],
+                      uint8_t wor_s_enc_key[16] );
+/**
+ * @brief Extract WOR data from a buffer
+ *
+ * Encoded data are still unencrypted.
+ *
+ * @param[in]   buffer  Input buffer with WOR frame
+ * @param[in]   length  Length of input buffer
+ * @param[out]  wor     WOR info to filled
+ * @return true WOR type and payload length is coherent but content could still be NOK
+ * @return false WOR type or length is NOK
+ */
+bool wor_extract_wor_info( const uint8_t* buffer, const uint8_t length, wor_infos_t* wor );
+
+/**
+ * @brief Extract MIC from the WOR payload
+ *
+ * Only used in relay RX to check MIC
+ *
+ * @param[in]   buffer  Input buffer with WOR frame
+ * @return uint32_t     MIC value
+ */
+uint32_t wor_extract_mic_wor_uplink( const uint8_t* buffer );
+/**
+ * @brief Decode the WOR data
+ *
+ * @param[in]       buffer_enc      Encoded buffer
+ * @param[in,out]   wor_ul          WOR uplink data
+ * @param[in]       wor_rf          WOR Radiofrequency info
+ * @param[in]       wor_s_enc_key   WOR Session Encryption Key
+ */
+void wor_decode_wor_enc_data( const uint8_t buffer_enc[4], wor_uplink_t* wor_ul, const wor_rf_infos_t* wor_rf,
+                              const uint8_t wor_s_enc_key[16] );
+
+/**
+ * @brief   Generate WOR ACK payload to be send
+ *
+ * @param[out]  buffer          Buffer to fill with WOR frame
+ * @param[in]   ack             WOR ACK infos
+ * @param[in]   mic_info        Info required to compute MIC
+ * @param[in]   wor_s_int_key   WOR Session Integrity Key
+ * @param[in]   wor_s_enc_key   WOR Session Encryption Key
+ * @return uint8_t              Length of ouput buffer
+ */
+uint8_t wor_generate_ack( uint8_t* buffer, const wor_ack_infos_t* ack, const wor_ack_mic_info_t* mic_info,
+                          const uint8_t* wor_s_int_key, const uint8_t wor_s_enc_key[16] );
 #ifdef _cplusplus
 }
 #endif

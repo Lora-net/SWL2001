@@ -232,6 +232,11 @@ void modem_load_modem_context( void );
 void modem_store_modem_context( void );
 
 /**
+ * @brief Reset modem context
+ */
+void modem_reset_modem_context( void );
+
+/**
  * @brief Get current reset counter value
  */
 uint32_t modem_get_reset_counter( void );

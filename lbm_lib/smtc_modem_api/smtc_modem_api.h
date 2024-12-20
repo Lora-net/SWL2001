@@ -351,8 +351,11 @@ typedef enum smtc_modem_event_type_e
     SMTC_MODEM_EVENT_WIFI_SCAN_DONE,
     SMTC_MODEM_EVENT_WIFI_TERMINATED,
     SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC,  //!< Relay TX dynamic mode has enable or disable the WOR protocol
-    SMTC_MODEM_EVENT_RELAY_TX_MODE,     //!< Relay TX activation has been updated 
+    SMTC_MODEM_EVENT_RELAY_TX_MODE,     //!< Relay TX activation has been updated
     SMTC_MODEM_EVENT_RELAY_TX_SYNC,     //!< Relay TX synchronisation has changed
+    SMTC_MODEM_EVENT_RELAY_RX_RUNNING,  //!< Relay RX running has changed
+    SMTC_MODEM_EVENT_TEST_MODE,
+    SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE,
     SMTC_MODEM_EVENT_MAX,
 } smtc_modem_event_type_t;
 
@@ -420,6 +423,14 @@ typedef enum smtc_modem_event_uploaddone_status_e
     SMTC_MODEM_EVENT_UPLOAD_DONE_SUCCESSFUL = 1,
 } smtc_modem_event_uploaddone_status_t;
 
+typedef enum smtc_modem_event_test_mode_status_e
+{
+    SMTC_MODEM_EVENT_TEST_MODE_ENDED        = 0,
+    SMTC_MODEM_EVENT_TEST_MODE_TX_COMPLETED = 1,
+    SMTC_MODEM_EVENT_TEST_MODE_TX_DONE      = 2,
+    SMTC_MODEM_EVENT_TEST_MODE_RX_DONE      = 3,
+    SMTC_MODEM_EVENT_TEST_MODE_RX_ABORTED   = 4,
+} smtc_modem_event_test_mode_status_t;
 /**
  * @brief Structure holding event-related data
  */
@@ -486,7 +497,18 @@ typedef struct smtc_modem_event_s
         {
             uint8_t status;
         } relay_tx;
-
+        struct
+        {
+            uint8_t status;
+        } relay_rx;
+        struct
+        {
+            smtc_modem_event_test_mode_status_t status;
+        } test_mode_status;
+        struct
+        {
+            uint8_t status;
+        } regional_duty_cycle;
     } event_data;
 } smtc_modem_event_t;
 
@@ -744,6 +766,38 @@ smtc_modem_return_code_t smtc_modem_get_chip_eui( uint8_t stack_id, uint8_t chip
  */
 smtc_modem_return_code_t smtc_modem_derive_keys( uint8_t stack_id );
 
+#if defined( USE_LR11XX_CE )
+/**
+ * @brief Get Fragmented DataBlockIntKey
+ *
+ * @param [in]  stack_id Stack identifier
+ * @param [out] data_block_int_key  the derived DataBlockIntKey from GenAppKey
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                 Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY               Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_FAIL               Modem is already joined or is joining
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID   Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_get_data_block_int_key( uint8_t stack_id,
+                                                            uint8_t data_block_int_key[SMTC_MODEM_KEY_LENGTH] );
+
+/**
+ * @brief Derive and set DataBlockIntKey
+ * @remark this key is not saved in crypto engine due to an hardware limitation
+ *
+ * @param [in]  stack_id Stack identifier
+ * @param [out] gen_appkey  GenAppKey for fragmented data block
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                 Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY               Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_FAIL               Modem is already joined or is joining
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID   Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_derive_and_set_data_block_int_key(
+    uint8_t stack_id, const uint8_t gen_appkey[SMTC_MODEM_KEY_LENGTH] );
+#endif  // USE_LR11XX_CE
 /*
  * -----------------------------------------------------------------------------
  * ----------- ADVANCED MODEM FUNCTIONS ----------------------------------------
@@ -940,7 +994,6 @@ smtc_modem_return_code_t smtc_modem_get_suspend_radio_communications( uint8_t st
  * @retval SMTC_MODEM_RC_BUSY          Modem is currently in test mode
  */
 smtc_modem_return_code_t smtc_modem_suspend_radio_communications( bool suspend );
-
 
 /**
  * @brief Set and start the alarm timer (up to 864000s ie 10 days)
@@ -1312,8 +1365,8 @@ smtc_modem_return_code_t smtc_modem_csma_get_state( uint8_t stack_id, bool* enab
  * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
  * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
  */
-smtc_modem_return_code_t smtc_modem_csma_set_parameters( uint8_t stack_id, uint8_t nb_bo_max, bool bo_enabled,
-                                                         uint8_t max_ch_change );
+smtc_modem_return_code_t smtc_modem_csma_set_parameters( uint8_t stack_id, uint8_t max_ch_change, bool bo_enabled,
+                                                         uint8_t nb_bo_max );
 
 /**
  * @brief Get the parameters of the CSMA feature
@@ -1351,7 +1404,7 @@ smtc_modem_return_code_t smtc_modem_get_charge( uint32_t* charge_mah );
  * @param stats_array_length
  * @return smtc_modem_return_code_t
  */
-smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array, uint8_t* stats_array_length );
+smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array, uint16_t* stats_array_length );
 
 /**
  * @brief Reset the total charge counter of the modem
@@ -2011,7 +2064,7 @@ smtc_modem_return_code_t smtc_modem_dm_get_user_data( uint8_t stack_id,
  * @remark This configuration function shall be called before the ALCSync service is started
  *
  * @param [in] stack_id Stack identifier
- * @param [in] handle_alcsync True to handle ALCSync trafic on dm frame, false otherwise
+ * @param [in] handle_alcsync True to handle ALCSync traffic on dm frame, false otherwise
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK            Command executed without errors

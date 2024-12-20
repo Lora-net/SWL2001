@@ -36,8 +36,7 @@
  * -----------------------------------------------------------------------------
  * --- DEPENDENCIES ------------------------------------------------------------
  */
-
-#include <string.h>  // memcpy
+#include <stddef.h>
 #include "sx126x.h"
 #include "sx126x_hal.h"
 #include "sx126x_regs.h"
@@ -1293,11 +1292,15 @@ sx126x_status_t sx126x_cfg_rx_boosted( const void* context, const bool state )
 sx126x_status_t sx126x_set_gfsk_sync_word( const void* context, const uint8_t* sync_word, const uint8_t sync_word_len )
 {
     sx126x_status_t status = SX126X_STATUS_ERROR;
-    uint8_t         buf[8] = { 0 };
 
     if( sync_word_len <= 8 )
     {
-        memcpy( buf, sync_word, sync_word_len );
+        uint8_t buf[8] = { 0 };
+
+        for( int i = 0; i < sync_word_len; i++ )
+        {
+            buf[i] = sync_word[i];
+        }
         status = sx126x_write_register( context, SX126X_REG_SYNCWORDBASEADDRESS, buf, 8 );
     }
 

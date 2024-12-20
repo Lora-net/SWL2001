@@ -54,7 +54,7 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 #define NUMBER_OF_CHANNEL_WW2G4            (16)
 #define NUMBER_OF_BOOT_TX_CHANNEL_WW2G4    (3)             // define the number of channel at boot
 #define JOIN_ACCEPT_DELAY1_WW2G4           (5)             // define in seconds
@@ -90,7 +90,7 @@ extern "C" {
 #define BEACON_FREQ_WW2G4                  (2424000000)     // Hz
 #define PING_SLOT_FREQ_WW2G4               (2424000000)     // Hz
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

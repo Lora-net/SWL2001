@@ -30,6 +30,9 @@ endif
 ifeq ($(RADIO),lr1120)
 REGION_WW_2G4 = yes
 endif
+ifeq ($(RADIO),lr1121)
+REGION_WW_2G4 = yes
+endif
 endif # REGION
 
 #-----------------------------------------------------------------------------

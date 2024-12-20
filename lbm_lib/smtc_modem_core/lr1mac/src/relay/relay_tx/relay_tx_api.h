@@ -220,6 +220,12 @@ uint32_t smtc_relay_tx_get_crystal_error( uint8_t relay_stack_id );
  */
 void smtc_relay_tx_data_receive_on_rxr( uint8_t relay_stack_id );
 
+/**
+ *  @brief return the relay duty cycle consumption in ms
+ *
+ * @param[in]   relay_stack_id  relay stack id
+*/
+int32_t smtc_relay_tx_free_duty_cycle_ms_get( uint8_t relay_stack_id );
 #ifdef __cplusplus
 }
 #endif

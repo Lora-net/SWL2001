@@ -55,7 +55,7 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
-// clang-format off
+/* clang-format off */
 #define SMTC_DTC_BANDS_MAX          ( 6 )                      // Number of ETSI band supported by this algo
 #define SMTC_DTC_PERIOD_MS          ( 3600000UL )              // Number of miliseconds in one period (3600000 for period 1h)
 #define SMTC_DTC_SECONDS_BY_UNIT    ( 120 )                    // Sum TOA by step of N seconds, MIN VALUE IS 60s to avoid division by 0
@@ -75,7 +75,7 @@ extern "C" {
 // RTC                       0s    120s  240s  360s         3360s 3480s 3600s
 //
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

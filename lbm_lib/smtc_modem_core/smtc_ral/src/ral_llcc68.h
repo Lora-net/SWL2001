@@ -258,6 +258,12 @@ ral_status_t ral_llcc68_set_gfsk_mod_params( const void* context, const ral_gfsk
 ral_status_t ral_llcc68_set_gfsk_pkt_params( const void* context, const ral_gfsk_pkt_params_t* params );
 
 /**
+ * @see ral_set_gfsk_pkt_address
+ */
+ral_status_t ral_llcc68_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                              const uint8_t braodcast_address );
+
+/**
  * @see ral_set_lora_mod_params
  */
 ral_status_t ral_llcc68_set_lora_mod_params( const void* context, const ral_lora_mod_params_t* params );
@@ -343,8 +349,10 @@ ral_status_t ral_llcc68_set_flrc_sync_word( const void* context, const uint8_t* 
 
 /**
  * @see ral_set_gfsk_crc_params
+ *
+ * @remark RAL Interface declares seed and polynomial as uint32_t but llcc68 drivers handles uint16_t only
  */
-ral_status_t ral_llcc68_set_gfsk_crc_params( const void* context, const uint16_t seed, const uint16_t polynomial );
+ral_status_t ral_llcc68_set_gfsk_crc_params( const void* context, const uint32_t seed, const uint32_t polynomial );
 
 /**
  * @see ral_set_flrc_crc_params
@@ -388,9 +396,8 @@ ral_status_t ral_llcc68_lr_fhss_get_time_on_air_in_ms( const void* context, cons
 /**
  * @see ral_lr_fhss_get_hop_sequence_count
  */
-ral_status_t ral_llcc68_lr_fhss_get_hop_sequence_count( const void*                 context,
-                                                        const ral_lr_fhss_params_t* lr_fhss_params,
-                                                        unsigned int*               hop_sequence_count );
+ral_status_t ral_llcc68_lr_fhss_get_hop_sequence_count( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                        unsigned int* hop_sequence_count );
 
 /**
  * @see ral_lr_fhss_get_bit_delay_in_us

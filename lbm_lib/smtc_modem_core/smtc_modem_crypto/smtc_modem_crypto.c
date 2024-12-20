@@ -430,6 +430,15 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_multicast_session_keys(
     return SMTC_MODEM_CRYPTO_RC_SUCCESS;
 }
 
+smtc_modem_crypto_return_code_t smtc_modem_crypto_derive_relay_session_keys( uint32_t dev_addr, uint8_t stack_id )
+{
+    if( smtc_secure_element_derive_relay_session_keys( dev_addr, stack_id ) != SMTC_SE_RC_SUCCESS )
+    {
+        return SMTC_MODEM_CRYPTO_RC_ERROR_SECURE_ELEMENT;
+    }
+    return SMTC_MODEM_CRYPTO_RC_SUCCESS;
+}
+
 smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t beacon_epoch_time, uint32_t dev_addr,
                                                                     uint8_t rand[16], uint8_t stack_id )
 {
@@ -442,11 +451,11 @@ smtc_modem_crypto_return_code_t smtc_modem_crypto_get_class_b_rand( uint32_t bea
     }
 
     // a block filling
-    a_block[0] = ( beacon_epoch_time ) &0xFF;
+    a_block[0] = ( beacon_epoch_time ) & 0xFF;
     a_block[1] = ( beacon_epoch_time >> 8 ) & 0xFF;
     a_block[2] = ( beacon_epoch_time >> 16 ) & 0xFF;
     a_block[3] = ( beacon_epoch_time >> 24 ) & 0xFF;
-    a_block[4] = ( dev_addr ) &0xFF;
+    a_block[4] = ( dev_addr ) & 0xFF;
     a_block[5] = ( dev_addr >> 8 ) & 0xFF;
     a_block[6] = ( dev_addr >> 16 ) & 0xFF;
     a_block[7] = ( dev_addr >> 24 ) & 0xFF;
@@ -595,8 +604,8 @@ static smtc_modem_crypto_return_code_t derive_session_key_1_0_x( smtc_se_key_ide
     comp_base[5] = net_id[1];
     comp_base[6] = net_id[2];
 
-    comp_base[7] = ( uint8_t )( ( dev_nonce >> 0 ) & 0xFF );
-    comp_base[8] = ( uint8_t )( ( dev_nonce >> 8 ) & 0xFF );
+    comp_base[7] = ( uint8_t ) ( ( dev_nonce >> 0 ) & 0xFF );
+    comp_base[8] = ( uint8_t ) ( ( dev_nonce >> 8 ) & 0xFF );
 
     if( smtc_secure_element_derive_and_store_key( comp_base, SMTC_SE_NWK_KEY, key_id, stack_id ) != SMTC_SE_RC_SUCCESS )
     {

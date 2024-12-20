@@ -391,6 +391,7 @@ void smtc_real_set_dr_distribution( smtc_real_t* real, uint8_t adr_mode, uint8_t
         memcpy( dr_distribution_ctx, dr_distribution_init_ctx, real_const.const_number_of_tx_dr );
         *out_nb_trans = BSP_USER_NUMBER_OF_RETRANSMISSION;
         break;
+    case JOIN_DR_DISTRIBUTION_LONG_TERM:
     default:
         memcpy( dr_distribution_init_ctx, real_const.const_default_dr_distri, real_const.const_number_of_tx_dr );
         memcpy( dr_distribution_ctx, dr_distribution_init_ctx, real_const.const_number_of_tx_dr );
@@ -1240,14 +1241,10 @@ void smtc_real_enable_all_channels_with_valid_freq( smtc_real_t* real )
 #if defined( REGION_WW2G4 ) || defined( REGION_EU_868 ) || defined( REGION_AS_923 ) || defined( REGION_IN_865 ) || \
     defined( REGION_KR_920 ) || defined( REGION_RU_864 )
     {
-        for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
+        for( uint8_t i = 0; i < real_const.const_number_of_boot_tx_channel; i++ )
         {
-            if( ( tx_frequency_channel_ctx[i] != 0 ) &&
-                ( SMTC_GET_BIT8( channel_index_enabled_ctx, i ) == CHANNEL_DISABLED ) )
-            {
-                SMTC_PUT_BIT8( channel_index_enabled_ctx, i, CHANNEL_ENABLED );
-                dr_bitfield_tx_channel_ctx[i] = real_const.const_default_tx_dr_bit_field;
-            }
+            SMTC_PUT_BIT8( channel_index_enabled_ctx, i, CHANNEL_ENABLED );
+            dr_bitfield_tx_channel_ctx[i] = real_const.const_default_tx_dr_bit_field;
         }
         break;
     }

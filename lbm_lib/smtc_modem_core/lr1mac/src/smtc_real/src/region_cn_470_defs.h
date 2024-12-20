@@ -162,7 +162,7 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define DEFAULT_TX_STEP_CN_470              (200000)    // Hz
 #define DEFAULT_RX_STEP_CN_470              (200000)    // Hz
 #endif
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

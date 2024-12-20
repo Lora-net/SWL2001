@@ -224,10 +224,7 @@ static void send_uplink_counter_on_port( uint8_t port );
  * @brief Example enable/disable certification mode by pushing blue button
  *
  */
-#if defined( USE_RELAY_TX )
-static smtc_modem_relay_tx_config_t relay_config = { 0 };
-#endif
-void                                main_lctt_certif( void )
+void main_lctt_certif( void )
 {
     uint32_t sleep_time_ms = 0;
 
@@ -320,14 +317,6 @@ static void modem_event_callback( void )
 #endif
             // Set user region
             ASSERT_SMTC_MODEM_RC( smtc_modem_set_region( stack_id, MODEM_EXAMPLE_REGION ) );
-            #if defined( USE_RELAY_TX )
-            relay_config.second_ch_enable = false;
-            relay_config.activation       = SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLED;
-            relay_config.number_of_miss_wor_ack_to_switch_in_nosync_mode = 1;
-            relay_config.smart_level                                     = 5;
-            relay_config.backoff                                         = 4;
-            ASSERT_SMTC_MODEM_RC( smtc_modem_relay_tx_enable( stack_id, &relay_config ) );
-            #endif
             ASSERT_SMTC_MODEM_RC( smtc_modem_get_certification_mode( stack_id, &certif_running ) );
             if( certif_running == false )
             {
@@ -450,6 +439,40 @@ static void modem_event_callback( void )
 
         case SMTC_MODEM_EVENT_MUTE:
             SMTC_HAL_TRACE_INFO( "Event received: MUTE\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC:  //!< Relay TX dynamic mode has enable or disable the WOR protocol
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_DYNAMIC\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_MODE:  //!< Relay TX activation has been updated
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_MODE\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_SYNC:  //!< Relay TX synchronisation has changed
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_SYNC\n" );
+            break;
+        case SMTC_MODEM_EVENT_RELAY_RX_RUNNING:
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_RX_RUNNING\n" );
+#if defined( ADD_CSMA )
+            bool csma_state = false;
+            ASSERT_SMTC_MODEM_RC( smtc_modem_csma_get_state( STACK_ID, &csma_state ) );
+            if( ( current_event.event_data.relay_rx.status == true ) && ( csma_state == true ) )
+            {
+                // Disable CSMA when Relay Rx Is enabled by network
+                ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, false ) );
+            }
+#if defined( ENABLE_CSMA_BY_DEFAULT )
+            if( current_event.event_data.relay_rx.status == false )
+            {
+                ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, true ) );
+            }
+#endif  // ENABLE_CSMA_BY_DEFAULT
+#endif  // ADD_CSMA
+
+            break;
+        case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
+            SMTC_HAL_TRACE_INFO( "Event received: DUTY_CYCLE\n" );
             break;
 
         default:

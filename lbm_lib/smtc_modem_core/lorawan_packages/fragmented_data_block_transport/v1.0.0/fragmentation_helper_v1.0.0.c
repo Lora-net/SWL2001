@@ -224,6 +224,7 @@ static FragDecoder_t FragDecoder;
 void FragDecoderInit( uint16_t fragNb, uint8_t fragSize, FragDecoderCallbacks_t* callbacks )
 
 {
+    memset( &FragDecoder, 0, sizeof( FragDecoder ) );
     FragDecoder.Callbacks           = callbacks;
     FragDecoder.FragNb              = fragNb;    // FragNb = FRAG_MAX_SIZE
     FragDecoder.FragSize            = fragSize;  // number of byte on a row

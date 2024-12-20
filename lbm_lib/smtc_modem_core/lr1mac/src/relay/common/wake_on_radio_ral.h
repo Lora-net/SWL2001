@@ -47,6 +47,8 @@ extern "C" {
 #include "radio_planner_types.h"
 #include "ral_defs.h"
 #include "smtc_real_defs.h"
+#include "wake_on_radio.h"
+
 
 /*
  * -----------------------------------------------------------------------------
@@ -129,6 +131,70 @@ void wor_ral_init_tx_ack( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, uint8
  */
 bool wor_schedule_rx_wor_ack( uint8_t hook_id, radio_planner_t* rp, wor_ack_rx_param_t* wor_ack_param );
 
+/**
+ * @brief   Fill rp_radio_params_t struct for RX WOR frame
+ *
+ * @param[in]   real                Regional Abstraction Layer object
+ * @param[in]   dr                  Datarate of the WOR
+ * @param[in]   freq_hz             Frequency of the WOR
+ * @param[in]   preamble_len_symb   Preamble len
+ * @param[in]   payload_len         Payload len of the WOR
+ * @param[out]  param               Radio parameter structure with WOR infos
+ */
+void wor_ral_init_rx_wor( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, wor_cad_periodicity_t cad_period,
+                          uint8_t max_payload, rp_radio_params_t* param );
+
+
+/**
+ * @brief   Fill rp_radio_params_t struct for TX WOR frame
+ *
+ * @param[in]   real                Regional Abstraction Layer object
+ * @param[in]   dr                  Datarate of the WOR
+ * @param[in]   freq_hz             Frequency of the WOR
+ * @param[in]   preamble_len_symb   Preamble len
+ * @param[in]   payload_len         Payload len of the WOR
+ * @param[out]  param               Radio parameter structure with WOR infos
+ */
+void wor_ral_init_tx_wor( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, uint16_t preamble_len_symb,
+                          uint8_t payload_len, rp_radio_params_t* param );
+
+/**
+ * @brief Function called by RP to send WOR and WOR ACK
+ *
+ * @param rp_void radio planner pointer
+ */
+void wor_ral_callback_start_tx( void* rp_void );
+
+/**
+ * @brief Function called by RP to receive WOR, WOR ACK and LoRaWAN uplink
+ *
+ * @param rp_void
+ */
+void wor_ral_callback_start_rx( void* rp_void );
+/**
+ * @brief   Fill rp_radio_params_t struct to received LoRaWAN Uplink after a WOR
+ *
+ * @param[in]   real        Regional Abstraction Layer object
+ * @param[in]   max_payload Maximum payload to be received
+ * @param[in]   dr          Datarate of the uplink
+ * @param[in]   freq_hz     Frequency of the uplink
+ * @param[out]  param       Radio parameter structure with LoRaWAN Uplink
+ */
+void wor_ral_init_rx_msg( smtc_real_t* real, uint8_t max_payload, uint8_t dr, uint32_t freq_hz,
+                          rp_radio_params_t* param );
+
+/**
+ * @brief Fill rp_radio_params_t struct for periodic CAD
+ *
+ * @param[in]   lr1_mac     Lr1mac object
+ * @param[in]   dr          Datarate of the CAD
+ * @param[in]   cad_period  Period between 2 CAD
+ * @param[in]   is_first    true for the first single CAD, False for the second 4th symbols
+ * @param[in]   wor_toa_ms  TOA of the WOR to be received
+ * @param[out]  param       Radio parameter structure with CAD infos
+ */
+void wor_ral_init_cad( smtc_real_t* lr1_mac, uint8_t dr, wor_cad_periodicity_t cad_period, bool is_first,
+                       uint32_t wor_toa_ms, ral_lora_cad_params_t* param );
 #ifdef _cplusplus
 }
 #endif

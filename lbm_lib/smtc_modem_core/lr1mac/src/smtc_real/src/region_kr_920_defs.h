@@ -54,7 +54,7 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 #define NUMBER_OF_CHANNEL_KR_920            (16)
 #define NUMBER_OF_BOOT_TX_CHANNEL_KR_920    (3)             // define the number of channel at boot
 #define JOIN_ACCEPT_DELAY1_KR_920           (5)             // define in seconds
@@ -91,7 +91,7 @@ extern "C" {
 #define BEACON_DR_KR_920                    (3)
 #define BEACON_FREQ_KR_920                  (923100000)     // Hz
 #define PING_SLOT_FREQ_KR_920               (923100000)     // Hz
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

@@ -54,9 +54,7 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-#define LR11XX_DRIVER_VERSION_MAJOR 2
-#define LR11XX_DRIVER_VERSION_MINOR 4
-#define LR11XX_DRIVER_VERSION_PATCH 1
+#define LR11XX_DRIVER_VERSION "v2.5.2"
 
 /*
  * -----------------------------------------------------------------------------
@@ -68,17 +66,11 @@ extern "C" {
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
-/*!
- * @brief Compare version information with current ones
+/**
+ * @brief Get version of driver as string
  *
- * This macro expands to true boolean value if the version information provided in argument is compatible or
- * retro-compatible with the version of this code base
+ * @return String describing driver version
  */
-#define LR11XX_DRIVER_VERSION_CHECK( x, y, z ) \
-    ( x == LR11XX_DRIVER_VERSION_MAJOR &&      \
-      ( y < LR11XX_DRIVER_VERSION_MINOR ||     \
-        ( y == LR11XX_DRIVER_VERSION_MINOR && z <= LR11XX_DRIVER_VERSION_PATCH ) ) )
-
 const char* lr11xx_driver_version_get_version_string( void );
 
 #ifdef __cplusplus

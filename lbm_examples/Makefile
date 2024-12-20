@@ -48,6 +48,8 @@ help:
 	$(call echo_help, " *                                  - LR11XX_WITH_CREDENTIALS (only for lr1110 and lr1120 targets)")
 	$(call echo_help, " * LBM_TRACE=yes/no                : choose to enable or disable modem trace print (default: trace is ON)")
 	$(call echo_help, " * APP_TRACE=yes/no                : choose to enable or disable application trace print (default: trace is ON)")
+	$(call echo_help, " * ALLOW_RELAY_TX=yes/no           : choose to enable or disable RelayTx (default: no)")
+	$(call echo_help, " * ALLOW_RELAY_RX=yes/no           : choose to enable or disable RelayRx (default: no)")
 	$(call echo_help_b, "-------------------- Optional makefile parameters --------------------------")
 	$(call echo_help, " * MULTITHREAD=no                  : Disable multithreaded build")
 	$(call echo_help, " * VERBOSE=yes                     : Increase build verbosity")

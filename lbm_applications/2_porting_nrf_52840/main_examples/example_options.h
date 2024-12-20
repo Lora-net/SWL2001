@@ -83,8 +83,6 @@ extern "C" {
 #define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_WW2G4
 #endif
 
-// clang-format on
-
 #ifdef __cplusplus
 }
 #endif

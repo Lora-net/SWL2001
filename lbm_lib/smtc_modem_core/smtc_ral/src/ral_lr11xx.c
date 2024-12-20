@@ -56,207 +56,6 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-#define LR11XX_LP_MIN_OUTPUT_POWER -17
-#define LR11XX_LP_MAX_OUTPUT_POWER 15
-
-#define LR11XX_HP_MIN_OUTPUT_POWER -9
-#define LR11XX_HP_MAX_OUTPUT_POWER 22
-
-#define LR11XX_HF_MIN_OUTPUT_POWER -17
-#define LR11XX_HF_MAX_OUTPUT_POWER 13
-
-#define LR11XX_LP_CONVERT_TABLE_INDEX_OFFSET 17
-#define LR11XX_HP_CONVERT_TABLE_INDEX_OFFSET 9
-#define LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET 17
-
-static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_lp_vreg[] = {
-    10820,  // -17 dBm
-    10980,  // -16 dBm
-    11060,  // -15 dBm
-    11160,  // -14 dBm
-    11300,  // -13 dBm
-    11430,  // -12 dBm
-    11550,  // -11 dBm
-    11680,  // -10 dBm
-    11930,  //  -9 dBm
-    12170,  //  -8 dBm
-    12420,  //  -7 dBm
-    12650,  //  -6 dBm
-    12900,  //  -5 dBm
-    13280,  //  -4 dBm
-    13600,  //  -3 dBm
-    14120,  //  -2 dBm
-    14600,  //  -1 dBm
-    15090,  //   0 dBm
-    15780,  //   1 dBm
-    16490,  //   2 dBm
-    17250,  //   3 dBm
-    17850,  //   4 dBm
-    18720,  //   5 dBm
-    19640,  //   6 dBm
-    20560,  //   7 dBm
-    21400,  //   8 dBm
-    22620,  //   9 dBm
-    23720,  //  10 dBm
-    25050,  //  11 dBm
-    26350,  //  12 dBm
-    27870,  //  13 dBm
-    28590,  //  14 dBm
-    37820,  //  15 dBm
-};
-
-static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_ldo_lp_vreg[] = {
-    14950,  // -17 dBm
-    15280,  // -16 dBm
-    15530,  // -15 dBm
-    15770,  // -14 dBm
-    16020,  // -13 dBm
-    16290,  // -12 dBm
-    16550,  // -11 dBm
-    16760,  // -10 dBm
-    17280,  //  -9 dBm
-    17770,  //  -8 dBm
-    18250,  //  -7 dBm
-    18750,  //  -6 dBm
-    19250,  //  -5 dBm
-    19960,  //  -4 dBm
-    20710,  //  -3 dBm
-    21620,  //  -2 dBm
-    22570,  //  -1 dBm
-    23570,  //   0 dBm
-    24990,  //   1 dBm
-    26320,  //   2 dBm
-    27830,  //   3 dBm
-    29070,  //   4 dBm
-    30660,  //   5 dBm
-    32490,  //   6 dBm
-    34220,  //   7 dBm
-    35820,  //   8 dBm
-    38180,  //   9 dBm
-    40220,  //  10 dBm
-    42800,  //  11 dBm
-    45030,  //  12 dBm
-    47900,  //  13 dBm
-    51220,  //  14 dBm
-    66060,  //  15 dBm
-};
-
-static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hp_vbat[] = {
-    27750,   //  -9 dBm
-    29100,   //  -8 dBm
-    30320,   //  -7 dBm
-    31650,   //  -6 dBm
-    34250,   //  -5 dBm
-    35550,   //  -4 dBm
-    36770,   //  -3 dBm
-    39250,   //  -2 dBm
-    41480,   //  -1 dBm
-    43820,   //   0 dBm
-    46000,   //   1 dBm
-    49020,   //   2 dBm
-    50900,   //   3 dBm
-    54200,   //   4 dBm
-    56330,   //   5 dBm
-    59050,   //   6 dBm
-    62210,   //   7 dBm
-    65270,   //   8 dBm
-    68600,   //   9 dBm
-    71920,   //  10 dBm
-    75500,   //  11 dBm
-    79500,   //  12 dBm
-    84130,   //  13 dBm
-    88470,   //  14 dBm
-    92200,   //  15 dBm
-    94340,   //  16 dBm
-    96360,   //  17 dBm
-    98970,   //  18 dBm
-    102220,  //  19 dBm
-    106250,  //  20 dBm
-    111300,  //  21 dBm
-    113040,  //  22 dBm
-};
-
-static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_ldo_hp_vbat[] = {
-    31310,   //  -9 dBm
-    32700,   //  -8 dBm
-    33970,   //  -7 dBm
-    35270,   //  -6 dBm
-    37900,   //  -5 dBm
-    39140,   //  -4 dBm
-    40380,   //  -3 dBm
-    42860,   //  -2 dBm
-    45150,   //  -1 dBm
-    47400,   //   0 dBm
-    49600,   //   1 dBm
-    52600,   //   2 dBm
-    54460,   //   3 dBm
-    57690,   //   4 dBm
-    59840,   //   5 dBm
-    62550,   //   6 dBm
-    65750,   //   7 dBm
-    68520,   //   8 dBm
-    72130,   //   9 dBm
-    75230,   //  10 dBm
-    78600,   //  11 dBm
-    82770,   //  12 dBm
-    87450,   //  13 dBm
-    91700,   //  14 dBm
-    95330,   //  15 dBm
-    97520,   //  16 dBm
-    99520,   //  17 dBm
-    102080,  //  18 dBm
-    105140,  //  19 dBm
-    109300,  //  20 dBm
-    114460,  //  21 dBm
-    116530,  //  22 dBm
-};
-
-static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hf_vreg[] = {
-    11800,  // -17 dBm
-    11800,  // -16 dBm
-    11900,  // -15 dBm
-    12020,  // -14 dBm
-    12120,  // -13 dBm
-    12230,  // -12 dBm
-    12390,  // -11 dBm
-    12540,  // -10 dBm
-    12740,  //  -9 dBm
-    12960,  //  -8 dBm
-    13150,  //  -7 dBm
-    13460,  //  -6 dBm
-    13770,  //  -5 dBm
-    14070,  //  -4 dBm
-    14460,  //  -3 dBm
-    15030,  //  -2 dBm
-    15440,  //  -1 dBm
-    16030,  //   0 dBm
-    16980,  //   1 dBm
-    17590,  //   2 dBm
-    18270,  //   3 dBm
-    19060,  //   4 dBm
-    19900,  //   5 dBm
-    20740,  //   6 dBm
-    21610,  //   7 dBm
-    22400,  //   8 dBm
-    23370,  //   9 dBm
-    24860,  //  10 dBm
-    26410,  //  11 dBm
-    26430,  //  12 dBm
-    27890,  //  13 dBm
-};
-
-// TODO: check values
-#define LR11XX_GFSK_RX_CONSUMPTION_DCDC 5400
-#define LR11XX_GFSK_RX_BOOSTED_CONSUMPTION_DCDC 7500
-
-#define LR11XX_GFSK_RX_CONSUMPTION_LDO 5400
-#define LR11XX_GFSK_RX_BOOSTED_CONSUMPTION_LDO 7500
-
-#define LR11XX_LORA_RX_CONSUMPTION_DCDC 5700
-#define LR11XX_LORA_RX_BOOSTED_CONSUMPTION_DCDC 7800
-
-#define LR11XX_LORA_RX_CONSUMPTION_LDO 5700
-#define LR11XX_LORA_RX_BOOSTED_CONSUMPTION_LDO 7800
 
 /*
  * -----------------------------------------------------------------------------
@@ -801,6 +600,12 @@ ral_status_t ral_lr11xx_set_gfsk_pkt_params( const void* context, const ral_gfsk
     return ( ral_status_t ) lr11xx_radio_set_gfsk_pkt_params( context, &radio_pkt_params );
 }
 
+ral_status_t ral_lr11xx_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                              const uint8_t braodcast_address )
+{
+    return ( ral_status_t ) lr11xx_radio_set_pkt_address( context, node_address, braodcast_address );
+}
+
 ral_status_t ral_lr11xx_set_lora_mod_params( const void* context, const ral_lora_mod_params_t* ral_mod_params )
 {
     ral_status_t                   status = RAL_STATUS_ERROR;
@@ -966,7 +771,7 @@ ral_status_t ral_lr11xx_set_flrc_sync_word( const void* context, const uint8_t* 
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_lr11xx_set_gfsk_crc_params( const void* context, const uint16_t seed, const uint16_t polynomial )
+ral_status_t ral_lr11xx_set_gfsk_crc_params( const void* context, const uint32_t seed, const uint32_t polynomial )
 {
     return ( ral_status_t ) lr11xx_radio_set_gfsk_crc_params( context, seed, polynomial );
 }
@@ -1083,167 +888,43 @@ ral_status_t ral_lr11xx_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr
 ral_status_t ral_lr11xx_get_tx_consumption_in_ua( const void* context, const int8_t output_pwr_in_dbm,
                                                   const uint32_t rf_freq_in_hz, uint32_t* pwr_consumption_in_ua )
 {
+    // 1. Get the LR11xx BSP configuration corresponding to the input parameters
     lr11xx_system_reg_mode_t                   radio_reg_mode;
     ral_lr11xx_bsp_tx_cfg_output_params_t      tx_cfg_output_params;
     const ral_lr11xx_bsp_tx_cfg_input_params_t tx_cfg_input_params = {
         .freq_in_hz               = rf_freq_in_hz,
         .system_output_pwr_in_dbm = output_pwr_in_dbm,
     };
-
     ral_lr11xx_bsp_get_tx_cfg( context, &tx_cfg_input_params, &tx_cfg_output_params );
-
     ral_lr11xx_bsp_get_reg_mode( context, &radio_reg_mode );
 
-    if( tx_cfg_output_params.pa_cfg.pa_sel == LR11XX_RADIO_PA_SEL_LP )
-    {
-        if( tx_cfg_output_params.pa_cfg.pa_reg_supply == LR11XX_RADIO_PA_REG_SUPPLY_VREG )
-        {
-            uint8_t index = 0;
-
-            if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected > LR11XX_LP_MAX_OUTPUT_POWER )
-            {
-                index = LR11XX_LP_MAX_OUTPUT_POWER + LR11XX_LP_CONVERT_TABLE_INDEX_OFFSET;
-            }
-            else if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected < LR11XX_LP_MIN_OUTPUT_POWER )
-            {
-                index = LR11XX_LP_MIN_OUTPUT_POWER + LR11XX_LP_CONVERT_TABLE_INDEX_OFFSET;
-            }
-            else
-            {
-                index = tx_cfg_output_params.chip_output_pwr_in_dbm_expected + LR11XX_LP_CONVERT_TABLE_INDEX_OFFSET;
-            }
-
-            if( radio_reg_mode == LR11XX_SYSTEM_REG_MODE_DCDC )
-            {
-                *pwr_consumption_in_ua = ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_lp_vreg[index];
-            }
-            else
-            {
-                *pwr_consumption_in_ua = ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_ldo_lp_vreg[index];
-            }
-        }
-        else
-        {
-            return RAL_STATUS_UNSUPPORTED_FEATURE;
-        }
-    }
-    else if( tx_cfg_output_params.pa_cfg.pa_sel == LR11XX_RADIO_PA_SEL_HP )
-    {
-        if( tx_cfg_output_params.pa_cfg.pa_reg_supply == LR11XX_RADIO_PA_REG_SUPPLY_VBAT )
-        {
-            uint8_t index = 0;
-
-            if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected > LR11XX_HP_MAX_OUTPUT_POWER )
-            {
-                index = LR11XX_HP_MAX_OUTPUT_POWER + LR11XX_HP_CONVERT_TABLE_INDEX_OFFSET;
-            }
-            else if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected < LR11XX_HP_MIN_OUTPUT_POWER )
-            {
-                index = LR11XX_HP_MIN_OUTPUT_POWER + LR11XX_HP_CONVERT_TABLE_INDEX_OFFSET;
-            }
-            else
-            {
-                index = tx_cfg_output_params.chip_output_pwr_in_dbm_expected + LR11XX_HP_CONVERT_TABLE_INDEX_OFFSET;
-            }
-
-            if( radio_reg_mode == LR11XX_SYSTEM_REG_MODE_DCDC )
-            {
-                *pwr_consumption_in_ua = ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hp_vbat[index];
-            }
-            else
-            {
-                *pwr_consumption_in_ua = ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_ldo_hp_vbat[index];
-            }
-        }
-        else
-        {
-            return RAL_STATUS_UNSUPPORTED_FEATURE;
-        }
-    }
-    else if( tx_cfg_output_params.pa_cfg.pa_sel == LR11XX_RADIO_PA_SEL_HF )
-    {
-        if( tx_cfg_output_params.pa_cfg.pa_reg_supply == LR11XX_RADIO_PA_REG_SUPPLY_VREG )
-        {
-            uint8_t index = 0;
-
-            if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected > LR11XX_HF_MAX_OUTPUT_POWER )
-            {
-                index = LR11XX_HF_MAX_OUTPUT_POWER + LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET;
-            }
-            else if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected < LR11XX_HF_MIN_OUTPUT_POWER )
-            {
-                index = LR11XX_HF_MIN_OUTPUT_POWER + LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET;
-            }
-            else
-            {
-                index = tx_cfg_output_params.chip_output_pwr_in_dbm_expected + LR11XX_HF_CONVERT_TABLE_INDEX_OFFSET;
-            }
-
-            if( radio_reg_mode == LR11XX_SYSTEM_REG_MODE_DCDC )
-            {
-                *pwr_consumption_in_ua = ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hf_vreg[index];
-            }
-            else
-            {
-                return RAL_STATUS_UNSUPPORTED_FEATURE;
-            }
-        }
-        else
-        {
-            return RAL_STATUS_UNSUPPORTED_FEATURE;
-        }
-    }
-    else
-    {
-        return RAL_STATUS_UNKNOWN_VALUE;
-    }
-
-    return RAL_STATUS_OK;
+    // 2. Refer to the BSP to get the instantaneous power consumption corresponding to the LR1xx BSP configuration
+    return ral_lr11xx_bsp_get_instantaneous_tx_power_consumption( context, &tx_cfg_output_params, radio_reg_mode,
+                                                                  pwr_consumption_in_ua );
 }
 
 ral_status_t ral_lr11xx_get_gfsk_rx_consumption_in_ua( const void* context, const uint32_t br_in_bps,
                                                        const uint32_t bw_dsb_in_hz, const bool rx_boosted,
                                                        uint32_t* pwr_consumption_in_ua )
 {
+    // 1. Get the regulator configured
     lr11xx_system_reg_mode_t radio_reg_mode;
-
     ral_lr11xx_bsp_get_reg_mode( context, &radio_reg_mode );
 
-    if( radio_reg_mode == LR11XX_SYSTEM_REG_MODE_DCDC )
-    {
-        *pwr_consumption_in_ua =
-            ( rx_boosted ) ? LR11XX_GFSK_RX_BOOSTED_CONSUMPTION_DCDC : LR11XX_GFSK_RX_CONSUMPTION_DCDC;
-    }
-    else
-    {
-        // TODO: find the good values
-        *pwr_consumption_in_ua =
-            ( rx_boosted ) ? LR11XX_GFSK_RX_BOOSTED_CONSUMPTION_LDO : LR11XX_GFSK_RX_CONSUMPTION_LDO;
-    }
-
-    return RAL_STATUS_OK;
+    // 2. Refer to BSP to get the instantaneous GFSK Rx Power consumption
+    return ral_lr11xx_bsp_get_instantaneous_gfsk_rx_power_consumption( context, radio_reg_mode, rx_boosted,
+                                                                       pwr_consumption_in_ua );
 }
 
 ral_status_t ral_lr11xx_get_lora_rx_consumption_in_ua( const void* context, const ral_lora_bw_t bw,
                                                        const bool rx_boosted, uint32_t* pwr_consumption_in_ua )
 {
+    // 1. Get the regulator configured
     lr11xx_system_reg_mode_t radio_reg_mode;
-
     ral_lr11xx_bsp_get_reg_mode( context, &radio_reg_mode );
 
-    if( radio_reg_mode == LR11XX_SYSTEM_REG_MODE_DCDC )
-    {
-        *pwr_consumption_in_ua =
-            ( rx_boosted ) ? LR11XX_LORA_RX_BOOSTED_CONSUMPTION_DCDC : LR11XX_LORA_RX_CONSUMPTION_DCDC;
-    }
-    else
-    {
-        // TODO: find the good values
-        *pwr_consumption_in_ua =
-            ( rx_boosted ) ? LR11XX_LORA_RX_BOOSTED_CONSUMPTION_LDO : LR11XX_LORA_RX_CONSUMPTION_LDO;
-    }
-
-    return RAL_STATUS_OK;
+    // 2. Refer to BSP to get the instantaneous LoRa Rx Power consumption
+    return ral_lr11xx_bsp_get_instantaneous_lora_rx_power_consumption( context, radio_reg_mode, rx_boosted, pwr_consumption_in_ua );
 }
 
 ral_status_t ral_lr11xx_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
@@ -1366,7 +1047,7 @@ ral_status_t ral_lr11xx_get_lora_cad_det_peak( const void* context, ral_lora_sf_
         break;
     }
 
-    ral_lr11xx_bsp_get_lora_cad_det_peak( sf, bw, nb_symbol, cad_det_peak );
+    ral_lr11xx_bsp_get_lora_cad_det_peak( context, sf, bw, nb_symbol, cad_det_peak );
 
     return RAL_STATUS_OK;
 }

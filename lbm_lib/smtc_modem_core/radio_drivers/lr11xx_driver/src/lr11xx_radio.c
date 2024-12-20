@@ -409,7 +409,22 @@ lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout
     return lr11xx_radio_set_rx_with_timeout_in_rtc_step( context, timeout_in_rtc_step );
 }
 
-lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* context, const uint32_t timeout )
+lr11xx_status_t lr11xx_radio_set_rx_and_lna_mode( const void* context, const uint32_t timeout_in_ms,
+                                                  lr11xx_radio_lna_mode_t lna_mode )
+{
+    const uint32_t timeout_in_rtc_step = lr11xx_radio_convert_time_in_ms_to_rtc_step( timeout_in_ms );
+
+    return lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( context, timeout_in_rtc_step, lna_mode );
+}
+
+lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* context, const uint32_t timeout_in_ms )
+{
+    return lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( context, timeout_in_ms,
+                                                                      LR11XX_RADIO_LNA_MODE_DIFFERENTIAL_LF0 );
+}
+
+lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( const void* context, const uint32_t timeout,
+                                                                           lr11xx_radio_lna_mode_t lna_mode )
 {
     lr11xx_status_t status                                  = LR11XX_STATUS_ERROR;
     const uint8_t   cbuffer[LR11XX_RADIO_SET_RX_CMD_LENGTH] = {
@@ -433,6 +448,17 @@ lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* contex
         {
             break;
         }
+
+        if( ( lna_mode == LR11XX_RADIO_LNA_MODE_SINGLE_RFI_P_LF0 ) ||
+            ( lna_mode == LR11XX_RADIO_LNA_MODE_SINGLE_RFI_N_LF0 ) )
+        {
+            status = lr11xx_radio_set_lna_mode( context, lna_mode );
+            if( status != LR11XX_STATUS_OK )
+            {
+                break;
+            }
+        }
+
     } while( 0 );
 
     return status;
@@ -1292,6 +1318,10 @@ uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uin
     return mant_loc << ( 2 * exp_loc + 1 );
 }
 
+lr11xx_status_t lr11xx_radio_set_lna_mode( const void* context, lr11xx_radio_lna_mode_t lna_config )
+{
+    return lr11xx_regmem_write_regmem32_mask( context, 0x00F3008C, 0xF0, lna_config << 4 );
+}
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------

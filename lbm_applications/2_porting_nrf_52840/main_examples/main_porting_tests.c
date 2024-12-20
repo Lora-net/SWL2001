@@ -183,7 +183,8 @@ static ralf_params_lora_t tx_lora_param = { .sync_word                       = S
                                             .pkt_params.invert_iq_is_on      = false,
                                             .pkt_params.preamble_len_in_symb = 8 };
 #if( ENABLE_TEST_FLASH != 0 )
-static const char* name_context_type[] = { "MODEM", "LR1MAC", "DEVNONCE", "SECURE_ELEMENT" };
+static const char* name_context_type[] = { "MODEM", "KEY_MODEM",      "LORAWAN_STACK",
+                                           "FUOTA", "SECURE_ELEMENT", "STORE_AND_FORWARD" };
 #endif
 
 /*
@@ -1448,7 +1449,6 @@ static bool porting_test_flash( void )
     SMTC_HAL_TRACE_MSG( "----------------------------------------\n porting_test_flash : \n" );
     SMTC_HAL_TRACE_MSG_COLOR( " !! TEST TO BE LAUNCH TWICE !! To check writing after MCU reset \n",
                               HAL_DBG_TRACE_COLOR_BLUE );
-
     /* LORAWAN */
     ret = test_context_store_restore( CONTEXT_LORAWAN_STACK );
     if( ret == false )

@@ -174,12 +174,6 @@ void region_kr_920_config( smtc_real_t* real )
     memset( &unwrapped_channel_mask[0], 0xFF, BANK_MAX_KR920 );
 }
 
-void region_kr_920_init_session( smtc_real_t* real )
-{
-    // Not used for KR920
-    return;
-}
-
 status_lorawan_t region_kr_920_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
                                                       uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency,
                                                       uint8_t* active_channel_nb )
@@ -288,7 +282,7 @@ status_channel_t region_kr_920_build_channel_mask( smtc_real_t* real, uint8_t ch
 
 modulation_type_t region_kr_920_get_modulation_type_from_datarate( uint8_t datarate )
 {
-    if( datarate <= 5 )
+    if( datarate <= DR5 )
     {
         return LORA;
     }
@@ -301,7 +295,7 @@ modulation_type_t region_kr_920_get_modulation_type_from_datarate( uint8_t datar
 
 void region_kr_920_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    if( in_dr <= 5 )
+    if( in_dr <= DR5 )
     {
         *out_sf = datarates_to_sf_kr_920[in_dr];
         *out_bw = datarates_to_bandwidths_kr_920[in_dr];

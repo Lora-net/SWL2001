@@ -126,7 +126,7 @@ extern "C" {
 
 // LR-FHSS
 #define LR_FHSS_NA                          (0xFFFFFFFF) // LR-FHSS Not Applicable
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

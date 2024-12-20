@@ -46,10 +46,9 @@
 #include "smtc_real_defs.h"
 #include "smtc_real_defs_str.h"
 
-
 #include "lr1mac_config.h"
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
 #include "relay_tx_api.h"
 #endif
 /*
@@ -82,7 +81,6 @@ static const char* smtc_name_lr_fhss_cr[] = { "CR 5/6", "CR 2/3", "CR 1/2", "CR 
 #ifndef DISABLE_LORAWAN_RX_WINDOWS
 #define DISABLE_LORAWAN_RX_WINDOWS 0
 #endif
-
 
 /*
  *-----------------------------------------------------------------------------------
@@ -184,18 +182,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
     bool    timer_in_past = false;
     rp_hook_get_id( lr1_mac_obj->rp, ( void* ) ( ( lr1_mac_obj ) ), &myhook_id );
 
-#if !defined( TEST_BYPASS_JOIN_DUTY_CYCLE )
-    if( lr1_mac_obj->is_join_duty_cycle_backoff_bypass_enabled == false )
-    {
-        if( ( lr1_mac_obj->join_status == JOINING ) &&
-            ( ( int32_t ) ( lr1_mac_obj->next_time_to_join_seconds - smtc_modem_hal_get_time_in_s( ) ) > 0 ) )
-        {
-            SMTC_MODEM_HAL_TRACE_PRINTF( "TOO SOON TO JOIN time is  %d time target is : %d\n",
-                                         smtc_modem_hal_get_time_in_s( ), lr1_mac_obj->next_time_to_join_seconds );
-            lr1_mac_obj->lr1mac_state = LWPSTATE_IDLE;
-        }
-    }
-#endif
+
 
     if( ( lr1_mac_obj->lr1mac_state != LWPSTATE_IDLE ) &&
         ( ( int32_t ) ( smtc_modem_hal_get_time_in_s( ) - lr1_mac_obj->timestamp_failsafe - FAILSAFE_DURATION ) > 0 ) )
@@ -232,7 +219,8 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
 
         switch( lr1_mac_obj->radio_process_state )
         {
-        case RADIOSTATE_IDLE: {
+        case RADIOSTATE_IDLE:
+        {
             lr1_mac_obj->radio_process_state = RADIOSTATE_PENDING;
             DBG_PRINT_WITH_LINE( "Send Payload  for stack_id = %d", lr1_mac_obj->stack_id );
 
@@ -273,7 +261,8 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
 
             break;
         }
-        case RADIOSTATE_TX_FINISHED: {
+        case RADIOSTATE_TX_FINISHED:
+        {
             DBG_PRINT_WITH_LINE( " TX DONE" );
             lr1_mac_obj->lr1mac_state               = LWPSTATE_RX1;
             lr1_mac_obj->tx_duty_cycle_timestamp_ms = lr1_mac_obj->isr_tx_done_radio_timestamp;
@@ -358,7 +347,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
     //                                   STATE RX2
     //**********************************************************************************
     case LWPSTATE_RX2:
-#ifndef RELAY_TX
+#if !defined( ADD_RELAY_TX )
         if( lr1_mac_obj->radio_process_state == RADIOSTATE_RX_FINISHED )
         {
             if( lr1_mac_obj->rp_planner_status == RP_STATUS_RX_PACKET )
@@ -404,7 +393,7 @@ lr1mac_states_t lr1mac_core_process( lr1_stack_mac_t* lr1_mac_obj )
             {
                 DBG_PRINT_WITH_LINE( "RX2 Timeout for stack_id = %d", lr1_mac_obj->stack_id );
             }
-            
+
             if( ( has_receive_valid_packet == false ) && ( smtc_relay_tx_is_enable( lr1_mac_obj->stack_id ) == true ) )
             {
                 lr1_mac_obj->lr1mac_state = LWPSTATE_RXR;
@@ -476,6 +465,17 @@ status_lorawan_t lr1mac_core_join( lr1_stack_mac_t* lr1_mac_obj, uint32_t target
         SMTC_MODEM_HAL_TRACE_ERROR( "LP STATE NOT EQUAL TO IDLE\n" );
         return ERRORLORAWAN;
     }
+#if !defined( TEST_BYPASS_JOIN_DUTY_CYCLE )
+    if( lr1_mac_obj->is_join_duty_cycle_backoff_bypass_enabled == false )
+    {
+        if( ( int32_t ) ( lr1_mac_obj->next_time_to_join_seconds - smtc_modem_hal_get_time_in_s( ) ) > 0 )
+        {
+            SMTC_MODEM_HAL_TRACE_PRINTF( "TOO SOON TO JOIN time is  %d time target is : %d\n",
+                                         smtc_modem_hal_get_time_in_s( ), lr1_mac_obj->next_time_to_join_seconds );
+            return ERRORLORAWAN;
+        }
+    }
+#endif
     if( lr1_mac_obj->activation_mode == ACTIVATION_MODE_ABP )
     {
         lr1_mac_obj->join_status = JOINED;
@@ -539,6 +539,9 @@ void lr1mac_core_join_status_clear( lr1_stack_mac_t* lr1_mac_obj )
     lr1mac_core_abort( lr1_mac_obj );
     smtc_real_init_join_snapshot_channel_mask( lr1_mac_obj->real );
     lr1_mac_obj->retry_join_cpt = 0;
+
+    // Revert ADR modem in case the leave network command is called before join success
+    lr1_mac_obj->adr_mode_select = lr1_mac_obj->adr_mode_select_tmp;
 }
 
 /**************************************************/
@@ -605,8 +608,8 @@ status_lorawan_t lr1mac_core_send_stack_cid_req( lr1_stack_mac_t* lr1_mac_obj, u
 }
 
 status_lorawan_t lr1mac_core_payload_send_at_time( lr1_stack_mac_t* lr1_mac_obj, uint8_t fport, bool fport_enabled,
-                                                   const uint8_t* data_in, uint8_t size_in, lr1mac_layer_param_t packet_type,
-                                                   uint32_t target_time_ms )
+                                                   const uint8_t* data_in, uint8_t size_in,
+                                                   lr1mac_layer_param_t packet_type, uint32_t target_time_ms )
 {
     status_lorawan_t status =
         lr1mac_core_payload_send( lr1_mac_obj, fport, fport_enabled, data_in, size_in, packet_type, target_time_ms );
@@ -903,8 +906,6 @@ status_lorawan_t lr1mac_core_set_region( lr1_stack_mac_t* lr1_mac_obj, smtc_real
         lr1_stack_mac_region_config( lr1_mac_obj );
         lr1mac_core_context_save( lr1_mac_obj );
 
-        // After a region change a new join should happen, reset join counter
-        lr1_mac_obj->retry_join_cpt = 0;
         return OKLORAWAN;
     }
     return ERRORLORAWAN;
@@ -1002,8 +1003,8 @@ bool lr1mac_core_convert_rtc_to_gps_epoch_time( lr1_stack_mac_t* lr1_mac_obj, ui
 
     tmp_seconds_since_epoch = lr1_mac_obj->seconds_since_epoch + tmp_s;
 
-    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "tx: %u, rx:%u, diff:%u\n", lr1_mac->timestamp_tx_done_device_time_req_ms,
-                                       lr1_mac->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "tx: %u, rx:%u, diff:%u\n", lr1_mac_obj->timestamp_tx_done_device_time_req_ms,
+                                       lr1_mac_obj->timestamp_last_device_time_ans_s, delta_tx_rx_ms );
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "DeviceTime GPS : %u.%u s\n", tmp_seconds_since_epoch, tmp_fractional_second );
 
     *seconds_since_epoch = tmp_seconds_since_epoch;
@@ -1166,59 +1167,49 @@ uint8_t lr1mac_core_get_no_rx_windows( lr1_stack_mac_t* lr1_mac_obj )
 }
 status_lorawan_t lr1mac_core_update_join_channel( lr1_stack_mac_t* lr1_mac_obj )
 {
-     lr1_stack_mac_region_config( lr1_mac_obj);
-        if( ( lr1_mac_obj->adr_mode_select != JOIN_DR_DISTRIBUTION ) ||
-            ( ( lr1_mac_obj->retry_join_cpt == 0 ) &&
-              ( lr1_mac_obj->adr_mode_select == JOIN_DR_DISTRIBUTION ) ) )
-        {
-            // if it is the case force dr distribution to join
-            lr1_mac_obj->adr_mode_select_tmp =
-                lr1_mac_obj->adr_mode_select;
-            smtc_real_set_dr_distribution( lr1_mac_obj->real,
-                                           JOIN_DR_DISTRIBUTION,
-                                           &lr1_mac_obj->nb_trans );
-            lr1_mac_obj->adr_mode_select = JOIN_DR_DISTRIBUTION;
-        }
+    lr1_stack_mac_region_config( lr1_mac_obj );
 
-        smtc_real_get_next_tx_dr( lr1_mac_obj->real,
-                                  lr1_mac_obj->join_status,
-                                  &lr1_mac_obj->adr_mode_select,
-                                  &lr1_mac_obj->tx_data_rate,
-                                  lr1_mac_obj->tx_data_rate_adr,
-                                  &lr1_mac_obj->adr_enable );
-        return ( smtc_real_get_join_next_channel(
-            lr1_mac_obj->real,
-            &( lr1_mac_obj->tx_data_rate ),
-            &( lr1_mac_obj->tx_frequency ),
-            &( lr1_mac_obj->rx1_frequency ),
-            &( lr1_mac_obj->rx2_frequency ),
-            &( lr1_mac_obj->nb_available_tx_channel ) ) );
+    if( ( lr1_mac_obj->adr_mode_select != JOIN_DR_DISTRIBUTION ) &&
+        ( lr1_mac_obj->adr_mode_select != JOIN_DR_DISTRIBUTION_LONG_TERM ) )
+    {
+        // if it is the case force dr distribution to join
+        lr1_mac_obj->adr_mode_select_tmp = lr1_mac_obj->adr_mode_select;
+        smtc_real_set_dr_distribution( lr1_mac_obj->real, JOIN_DR_DISTRIBUTION, &lr1_mac_obj->nb_trans );
+        lr1_mac_obj->adr_mode_select = JOIN_DR_DISTRIBUTION;
+    }
+
+    if( lr1_mac_obj->adr_mode_select == JOIN_DR_DISTRIBUTION_LONG_TERM )
+    {
+        smtc_real_set_dr_distribution( lr1_mac_obj->real, JOIN_DR_DISTRIBUTION_LONG_TERM, &lr1_mac_obj->nb_trans );
+    }
+
+    smtc_real_get_next_tx_dr( lr1_mac_obj->real, lr1_mac_obj->join_status, &lr1_mac_obj->adr_mode_select,
+                              &lr1_mac_obj->tx_data_rate, lr1_mac_obj->tx_data_rate_adr, &lr1_mac_obj->adr_enable );
+    return ( smtc_real_get_join_next_channel(
+        lr1_mac_obj->real, &( lr1_mac_obj->tx_data_rate ), &( lr1_mac_obj->tx_frequency ),
+        &( lr1_mac_obj->rx1_frequency ), &( lr1_mac_obj->rx2_frequency ), &( lr1_mac_obj->nb_available_tx_channel ) ) );
 }
 status_lorawan_t lr1mac_core_update_next_tx_channel( lr1_stack_mac_t* lr1_mac_obj )
 {
-    return( smtc_real_get_next_channel(
-            lr1_mac_obj->real,
-            lr1_mac_obj->tx_data_rate,
-            &( lr1_mac_obj->tx_frequency ),
-            &( lr1_mac_obj->rx1_frequency ),
-            &( lr1_mac_obj->nb_available_tx_channel ) ) );
+    return ( smtc_real_get_next_channel( lr1_mac_obj->real, lr1_mac_obj->tx_data_rate, &( lr1_mac_obj->tx_frequency ),
+                                         &( lr1_mac_obj->rx1_frequency ), &( lr1_mac_obj->nb_available_tx_channel ) ) );
 }
 uint32_t lr1mac_core_get_time_of_nwk_ans( lr1_stack_mac_t* lr1_mac_obj )
 {
-    return (lr1_mac_obj->rtc_target_timer_ms);
+    return ( lr1_mac_obj->rtc_target_timer_ms );
 }
 void lr1mac_core_set_time_of_nwk_ans( lr1_stack_mac_t* lr1_mac_obj, uint32_t target_time )
 {
     lr1_mac_obj->rtc_target_timer_ms = target_time;
 }
 
-void lr1mac_core_set_next_tx_at_time(  lr1_stack_mac_t* lr1_mac_obj, bool is_send_at_time )
+void lr1mac_core_set_next_tx_at_time( lr1_stack_mac_t* lr1_mac_obj, bool is_send_at_time )
 {
-    lr1_mac_obj->send_at_time=is_send_at_time;
+    lr1_mac_obj->send_at_time = is_send_at_time;
 }
 void lr1mac_core_set_join_status( lr1_stack_mac_t* lr1_mac_obj, join_status_t join_status )
 {
-     lr1_mac_obj->join_status=join_status;
+    lr1_mac_obj->join_status = join_status;
 }
 /*
  *-----------------------------------------------------------------------------------
@@ -1265,8 +1256,9 @@ static void lr1mac_mac_update( lr1_stack_mac_t* lr1_mac_obj )
 
             //@note because datarate Distribution has been changed during join
             lr1_mac_obj->adr_mode_select = lr1_mac_obj->adr_mode_select_tmp;
-            // copy the join data rate to the default data_rate_adr => the first uplink will be transmit with the join dr (ease GW one chanel)
-            lr1_mac_obj->tx_data_rate_adr =lr1_mac_obj->tx_data_rate;
+            // copy the join data rate to the default data_rate_adr => the first uplink will be transmit with the join
+            // dr (ease GW one chanel)
+            lr1_mac_obj->tx_data_rate_adr = lr1_mac_obj->tx_data_rate;
             smtc_real_set_dr_distribution( lr1_mac_obj->real, lr1_mac_obj->adr_mode_select_tmp,
                                            &lr1_mac_obj->nb_trans );
             lr1mac_core_context_save( lr1_mac_obj );
@@ -1332,7 +1324,7 @@ static void lr1mac_mac_update( lr1_stack_mac_t* lr1_mac_obj )
                 smtc_modem_hal_get_time_in_ms( ) + smtc_modem_hal_get_random_nb_in_range( 1000, 3000 );
             lr1_mac_obj->lr1mac_state = LWPSTATE_TX_WAIT;
             // protected by tpm failsafe
-            lr1_mac_obj->timestamp_failsafe  = smtc_modem_hal_get_time_in_s( );
+            lr1_mac_obj->timestamp_failsafe = smtc_modem_hal_get_time_in_s( );
         }
     }
     else

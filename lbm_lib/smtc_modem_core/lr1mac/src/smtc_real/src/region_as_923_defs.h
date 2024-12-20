@@ -54,7 +54,7 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 #define NUMBER_OF_CHANNEL_AS_923            (16)
 #define NUMBER_OF_BOOT_TX_CHANNEL_AS_923    (2)             // define the number of channel at boot
 #define JOIN_ACCEPT_DELAY1_AS_923           (5)             // define in seconds
@@ -104,7 +104,7 @@ extern "C" {
 #define BEACON_DR_AS_923                    (3)
 #define PING_SLOT_FREQ_AS_923               (923400000)     // Hz
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

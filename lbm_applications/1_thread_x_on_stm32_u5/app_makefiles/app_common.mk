@@ -160,9 +160,31 @@ COMMON_C_DEFS += \
 	-DMAKEFILE_APP=${MODEM_APP}
 endif
 
+
 ifeq ($(MODEM_APP),HW_MODEM)
+
+# git defines
+ifneq (, $(shell which git))
+GIT_VERSION := $(shell git --no-pager describe --tags --always)
+GIT_COMMIT  := $(shell git rev-parse --verify HEAD)
+GIT_DATE    := $(firstword $(shell git --no-pager show --date=iso-strict --format="%ad" --name-only))
+BUILD_DATE  := $(shell date --iso=seconds)
+SHORT_DATE  := $(shell date +%Y-%m-%d-%H-%M)
+
+# If working tree is dirty, append dirty flag
+ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
+GIT_VERSION := $(GIT_VERSION)--dirty
+endif
+endif 
+
 COMMON_C_DEFS += \
-	-DHW_MODEM_ENABLED
+	-DHW_MODEM_ENABLED \
+	-DGIT_VERSION=\"$(GIT_VERSION)\" \
+	-DGIT_COMMIT=\"$(GIT_COMMIT)\" \
+	-DGIT_DATE=\"$(GIT_DATE)\" \
+	-DBUILD_DATE=\"$(BUILD_DATE)\"
+LBM_BUILD_OPTIONS += REGION=ALL LBM_STREAM=yes LBM_LFU=yes LBM_DEVICE_MANAGEMENT=yes LBM_CLASS_B=yes LBM_CLASS_C=yes LBM_MULTICAST=yes LBM_CSMA=yes
+ALLOW_FUOTA=yes
 endif
 
 ifeq ($(APP_TRACE),yes)

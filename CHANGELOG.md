@@ -4,6 +4,47 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.8.0] 2024-12-20
+
+This version is based on feature branch v4.5.0 of the LoRa Basics Modem.
+
+Detailed Modem API changelog can be found [here](lbm_lib/smtc_modem_api/CHANGELOG.md)
+Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELOG.md)
+
+### Added
+
+* Support both Relay Rx and Relay Tx that follows LoRaWAN® Specification TS011-1.0.1 with compilation flag in app_options.mk
+* Duty-cycle event to know when the Time On Air is reached or available
+* Test-mode event
+
+### Changed
+
+* Enable CSMA by default for lbm_examples
+* Update RAL with instantaneous power consumption obtained through BSP
+* Implement the RAL BSP instantaneous power consumption getters for supported radio in examples
+* [lr11xx-driver] Update lr11xx radio driver to v2.5.2 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/lr11xx_driver/CHANGELOG.md))
+* [sx126x-driver] Update sx126x radio driver to v2.3.2 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/sx126x_driver/CHANGELOG.md))
+
+### Fixed
+
+* FSK modulation, SNR and RSSI returned by the stack were not correct in class A/B/C
+* LinkADRReq with ADR disabled do not answer the request correctly
+* Remote Multicast Setup, time request in loop if no network coverage
+* Backoff datarate must revert default channels and keeps as is others
+* Fixed channel plan do not handle correctly bad CFlist type
+* The modem keep the JoinDatarate distribution after joined if CSMA or LBT detect a possible collision during the first joinReq, or when the user leave before the end of a join and called the join
+* TxParamSetupReq EIRP is not applied if a LinkADRReq is not received
+* Speed up the certification in class B/C by applying on the fly the new requested periodicity
+* LR-FHSS the values returned by `smtc_modem_get_charge()` is based on the center frequency
+* LR-FHSS the values returned by `smtc_modem_get_duty_cycle_status()` is based on the center frequency
+* Fix supervisor lorawan_manager for multi-stack support
+* Issue [#83](https://github.com/Lora-net/SWL2001/issues/83) 2.4GHz is not working for LR1121 with STM32L476RG MCU
+* Issue [#69](https://github.com/Lora-net/SWL2001/issues/69) Firmware Management Protocol, no DevUpgradeImageAns when the FW upgrade image is not valid
+* Issue [#68](https://github.com/Lora-net/SWL2001/issues/68) aes_encrypt duplicate definition linking error
+* Issue [#66](https://github.com/Lora-net/SWL2001/issues/66) Frequent store and forward uplinks if offline
+* Issue [#62](https://github.com/Lora-net/SWL2001/issues/62) v4.5.0 relay_tx_check_decode_ack() does not calculate MIC according to TS011-1.0.0
+* Issue [#61](https://github.com/Lora-net/SWL2001/issues/61) Modem charge mAh with different configuration
+
 ## [v4.5.0] 2024-05-06
 
 This version is based on feature branch v4.3.1 of the LoRa Basics Modem.
@@ -68,12 +109,12 @@ Detailed Modem API changelog can be found [here](lbm_lib/smtc_modem_api/CHANGELO
 * [relay] Issue [#28](https://github.com/Lora-net/SWL2001/issues/28) Fix backoff field parse in EndDeviceConfReq
 * [relay] Fix join request forwarding rules management for relay rx
 * [relay] Fix sync status for relay tx
-* [relay] Fix backoff mecanism for relay tx
+* [relay] Fix backoff mechanism for relay tx
 * [relay] Manage dual value of default channel for relay rx
 * [relay] Use real device crystal error for relay rx
 * [relay] WOR : Fix typo in b0 buffer for MIC computation
 * [relay] WOR : Use frequency step of 100Hz instead of real frequency in MIC
-* [relay] WOR ACK : Fix AckUplinkEnc endianess
+* [relay] WOR ACK : Fix AckUplinkEnc endianness
 * [relay] WOR ACK : Fix LoRa polarity
 * [relay] WOR ACK : Use frequency and datarate of WOR ACK in MIC
 * [relay] WOR ACK : Use frequency step of 100Hz instead of real frequency in MIC
@@ -99,10 +140,10 @@ Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELO
   * Large File Upload (LFU) service and associated makefile option (related with LoRaCloud)
   * Stream service and associated makefile option (related with LoRaCloud)
   * Almanac Update service  and associated makefile option (related with LoRaCloud)
-* [general] Add a new folder `lbm_applications` that contains 3 specific implementation references on sereval MCU
+* [general] Add a new folder `lbm_applications` that contains 3 specific implementation references on several MCU
 * [general] Real Time OS compatibility (add hal function `smtc_modem_hal_user_lbm_irq`)
 * [lr11xx-crypto] Re-add suspend/resume guard for lr11xx crypto access
-* [makefile] Add `DEBUG_OPT` option to choose optimization in caseof DEBUG
+* [makefile] Add `DEBUG_OPT` option to choose optimization in case of DEBUG
 
 ### Fixed
 
@@ -122,12 +163,12 @@ Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELO
 ### Changed
 
 * [general] Change repository organization to ease readability.  
-            Put all LoRa Basics Modem libraray related code in `lbm_lib` folder.  
+            Put all LoRa Basics Modem library related code in `lbm_lib` folder.
             Rename `utilities` folder into `lbm_examples` for generic Lora Basics Modem examples
 * [lorawan-package] Change `lorawan_packages` folder organization to use a dedicated folder for each packages instead of fuota_v1 and fuota_V2
 
 * [lr11xx-driver] Update lr11xx radio driver to v2.4.0 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/lr11xx_driver/CHANGELOG.md))
-* [sx126x-driver] Update sx126x radio driver to v3.2.1 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/sx126x_driver/CHANGELOG.md))
+* [sx126x-driver] Update sx126x radio driver to v2.3.1 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/sx126x_driver/CHANGELOG.md))
 * [sx128x-driver] Update sx128x radio driver to v1.0.0 version ([CHANGELOG.md](lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/CHANGELOG.md))
 * [makefile] Set all LBM features options to `no` by default
 * [certification-service] Update certification service to support FUOTA certification
@@ -138,8 +179,8 @@ This version is based on feature branch v4.1.0 of the LoRa Basics Modem.
 
 ### Added
 
-* [lorawan-stack] Add Relay RX feature that follows LoRaWAN® Specification TS011-1.0.0
-* [lorawan-stack] Add Relay TX feature that follows LoRaWAN® Specification TS011-1.0.0
+* [lorawan-stack] Add Relay Rx feature that follows LoRaWAN® Specification TS011-1.0.0
+* [lorawan-stack] Add Relay Tx feature that follows LoRaWAN® Specification TS011-1.0.0
 
 ## [v4.1.0] 2023-07-27
 
@@ -226,7 +267,7 @@ Detailed Modem HAL changelog can be found [here](smtc_modem_hal/CHANGELOG.md)
 
 * [general] Support of LR1121 radio (target: lr1121)
 * [makefile] Provide a way to change any LBM define values in make command (use `EXTRAFLAGS` )
-* [utilities] Add a porting on NUCLEO-L073 board using LL drivers for minimal flash usage
+* [utilities] Add a porting on Nucleo-L073 board using LL drivers for minimal flash usage
 * [utilities] Add a porting tool in main examples to help during mcu porting
 
 ### Changed
@@ -309,7 +350,7 @@ Detailed Modem HAL changelog can be found [here](smtc_modem_hal/CHANGELOG.md)
     * `smtc_modem_hal_get_radio_irq_timestamp_in_100us()` function
   * In `SMTC_MODEM_EVENT_DOWNDATA` event status: added new class B reception windows, fpending bit status, reception frequency and datarate
   * Middleware API for geolocation
-* Add basic example to provide an easy start point on Nucleo L476 board
+* Add basic example to provide an easy start point on Nucleo-L476 board
 
 ### Changed
 

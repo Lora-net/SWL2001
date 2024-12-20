@@ -55,6 +55,8 @@
 #include "lorawan_remote_multicast_setup_package.h"
 #include "smtc_multicast.h"
 #include "modem_tx_protocol_manager.h"
+#include "lorawan_cid_request_management.h"
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -161,28 +163,27 @@ static const uint8_t multicast_setup_req_cmd_size[6] = { REMOTE_MULTICAST_SETUP_
                                                          REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_C_SESSION_REQ_SIZE,
                                                          REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_B_SESSION_REQ_SIZE };
 
-#define NB_MULTICAST_GROUPS LR1MAC_MC_NUMBER_OF_SESSION
+#define NB_MULTICAST_GROUPS ( LR1MAC_MC_NUMBER_OF_SESSION )
 
 typedef enum
 {
     ANS_CMD_TASK                   = 0,
-    REQUEST_TIME_SYNC_TASK         = 1,
-    LAUNCH_CLASS_C_TASK_GROUP_ID_0 = 2,
-    LAUNCH_CLASS_C_TASK_GROUP_ID_1 = 3,
-    LAUNCH_CLASS_C_TASK_GROUP_ID_2 = 4,
-    LAUNCH_CLASS_C_TASK_GROUP_ID_3 = 5,
-    STOP_CLASS_C_TASK_GROUP_ID_0   = 6,
-    STOP_CLASS_C_TASK_GROUP_ID_1   = 7,
-    STOP_CLASS_C_TASK_GROUP_ID_2   = 8,
-    STOP_CLASS_C_TASK_GROUP_ID_3   = 9,
-    LAUNCH_CLASS_B_TASK_GROUP_ID_0 = 10,
-    LAUNCH_CLASS_B_TASK_GROUP_ID_1 = 11,
-    LAUNCH_CLASS_B_TASK_GROUP_ID_2 = 12,
-    LAUNCH_CLASS_B_TASK_GROUP_ID_3 = 13,
-    STOP_CLASS_B_TASK_GROUP_ID_0   = 14,
-    STOP_CLASS_B_TASK_GROUP_ID_1   = 15,
-    STOP_CLASS_B_TASK_GROUP_ID_2   = 16,
-    STOP_CLASS_B_TASK_GROUP_ID_3   = 17,
+    LAUNCH_CLASS_C_TASK_GROUP_ID_0 = 1,
+    LAUNCH_CLASS_C_TASK_GROUP_ID_1 = 2,
+    LAUNCH_CLASS_C_TASK_GROUP_ID_2 = 3,
+    LAUNCH_CLASS_C_TASK_GROUP_ID_3 = 4,
+    STOP_CLASS_C_TASK_GROUP_ID_0   = 5,
+    STOP_CLASS_C_TASK_GROUP_ID_1   = 6,
+    STOP_CLASS_C_TASK_GROUP_ID_2   = 7,
+    STOP_CLASS_C_TASK_GROUP_ID_3   = 8,
+    LAUNCH_CLASS_B_TASK_GROUP_ID_0 = 9,
+    LAUNCH_CLASS_B_TASK_GROUP_ID_1 = 10,
+    LAUNCH_CLASS_B_TASK_GROUP_ID_2 = 11,
+    LAUNCH_CLASS_B_TASK_GROUP_ID_3 = 12,
+    STOP_CLASS_B_TASK_GROUP_ID_0   = 13,
+    STOP_CLASS_B_TASK_GROUP_ID_1   = 14,
+    STOP_CLASS_B_TASK_GROUP_ID_2   = 15,
+    STOP_CLASS_B_TASK_GROUP_ID_3   = 16,
 } remote_multicast_supervisor_task_types_t;
 
 typedef struct lorawan_remote_multicast_setup_package_s
@@ -360,6 +361,8 @@ void lorawan_remote_multicast_setup_package_services_init(
         ctx->launch_class_b[i] = false;
         ctx->stop_class_b[i]   = false;
     }
+
+    memset( multicast_group_params, 0, sizeof( multicast_group_params ) );
 }
 
 void lorawan_remote_multicast_setup_package_service_on_launch( void* ctx_service )
@@ -379,18 +382,6 @@ void lorawan_remote_multicast_setup_package_service_on_launch( void* ctx_service
         ctx->remote_multicast_tx_payload_ans_size = 0;
 
         ctx->task_ctx_mask &= ~( 1 << ANS_CMD_TASK );
-    }
-
-    else if( ( ( ctx->task_ctx_mask >> REQUEST_TIME_SYNC_TASK ) & 0x01 ) == 0x01 )
-    {
-        SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_remote_multicast_setup_package launch REQUEST_TIME_SYNC_TASK \n" );
-        ctx->request_time_sync             = false;
-        cid_from_device_t cid_buffer[]     = { DEVICE_TIME_REQ };
-        uint8_t           cid_request_size = 1;
-
-        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
-                                     smtc_modem_hal_get_time_in_ms( ), stack_id );
-        ctx->task_ctx_mask &= ~( 1 << REQUEST_TIME_SYNC_TASK );
     }
 
     else if( ( ( ctx->task_ctx_mask >> LAUNCH_CLASS_C_TASK_GROUP_ID_0 ) & 0x0F ) != 0 )
@@ -537,8 +528,8 @@ void lorawan_remote_multicast_setup_package_service_on_update( void* ctx_service
     // if time sync is missing launch a task to ask time sync (network sync)
     if( ctx->request_time_sync == true )
     {
-        lorawan_remote_multicast_setup_add_task( ( lorawan_remote_multicast_setup_package_ctx_t* ) ctx_service, 0 );
-        ctx->task_ctx_mask |= ( 1 << REQUEST_TIME_SYNC_TASK );
+        smtc_modem_lorawan_mac_request_mask_t cid_request_mask = SMTC_MODEM_LORAWAN_MAC_REQ_DEVICE_TIME;
+        lorawan_cid_request_add_task( stack_id, cid_request_mask, 1 );
         return;
     }
 
@@ -686,7 +677,7 @@ uint8_t lorawan_remote_multicast_setup_package_service_downlink_handler( lr1_sta
 
     if( stack_id >= NUMBER_OF_REMOTE_MULTICAST_SETUP_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -739,7 +730,7 @@ bool lorawan_remote_multicast_setup_mpa_injector( uint8_t stack_id, uint8_t* pay
 
     if( stack_id >= NUMBER_OF_REMOTE_MULTICAST_SETUP_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return false;
     }
 
@@ -764,7 +755,7 @@ bool lorawan_remote_multicast_setup_mpa_injector( uint8_t stack_id, uint8_t* pay
         SMTC_MODEM_HAL_PANIC_ON_FAILURE( ctx->remote_multicast_tx_payload_ans_size <= max_payload_out_length );
         *payload_out_length = ctx->remote_multicast_tx_payload_ans_size;
         memcpy( payload_out, ctx->remote_multicast_tx_payload_ans, ctx->remote_multicast_tx_payload_ans_size );
-        
+
         lorawan_remote_multicast_setup_add_task( ctx, 0 );
         return true;
     }
@@ -863,7 +854,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
     {
         switch( rx_buffer[rx_buffer_index] )
         {
-        case REMOTE_MULTICAST_SETUP_PKG_VERSION_REQ: {
+        case REMOTE_MULTICAST_SETUP_PKG_VERSION_REQ:
+        {
             IS_VALID_PKG_CMD( REMOTE_MULTICAST_SETUP_PKG_VERSION_REQ_SIZE );
             rx_buffer_index += REMOTE_MULTICAST_SETUP_PKG_VERSION_REQ_SIZE;
 
@@ -876,7 +868,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
             break;
         }
 
-        case REMOTE_MULTICAST_SETUP_MC_GROUP_STATUS_REQ: {
+        case REMOTE_MULTICAST_SETUP_MC_GROUP_STATUS_REQ:
+        {
             IS_VALID_PKG_CMD( REMOTE_MULTICAST_SETUP_MC_GROUP_STATUS_REQ_SIZE );
             uint8_t mc_grp_mask                               = rx_buffer[rx_buffer_index + 1] & 0x0F;
             uint8_t ans_group_mask                            = 0;
@@ -912,7 +905,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
             rx_buffer_index += REMOTE_MULTICAST_SETUP_MC_GROUP_STATUS_REQ_SIZE;
             break;
         }
-        case REMOTE_MULTICAST_SETUP_MC_GROUP_SETUP_REQ: {
+        case REMOTE_MULTICAST_SETUP_MC_GROUP_SETUP_REQ:
+        {
             IS_VALID_PKG_CMD( REMOTE_MULTICAST_SETUP_MC_GROUP_SETUP_REQ_SIZE );
             uint8_t mc_grp_id = rx_buffer[rx_buffer_index + 1] & 0x03;
             bool    id_error  = 0;
@@ -952,7 +946,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
 
             break;
         }
-        case REMOTE_MULTICAST_SETUP_MC_GROUP_DELETE_REQ: {
+        case REMOTE_MULTICAST_SETUP_MC_GROUP_DELETE_REQ:
+        {
             IS_VALID_PKG_CMD( REMOTE_MULTICAST_SETUP_MC_GROUP_DELETE_REQ_SIZE );
             uint8_t mc_grp_id = rx_buffer[rx_buffer_index + 1] & 0x03;
 
@@ -969,7 +964,7 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
                 // reset time out to force stop class c in case of class c is already started
                 multicast_group_params[mc_grp_id].params.time_out = 0;
                 ctx->launch_class_c[mc_grp_id] =
-                    false;  // don't reset ctx->stop_class_c, let do it by the task enqueu by the supervisor
+                    false;  // don't reset ctx->stop_class_c, let do it by the task enqueue by the supervisor
                 if( ctx->stop_class_c[mc_grp_id] == true )
                 {
                     lorawan_api_multicast_c_stop_session( mc_grp_id, stack_id );
@@ -988,7 +983,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
             break;
         }
 
-        case REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_C_SESSION_REQ: {
+        case REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_C_SESSION_REQ:
+        {
             IS_VALID_PKG_CMD( REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_C_SESSION_REQ_SIZE );
             uint8_t mc_grp_id = rx_buffer[rx_buffer_index + 1] & 0x03;
 
@@ -1075,7 +1071,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
             rx_buffer_index += REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_C_SESSION_REQ_SIZE;
             break;
         }
-        case REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_B_SESSION_REQ: {
+        case REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_B_SESSION_REQ:
+        {
             IS_VALID_PKG_CMD( REMOTE_MULTICAST_SETUP_MC_GROUP_CLASS_B_SESSION_REQ_SIZE );
             uint8_t mc_grp_id = rx_buffer[rx_buffer_index + 1] & 0x03;
 

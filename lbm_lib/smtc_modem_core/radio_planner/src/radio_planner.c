@@ -164,7 +164,7 @@ static void rp_set_alarm( radio_planner_t* rp, const uint32_t alarm_in_ms );
 static void rp_timer_irq( radio_planner_t* rp );
 
 /**
- * @brief rp_task_call_aborted excute the callback of the aborted tasks
+ * @brief rp_task_call_aborted execute the callback of the aborted tasks
  *
  * @param rp pointer to the radioplanner object itself
  */
@@ -315,8 +315,9 @@ rp_hook_status_t rp_task_enqueue( radio_planner_t* rp, const rp_task_t* task, ui
 
     if( ( task->state == RP_TASK_STATE_SCHEDULE ) && ( ( ( int32_t ) ( task->start_time_ms - now ) <= 0 ) ) )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( " RP: Task enqueue impossible. Task is in past start_time_ms:%d - now:%d = %d\n",
-                                     task->start_time_ms, now, task->start_time_ms - now );
+        SMTC_MODEM_HAL_TRACE_PRINTF(
+            " RP: Task #%u enqueue impossible. Task is in past start_time_ms:%d - now:%d = %d\n", hook_id,
+            task->start_time_ms, now, task->start_time_ms - now );
         return RP_TASK_STATUS_SCHEDULE_TASK_IN_PAST;
     }
 
@@ -387,8 +388,8 @@ rp_hook_status_t rp_task_abort( radio_planner_t* rp, const uint8_t hook_id )
         }
 #endif
 
-        rp->radio_irq_flag                         = true;  // Fake soft IRQ to call user callback
-        rp->irq_timestamp_ms[rp->radio_task_id]    = smtc_modem_hal_get_time_in_ms( );
+        rp->radio_irq_flag                      = true;  // Fake soft IRQ to call user callback
+        rp->irq_timestamp_ms[rp->radio_task_id] = smtc_modem_hal_get_time_in_ms( );
         smtc_modem_hal_user_lbm_irq( );
     }
     else
@@ -432,7 +433,6 @@ rp_stats_t rp_get_stats( const radio_planner_t* rp )
 
 void rp_callback( radio_planner_t* rp )
 {
-    smtc_modem_hal_disable_modem_irq( );
     if( ( rp->tasks[rp->radio_task_id].state == RP_TASK_STATE_RUNNING ) &&
         ( rp->disable_failsafe != RP_DISABLE_FAILSAFE_KEY ) &&
         ( ( int32_t ) ( rp->tasks[rp->radio_task_id].start_time_ms + 128000 - smtc_modem_hal_get_time_in_ms( ) ) < 0 ) )
@@ -441,14 +441,12 @@ void rp_callback( radio_planner_t* rp )
     }
     if( ( rp->radio_irq_flag == false ) && ( rp->timer_irq_flag == false ) )
     {
-        smtc_modem_hal_enable_modem_irq( );
         return;
     }
     if( ( rp->radio_irq_flag == false ) && ( rp->timer_irq_flag == true ) )
     {
         rp->timer_irq_flag = false;
         rp_timer_irq( rp );
-        smtc_modem_hal_enable_modem_irq( );
         return;
     }
     if( rp->radio_irq_flag == true )
@@ -460,13 +458,13 @@ void rp_callback( radio_planner_t* rp )
 
             rp_irq_get_status( rp, rp->radio_task_id );
 
-            rp_consumption_statistics_updated( rp, rp->radio_task_id, rp->irq_timestamp_ms[rp->radio_task_id] );
-
             if( rp->status[rp->radio_task_id] == RP_STATUS_LR_FHSS_HOP )
             {
-                smtc_modem_hal_enable_modem_irq( );
                 return;
             }
+
+            // Compute statistics after LR-FHSS hopping interrupts to have the correct TOA and not only by hop
+            rp_consumption_statistics_updated( rp, rp->radio_task_id, rp->irq_timestamp_ms[rp->radio_task_id] );
 
             // Tx can be performed only if no activity detected on channel
             if( ( rp->status[rp->radio_task_id] == RP_STATUS_CAD_NEGATIVE ) &&
@@ -474,7 +472,6 @@ void rp_callback( radio_planner_t* rp )
             {
                 rp->radio = TARGET_RADIO;
                 rp_hook_callback( rp, rp->radio_task_id );
-                smtc_modem_hal_enable_modem_irq( );
                 return;
             }
 
@@ -484,7 +481,6 @@ void rp_callback( radio_planner_t* rp )
             {
                 rp->radio = TARGET_RADIO;
                 rp_hook_callback( rp, rp->radio_task_id );
-                smtc_modem_hal_enable_modem_irq( );
                 return;
             }
 
@@ -495,7 +491,6 @@ void rp_callback( radio_planner_t* rp )
                 {
                     rp->radio = TARGET_RADIO;
                     rp_hook_callback( rp, rp->radio_task_id );
-                    smtc_modem_hal_enable_modem_irq( );
                     return;
                 }
             }
@@ -527,7 +522,6 @@ void rp_callback( radio_planner_t* rp )
         // Shut Down the TCXO
         smtc_modem_hal_stop_radio_tcxo( );
     }
-    smtc_modem_hal_enable_modem_irq( );
 }
 
 bool rp_get_irq_flag( void* obj )
@@ -625,8 +619,10 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
     {  // Next task exists
         int32_t delay = ( int32_t ) ( rp->priority_task.start_time_ms - now );
         SMTC_MODEM_HAL_RP_TRACE_PRINTF(
-            " RP: Arbiter has been called by %s and priority-task #%d, timer hook #%d, delay %d, now %d\n ",
-            caller_func_name, rp->priority_task.hook_id, rp->timer_hook_id, delay, now );
+            " RP: Arbiter has been called by %s and priority-task #%d, timer hook #%d, delay %d, now %d, start_time_ms "
+            "%u\n ",
+            caller_func_name, rp->priority_task.hook_id, rp->timer_hook_id, delay, now,
+            rp->priority_task.start_time_ms );
 
         // Case where the high priority task is in the past, error case
         if( delay < 0 )
@@ -668,8 +664,6 @@ static void rp_task_arbiter( radio_planner_t* rp, const char* caller_func_name )
                     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_standby( TARGET_RAL, RAL_STANDBY_CFG_RC ) ==
                                                      RAL_STATUS_OK );
                     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_clear_irq_status( TARGET_RAL, RAL_IRQ_ALL ) == RAL_STATUS_OK );
-
-                    smtc_modem_hal_radio_irq_clear_pending( );
 
                     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_sleep( TARGET_RAL, true ) == RAL_STATUS_OK );
 
@@ -1146,16 +1140,23 @@ static void rp_consumption_statistics_updated( radio_planner_t* rp, const uint8_
     uint32_t radio_t = 0, process_t = 0;
     uint32_t tx_freq_hz = 0;
 
-    if( rp->tasks[hook_id].type == RP_TASK_TYPE_RX_LORA )
+    // TODO RP_TASK_TYPE_CAD_TO_TX, RP_TASK_TYPE_USER, RP_TASK_TYPE_NONE,
+
+    if( ( rp->tasks[hook_id].type == RP_TASK_TYPE_RX_LORA ) || ( rp->tasks[hook_id].type == RP_TASK_TYPE_CAD ) ||
+        ( rp->tasks[hook_id].type == RP_TASK_TYPE_CAD_TO_RX ) )
     {
+        bool enable_boost_mode = false;
+        ral_cfg_rx_boosted( TARGET_RAL_FOR_HOOK_ID, enable_boost_mode );
         ral_get_lora_rx_consumption_in_ua( TARGET_RAL_FOR_HOOK_ID, rp->radio_params[hook_id].rx.lora.mod_params.bw,
-                                           false, &micro_ampere_radio );
+                                           enable_boost_mode, &micro_ampere_radio );
     }
-    else if( rp->tasks[hook_id].type == RP_TASK_TYPE_RX_FSK )
+    else if( ( rp->tasks[hook_id].type == RP_TASK_TYPE_RX_FSK ) || ( rp->tasks[hook_id].type == RP_TASK_TYPE_LBT ) )
     {
+        bool enable_boost_mode = false;
+        ral_cfg_rx_boosted( TARGET_RAL_FOR_HOOK_ID, enable_boost_mode );
         ral_get_gfsk_rx_consumption_in_ua(
             TARGET_RAL_FOR_HOOK_ID, rp->radio_params[hook_id].rx.gfsk.mod_params.br_in_bps,
-            rp->radio_params[hook_id].rx.gfsk.mod_params.bw_dsb_in_hz, false, &micro_ampere_radio );
+            rp->radio_params[hook_id].rx.gfsk.mod_params.bw_dsb_in_hz, enable_boost_mode, &micro_ampere_radio );
     }
     else if( rp->tasks[hook_id].type == RP_TASK_TYPE_TX_LORA )
     {
@@ -1169,13 +1170,15 @@ static void rp_consumption_statistics_updated( radio_planner_t* rp, const uint8_
                                       rp->radio_params[hook_id].tx.gfsk.rf_freq_in_hz, &micro_ampere_radio );
         tx_freq_hz = rp->radio_params[hook_id].tx.gfsk.rf_freq_in_hz;
     }
-    // else if( rp->tasks[hook_id].type == RP_TASK_TYPE_TX_LR_FHSS )  // TODO uncomment when LR-FHSS consumption will be
-    // developed
-    // {
-    //     ral_get_tx_consumption_in_ua( TARGET_RAL_FOR_HOOK_ID, rp->radio_params[hook_id].tx.lr_fhss.output_pwr_in_dbm,
-    //                                   rp->radio_params[hook_id].tx.lr_fhss.ral_lr_fhss_params.rf_freq_in_hz,
-    //                                   &micro_ampere_radio );
-    // }
+    else if( rp->tasks[hook_id].type == RP_TASK_TYPE_TX_LR_FHSS )
+    {
+        // The power and duty-cycle are computed only on the center_frequency_in_hz and not on all hopping
+        ral_get_tx_consumption_in_ua( TARGET_RAL_FOR_HOOK_ID, rp->radio_params[hook_id].tx.lr_fhss.output_pwr_in_dbm,
+                                      rp->radio_params[hook_id].tx.lr_fhss.ral_lr_fhss_params.center_frequency_in_hz,
+                                      &micro_ampere_radio );
+
+        tx_freq_hz = rp->radio_params[hook_id].tx.lr_fhss.ral_lr_fhss_params.center_frequency_in_hz;
+    }
 
     if( ( rp->tasks[hook_id].type == RP_TASK_TYPE_GNSS_SNIFF ) ||
         ( rp->tasks[hook_id].type == RP_TASK_TYPE_GNSS_RSSI ) ||
@@ -1208,9 +1211,9 @@ static void rp_consumption_statistics_updated( radio_planner_t* rp, const uint8_
 
 void rp_radio_irq_callback( void* obj )
 {
-    radio_planner_t* rp                        = ( ( radio_planner_t* ) obj );
-    rp->radio_irq_flag                         = true;
-    rp->irq_timestamp_ms[rp->radio_task_id]    = smtc_modem_hal_get_time_in_ms( );
+    radio_planner_t* rp                     = ( ( radio_planner_t* ) obj );
+    rp->radio_irq_flag                      = true;
+    rp->irq_timestamp_ms[rp->radio_task_id] = smtc_modem_hal_get_time_in_ms( );
     smtc_modem_hal_user_lbm_irq( );
 }
 

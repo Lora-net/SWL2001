@@ -153,7 +153,7 @@ uint32_t smtc_modem_hal_get_time_in_s( void );
 uint32_t smtc_modem_hal_get_time_in_ms( void );
 
 /**
- * @brief set an offset into the rtc ounter
+ * @brief set an offset into the rtc counter
  *
  * @remark Used for debug purpose such as wrapping issue.
  *
@@ -265,11 +265,6 @@ uint32_t smtc_modem_hal_get_random_nb_in_range( const uint32_t val_1, const uint
  */
 void smtc_modem_hal_irq_config_radio_irq( void ( *callback )( void* context ), void* context );
 
-/*
- * @brief Clear any MCU-layer pending radio IRQ flags
- */
-void smtc_modem_hal_radio_irq_clear_pending( void );
-
 /**
  * @brief Start radio tcxo
  *
@@ -305,6 +300,12 @@ void smtc_modem_hal_set_ant_switch( bool is_tx_on );
 /**
  * @brief Return the battery level
  *
+ * @remark
+ * Please implement according to used board
+ * According to LoRaWan 1.0.4 spec:
+ *  0: The end-device is connected to an external power source.
+ *  1..254: Battery level, where 1 is the minimum and 254 is the maximum.
+ *  255: The end-device was not able to measure the battery level.
  * @return uint8_t Battery level for lorawan stack
  */
 uint8_t smtc_modem_hal_get_battery_level( void );

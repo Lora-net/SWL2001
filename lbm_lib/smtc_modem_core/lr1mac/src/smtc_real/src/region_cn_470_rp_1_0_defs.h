@@ -114,7 +114,7 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define BEACON_STEP_CN_470_RP_1_0                  (200000)    // Hz
 #define PING_SLOT_FREQ_START_CN_470_RP_1_0         (923300000) // Hz
 #define PING_SLOT_STEP_CN_470_RP_1_0               (200000)    // Hz
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

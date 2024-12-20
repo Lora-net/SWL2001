@@ -61,6 +61,11 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
+enum 
+{
+    SUCCESS_TO_LAUNCH_JOIN   = 0,
+    FAIL_TO_LAUNCH_JOIN = 1
+} ;
 
 /**
  * @brief LoRaWAN join_management Object

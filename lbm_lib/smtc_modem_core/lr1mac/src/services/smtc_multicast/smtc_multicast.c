@@ -75,26 +75,34 @@ typedef struct smtc_multicast_key_s
  */
 
 static const smtc_multicast_key_t smtc_mc_skey_tab[LR1MAC_MC_NUMBER_OF_SESSION] = {
+#if LR1MAC_MC_NUMBER_OF_SESSION > 0
     {
         .mc_key      = SMTC_SE_MC_KEY_0,
         .mc_app_skey = SMTC_SE_MC_APP_S_KEY_0,
         .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_0,
     },
+#endif
+#if LR1MAC_MC_NUMBER_OF_SESSION > 1
     {
         .mc_key      = SMTC_SE_MC_KEY_1,
         .mc_app_skey = SMTC_SE_MC_APP_S_KEY_1,
         .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_1,
     },
+#endif
+#if LR1MAC_MC_NUMBER_OF_SESSION > 2
     {
         .mc_key      = SMTC_SE_MC_KEY_2,
         .mc_app_skey = SMTC_SE_MC_APP_S_KEY_2,
         .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_2,
     },
+#endif
+#if LR1MAC_MC_NUMBER_OF_SESSION > 3
     {
         .mc_key      = SMTC_SE_MC_KEY_3,
         .mc_app_skey = SMTC_SE_MC_APP_S_KEY_3,
         .mc_ntw_skey = SMTC_SE_MC_NWK_S_KEY_3,
     },
+#endif
 };
 
 /*

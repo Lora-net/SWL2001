@@ -52,11 +52,9 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
-#define STACK_ID_CURRENT_TASK \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].stack_id
-#define CURRENT_TASK_ID ( ( stask_manager* ) context )->next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
-#define CURRENT_TASK_TIME \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].time_to_execute_s
+#define VIRTUAL_TASK_ID ( ( stask_manager* ) context )->next_task_id
+#define STACK_ID_CURRENT_TASK ( ( stask_manager* ) context )->modem_task[VIRTUAL_TASK_ID].stack_id
+#define CURRENT_TASK_TIME ( ( stask_manager* ) context )->modem_task[VIRTUAL_TASK_ID].time_to_execute_s
 
 /**
  * @brief Check is the index is valid before accessing the object
@@ -153,7 +151,8 @@ static void lorawan_dwn_ack_management_on_launch( void* context )
     if( ( smtc_modem_hal_get_time_in_s( ) <= ( CURRENT_TASK_TIME + 2 ) ) &&
         ( lorawan_api_tx_ack_bit_get( STACK_ID_CURRENT_TASK ) ) )
     {
-        lorawan_send_add_task( STACK_ID_CURRENT_TASK, 1, false, false, NULL, 0, false, 0 );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, 1, false, NULL, 0, UNCONF_DATA_UP,
+                                     smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
     }
     else
     {

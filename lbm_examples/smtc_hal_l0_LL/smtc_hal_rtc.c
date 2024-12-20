@@ -54,14 +54,14 @@
 /*!
  * Calculates ceiling( X / N )
  */
-#define DIVC( X, N ) ( ( ( X ) + ( N ) -1 ) / ( N ) )
+#define DIVC( X, N ) ( ( ( X ) + ( N ) - 1 ) / ( N ) )
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 
 // MCU Wake Up Time
 #define MIN_ALARM_DELAY_IN_TICKS       3U              // in ticks
@@ -117,7 +117,7 @@
                                            RTC_TR_MNT | RTC_TR_MNU| RTC_TR_ST | \
                                            RTC_TR_SU))
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------
@@ -133,7 +133,7 @@ static uint32_t offset_to_test_wrapping = 0;
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
-static uint32_t  rtc_get_offset_to_test_wrapping (void);
+static uint32_t rtc_get_offset_to_test_wrapping( void );
 /*!
  * Converts time in ms to time in wake up timer ticks
  * Assuming WUCKSEL[2:0] = 000: RTCCLK/16 clock is selected
@@ -304,7 +304,8 @@ static uint32_t rtc_get_calendar_time( uint16_t* milliseconds_div_10 )
 {
     uint32_t ticks;
 
-    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( ) + ( uint64_t) ((( uint64_t)rtc_get_offset_to_test_wrapping()) << N_PREDIV_S );
+    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( ) +
+                                  ( uint64_t ) ( ( ( uint64_t ) rtc_get_offset_to_test_wrapping( ) ) << N_PREDIV_S );
 
     uint32_t seconds = ( uint32_t ) ( timestamp_in_ticks >> N_PREDIV_S );
 
@@ -382,8 +383,8 @@ void RTC_IRQHandler( void )
         LL_EXTI_ClearFlag_0_31( LL_EXTI_LINE_20 );
     }
 }
-static uint32_t  rtc_get_offset_to_test_wrapping (void)
+static uint32_t rtc_get_offset_to_test_wrapping( void )
 {
-    return offset_to_test_wrapping ;
+    return offset_to_test_wrapping;
 }
 /* --- EOF ------------------------------------------------------------------ */

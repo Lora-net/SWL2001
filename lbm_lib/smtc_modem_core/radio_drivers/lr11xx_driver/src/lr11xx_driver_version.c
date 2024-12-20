@@ -44,12 +44,6 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
-#define STR_HELPER( x ) #x
-#define STR( x ) STR_HELPER( x )
-
-#define LR11XX_DRIVER_VERSION_FULL \
-    "v" STR( LR11XX_DRIVER_VERSION_MAJOR ) "." STR( LR11XX_DRIVER_VERSION_MINOR ) "." STR( LR11XX_DRIVER_VERSION_PATCH )
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
@@ -77,7 +71,7 @@
 
 const char* lr11xx_driver_version_get_version_string( void )
 {
-    return ( const char* ) LR11XX_DRIVER_VERSION_FULL;
+    return ( const char* ) LR11XX_DRIVER_VERSION;
 }
 
 /*

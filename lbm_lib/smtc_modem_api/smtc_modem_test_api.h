@@ -48,6 +48,7 @@ extern "C" {
 #include <stdbool.h>  // bool type
 
 #include "smtc_modem_api.h"
+#include "ral_defs.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -63,65 +64,13 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
-
-/**
- * @brief Test mode Spreading Factor type
- */
-typedef enum smtc_modem_test_sf_e
+typedef enum smtc_modem_test_mode_sync_word_e
 {
-    SMTC_MODEM_TEST_FSK = 0,        //!< FSK
-    SMTC_MODEM_TEST_LORA_SF5,       //!< SF5
-    SMTC_MODEM_TEST_LORA_SF6,       //!< SF6
-    SMTC_MODEM_TEST_LORA_SF7,       //!< SF7
-    SMTC_MODEM_TEST_LORA_SF8,       //!< SF8
-    SMTC_MODEM_TEST_LORA_SF9,       //!< SF9
-    SMTC_MODEM_TEST_LORA_SF10,      //!< SF10
-    SMTC_MODEM_TEST_LORA_SF11,      //!< SF11
-    SMTC_MODEM_TEST_LORA_SF12,      //!< SF12
-    SMTC_MODEM_TEST_LORA_SF_COUNT,  //!< Count
-} smtc_modem_test_sf_t;
-
-/**
- * @brief Test mode Bandwith type
- */
-typedef enum smtc_modem_test_bw_e
-{
-    SMTC_MODEM_TEST_BW_125_KHZ,   //!< BW125
-    SMTC_MODEM_TEST_BW_250_KHZ,   //!< BW250
-    SMTC_MODEM_TEST_BW_500_KHZ,   //!< BW500
-    SMTC_MODEM_TEST_BW_200_KHZ,   //!< BW200
-    SMTC_MODEM_TEST_BW_400_KHZ,   //!< BW400
-    SMTC_MODEM_TEST_BW_800_KHZ,   //!< BW800
-    SMTC_MODEM_TEST_BW_1600_KHZ,  //!< BW1600
-    SMTC_MODEM_TEST_BW_COUNT,     //!< Count
-} smtc_modem_test_bw_t;
-
-/**
- * @brief Test mode Bandwith type (high bandwidth)
- */
-typedef enum smtc_modem_test_bw_m_e
-{
-    SMTC_MODEM_TEST_BW_12M = 15,
-    SMTC_MODEM_TEST_BW_18M,
-    SMTC_MODEM_TEST_BW_24M,
-} smtc_modem_test_bw_m_t;
-
-/**
- * @brief Test mode Coding Rate type
- */
-typedef enum smtc_modem_test_cr_e
-{
-    SMTC_MODEM_TEST_CR_4_5 = 0,  //!< CR 4/5
-    SMTC_MODEM_TEST_CR_4_6,      //!< CR 4/6
-    SMTC_MODEM_TEST_CR_4_7,      //!< CR 4/7
-    SMTC_MODEM_TEST_CR_4_8,      //!< CR 4/8
-    SMTC_MODEM_TEST_CR_LI_4_5,   //!< CR 4/5 long interleaved
-    SMTC_MODEM_TEST_CR_LI_4_6,   //!< CR 4/6 long interleaved
-    SMTC_MODEM_TEST_CR_LI_4_8,   //!< CR 4/8 long interleaved
-    SMTC_MODEM_TEST_CR_COUNT,    //!< Count
-} smtc_modem_test_cr_t;
-
-/* clang-format on */
+    SYNC_WORD_0x12 = 0x12,
+    SYNC_WORD_0x21 = 0x21,
+    SYNC_WORD_0x34 = 0x34,
+    SYNC_WORD_0x56 = 0x56,
+} smtc_modem_test_mode_sync_word_t;
 
 /*
  * -----------------------------------------------------------------------------
@@ -147,30 +96,75 @@ smtc_modem_return_code_t smtc_modem_test_stop( void );
 /**
  * @brief Perform no operation. This function can be used to terminate an ongoing continuous operation
  * @remark Abort the radio planner task
- *
+ * @param [in] reset_radio  Reset radio after NOP
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  */
-smtc_modem_return_code_t smtc_modem_test_nop( void );
+smtc_modem_return_code_t smtc_modem_test_nop( bool reset_radio );
 
 /**
- * @brief Test mode TX single or continue
- * @remark Transmit a single packet or continuously transmit packets as fast as possible.
+ * @brief  Test mode TX LoRa single or continue
  *
  * @param [in] payload*        Payload that will be sent. If NULL a randomly generated payload_length msg will be sent
  * @param [in] payload_length  Length of the payload
  * @param [in] frequency_hz    Frequency in Hz
  * @param [in] tx_power_dbm    Power in dbm
- * @param [in] sf              Spreading factor following smtc_modem_test_sf_t definition
- * @param [in] bw              Bandwith following smtc_modem_test_bw_t definition
- * @param [in] cr              Coding rate following smtc_modem_test_cr_t definition
+ * @param [in] sf              Spreading factor following ral_lora_sf_t definition
+ * @param [in] bw              Bandwidth following ral_lora_bw_t definition
+ * @param [in] cr              Coding rate following ral_lora_cr_t definition
+ * @param [in] sync_word       sync_word
+ * @param [in] invert_iq       invert iq parameter
+ * @param [in] crc_is_on       include crc boolean
+ * @param [in] header_type     header type (explicit/implicit)
  * @param [in] preamble_size   Size of the preamble
- * @param [in] continuous_tx   false: single transmission / true: continuous transmission
+ * @param [in] nb_of_tx        nb of transmissions (0 means tx continuous)
+ * @param [in] delay_ms        delay between two  transmissions
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  */
-smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
-                                             int8_t tx_power_dbm, smtc_modem_test_sf_t sf, smtc_modem_test_bw_t bw,
-                                             smtc_modem_test_cr_t cr, uint32_t preamble_size, bool continuous_tx );
+
+smtc_modem_return_code_t smtc_modem_test_tx_lora( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
+                                                  int8_t tx_power_dbm, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                                  ral_lora_cr_t cr, smtc_modem_test_mode_sync_word_t sync_word,
+                                                  bool invert_iq, bool crc_is_on, ral_lora_pkt_len_modes_t header_type,
+                                                  uint32_t preamble_size, uint32_t nb_of_tx, uint32_t delay_ms );
+
+/**
+ * @brief  Test mode TX FSK single or continue
+ *
+ * @param [in] payload*        Payload that will be sent. If NULL a randomly generated payload_length msg will be
+ * sent
+ * @param [in] payload_length  Length of the payload
+ * @param [in] frequency_hz    Frequency in Hz
+ * @param [in] tx_power_dbm    Power in dbm
+ * @param [in] nb_of_tx        nb of transmissions (0 means tx continuous)
+ * @param [in] delay_ms        delay between two  transmissions
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ */
+smtc_modem_return_code_t smtc_modem_test_tx_fsk( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
+                                                 int8_t tx_power_dbm, uint32_t nb_of_tx, uint32_t delay_ms );
+
+/**
+ * @brief  Test mode TX LR_FHSS single or continue
+ *
+ * @param [in] payload*        Payload that will be sent. If NULL a randomly generated payload_length msg will be sent
+ * @param [in] payload_length  Length of the payload
+ * @param [in] frequency_hz    Frequency in Hz
+ * @param [in] tx_power_dbm    Power in dbm
+ * @param [in] cr              Coding rate following lr_fhss_v1_cr_t definition
+ * @param [in] bw              Bandwidth following lr_fhss_v1_bw_t definition
+ * @param [in] grid            Grid following lr_fhss_v1_grid_t definition
+ * @param [in] enable_hopping  Enable channel hopping
+ * @param [in] nb_of_tx        nb of transmissions (0 means tx continuous)
+ * @param [in] delay_ms        delay between two  transmissions
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ */
+
+smtc_modem_return_code_t smtc_modem_test_tx_lrfhss( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
+                                                    int8_t tx_power_dbm, lr_fhss_v1_cr_t tx_cr, lr_fhss_v1_bw_t tx_bw,
+                                                    lr_fhss_v1_grid_t tx_grid, bool enable_hopping, uint32_t nb_of_tx,
+                                                    uint32_t delay_ms );
 
 /**
  * @brief Test mode transmit a continuous wave.
@@ -184,18 +178,38 @@ smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_l
 smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx_power_dbm );
 
 /**
- * @brief Test mode RX continue
+ * @brief Test mode RX LoRa continue
+ * @remark Continuously receive packets.
+ *
+ * @param [in] frequency_hz    Frequency in Hz
+ * @param [in] sf              Spreading factor following ral_lora_sf_t definition
+ * @param [in] bw              Bandwidth following ral_lora_bw_t definition
+ * @param [in] cr              Coding rate following ral_lora_cr_t definition
+ * @param [in] sync_word       sync_word
+ * @param [in] invert_iq       invert iq parameter
+ * @param [in] crc_is_on       include crc boolean
+ * @param [in] header_type     header type (explicit/implicit)
+ * @param [in] preamble_size   Size of the preamble
+ * @param [in] symb_nb_timeout Number of symbols before timeout (0 means no timeout)
+ * 
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ */
+
+smtc_modem_return_code_t smtc_modem_test_rx_lora( uint32_t frequency_hz, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                                             ral_lora_cr_t                    cr,
+                                                             smtc_modem_test_mode_sync_word_t sync_word, bool invert_iq,
+                                                             bool crc_is_on, ral_lora_pkt_len_modes_t header_type,
+                                                             uint32_t preamble_size, uint8_t symb_nb_timeout);
+
+/**
+ * @brief Test mode RX FSK continue
  * @remark Continuously receive packets.
  *
  * @param [in] frequency_hz  Frequency in Hz
- * @param [in] sf            Spreading factor following smtc_modem_test_sf_t definition
- * @param [in] bw            Bandwith following smtc_modem_test_bw_t definition
- * @param [in] cr            Coding rate following smtc_modem_test_cr_t definition
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  */
-smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, smtc_modem_test_sf_t sf,
-                                                        smtc_modem_test_bw_t bw, smtc_modem_test_cr_t cr );
+smtc_modem_return_code_t smtc_modem_test_rx_fsk_continuous( uint32_t frequency_hz );
 
 /**
  * @brief Read number of received packets during test RX continue
@@ -208,16 +222,29 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
 smtc_modem_return_code_t smtc_modem_test_get_nb_rx_packets( uint32_t* nb_rx_packets );
 
 /**
- * @brief Test mode RSSI
+ * @brief Read last received packet during test RX continue
+ * @remark
+ * @param [out] rssi*            RSSI in dBm
+ * @param [out] snr*             SNR in dB
+ * @param [out] rx_payload*      Pointer to the buffer to store the received payload
+ * @param [out] rx_payload_length*  Length of the received payload
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ */
+smtc_modem_return_code_t smtc_modem_test_get_last_rx_packets( int16_t* rssi, int16_t* snr, uint8_t* rx_payload,
+                                                              uint8_t* rx_payload_length );
+
+/**
+ * @brief Test mode RSSI LBT
  * @remark Measure continuously the RSSI during a chosen time and give an average value
  *
  * @param [in] frequency_hz  Frequency in Hz
- * @param [in] bw            bandwidth following smtc_modem_test_bw_t definition
+ * @param [in] bw            bandwidth in Hz
  * @param [in] time_ms       test duration in ms (1 rssi every 10 ms)
 
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  */
-smtc_modem_return_code_t smtc_modem_test_rssi( uint32_t frequency_hz, smtc_modem_test_bw_t bw, uint16_t time_ms );
+
+smtc_modem_return_code_t smtc_modem_test_rssi_lbt( uint32_t frequency_hz, uint32_t bw_hz, uint16_t time_ms );
 
 /**
  * @brief Get RSSI result (to be called when test rssi is finished)

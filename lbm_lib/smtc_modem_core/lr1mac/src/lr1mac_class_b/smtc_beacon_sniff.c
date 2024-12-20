@@ -3,11 +3,12 @@
  *
  * \brief     Beacon management for LoRaWAN class B devices
  *
- * Revised BSD License
- * Copyright Semtech Corporation 2020. All rights reserved.
+ * The Clear BSD License
+ * Copyright Semtech Corporation 2021. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are permitted (subject to the limitations in the disclaimer
+ * below) provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -17,16 +18,18 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL SEMTECH CORPORATION BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY
+ * THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
+ * NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SEMTECH CORPORATION BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "smtc_modem_hal_dbg_trace.h"
@@ -608,10 +611,24 @@ static void compute_beacon_metadata( smtc_lr1_beacon_t* lr1_beacon_obj, uint32_t
     if( lr1_beacon_obj->is_valid_beacon == true )
     {
         lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.timestamp_ms = timestamp;
-        lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr =
-            lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].rx.lora_pkt_status.snr_pkt_in_db;
-        lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
-            lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].rx.lora_pkt_status.rssi_pkt_in_dbm;
+
+        if( lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].pkt_type == RAL_PKT_TYPE_LORA )
+        {
+            lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr =
+                lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].rx.lora_pkt_status.snr_pkt_in_db;
+            lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
+                lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].rx.lora_pkt_status.rssi_pkt_in_dbm;
+        }
+        else if( lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].pkt_type == RAL_PKT_TYPE_GFSK )
+        {
+            lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr = 0;
+            lr1_beacon_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
+                lr1_beacon_obj->rp->radio_params[lr1_beacon_obj->beacon_sniff_id_rp].rx.gfsk_pkt_status.rssi_avg_in_dbm;
+        }
+        else
+        {
+            SMTC_MODEM_HAL_PANIC( );
+        }
 
         lr1_beacon_obj->beacon_statistics.last_beacon_received_timestamp = timestamp;
         lr1_beacon_obj->ping_slot_obj->last_valid_rx_beacon_ms           = timestamp;

@@ -59,6 +59,9 @@
 #include "lorawan_class_b_management.h"
 #include "lorawan_send_management.h"
 
+#if defined( ADD_RELAY_TX )
+#include "relay_tx_api.h"
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -114,7 +117,7 @@ struct
     uint32_t             user_alarm;
     fifo_ctrl_t          fifo_ctrl_obj;
     uint8_t              fifo_buffer[FIFO_LORAWAN_SIZE];
-    uint8_t              ( *downlink_services_callback[NUMBER_OF_SERVICES + NUMBER_OF_LORAWAN_MANAGEMENT_TASKS] )(
+    uint8_t ( *downlink_services_callback[NUMBER_OF_SERVICES + NUMBER_OF_LORAWAN_MANAGEMENT_TASKS] )(
         lr1_stack_mac_down_data_t* rx_down_data );
     uint32_t modem_reset_counter;
 } modem_ctx_light;
@@ -143,8 +146,8 @@ static void modem_downlink_callback( lr1_stack_mac_down_data_t* rx_down_data );
 
 void modem_context_init_light( void ( *callback )( void ), radio_planner_t* rp )
 {
-    void  ( *callback_on_launch_temp )( void* );
-    void  ( *callback_on_update_temp )( void* );
+    void ( *callback_on_launch_temp )( void* );
+    void ( *callback_on_update_temp )( void* );
     void* context_callback_tmp;
 
     modem_rp = rp;
@@ -272,7 +275,7 @@ bool modem_suspend_radio_access( void )
         .launch_task_callbacks      = modem_empty_callback,
         .schedule_task_low_priority = false,
         .start_time_ms              = smtc_modem_hal_get_time_in_ms( ) + 4,
-        .duration_time_ms           = 20000,
+        .duration_time_ms           = 20,
         .state                      = RP_TASK_STATE_SCHEDULE,
 
     };
@@ -335,6 +338,14 @@ int32_t modem_duty_cycle_get_status( uint8_t stack_id )
                 &number_of_freq, freq_list, sizeof( freq_list ) / sizeof( freq_list[0] ), stack_id ) == true )
         {
             region_dtc = smtc_duty_cycle_get_next_free_time_ms( number_of_freq, freq_list );
+#if defined( ADD_RELAY_TX )
+            int32_t relay_region_dtc = smtc_relay_tx_free_duty_cycle_ms_get( stack_id );
+
+            if( relay_region_dtc != 0 )
+            {
+                region_dtc = MAX( region_dtc, relay_region_dtc );
+            }
+#endif
         }
 
         if( nwk_dtc == 0 )
@@ -414,17 +425,23 @@ void modem_load_modem_context( void )
     modem_ctx_t ctx = { 0 };
     smtc_modem_hal_context_restore( CONTEXT_MODEM, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
 
-    if( crc( ( uint8_t* ) &ctx, sizeof( ctx ) - sizeof( ctx.crc ) ) == ctx.crc )
+    if( crc( ( uint8_t* ) &ctx, sizeof( ctx ) - sizeof( ctx.crc ) ) != ctx.crc )
     {
-        modem_reset_counter = ctx.reset_counter;
-    }
-    else
-    {
-        ctx.reset_counter = 0;
+        memset( &ctx, 0, sizeof( ctx ) );
+        ctx.crc = crc( ( uint8_t* ) &ctx, sizeof( ctx ) - sizeof( ctx.crc ) );
+
         smtc_modem_hal_context_store( CONTEXT_MODEM, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
         // dummy context reading to ensure context store is done before exiting the function
         smtc_modem_hal_context_restore( CONTEXT_MODEM, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
     }
+
+    modem_reset_counter = ctx.reset_counter;
+}
+
+void modem_reset_modem_context( void )
+{
+    modem_ctx_t ctx = { 0 };
+    smtc_modem_hal_context_store( CONTEXT_MODEM, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
 }
 
 uint32_t modem_get_reset_counter( void )

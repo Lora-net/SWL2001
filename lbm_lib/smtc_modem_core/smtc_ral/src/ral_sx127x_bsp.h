@@ -1,7 +1,7 @@
 /**
  * @file      ral_sx127x_bsp.h
  *
- * @brief     Board Support Package for the SX126x-specific RAL.
+ * @brief     Board Support Package for the SX127x-specific RAL.
  *
  * The Clear BSD License
  * Copyright Semtech Corporation 2021. All rights reserved.
@@ -104,6 +104,39 @@ void ral_sx127x_bsp_get_tx_cfg( const void* context, const ral_sx127x_bsp_tx_cfg
  * @param [out] ocp_trim_value OCP trim value
  */
 void ral_sx127x_bsp_get_ocp_value( const void* context, uint8_t* ocp_trim_value );
+
+/**
+ * @brief Get the instantaneous power consumption for the given Tx configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] tx_cfg_output_params_local The Tx configuration
+ * @param [out] pwr_consumption_in_ua The corresponding instantaneous power consumption
+ * @return ral_status_t
+ */
+ral_status_t ral_sx127x_bsp_get_instantaneous_tx_power_consumption( const void* context,
+    const ral_sx127x_bsp_tx_cfg_output_params_t* tx_cfg_output_params_local, uint32_t* pwr_consumption_in_ua );
+
+/**
+ * @brief Get the instantaneous power consumption for the given GFSK Rx configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] rx_boosted The Rx boosted configuration
+ * @param [out] pwr_consumption_in_ua The corresponding instantaneous power consumption
+ * @return ral_status_t
+ */
+ral_status_t ral_sx127x_bsp_get_instantaneous_gfsk_rx_power_consumption( const void* context,
+    bool rx_boosted, uint32_t* pwr_consumption_in_ua );
+
+/**
+ * @brief Get the instantaneous power consumption for the given LoRa Rx configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] rx_boosted The Rx boosted configuration
+ * @param [out] pwr_consumption_in_ua The corresponding instantaneous power consumption
+ * @return ral_status_t
+ */
+ral_status_t ral_sx127x_bsp_get_instantaneous_lora_rx_power_consumption( const void* context,
+    bool rx_boosted, uint32_t* pwr_consumption_in_ua );
 
 #ifdef __cplusplus
 }

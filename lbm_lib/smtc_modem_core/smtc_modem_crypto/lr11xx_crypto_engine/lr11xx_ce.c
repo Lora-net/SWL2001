@@ -184,13 +184,11 @@ smtc_se_return_code_t smtc_secure_element_set_key( smtc_se_key_identifier_t key_
 
     smtc_se_return_code_t status = SMTC_SE_RC_ERROR;
 
-    // convert key into lr11xx value first to check if returned key is not LR11XX_CRYPTO_KEYS_IDX_GP1
-    lr11xx_crypto_keys_idx_t lr11xx_key_id = convert_key_id_from_se_to_lr11xx( key_id );
-
-    if( lr11xx_key_id == LR11XX_CRYPTO_KEYS_IDX_GP1 )
+    if( key_id == SMTC_SE_DATA_BLOCK_INT_KEY )
     {
         return SMTC_SE_RC_ERROR_INVALID_KEY_ID;
     }
+    lr11xx_crypto_keys_idx_t lr11xx_key_id = convert_key_id_from_se_to_lr11xx( key_id );
 
     // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( modem_suspend_radio_access( ) == true );
@@ -349,6 +347,95 @@ smtc_se_return_code_t smtc_secure_element_derive_and_store_key( uint8_t* input, 
 
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) ==
                                      LR11XX_STATUS_OK );
+
+    // lr11xx crypto operation done: resume modem radio access
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( modem_resume_radio_access( ) == true );
+
+    return status;
+}
+
+smtc_se_return_code_t smtc_secure_element_derive_relay_session_keys( uint32_t dev_addr, uint8_t stack_id )
+{
+    smtc_se_return_code_t status  = SMTC_SE_RC_ERROR;
+    uint8_t               key[16] = { 0 };
+    uint8_t               block[16];
+
+    memset( block, 0, sizeof( block ) );
+    block[0] = 0x01;
+
+    // lr11xx crypto operation needed: suspend modem radio access to secure this direct access
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( modem_suspend_radio_access( ) == true );
+
+    // key = RELAY_ROOT_WOR_S_KEY
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+        lr11xx_crypto_aes_encrypt_01( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                      convert_key_id_from_se_to_lr11xx( SMTC_SE_NWK_S_ENC_KEY ), block, 16,
+                                      key ) == LR11XX_STATUS_OK );
+
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+        lr11xx_crypto_set_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                               convert_key_id_from_se_to_lr11xx( SMTC_SE_RELAY_ROOT_WOR_S_KEY ),
+                               key ) == LR11XX_STATUS_OK );
+
+    if( status == SMTC_SE_RC_SUCCESS )
+    {
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) == LR11XX_STATUS_OK );
+    }
+
+    memset( block, 0, sizeof( block ) );
+    block[0] = 0x01;
+    block[1] = ( uint8_t ) ( dev_addr );
+    block[2] = ( uint8_t ) ( dev_addr >> 8 );
+    block[3] = ( uint8_t ) ( dev_addr >> 16 );
+    block[4] = ( uint8_t ) ( dev_addr >> 24 );
+
+    // key = SMTC_SE_RELAY_WOR_S_INT_KEY
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+        lr11xx_crypto_aes_encrypt( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                   convert_key_id_from_se_to_lr11xx( SMTC_SE_RELAY_ROOT_WOR_S_KEY ), block, 16,
+                                   key ) == LR11XX_STATUS_OK );
+
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+        lr11xx_crypto_set_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                               convert_key_id_from_se_to_lr11xx( SMTC_SE_RELAY_WOR_S_INT_KEY ),
+                               key ) == LR11XX_STATUS_OK );
+
+    if( status == SMTC_SE_RC_SUCCESS )
+    {
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) == LR11XX_STATUS_OK );
+    }
+
+    memset( block, 0, sizeof( block ) );
+    block[0] = 0x02;
+    block[1] = ( uint8_t ) ( dev_addr );
+    block[2] = ( uint8_t ) ( dev_addr >> 8 );
+    block[3] = ( uint8_t ) ( dev_addr >> 16 );
+    block[4] = ( uint8_t ) ( dev_addr >> 24 );
+
+    // key = SMTC_SE_RELAY_WOR_S_ENC_KEY
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+        lr11xx_crypto_aes_encrypt( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                                   convert_key_id_from_se_to_lr11xx( SMTC_SE_RELAY_ROOT_WOR_S_KEY ), block, 16,
+                                   key ) == LR11XX_STATUS_OK );
+
+    if( status == SMTC_SE_RC_SUCCESS )
+    {
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) == LR11XX_STATUS_OK );
+    }
+
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+        lr11xx_crypto_set_key( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status,
+                               convert_key_id_from_se_to_lr11xx( SMTC_SE_RELAY_WOR_S_ENC_KEY ),
+                               key ) == LR11XX_STATUS_OK );
+
+    if( status == SMTC_SE_RC_SUCCESS )
+    {
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE(
+            lr11xx_crypto_store_to_flash( lr11xx_ctx, ( lr11xx_crypto_status_t* ) &status ) == LR11XX_STATUS_OK );
+    }
 
     // lr11xx crypto operation done: resume modem radio access
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( modem_resume_radio_access( ) == true );
@@ -593,6 +680,15 @@ static lr11xx_crypto_keys_idx_t convert_key_id_from_se_to_lr11xx( smtc_se_key_id
         break;
     case SMTC_SE_MC_NWK_S_KEY_3:
         id = LR11XX_CRYPTO_KEYS_IDX_MC_NWK_S_KEY_3;
+        break;
+    case SMTC_SE_RELAY_ROOT_WOR_S_KEY:
+        id = LR11XX_CRYPTO_KEYS_IDX_GP1;
+        break;
+    case SMTC_SE_RELAY_WOR_S_INT_KEY:
+        id = LR11XX_CRYPTO_KEYS_IDX_RFU_0;
+        break;
+    case SMTC_SE_RELAY_WOR_S_ENC_KEY:
+        id = LR11XX_CRYPTO_KEYS_IDX_RFU_1;
         break;
     case SMTC_SE_SLOT_RAND_ZERO_KEY:
         id = LR11XX_CRYPTO_KEYS_IDX_GP0;

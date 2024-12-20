@@ -52,14 +52,14 @@
 /*!
  * Calculates ceiling( X / N )
  */
-#define DIVC( X, N ) ( ( ( X ) + ( N ) -1 ) / ( N ) )
+#define DIVC( X, N ) ( ( ( X ) + ( N ) - 1 ) / ( N ) )
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 
 // MCU Wake Up Time
 #define MIN_ALARM_DELAY_IN_TICKS       3U              // in ticks
@@ -101,7 +101,7 @@
 #define DAYS_IN_MONTH_CORRECTION_NORM  ( ( uint32_t ) 0x99AAA0 )
 #define DAYS_IN_MONTH_CORRECTION_LEAP  ( ( uint32_t ) 0x445550 )
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------
@@ -114,7 +114,7 @@
  */
 
 static RTC_HandleTypeDef hal_rtc_handle;
-static uint32_t offset_to_test_wrapping = 0;
+static uint32_t          offset_to_test_wrapping = 0;
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
@@ -156,9 +156,9 @@ static uint64_t rtc_get_timestamp_in_ticks( void );
 /*!
  * Get current offset
  *
- * 
+ *
  */
-static uint32_t  rtc_get_offset_to_test_wrapping (void);
+static uint32_t rtc_get_offset_to_test_wrapping( void );
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -263,8 +263,9 @@ static uint32_t rtc_ms_2_wakeup_timer_tick( const uint32_t milliseconds )
 static uint32_t rtc_get_calendar_time( uint16_t* milliseconds_div_10 )
 {
     uint32_t ticks;
- 
-    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( ) + ( uint64_t) ((( uint64_t)rtc_get_offset_to_test_wrapping()) << N_PREDIV_S );
+
+    uint64_t timestamp_in_ticks = rtc_get_timestamp_in_ticks( ) +
+                                  ( uint64_t ) ( ( ( uint64_t ) rtc_get_offset_to_test_wrapping( ) ) << N_PREDIV_S );
 
     uint32_t seconds = ( uint32_t ) ( timestamp_in_ticks >> N_PREDIV_S );
 
@@ -332,9 +333,9 @@ void HAL_RTC_MspDeInit( RTC_HandleTypeDef* rtc_handle )
     __HAL_RCC_RTC_DISABLE( );
     HAL_NVIC_DisableIRQ( RTC_WKUP_IRQn );
 }
-static uint32_t  rtc_get_offset_to_test_wrapping (void)
+static uint32_t rtc_get_offset_to_test_wrapping( void )
 {
-    return offset_to_test_wrapping ;
+    return offset_to_test_wrapping;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

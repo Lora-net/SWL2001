@@ -98,20 +98,30 @@
 #include "smtc_modem_geolocation_api.h"
 #endif
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
 #include "smtc_modem_relay_api.h"
 #include "relay_tx_api.h"
+#endif
+
+#if defined( ADD_RELAY_RX )
+#include "relay_rx_api.h"
 #endif
 
 #if defined( ADD_SMTC_STORE_AND_FORWARD )
 #include "store_and_forward_flash.h"
 #endif
 
+#if defined( USE_LR11XX_CE ) && ( ADD_FUOTA == 2 )
+#include "aes.h"
+#endif  // USE_LR11XX_CE && ( ADD_FUOTA == 2 )
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
-
+#if defined( BYPASS_CHECK_TEST_MODE )
+#define RETURN_BUSY_IF_TEST_MODE( )
+#else
 #define RETURN_BUSY_IF_TEST_MODE( )                 \
     do                                              \
     {                                               \
@@ -120,6 +130,7 @@
             return SMTC_MODEM_RC_BUSY;              \
         }                                           \
     } while( 0 )
+#endif  // BYPASS_CHECK_TEST_MODE
 
 #define RETURN_INVALID_IF_NULL( x )       \
     do                                    \
@@ -163,6 +174,7 @@ typedef struct modem_key_ctx_s
     uint32_t appkey_crc;
     uint8_t  gen_appkey_crc_status;
     uint32_t gen_appkey_crc;
+    uint8_t  data_block_int_key[16];
     uint8_t  rfu[6];
     uint32_t crc;  // !! crc MUST be the last field of the structure !!
 } modem_key_ctx_t;
@@ -194,12 +206,14 @@ struct
     uint32_t modem_appkey_crc;
     uint8_t  modem_gen_appkey_status;
     uint32_t modem_gen_appkey_crc;
+    uint8_t  modem_data_block_int_key[16];
 } smtc_modem_key_ctx;
 
 #define modem_appkey_status smtc_modem_key_ctx.modem_appkey_status
 #define modem_appkey_crc smtc_modem_key_ctx.modem_appkey_crc
 #define modem_gen_appkey_status smtc_modem_key_ctx.modem_gen_appkey_status
 #define modem_gen_appkey_crc smtc_modem_key_ctx.modem_gen_appkey_crc
+#define modem_data_block_int_key smtc_modem_key_ctx.modem_data_block_int_key
 
 /*
  * -----------------------------------------------------------------------------
@@ -249,7 +263,7 @@ void smtc_modem_init( void ( *callback_event )( void ) )
     smtc_secure_element_init( );
     modem_supervisor_init( );
     modem_context_init_light( callback_event, &modem_radio_planner );
-    modem_tx_protcol_manager_init( &modem_radio_planner );
+    modem_tx_protocol_manager_init( &modem_radio_planner );
     // If lr11xx crypto engine is used for crypto
 #if defined( USE_LR11XX_CE )
     modem_load_appkey_context( );
@@ -369,6 +383,41 @@ smtc_modem_return_code_t smtc_modem_set_deveui( uint8_t stack_id, const uint8_t 
     return return_code;
 }
 
+#if defined( USE_LR11XX_CE ) && ( ADD_FUOTA == 2 )
+smtc_modem_return_code_t smtc_modem_get_data_block_int_key( uint8_t stack_id,
+                                                            uint8_t data_block_int_key[SMTC_MODEM_KEY_LENGTH] )
+{
+    RETURN_BUSY_IF_TEST_MODE( );
+    RETURN_INVALID_IF_NULL( data_block_int_key );
+
+    smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
+
+    memcpy( data_block_int_key, modem_data_block_int_key, SMTC_MODEM_KEY_LENGTH );
+
+    return return_code;
+}
+
+smtc_modem_return_code_t smtc_modem_derive_and_set_data_block_int_key( uint8_t       stack_id,
+                                                                       const uint8_t gen_appkey[SMTC_MODEM_KEY_LENGTH] )
+{
+    RETURN_BUSY_IF_TEST_MODE( );
+    RETURN_INVALID_IF_NULL( gen_appkey );
+
+    smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
+
+    memset( modem_data_block_int_key, 0, SMTC_MODEM_KEY_LENGTH );
+
+    uint8_t b0[16] = { 0 };
+    // Derive key
+    b0[0]               = 0x30;
+    aes_context aes_ctx = { 0 };
+    smtc_aes_set_key( gen_appkey, 16, &aes_ctx );
+    smtc_aes_encrypt( b0, modem_data_block_int_key, &aes_ctx );
+
+    return return_code;
+}
+#endif  // USE_LR11XX_CE
+
 smtc_modem_return_code_t smtc_modem_set_appkey( uint8_t stack_id, const uint8_t appkey[SMTC_MODEM_KEY_LENGTH] )
 {
     RETURN_BUSY_IF_TEST_MODE( );
@@ -387,7 +436,7 @@ smtc_modem_return_code_t smtc_modem_set_appkey( uint8_t stack_id, const uint8_t 
 
 // To prevent too much flash access first check crc on key in case of Hardware Secure element
 #if defined( USE_LR11XX_CE )
-    uint32_t new_crc = crc( appkey, 16 );
+    uint32_t new_crc = crc( appkey, SMTC_MODEM_KEY_LENGTH );
 
     if( ( modem_gen_appkey_status == MODEM_KEY_CRC_STATUS_INVALID ) || ( modem_gen_appkey_crc != new_crc ) )
     {
@@ -401,6 +450,13 @@ smtc_modem_return_code_t smtc_modem_set_appkey( uint8_t stack_id, const uint8_t 
 #if defined( USE_LR11XX_CE )
         else
         {
+#if defined( ADD_FUOTA ) && ( ADD_FUOTA == 2 )
+            if( smtc_modem_derive_and_set_data_block_int_key( stack_id, appkey ) != SMTC_MODEM_RC_OK )
+            {
+                return_code = SMTC_MODEM_RC_FAIL;
+            }
+#endif
+
             // Store appkey crc and status
             modem_store_key_context( );
         }
@@ -427,7 +483,7 @@ smtc_modem_return_code_t smtc_modem_set_nwkkey( uint8_t stack_id, const uint8_t 
 
 // To prevent too much flash access first check crc on key in case of Hardware Secure element
 #if defined( USE_LR11XX_CE )
-    uint32_t new_crc = crc( nwkkey, 16 );
+    uint32_t new_crc = crc( nwkkey, SMTC_MODEM_KEY_LENGTH );
 
     if( ( modem_appkey_status == MODEM_KEY_CRC_STATUS_INVALID ) || ( modem_appkey_crc != new_crc ) )
     {
@@ -590,7 +646,8 @@ smtc_modem_return_code_t smtc_modem_adr_set_profile(
         // update profile in lorawan stack
         status = lorawan_api_dr_strategy_set( MOBILE_LOWPER_DR_DISTRIBUTION, stack_id );
         break;
-    case SMTC_MODEM_ADR_PROFILE_CUSTOM: {
+    case SMTC_MODEM_ADR_PROFILE_CUSTOM:
+    {
         uint16_t mask_dr_allowed = lorawan_api_mask_tx_dr_channel_up_dwell_time_check( stack_id );
         uint8_t  adr_distribution_tab[SMTC_MODEM_CUSTOM_ADR_DATA_LENGTH] = { 0 };
 
@@ -607,7 +664,8 @@ smtc_modem_return_code_t smtc_modem_adr_set_profile(
         status = lorawan_api_dr_strategy_set( USER_DR_DISTRIBUTION, stack_id );
         break;
     }
-    default: {
+    default:
+    {
         SMTC_MODEM_HAL_TRACE_ERROR( "Unknown adr profile %d\n ", adr_profile );
         return SMTC_MODEM_RC_INVALID;
     }
@@ -720,7 +778,6 @@ smtc_modem_return_code_t smtc_modem_request_uplink( uint8_t stack_id, uint8_t f_
 
 smtc_modem_return_code_t smtc_modem_get_event( smtc_modem_event_t* event, uint8_t* event_pending_count )
 {
-    RETURN_BUSY_IF_TEST_MODE( );
     RETURN_INVALID_IF_NULL( event );
     RETURN_INVALID_IF_NULL( event_pending_count );
 
@@ -804,7 +861,7 @@ smtc_modem_return_code_t smtc_modem_get_event( smtc_modem_event_t* event, uint8_
             break;
 #endif  // ADD_SMTC_LFU
 
-#ifdef RELAY_TX
+#if defined( ADD_RELAY_TX )
         case SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC:
         case SMTC_MODEM_EVENT_RELAY_TX_MODE:
         case SMTC_MODEM_EVENT_RELAY_TX_SYNC:
@@ -812,6 +869,18 @@ smtc_modem_return_code_t smtc_modem_get_event( smtc_modem_event_t* event, uint8_
             break;
 #endif
 
+#if defined( ADD_RELAY_RX )
+        case SMTC_MODEM_EVENT_RELAY_RX_RUNNING:
+            event->event_data.relay_rx.status = get_modem_event_status( event->event_type );
+            break;
+#endif
+
+        case SMTC_MODEM_EVENT_TEST_MODE:
+            event->event_data.test_mode_status.status = get_modem_event_status( event->event_type );
+            break;
+        case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
+            event->event_data.regional_duty_cycle.status = get_modem_event_status( event->event_type );
+            break;
         case SMTC_MODEM_EVENT_DOWNDATA:
         case SMTC_MODEM_EVENT_ALARM:
         case SMTC_MODEM_EVENT_JOINED:
@@ -1005,7 +1074,7 @@ smtc_modem_return_code_t smtc_modem_leave_network( uint8_t stack_id )
     smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
     RETURN_BUSY_IF_TEST_MODE( );
     smtc_modem_set_class( stack_id, SMTC_MODEM_CLASS_A );
-    tx_protocol_manager_abort ();
+    tx_protocol_manager_abort( );
     modem_supervisor_abort_tasks_in_range( stack_id * NUMBER_OF_TASKS, ( ( stack_id + 1 ) * NUMBER_OF_TASKS ) - 1 );
     lorawan_api_join_status_clear( stack_id );
 
@@ -1357,11 +1426,11 @@ smtc_modem_return_code_t smtc_modem_csma_get_state( uint8_t stack_id, bool* enab
     return SMTC_MODEM_RC_OK;
 }
 
-smtc_modem_return_code_t smtc_modem_csma_set_parameters( uint8_t stack_id, uint8_t nb_bo_max, bool bo_enabled,
-                                                         uint8_t max_ch_change )
+smtc_modem_return_code_t smtc_modem_csma_set_parameters( uint8_t stack_id, uint8_t max_ch_change, bool bo_enabled,
+                                                         uint8_t nb_bo_max )
 {
     RETURN_BUSY_IF_TEST_MODE( );
-    if( smtc_lora_cad_bt_set_parameters( smtc_cad_get_obj( stack_id ), nb_bo_max, bo_enabled, max_ch_change ) !=
+    if( smtc_lora_cad_bt_set_parameters( smtc_cad_get_obj( stack_id ), max_ch_change, bo_enabled, nb_bo_max ) !=
         SMTC_LORA_CAD_OK )
 
     {
@@ -1384,7 +1453,6 @@ smtc_modem_return_code_t smtc_modem_csma_get_parameters( uint8_t stack_id, uint8
 
 smtc_modem_return_code_t smtc_modem_get_charge( uint32_t* charge_mah )
 {
-    RETURN_BUSY_IF_TEST_MODE( );
     RETURN_INVALID_IF_NULL( charge_mah );
 
     *charge_mah = rp_stats_get_charge_mah( &modem_radio_planner.stats );
@@ -1392,9 +1460,8 @@ smtc_modem_return_code_t smtc_modem_get_charge( uint32_t* charge_mah )
     return SMTC_MODEM_RC_OK;
 }
 
-smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array, uint8_t* stats_array_length )
+smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array, uint16_t* stats_array_length )
 {
-    RETURN_BUSY_IF_TEST_MODE( );
     RETURN_INVALID_IF_NULL( stats_array );
     RETURN_INVALID_IF_NULL( stats_array_length );
 
@@ -1442,7 +1509,7 @@ smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array,
         stats_array[*stats_array_length + 30] = ( modem_radio_planner.stats.none_consumption_ma[i] >> 8 ) & 0xFF;
         stats_array[*stats_array_length + 31] = ( modem_radio_planner.stats.none_consumption_ma[i] & 0xFF );
 
-        *stats_array_length = 32 * i;
+        *stats_array_length += 32;
     }
 
     return SMTC_MODEM_RC_OK;
@@ -1450,8 +1517,6 @@ smtc_modem_return_code_t smtc_modem_get_rp_stats_to_array( uint8_t* stats_array,
 
 smtc_modem_return_code_t smtc_modem_reset_charge( void )
 {
-    RETURN_BUSY_IF_TEST_MODE( );
-
     rp_stats_init( &modem_radio_planner.stats );
     return SMTC_MODEM_RC_OK;
 }
@@ -1613,7 +1678,8 @@ smtc_modem_return_code_t smtc_modem_set_class( uint8_t stack_id, smtc_modem_clas
 
     switch( lorawan_class )
     {
-    case SMTC_MODEM_CLASS_A: {
+    case SMTC_MODEM_CLASS_A:
+    {
 #ifdef ADD_CLASS_B
         lorawan_class_b_management_enable( stack_id, false, 0 );
 #endif
@@ -1623,7 +1689,8 @@ smtc_modem_return_code_t smtc_modem_set_class( uint8_t stack_id, smtc_modem_clas
         break;
     }
 #ifdef ADD_CLASS_B
-    case SMTC_MODEM_CLASS_B: {
+    case SMTC_MODEM_CLASS_B:
+    {
 #ifdef ADD_CLASS_C
         lorawan_api_class_c_enabled( false, stack_id );
 #endif  // ADD_CLASS_C
@@ -1632,7 +1699,8 @@ smtc_modem_return_code_t smtc_modem_set_class( uint8_t stack_id, smtc_modem_clas
     }
 #endif  // ADD_CLASS_B
 #ifdef ADD_CLASS_C
-    case SMTC_MODEM_CLASS_C: {
+    case SMTC_MODEM_CLASS_C:
+    {
 #ifdef ADD_CLASS_B
         lorawan_class_b_management_enable( stack_id, false, 0 );
 #endif  // ADD_CLASS_B
@@ -1704,9 +1772,9 @@ smtc_modem_return_code_t smtc_modem_multicast_set_grp_config( uint8_t stack_id, 
         modem_rc = SMTC_MODEM_RC_INVALID;
         break;
     case LORAWAN_MC_RC_ERROR_BUSY:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_CRYPTO:
-        // intentional fallthrought
+        // intentional fallthrough
     default:
         modem_rc = SMTC_MODEM_RC_FAIL;
         break;
@@ -1760,16 +1828,16 @@ smtc_modem_return_code_t smtc_modem_multicast_class_c_start_session( uint8_t sta
         modem_rc = SMTC_MODEM_RC_OK;
         break;
     case LORAWAN_MC_RC_ERROR_PARAM:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_INCOMPATIBLE_SESSION:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_BAD_ID:
         modem_rc = SMTC_MODEM_RC_INVALID;
         break;
     case LORAWAN_MC_RC_ERROR_BUSY:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_CLASS_NOT_ENABLED:
-        // intentional fallthrought
+        // intentional fallthrough
     default:
         modem_rc = SMTC_MODEM_RC_FAIL;
         break;
@@ -1879,16 +1947,16 @@ smtc_modem_return_code_t smtc_modem_multicast_class_b_start_session(
         modem_rc = SMTC_MODEM_RC_OK;
         break;
     case LORAWAN_MC_RC_ERROR_PARAM:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_INCOMPATIBLE_SESSION:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_BAD_ID:
         modem_rc = SMTC_MODEM_RC_INVALID;
         break;
     case LORAWAN_MC_RC_ERROR_BUSY:
-        // intentional fallthrought
+        // intentional fallthrough
     case LORAWAN_MC_RC_ERROR_CLASS_NOT_ENABLED:
-        // intentional fallthrought
+        // intentional fallthrough
     default:
         modem_rc = SMTC_MODEM_RC_FAIL;
         break;
@@ -2676,7 +2744,6 @@ static smtc_modem_return_code_t smtc_modem_send_tx( uint8_t stack_id, uint8_t f_
                                                     const uint8_t* payload, uint8_t payload_length, bool emergency )
 {
     smtc_modem_return_code_t return_code = SMTC_MODEM_RC_OK;
-    SMTC_MODEM_HAL_TRACE_INFO( "add task user \n" );
     smtc_modem_status_mask_t status_mask = modem_get_status( stack_id );
     if( ( ( status_mask & SMTC_MODEM_STATUS_JOINED ) != SMTC_MODEM_STATUS_JOINED ) ||
         ( ( status_mask & SMTC_MODEM_STATUS_MUTE ) == SMTC_MODEM_STATUS_MUTE ) ||
@@ -2702,6 +2769,7 @@ static smtc_modem_return_code_t smtc_modem_send_tx( uint8_t stack_id, uint8_t f_
     }
     else
     {
+        SMTC_MODEM_HAL_TRACE_INFO( "add send task\n" );
         lorawan_send_add_task( stack_id, f_port, true, confirmed, payload, payload_length, emergency, 0 );
     }
 
@@ -2754,7 +2822,8 @@ static void modem_store_key_context( void )
         ctx.appkey_crc_status     = modem_appkey_status;
         ctx.gen_appkey_crc        = modem_gen_appkey_crc;
         ctx.gen_appkey_crc_status = modem_gen_appkey_status;
-        ctx.crc                   = crc( ( uint8_t* ) &ctx, sizeof( ctx ) - sizeof( ctx.crc ) );
+        memcpy( ctx.data_block_int_key, modem_data_block_int_key, SMTC_MODEM_KEY_LENGTH );
+        ctx.crc = crc( ( uint8_t* ) &ctx, sizeof( ctx ) - sizeof( ctx.crc ) );
 
         smtc_modem_hal_context_store( CONTEXT_KEY_MODEM, 0, ( uint8_t* ) &ctx, sizeof( ctx ) );
         // dummy context reading to ensure context store is done before exiting the function
@@ -2773,10 +2842,11 @@ static void modem_load_appkey_context( void )
         modem_appkey_crc        = ctx.appkey_crc;
         modem_gen_appkey_status = ctx.gen_appkey_crc_status;
         modem_gen_appkey_crc    = ctx.gen_appkey_crc;
+        memcpy( modem_data_block_int_key, ctx.data_block_int_key, SMTC_MODEM_KEY_LENGTH );
     }
     else
     {
-        // crc of the context is not good anymore => restore key stasus to default
+        // crc of the context is not good anymore => restore key status to default
         ctx.appkey_crc            = 0;
         ctx.appkey_crc_status     = MODEM_KEY_CRC_STATUS_INVALID;
         ctx.gen_appkey_crc        = 0;
@@ -2790,7 +2860,7 @@ static void modem_load_appkey_context( void )
 }
 #endif
 
-#ifdef RELAY_TX
+#if defined( ADD_RELAY_TX )
 smtc_modem_return_code_t smtc_modem_relay_tx_get_activation_mode( uint8_t                                stack_id,
                                                                   smtc_modem_relay_tx_activation_mode_t* mode )
 {
@@ -2827,6 +2897,13 @@ smtc_modem_return_code_t smtc_modem_relay_tx_enable( uint8_t                    
     UNUSED( stack_id );
     RETURN_BUSY_IF_TEST_MODE( );
     RETURN_INVALID_IF_NULL( relay_config );
+
+#if defined( ADD_RELAY_RX )
+    if( relay_rx_get_flag_started( ) == true )
+    {
+        return SMTC_MODEM_RC_FAIL;
+    }
+#endif  // ADD_RELAY_RX
 
     if( smtc_relay_tx_update_config( stack_id, ( relay_tx_config_t* ) relay_config ) != true )
     {

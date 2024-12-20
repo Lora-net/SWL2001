@@ -1,5 +1,5 @@
 /**
- * @file      lorawan_template.h
+ * @file      service_template.h
  *
  * @brief     LoRaWAN template
  * The Clear BSD License

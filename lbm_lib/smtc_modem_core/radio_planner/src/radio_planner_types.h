@@ -61,7 +61,7 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 
 /*
  * Maximum number of objects that can be attached to the scheduler
@@ -104,14 +104,16 @@ extern "C" {
 /*!
  *
  */
+#ifndef RP_MCU_FAIRNESS_DELAY_MS
 #define RP_MCU_FAIRNESS_DELAY_MS                    10
+#endif
 
 /*!
  *
  */
 #define RP_DISABLE_FAILSAFE_KEY                     0xF00D4BEE
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------
@@ -141,7 +143,7 @@ typedef struct rp_radio_params_s
             ralf_params_lora_t     lora;
             ralf_params_lora_cad_t lora_cad;
         };
-        uint32_t timeout_in_ms;
+        uint32_t              timeout_in_ms;
         ral_lora_cad_params_t cad;
         union
         {
@@ -221,9 +223,9 @@ typedef enum rp_next_state_status_e
  */
 typedef struct rp_task_s
 {
-    uint8_t          hook_id;
-    rp_task_types_t  type;
-    void             ( *launch_task_callbacks )( void* );
+    uint8_t         hook_id;
+    rp_task_types_t type;
+    void ( *launch_task_callbacks )( void* );
     uint8_t          priority;
     bool             schedule_task_low_priority;
     rp_task_states_t state;

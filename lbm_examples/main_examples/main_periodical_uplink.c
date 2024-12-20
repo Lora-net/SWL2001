@@ -41,6 +41,7 @@
 
 #include "main.h"
 
+#include "smtc_modem_test_api.h"
 #include "smtc_modem_api.h"
 #include "smtc_modem_utilities.h"
 
@@ -333,7 +334,8 @@ static void modem_event_callback( void )
             relay_config.second_ch_enable = false;
 
             // The RelayModeActivation field indicates how the end-device SHOULD manage the relay mode.
-            relay_config.activation = SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DYNAMIC;
+            relay_config.activation =
+                SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ENABLE;  // SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DYNAMIC;
 
             // number_of_miss_wor_ack_to_switch_in_nosync_mode  field indicates that the
             // relay mode SHALL be restart in no sync mode when it does not receive a WOR ACK frame after
@@ -350,9 +352,10 @@ static void modem_event_callback( void )
             // BackOff Description
             // 0 Always send a LoRaWAN uplink
             // 1..63 Send a LoRaWAN uplink after X WOR frames without a WOR ACK
-            relay_config.backoff = 4;
+            relay_config.backoff = 0;  // 4;
             ASSERT_SMTC_MODEM_RC( smtc_modem_relay_tx_enable( stack_id, &relay_config ) );
 #endif
+          
             ASSERT_SMTC_MODEM_RC( smtc_modem_join_network( stack_id ) );
             break;
 
@@ -474,6 +477,49 @@ static void modem_event_callback( void )
         case SMTC_MODEM_EVENT_RELAY_TX_SYNC:  //!< Relay TX synchronisation has changed
             SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_SYNC\n" );
             break;
+        case SMTC_MODEM_EVENT_RELAY_RX_RUNNING:
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_RX_RUNNING\n" );
+#if defined( ADD_CSMA )
+            bool csma_state = false;
+            ASSERT_SMTC_MODEM_RC( smtc_modem_csma_get_state( STACK_ID, &csma_state ) );
+            if( ( current_event.event_data.relay_rx.status == true ) && ( csma_state == true ) )
+            {
+                // Disable CSMA when Relay Rx Is enabled by network
+                ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, false ) );
+            }
+#if defined( ENABLE_CSMA_BY_DEFAULT )
+            if( current_event.event_data.relay_rx.status == false )
+            {
+                ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, true ) );
+            }
+#endif  // ENABLE_CSMA_BY_DEFAULT
+#endif  // ADD_CSMA
+
+            break;
+        case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
+            SMTC_HAL_TRACE_INFO( "Event received: DUTY_CYCLE\n" );
+            break;
+        case SMTC_MODEM_EVENT_TEST_MODE:
+        {
+            uint8_t status_test_mode = current_event.event_data.test_mode_status.status;
+#if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
+            char* status_name[] = { "SMTC_MODEM_EVENT_TEST_MODE_ENDED", "SMTC_MODEM_EVENT_TEST_MODE_TX_COMPLETED",
+                                    "SMTC_MODEM_EVENT_TEST_MODE_TX_DONE", "SMTC_MODEM_EVENT_TEST_MODE_RX_DONE" };
+            SMTC_HAL_TRACE_INFO( "Event received: TEST_MODE :  %s\n", status_name[status_test_mode] );
+#endif
+            if( status_test_mode == SMTC_MODEM_EVENT_TEST_MODE_RX_DONE )
+            {
+                int16_t rssi;
+                int16_t snr;
+                uint8_t rx_payload_length;
+                smtc_modem_test_get_last_rx_packets( &rssi, &snr, rx_payload, &rx_payload_length );
+                SMTC_HAL_TRACE_ARRAY( "rx_payload", rx_payload, rx_payload_length );
+                SMTC_HAL_TRACE_PRINTF( "rssi: %d, snr: %d\n", rssi, snr );
+            }
+
+            break;
+        }
+
         default:
             SMTC_HAL_TRACE_ERROR( "Unknown event %u\n", current_event.event_type );
             break;

@@ -628,6 +628,18 @@ typedef struct lr11xx_radio_rssi_calibration_table_s
     int16_t gain_offset;  //!< Used to set gain offset value for RSSI calibration
 } lr11xx_radio_rssi_calibration_table_t;
 
+/*!
+ * @brief Values to use to setup LNA LF0 configuration
+ *
+ * LNA can be configured in either of the 3 modes: Single N, Single P or differential (which is default)
+ *
+ */
+typedef enum
+{
+    LR11XX_RADIO_LNA_MODE_SINGLE_RFI_N_LF0 = 1,  //!< Use only RFI_N_LF0 antenna
+    LR11XX_RADIO_LNA_MODE_SINGLE_RFI_P_LF0 = 2,  //!< Use only RFI_P_LF0 antenna
+    LR11XX_RADIO_LNA_MODE_DIFFERENTIAL_LF0 = 3   //!< Configure LNA LF0 in differential mode (default)
+} lr11xx_radio_lna_mode_t;
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------

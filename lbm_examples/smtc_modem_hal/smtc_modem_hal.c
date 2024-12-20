@@ -166,7 +166,7 @@ void smtc_modem_hal_set_offset_to_test_wrapping( const uint32_t offset_to_test_w
 void smtc_modem_hal_start_timer( const uint32_t milliseconds, void ( *callback )( void* context ), void* context )
 {
     hal_lp_timer_start( HAL_LP_TIMER_ID_1, milliseconds,
-                        &( hal_lp_timer_irq_t ){ .context = context, .callback = callback } );
+                        &( hal_lp_timer_irq_t ) { .context = context, .callback = callback } );
 }
 
 void smtc_modem_hal_stop_timer( void )
@@ -180,7 +180,7 @@ void smtc_modem_hal_disable_modem_irq( void )
 {
     hal_gpio_irq_disable( );
     hal_lp_timer_irq_disable( HAL_LP_TIMER_ID_1 );
-#if( SX127X )
+#if ( SX127X )
     hal_lp_timer_irq_disable( HAL_LP_TIMER_ID_2 );
 #endif
 }
@@ -189,7 +189,7 @@ void smtc_modem_hal_enable_modem_irq( void )
 {
     hal_gpio_irq_enable( );
     hal_lp_timer_irq_enable( HAL_LP_TIMER_ID_1 );
-#if( SX127X )
+#if ( SX127X )
     hal_lp_timer_irq_enable( HAL_LP_TIMER_ID_2 );
 #endif
 }
@@ -351,9 +351,11 @@ void smtc_modem_hal_crashlog_set_status( bool available )
     crashlog_available_noinit = available;
 }
 
-bool smtc_modem_hal_crashlog_get_status( void )
+static volatile bool temp = 0x1;  // solve new behaviour introduce with gcc11 compilo
+bool                 smtc_modem_hal_crashlog_get_status( void )
 {
-    return crashlog_available_noinit;
+    bool temp2 = crashlog_available_noinit & temp;
+    return temp2;
 }
 
 /* ------------ assert management ------------*/
@@ -395,17 +397,6 @@ void smtc_modem_hal_irq_config_radio_irq( void ( *callback )( void* context ), v
     radio_dio_irq.context  = context;
 
     hal_gpio_irq_attach( &radio_dio_irq );
-#endif
-}
-
-void smtc_modem_hal_radio_irq_clear_pending( void )
-{
-#if defined( SX127X )
-    hal_gpio_clear_pending_irq( RADIO_DIO_0 );
-    hal_gpio_clear_pending_irq( RADIO_DIO_1 );
-    hal_gpio_clear_pending_irq( RADIO_DIO_2 );
-#else
-    hal_gpio_clear_pending_irq( RADIO_DIOX );
 #endif
 }
 

@@ -58,7 +58,7 @@ extern "C" {
 /********************************************************************************/
 /*                         Application     dependant                            */
 /********************************************************************************/
-// clang-format off
+/* clang-format off */
 
 //Debug uart specific pinout for debug print
 #define DEBUG_UART_TX           PA_2
@@ -110,7 +110,7 @@ extern "C" {
 #define HW_MODEM_BUSY_PIN       PC_8
 #define HW_MODEM_TX_LINE        PC_10
 #define HW_MODEM_RX_LINE        PC_11
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

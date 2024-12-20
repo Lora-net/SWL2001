@@ -49,10 +49,16 @@
 #include "modem_core.h"
 #include "lora_basics_modem_version.h"
 #include "lorawan_certification.h"
+#include "modem_tx_protocol_manager.h"
+
 #ifdef ADD_FUOTA
 #include "lorawan_fragmentation_package.h"
 #endif
-#include "modem_tx_protocol_manager.h"
+
+#if defined( ADD_RELAY_TX )
+#include "smtc_modem_relay_api.h"
+#endif
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -305,7 +311,7 @@ static void lorawan_certification_service_on_launch( void* service_id )
 
     IS_VALID_OBJECT_ID( idx );
 
-    timestamp_launch_ms[idx] = smtc_modem_hal_get_time_in_ms( ) + 10;
+    timestamp_launch_ms[idx] = smtc_modem_hal_get_time_in_ms( );
 
     if( lorawan_certification_obj[idx].cw_running == true )
     {
@@ -321,24 +327,27 @@ static void lorawan_certification_service_on_launch( void* service_id )
     status_lorawan_t status_lorawan = ERRORLORAWAN;
     switch( lorawan_certification_obj[idx].is_tx_requested )
     {
-    case LORAWAN_CERTIFICATION_TX_CERTIF_REQ: {
+    case LORAWAN_CERTIFICATION_TX_CERTIF_REQ:
+    {
         status_lorawan = tx_protocol_manager_request(
-            TX_PROTOCOL_TRANSMIT_LORA, LORAWAN_CERTIFICATION_FPORT,
+            TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION, LORAWAN_CERTIFICATION_FPORT,
             ( lorawan_certification_obj[idx].tx_buffer_length == 0 ) ? false : true,
             lorawan_certification_obj[idx].tx_buffer, lorawan_certification_obj[idx].tx_buffer_length,
             ( lorawan_certification_obj[idx].frame_type == false ) ? UNCONF_DATA_UP : CONF_DATA_UP,
             timestamp_launch_ms[idx], lorawan_certification_obj[idx].stack_id );
         break;
     }
-    case LORAWAN_CERTIFICATION_TX_MAC_REQ: {
+    case LORAWAN_CERTIFICATION_TX_MAC_REQ:
+    {
         status_lorawan = tx_protocol_manager_request(
             TX_PROTOCOL_TRANSMIT_CID, 0, false, lorawan_certification_obj[idx].cid_req_list,
-            lorawan_certification_obj[idx].cid_req_list_size, 0, smtc_modem_hal_get_time_in_ms( ),
+            lorawan_certification_obj[idx].cid_req_list_size, 0, timestamp_launch_ms[idx],
             lorawan_certification_obj[idx].stack_id );
         lorawan_certification_obj[idx].cid_req_list_size = 0;
         break;
     }
-    case LORAWAN_CERTIFICATION_JOIN_REQ: {
+    case LORAWAN_CERTIFICATION_JOIN_REQ:
+    {
         if( lorawan_api_isjoined( lorawan_certification_obj[idx].stack_id ) != JOINED )
         {
             lorawan_join_add_task( lorawan_certification_obj[idx].stack_id );
@@ -346,10 +355,11 @@ static void lorawan_certification_service_on_launch( void* service_id )
         break;
     }
     case LORAWAN_CERTIFICATION_NO_TX_REQ:
-    default: {
+    default:
+    {
         uint8_t buffer_tx_tmp[] = { 0x11, 0x12, 0x13, 0x14 };
         status_lorawan          = tx_protocol_manager_request(
-            TX_PROTOCOL_TRANSMIT_LORA, 1, true, buffer_tx_tmp, sizeof( buffer_tx_tmp ),
+            TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION, 1, true, buffer_tx_tmp, sizeof( buffer_tx_tmp ),
             ( lorawan_certification_obj[idx].frame_type == false ) ? UNCONF_DATA_UP : CONF_DATA_UP,
             timestamp_launch_ms[idx], lorawan_certification_obj[idx].stack_id );
         break;
@@ -384,25 +394,27 @@ static void lorawan_certification_service_on_update( void* service_id )
     {
         if( lorawan_certification_obj[idx].cw_running == true )
         {
-            timestamp_launch_ms[idx] =
-                smtc_modem_hal_get_time_in_ms( ) + ( lorawan_certification_obj[idx].cw_timeout_s * 1000 );
+            task_certif.time_to_execute_s = ( timestamp_launch_ms[idx] + smtc_modem_hal_get_time_in_ms( ) +
+                                              ( lorawan_certification_obj[idx].cw_timeout_s * 1000UL ) ) /
+                                            1000;
         }
         else
         {
-            timestamp_launch_ms[idx] += ( lorawan_certification_obj[idx].ul_periodicity_s * 1000 );
+            task_certif.time_to_execute_s =
+                ( timestamp_launch_ms[idx] + ( lorawan_certification_obj[idx].ul_periodicity_s * 1000UL ) ) / 1000UL;
         }
 
-        task_certif.time_to_execute_s = timestamp_launch_ms[idx] / 1000;
         modem_supervisor_add_task( &task_certif );
     }
 }
+
 static uint8_t lorawan_certification_service_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
     uint8_t stack_id = rx_down_data->stack_id;
 
     if( stack_id >= NUMBER_OF_CERTIF_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -438,6 +450,7 @@ static uint8_t lorawan_certification_service_downlink_handler( lr1_stack_mac_dow
 #if defined( ADD_SMTC_ALC_SYNC )
         lorawan_alcsync_set_enabled( stack_id, true );
 #endif
+        return MODEM_DOWNLINK_UNCONSUMED;
     }
 
     if( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXBEACON )
@@ -482,6 +495,14 @@ static uint8_t lorawan_certification_service_downlink_handler( lr1_stack_mac_dow
                 &lorawan_certification_obj[service_id], rx_down_data->rx_payload, rx_down_data->rx_payload_size,
                 lorawan_certification_obj[service_id].tx_buffer,
                 &lorawan_certification_obj[service_id].tx_buffer_length );
+
+            task_id_t current_task_id = modem_supervisor_get_task( )->next_task_id;
+            if( current_task_id != lorawan_certification_obj[service_id].task_id )
+            {
+                // To recompute time for the next certif uplink in case received downlink when another service is
+                // running
+                lorawan_certification_service_on_update( &service_id );
+            }
         }
     }
     return MODEM_DOWNLINK_CONSUMED;
@@ -531,6 +552,7 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
     switch( cid )
     {
     case LORAWAN_CERTIFICATION_PACKAGE_VERSION_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_PACKAGE_VERSION_REQ_SIZE )
         {
             tx_buffer[( *tx_buffer_length )++] = LORAWAN_CERTIFICATION_PACKAGE_VERSION_ANS;
@@ -544,9 +566,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
         break;
-
-    case LORAWAN_CERTIFICATION_DUT_REST_REQ:
-        if( rx_buffer_length == LORAWAN_CERTIFICATION_DUT_REST_REQ_SIZE )
+    }
+    case LORAWAN_CERTIFICATION_DUT_RESET_REQ:
+    {
+        if( rx_buffer_length == LORAWAN_CERTIFICATION_DUT_RESET_REQ_SIZE )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( "Certif mcu reset\n" );
             smtc_modem_hal_reset_mcu( );
@@ -555,9 +578,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_DUT_JOIN_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_DUT_JOIN_REQ_SIZE )
         {
             // leave network
@@ -569,9 +593,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_SWITCH_CLASS_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_SWITCH_CLASS_REQ_SIZE )
         {
             if( rx_buffer[1] <= ( uint8_t ) LORAWAN_CERTIFICATION_CLASS_C )
@@ -587,9 +612,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_ADR_BIT_CHANGE_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_ADR_BIT_CHANGE_REQ_SIZE )
         {
             if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_ADR_OFF )
@@ -608,9 +634,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_REGIONAL_DUTY_CYCLE_CTRL_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_REGIONAL_DUTY_CYCLE_CTRL_REQ_SIZE )
         {
             if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_DUTY_CYCLE_OFF )
@@ -626,9 +653,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_TX_PERIODICITY_CHANGE_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_TX_PERIODICITY_CHANGE_REQ_SIZE )
         {
             lorawan_certification->ul_periodicity_s = lorawan_certification_periodicity_table_s[rx_buffer[1]];
@@ -637,9 +665,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_TX_FRAME_CTRL_REQ:
+    {
         if( rx_buffer_length <= LORAWAN_CERTIFICATION_TX_FRAME_CTRL_REQ_SIZE )
         {
             if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_FRAME_TYPE_UNCONFIRMED )
@@ -657,7 +686,9 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         }
 
         break;
+    }
     case LORAWAN_CERTIFICATION_ECHO_PLAY_REQ:
+    {
         if( rx_buffer_length <= LORAWAN_CERTIFICATION_ECHO_PLAY_REQ_SIZE )
         {
             uint8_t max_len =
@@ -679,9 +710,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_RX_APP_CNT_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_RX_APP_CNT_REQ_SIZE )
         {
             tx_buffer[( *tx_buffer_length )++] = LORAWAN_CERTIFICATION_RX_APP_CNT_ANS;
@@ -694,9 +726,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_RX_APP_CNT_RESET_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_RX_APP_CNT_RESET_REQ_SIZE )
         {
             lorawan_certification->rx_app_cnt = 0;
@@ -705,10 +738,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_LINK_CHECK_REQ:
-
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_LINK_CHECK_REQ_SIZE )
         {
             if( lorawan_certification->cid_req_list_size < sizeof( lorawan_certification->cid_req_list ) )
@@ -721,9 +754,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_DEVICE_TIME_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_DEVICE_TIME_REQ_SIZE )
         {
             if( lorawan_certification->cid_req_list_size < sizeof( lorawan_certification->cid_req_list ) )
@@ -736,9 +770,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_PING_SLOT_INFO_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_PING_SLOT_INFO_REQ_SIZE )
         {
             lorawan_api_set_ping_slot_periodicity( rx_buffer[1], lorawan_certification->stack_id );
@@ -752,9 +787,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL_SIZE )
         {
             lorawan_certification->beacon_rx_status_ind_ctrl = rx_buffer[1];
@@ -764,7 +800,9 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
         break;
+    }
     case LORAWAN_CERTIFICATION_BEACON_CNT_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_CNT_REQ_SIZE )
         {
             tx_buffer[( *tx_buffer_length )++] = LORAWAN_CERTIFICATION_BEACON_CNT_ANS;
@@ -778,8 +816,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
         break;
+    }
     case LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ:
-#if( ADD_FUOTA == 2 )
+    {
+#if ( ADD_FUOTA == 2 )
         if( rx_buffer_length == LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ_SIZE )
         {
             uint8_t  frag_index  = rx_buffer[1] & 0x03;
@@ -804,7 +844,40 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         SMTC_MODEM_HAL_TRACE_ERROR( "Not implemented\n" );
 #endif
         break;
+    }
+
+    case LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_REQ:
+    {
+#if defined( ADD_RELAY_TX )
+        if( rx_buffer_length == LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_SIZE )
+        {
+            if( rx_buffer[1] == ( uint8_t ) LORAWAN_CERTIFICATION_RELAY_TX_OFF )
+            {
+                smtc_modem_relay_tx_disable( lorawan_certification_obj->stack_id );
+            }
+            else
+            {
+                smtc_modem_relay_tx_config_t user_relay_config = { 0 };
+                user_relay_config.second_ch_enable             = false;
+                user_relay_config.activation                   = SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLLED;
+                user_relay_config.number_of_miss_wor_ack_to_switch_in_nosync_mode = 1;
+                user_relay_config.smart_level                                     = 5;
+                user_relay_config.backoff                                         = 4;
+
+                smtc_modem_relay_tx_enable( lorawan_certification_obj->stack_id, &user_relay_config );
+            }
+        }
+        else
+        {
+            SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
+        }
+#else
+        SMTC_MODEM_HAL_TRACE_ERROR( "RELAY_TX not implemented\n" );
+#endif
+        break;
+    }
     case LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ_SIZE )
         {
             lorawan_certification->rx_beacon_cnt = 0;
@@ -814,7 +887,9 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
         break;
+    }
     case LORAWAN_CERTIFICATION_TX_CW_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_TX_CW_REQ_SIZE )
         {
             lorawan_certification->cw_running   = true;
@@ -834,9 +909,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_DUT_FPORT_224_DISABLE_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_DUT_FPORT_224_DISABLE_REQ_SIZE )
         {
             lorawan_certification->enabled = false;
@@ -847,9 +923,10 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         {
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
-
         break;
+    }
     case LORAWAN_CERTIFICATION_DUT_VERSION_REQ:
+    {
         if( rx_buffer_length == LORAWAN_CERTIFICATION_DUT_VERSION_REQ_SIZE )
         {
             // Ignore command if the payload length is greater than the max payload length allowed
@@ -889,7 +966,7 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
             SMTC_MODEM_HAL_TRACE_ERROR( "bad size\n" );
         }
         break;
-
+    }
     default:
         SMTC_MODEM_HAL_TRACE_ERROR( "%s Illegal state(%u)\n ", __func__, cid );
         SMTC_MODEM_HAL_TRACE_ARRAY( "rx_buffer", rx_buffer, rx_buffer_length );

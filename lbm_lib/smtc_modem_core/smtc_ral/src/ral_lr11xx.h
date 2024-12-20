@@ -213,6 +213,12 @@ ral_status_t ral_lr11xx_set_tx_cfg( const void* context, const int8_t output_pwr
 ral_status_t ral_lr11xx_set_pkt_payload( const void* context, const uint8_t* buffer, const uint16_t size );
 
 /**
+ * @see ral_set_gfsk_pkt_address
+ */
+ral_status_t ral_lr11xx_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                              const uint8_t braodcast_address );
+
+/**
  * @see ral_get_pkt_payload
  */
 ral_status_t ral_lr11xx_get_pkt_payload( const void* context, uint16_t max_size_in_bytes, uint8_t* buffer,
@@ -350,7 +356,7 @@ ral_status_t ral_lr11xx_set_flrc_sync_word( const void* context, const uint8_t* 
 /**
  * @see ral_set_gfsk_crc_params
  */
-ral_status_t ral_lr11xx_set_gfsk_crc_params( const void* context, const uint16_t seed, const uint16_t polynomial );
+ral_status_t ral_lr11xx_set_gfsk_crc_params( const void* context, const uint32_t seed, const uint32_t polynomial );
 
 /**
  * @see ral_set_flrc_crc_params
@@ -401,9 +407,8 @@ ral_status_t ral_lr11xx_lr_fhss_get_bit_delay_in_us( const void* context, const 
 /**
  * @see ral_lr_fhss_get_hop_sequence_count
  */
-ral_status_t ral_lr11xx_lr_fhss_get_hop_sequence_count( const void*                 context,
-                                                        const ral_lr_fhss_params_t* lr_fhss_params,
-                                                        unsigned int*               hop_sequence_count );
+ral_status_t ral_lr11xx_lr_fhss_get_hop_sequence_count( const void* context, const ral_lr_fhss_params_t* lr_fhss_params,
+                                                        unsigned int* hop_sequence_count );
 
 /**
  * @see ral_get_lora_rx_pkt_cr_crc

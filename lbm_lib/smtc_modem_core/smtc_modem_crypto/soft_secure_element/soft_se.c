@@ -63,7 +63,7 @@
 /*!
  * Number of keys supported in soft secure element
  */
-#define SOFT_SE_NUMBER_OF_KEYS 26
+#define SOFT_SE_NUMBER_OF_KEYS 27
 
 /*!
  * JoinAccept frame maximum size
@@ -269,7 +269,7 @@
             /*!                                                                                                      \
              * Relay WOR Session key (Dynamically updated)                                                           \
              */                                                                                                      \
-            .key_id    = SMTC_RELAY_ROOT_WOR_S_KEY,                                                                  \
+            .key_id    = SMTC_SE_RELAY_ROOT_WOR_S_KEY,                                                               \
             .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
                            0x00 },                                                                                   \
         },                                                                                                           \
@@ -277,7 +277,7 @@
             /*!                                                                                                      \
              * Relay WOR Integrity session key (Dynamically updated)                                                 \
              */                                                                                                      \
-            .key_id    = SMTC_RELAY_WOR_S_INT_KEY,                                                                   \
+            .key_id    = SMTC_SE_RELAY_WOR_S_INT_KEY,                                                                \
             .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
                            0x00 },                                                                                   \
         },                                                                                                           \
@@ -285,7 +285,15 @@
             /*!                                                                                                      \
              * Relay WOR Encryption session key (Dynamically updated)                                                \
              */                                                                                                      \
-            .key_id    = SMTC_RELAY_WOR_S_ENC_KEY,                                                                   \
+            .key_id    = SMTC_SE_RELAY_WOR_S_ENC_KEY,                                                                \
+            .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+                           0x00 },                                                                                   \
+        },                                                                                                           \
+        {                                                                                                            \
+            /*!                                                                                                      \
+             * Fragmentation data block integrity key (Dynamically updated)                                          \
+             */                                                                                                      \
+            .key_id    = SMTC_SE_DATA_BLOCK_INT_KEY,                                                                 \
             .key_value = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
                            0x00 },                                                                                   \
         },                                                                                                           \
@@ -505,13 +513,13 @@ smtc_se_return_code_t smtc_secure_element_aes_encrypt( const uint8_t* buffer, ui
 
     if( rc == SMTC_SE_RC_SUCCESS )
     {
-        aes_set_key( key_item->key_value, 16, &aes_ctx );
+        smtc_aes_set_key( key_item->key_value, 16, &aes_ctx );
 
         uint8_t block = 0;
 
         while( size != 0 )
         {
-            aes_encrypt( &buffer[block], &enc_buffer[block], &aes_ctx );
+            smtc_aes_encrypt( &buffer[block], &enc_buffer[block], &aes_ctx );
             block = block + 16;
             size  = size - 16;
         }
@@ -553,6 +561,40 @@ smtc_se_return_code_t smtc_secure_element_derive_and_store_key( uint8_t* input, 
     {
         return rc;
     }
+
+    return SMTC_SE_RC_SUCCESS;
+}
+
+smtc_se_return_code_t smtc_secure_element_derive_relay_session_keys( uint32_t dev_addr, uint8_t stack_id )
+{
+    uint8_t block[16];
+    memset( block, 0, sizeof( block ) );
+    block[0] = 0x01;
+
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( smtc_secure_element_derive_and_store_key( block, SMTC_SE_NWK_S_ENC_KEY,
+                                                                               SMTC_SE_RELAY_ROOT_WOR_S_KEY,
+                                                                               stack_id ) == SMTC_SE_RC_SUCCESS );
+
+    memset( block, 0, sizeof( block ) );
+    block[0] = 0x01;
+    block[1] = ( uint8_t ) ( dev_addr );
+    block[2] = ( uint8_t ) ( dev_addr >> 8 );
+    block[3] = ( uint8_t ) ( dev_addr >> 16 );
+    block[4] = ( uint8_t ) ( dev_addr >> 24 );
+
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( smtc_secure_element_derive_and_store_key( block, SMTC_SE_RELAY_ROOT_WOR_S_KEY,
+                                                                               SMTC_SE_RELAY_WOR_S_INT_KEY,
+                                                                               stack_id ) == SMTC_SE_RC_SUCCESS );
+
+    memset( block, 0, sizeof( block ) );
+    block[0] = 0x02;
+    block[1] = ( uint8_t ) ( dev_addr );
+    block[2] = ( uint8_t ) ( dev_addr >> 8 );
+    block[3] = ( uint8_t ) ( dev_addr >> 16 );
+    block[4] = ( uint8_t ) ( dev_addr >> 24 );
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( smtc_secure_element_derive_and_store_key( block, SMTC_SE_RELAY_ROOT_WOR_S_KEY,
+                                                                               SMTC_SE_RELAY_WOR_S_ENC_KEY,
+                                                                               stack_id ) == SMTC_SE_RC_SUCCESS );
 
     return SMTC_SE_RC_SUCCESS;
 }

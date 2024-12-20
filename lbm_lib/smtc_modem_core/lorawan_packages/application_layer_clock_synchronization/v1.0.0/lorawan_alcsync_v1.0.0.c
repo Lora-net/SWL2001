@@ -103,7 +103,7 @@
         SMTC_MODEM_HAL_PANIC_ON_FAILURE( x < NUMBER_OF_STACKS ); \
     } while( 0 )
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
 static const char alc_sync_bad_size_str[] = "ALC Sync payload bad size";
 #endif
 /*
@@ -465,7 +465,7 @@ uint8_t lorawan_alcsync_service_downlink_handler( lr1_stack_mac_down_data_t* rx_
 
     if( stack_id >= NUMBER_OF_ALCSYNC_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -495,7 +495,7 @@ uint8_t lorawan_alcsync_service_downlink_handler( lr1_stack_mac_down_data_t* rx_
         }
         else
 #endif
-            if( rx_down_data->rx_metadata.rx_fport == ctx->fport )
+            if( ( ctx->use_cloud_dm == false ) && ( rx_down_data->rx_metadata.rx_fport == ctx->fport ) )
         {
             rx_payload_ptr      = &rx_down_data->rx_payload[0];
             rx_payload_ptr_size = rx_down_data->rx_payload_size;
@@ -540,7 +540,7 @@ bool lorawan_alcsync_mpa_injector( uint8_t stack_id, uint8_t* payload_in, uint8_
 
     if( stack_id >= NUMBER_OF_ALCSYNC_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return false;
     }
 

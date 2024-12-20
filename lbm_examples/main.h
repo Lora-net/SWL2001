@@ -69,7 +69,6 @@ extern "C" {
 #define HW_MODEM 1
 #define PORTING_TESTS 2
 #define LCTT_CERTIF 3
-#define RELAY_TX 4
 
 /*
  * -----------------------------------------------------------------------------

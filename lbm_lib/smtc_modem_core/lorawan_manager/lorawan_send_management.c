@@ -54,9 +54,8 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
-#define STACK_ID_CURRENT_TASK \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].stack_id
-#define CURRENT_TASK_ID ( ( stask_manager* ) context )->next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
+#define VIRTUAL_TASK_ID ( ( stask_manager* ) context )->next_task_id
+#define STACK_ID_CURRENT_TASK ( ( stask_manager* ) context )->modem_task[VIRTUAL_TASK_ID].stack_id
 
 /**
  * @brief Check is the index is valid before accessing the object
@@ -206,7 +205,7 @@ static void lorawan_send_management_service_on_launch( void* context )
 
     if( send_status == OKLORAWAN )
     {
-        task_manager->modem_task[CURRENT_TASK_ID].task_context = true;
+        task_manager->modem_task[VIRTUAL_TASK_ID].task_context = true;
         SMTC_MODEM_HAL_TRACE_PRINTF(
             " User LoRaWAN tx %s %d \n",
             ( lorawan_send_management_obj[STACK_ID_CURRENT_TASK].fport_present == true ) ? "on FPort" : "No FPort",
@@ -214,7 +213,7 @@ static void lorawan_send_management_service_on_launch( void* context )
     }
     else
     {
-        task_manager->modem_task[CURRENT_TASK_ID].task_context = false;
+        task_manager->modem_task[VIRTUAL_TASK_ID].task_context = false;
         SMTC_MODEM_HAL_TRACE_WARNING( "The payload can't be send! internal code: %x\n", send_status );
     }
 }
@@ -222,14 +221,14 @@ static void lorawan_send_management_service_on_launch( void* context )
 static void lorawan_send_management_service_on_update( void* context )
 {
     stask_manager* task_manager = ( stask_manager* ) context;
-    if( task_manager->modem_task[CURRENT_TASK_ID].priority == TASK_HIGH_PRIORITY )
+    if( task_manager->modem_task[VIRTUAL_TASK_ID].priority == TASK_HIGH_PRIORITY )
     {
         smtc_duty_cycle_enable_set( SMTC_DTC_ENABLED );
     }
 
-    if( task_manager->modem_task[CURRENT_TASK_ID].task_enabled == true )
+    if( task_manager->modem_task[VIRTUAL_TASK_ID].task_enabled == true )
     {
-        if( ( task_manager->modem_task[CURRENT_TASK_ID].task_context == true ) &&
+        if( ( task_manager->modem_task[VIRTUAL_TASK_ID].task_context == true ) &&
             ( tx_protocol_manager_tx_is_aborted( ) == false ) )
         {
             if( lorawan_send_management_obj[STACK_ID_CURRENT_TASK].rx_ack_bit_context == 1 )
@@ -251,7 +250,7 @@ static void lorawan_send_management_service_on_update( void* context )
 
 static uint8_t lorawan_send_management_service_downlink_handler( lr1_stack_mac_down_data_t* rx_down_data )
 {
-#ifdef RELAY_TX
+#if defined( ADD_RELAY_TX )
     if( ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX2 ) ||
         ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RX1 ) ||
         ( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXR ) )

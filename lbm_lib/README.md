@@ -84,6 +84,9 @@ Support for the following transceivers can be selected at build time:
 - sx1261 - SX1261 Transceiver.
 - sx1262 - SX1262 Transceiver.
 - sx1268 - SX1268 Transceiver.
+- sx1272 - SX1272 Transceiver.
+- sx1276 - SX1276 Transceiver.
+
 LoRa Basics™ Modem (LBM) should be built for a specific transceiver by using the basic_modem_<TARGET> parameter.
 
 ### MCU Flags
@@ -127,8 +130,10 @@ The user can choose which feature to embed in LoRa Basics Modem by updating [opt
 
 - LBM_CLASS_B: Enable compilation of class B feature
 - LBM_CLASS_C: Enable compilation of class C feature
-- LBM_MULTICAST: Enable compilation of LoRaWAN mutlicast feature
+- LBM_MULTICAST: Enable compilation of LoRaWAN multicast feature
 - LBM_CSMA: Enable compilation of CSMA feature
+- LBM_RELAY_TX_ENABLE : Enable compilation of Relay Tx feature
+- LBM_RELAY_RX_ENABLE : Enable compilation of Relay Rx feature
 
 **LoRaWAN packages related options**:
 
@@ -257,7 +262,7 @@ Retrieve information about the connection:
 ### Carrier Sense Multiple Access (CSMA) for LoRaWAN
 
 The modem supports a CSMA (Carrier Sense Multiple Access) feature designed to prevent collisions in LoRa packet transmissions.
-LoRa Alliance Technical Recommandations can be read at [TR0013](https://resources.lora-alliance.org/home/tr013-1-0-0-csma)
+LoRa Alliance Technical Recommendations can be read at [TR0013](https://resources.lora-alliance.org/home/tr013-1-0-0-csma)
 
 To enable CSMA during compilation, set the option `LBM_CSMA=yes` in the Makefile.
 By default, CSMA is activated at modem startup if the compilation option `USE_CSMA_BY_DEFAULT=yes` is configured.
@@ -411,7 +416,7 @@ The proposed implementation supports both Class B or Class C modes and supports 
 FUOTA is not enabled by default in LoRa Basics™ Modem.
 To activate it during project compilation, set the `LBM_FUOTA` flag to `yes` and set the `LBM_FUOTA_VERSION` flag to chosen version number 1 or 2 in [options.mk](makefiles/options.mk).
 
-Multi-Package Access is not automaticaly added to compilation even if `LBM_FUOTA` flag is set to `yes`. User shall set `LBM_FUOTA_ENABLE_MPA` to yes to use it.
+Multi-Package Access is not automatically added to compilation even if `LBM_FUOTA` flag is set to `yes`. User shall set `LBM_FUOTA_ENABLE_MPA` to yes to use it.
 
 Additionally, provide the following compilation fields:
 
@@ -519,7 +524,7 @@ The cloud service may send requests to the modem on the device management port. 
 - **Mute**: ask the modem to mute itself permanently or during a specified number of days (a `SMTC_MODEM_EVENT_MUTE` event is triggered)
 - **SetConf**: Update device management configuration (a `SMTC_MODEM_EVENT_DM_SET_CONF` event is triggered, provided the field that was updated according to `smtc_modem_event_setconf_opcode_t` )
 
-### Alamanac Update service (LoRaCloud)
+### Almanac Update service (LoRaCloud)
 
 Choose to update the Lora-Edge transceiver almanac using the cloud with the autonomous Almanac Update service.
 Initiate the service with `smtc_modem_almanac_start()` and  stop it anytime with `smtc_modem_almanac_stop()`.
@@ -552,29 +557,50 @@ In the provided example on the STM32L4 MCU (under the lbm_examples folder), LPTI
 
 ## Relay
 
-**LoRa Basic Modem** proposes an implementation of the [LoRaWAN® Relay Specification TS011-1.0.0](https://resources.lora-alliance.org/technical-specifications/ts011-1-0-0-relay)
+**LoRa Basic Modem** proposes an implementation of the [LoRaWAN® Relay Specification TS011-1.0.1](https://resources.lora-alliance.org/technical-specifications/ts011-1-0-1-relay)
 
-This implementation provides the code for the relayed end-device refered as Relay TX
+This implementation provides the code for the relayed end-device referred as Relay Tx
 
-### Relay TX
+### Relay Tx
 
-To build the relay TX feature you need to define "RELAY_TX_ENABLE=yes"
+To build the relay Tx feature you need to define "LBM_RELAY_TX_ENABLE=yes"
 
 This option will require an additional 500 bytes of RAM and 5.5 Kbytes of FLASH.
 
-### Known limitation for the Relay TX
+### Known limitation for the Relay Tx
 
-- This implementation is only compatible with embedded software cryptographic operations.
+- Relay specific cryptographic operations are not supported by Semtech’s hardware Crypto Engine (LR11xx platform), and therefore this implementation is only compatible with embedded software cryptographic operations.
+- SX128x and SX127x are not supported fir Relay Tx operation.
+- The Scan and Send feature (SEND_MODE_UPLINK used in SMTC_MODEM_WIFI_SEND_MODE) of the geolocation services can only be used when the Relay Tx device is joined.
+- In a Store and Forward context (device accruing scans when it is offline) with device being relayed, the first uplink may be missed if the Relay Rx is waiting for its network configuration from the LNS.
+- On this release, a single WOR channel is supported for US915 and AU915 regions.
+- If the Periodical uplink example is built with the RELAY_TX=yes and RELAY_RX=yes flags (that device is relayed device, but can be changed to a Relay Rx by network command), the modem will enable the RELAY_TX feature after a reset. However, if a command from the LNS to activate the RELAY_RX feature (0X40 RELAY CONFIG) is received, the device will unexpectedly open an additional RxR window, without compromising functionality.
+
+### Relay Rx
+
+To build the relay Rx feature you need to define "LBM_RELAY_RX_ENABLE=yes"
+
+This option will require an additional 2.5 kbytes of RAM and 10 kbytes of FLASH.
+
+On a hardware note, it is strongly recommended to use a 32 MHz TCXO in a Relay Rx to respect the maximum frequency offset budget between the end-device and the relay itself.
+
+### Known limitation for the Relay Rx
+
+- This implementation is only compatible with embedded software cryptographic operations. (see above “Relay Tx”).
 - SX128x and SX127x are not supported
-- With relayTx feature enable, if a modem cannot send a WOR due to DutyCycle restriction in the band, the uplink is not send neither event if there is DutyCycle time still available.
-- If geoloc services wifi scan and the wifi scan uplink is aborted by lbt or relay link, the extra data from wifi terminated event return nb_scan_sent at 1.
+- Due to specification limitation, JoinAccept cannot be forwarded to end-device if Rx1 delay is greater than 12s with SF12BW125, Rx1 and RxR windows will overlap
+- If the CAD periodicity is set to 250ms or less, it is no longer possible to increase it without resetting the Relay Rx.
+- The reduction of a device bucket size on the go, will not be effective before the previous allocation has been used.
+- On this release, a single WOR channel is supported for US915 and AU915 regions.
+- If the Periodical uplink example is built with the RELAY_TX=yes and RELAY_RX=yes flags (that device is relayed device, but can be changed to a Relay Rx by network command) , the modem will enable the RELAY_TX feature after a reset. However, if a command from the LNS to activate the RELAY_RX feature (0X40 RELAY CONFIG) is received, the the  device will unexpectedly open an additional RxR window, without compromising functionality.
 
 ## LoRa Basic Modem known limitations
 
+- [test-mode] The device will panic and reset if a bandwidth that is not supported by the selected radio chip is chosen. The choice of bandwidth is dependent on the radio used. This will not happen for the LoRaWAN bandwidths 125kHz and 500kHz.
+- [test-mode] In test mode, CSMA can’t be used for non LoRaWAN bandwidths lower than 125 kHz.
 - [charge] Values returned by `smtc_modem_get_charge()` for regions CN470 and CN470_RP1 are not accurate.
-- [charge] Values returned by `smtc_modem_get_charge()` for the LR-FHSS based datarates are not accurate.
 - [charge] Values returned by `smtc_modem_get_charge()` for sx127x radios are not accurate.
-- [modem-status] The joining bit status is exclusively set during the LoRaWAN join transaction (i.e., TX/RX1/RX2) and remains unset between join attempts.
+- [modem-status] The joining bit status is exclusively set during the LoRaWAN join transaction (i.e., Tx/Rx1/Rx2) and remains unset between join attempts.
 - [file upload] DAS may encounter difficulties reconstructing small files (less than 13 bytes) when the modem operates in the US915 region and utilizes DR0 data rate.
 - On fixed channel plan regions (ex:US915) if LBT is enabled and a channel is constantly jammed, the modem will use the 7 others channels then it will try to send on the jammed channel. As the modem cannot send on this channel, it will not remove this channel from the usable channel list and did not re-enable all other channels. Resulting in modem stuck.
 

@@ -228,10 +228,10 @@ void lr1mac_class_c_launch( lr1mac_class_c_t* class_c_obj )
 
         lora_param.pkt_params.header_type = RAL_LORA_PKT_EXPLICIT;
 
-        // +5 for MIC + FPort
         lora_param.pkt_params.pld_len_in_bytes =
-            5 + smtc_real_get_max_payload_size( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate,
-                                                DOWN_LINK );
+            MHDRSIZE + MICSIZE +
+            smtc_real_get_max_payload_size( class_c_obj->lr1_mac->real, RX_SESSION_PARAM_CURRENT->rx_data_rate,
+                                            DOWN_LINK );
         lora_param.pkt_params.crc_is_on       = false;
         lora_param.pkt_params.invert_iq_is_on = true;
         lora_param.pkt_params.preamble_len_in_symb =
@@ -348,10 +348,25 @@ void lr1mac_class_c_mac_rp_callback( lr1mac_class_c_t* class_c_obj )
 
         // save rssi and snr
         class_c_obj->lr1_mac->rx_down_data.rx_metadata.timestamp_ms = tcurrent_ms;
-        class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr =
-            class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
-        class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
-            class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
+
+        if( class_c_obj->rp->radio_params[from_hook_id].pkt_type == RAL_PKT_TYPE_LORA )
+        {
+            class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr =
+                class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
+            class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
+                class_c_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
+        }
+        else if( class_c_obj->rp->radio_params[from_hook_id].pkt_type == RAL_PKT_TYPE_GFSK )
+        {
+            class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_snr = 0;
+            class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_rssi =
+                class_c_obj->rp->radio_params[from_hook_id].rx.gfsk_pkt_status.rssi_avg_in_dbm;
+        }
+        else
+        {
+            SMTC_MODEM_HAL_PANIC( );
+        }
+
         class_c_obj->lr1_mac->rx_down_data.rx_payload_size = ( uint8_t ) class_c_obj->rp->rx_payload_size[from_hook_id];
 
         SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(

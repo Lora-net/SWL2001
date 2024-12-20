@@ -389,7 +389,7 @@ void region_cn_470_rp_1_0_enable_all_channels_with_valid_freq( smtc_real_t* real
 
 modulation_type_t region_cn_470_rp_1_0_get_modulation_type_from_datarate( uint8_t datarate )
 {
-    if( datarate <= 5 )
+    if( datarate <= DR5 )
     {
         return LORA;
     }
@@ -402,7 +402,7 @@ modulation_type_t region_cn_470_rp_1_0_get_modulation_type_from_datarate( uint8_
 
 void region_cn_470_rp_1_0_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    if( in_dr <= 5 )
+    if( in_dr <= DR5 )
     {
         *out_sf = datarates_to_sf_cn_470_rp_1_0[in_dr];
         *out_bw = datarates_to_bandwidths_cn_470_rp_1_0[in_dr];

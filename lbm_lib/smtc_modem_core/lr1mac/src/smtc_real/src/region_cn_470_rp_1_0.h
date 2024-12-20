@@ -91,13 +91,6 @@ void region_cn_470_rp_1_0_config( smtc_real_t* real );
  * \param [IN]  none
  * \param [OUT] return
  */
-void region_cn_470_rp_1_0_init_session( smtc_real_t* real );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
 uint8_t region_cn_470_rp_1_0_get_number_of_chmask_in_cflist( smtc_real_t* real );
 /**
  * \brief

@@ -45,7 +45,6 @@ extern "C" {
  */
 #include "radio_planner.h"
 #include "lr1_stack_mac_layer.h"
-#include "modem_services_config.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -59,11 +58,13 @@ extern "C" {
  */
 typedef enum tx_protocol_manager_tx_type
 {
-    TX_PROTOCOL_NONE                  = 0x00,
-    TX_PROTOCOL_JOIN_LORA             = 0x01,  //!<
-    TX_PROTOCOL_TRANSMIT_LORA         = 0x02,  //!<
-    TX_PROTOCOL_TRANSMIT_CID          = 0x3,
-    TX_PROTOCOL_TRANSMIT_LORA_AT_TIME = 0x4,
+    TX_PROTOCOL_NONE                        = 0x00,
+    TX_PROTOCOL_JOIN_LORA                   = 0x01,  //!<
+    TX_PROTOCOL_TRANSMIT_LORA               = 0x02,  //!<
+    TX_PROTOCOL_TRANSMIT_CID                = 0x03,
+    TX_PROTOCOL_TRANSMIT_LORA_AT_TIME       = 0x04,
+    TX_PROTOCOL_TRANSMIT_TEST_MODE          = 0x05,
+    TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION = 0x06,
 } tx_protocol_manager_tx_type_t;
 /*
  * -----------------------------------------------------------------------------
@@ -75,7 +76,7 @@ typedef enum tx_protocol_manager_tx_type
  * \remark  This function is called  by the modem's upper layer itself, it shouldn't be useful at the application layer
  * \retval  None
  */
-void modem_tx_protcol_manager_init( radio_planner_t* rp );
+void modem_tx_protocol_manager_init( radio_planner_t* rp );
 
 /*!
  * @brief tx_protocol_manager_request function is called each time a LoRaWAN transmission will be processed
@@ -122,7 +123,7 @@ bool tx_protocol_manager_tx_is_aborted( void );
  * @param  NONE
  * @return void
  */
- void tx_protocol_manager_abort( void );
+void tx_protocol_manager_abort( void );
 #ifdef __cplusplus
 }
 #endif

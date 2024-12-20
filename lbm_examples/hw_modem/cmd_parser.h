@@ -204,6 +204,7 @@ typedef enum host_cmd_id_e
     CMD_GET_SUSPEND_RADIO_COMMUNICATIONS   = 0x95,
     CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF = 0x96,
     CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF = 0x97,
+    CMD_MODEM_GET_CRASHLOG                 = 0x98,
     CMD_MAX
 } host_cmd_id_t;
 
@@ -212,25 +213,25 @@ typedef enum host_cmd_id_e
  */
 typedef enum host_cmd_test_id_e
 {
-    CMD_TST_START                = 0x00,
-    CMD_TST_NOP                  = 0x01,
-    CMD_TST_TX_SINGLE            = 0x02,
-    CMD_TST_TX_CONT              = 0x03,
-    CMD_TST_TX_HOP               = 0x04,
-    CMD_TST_NA_1                 = 0x05,
-    CMD_TST_TX_CW                = 0x06,
-    CMD_TST_RX_CONT              = 0x07,
-    CMD_TST_RSSI                 = 0x08,
-    CMD_TST_RADIO_RST            = 0x09,
-    CMD_TST_EXIT                 = 0x0B,
-    CMD_TST_BUSYLOOP             = 0x0C,
-    CMD_TST_PANIC                = 0x0D,
-    CMD_TST_WATCHDOG             = 0x0E,
-    CMD_TST_RADIO_READ           = 0x0F,
-    CMD_TST_RADIO_WRITE          = 0x10,
-    CMD_TST_TX_SINGLE_PREAM      = 0x14,
-    CMD_TST_RSSI_GET             = 0x15,
-    CMD_TST_READ_NB_PKTS_RX_CONT = 0x18,
+    CMD_TST_START            = 0x00,
+    CMD_TST_EXIT             = 0x01,
+    CMD_TST_NOP              = 0x02,
+    CMD_TST_TX_LORA          = 0x03,
+    CMD_TST_TX_FSK           = 0x04,
+    CMD_TST_TX_LRFHSS        = 0x05,
+    CMD_TST_TX_CW            = 0x06,
+    CMD_TST_RX_LORA          = 0x07,
+    CMD_TST_RX_FSK_CONT      = 0x08,
+    CMD_TST_READ_NB_PKTS_RX  = 0x09,
+    CMD_TST_READ_LAST_RX_PKT = 0x0A,
+    CMD_TST_RSSI             = 0x0B,
+    CMD_TST_RSSI_GET         = 0x0C,
+    CMD_TST_RADIO_RST        = 0x0D,
+    CMD_TST_BUSYLOOP         = 0x0E,
+    CMD_TST_PANIC            = 0x0F,
+    CMD_TST_WATCHDOG         = 0x10,
+    CMD_TST_RADIO_READ       = 0x11,
+    CMD_TST_RADIO_WRITE      = 0x12,
     CMD_TST_MAX
 } host_cmd_test_id_t;
 

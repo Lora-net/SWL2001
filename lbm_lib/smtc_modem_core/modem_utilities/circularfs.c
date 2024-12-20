@@ -43,6 +43,10 @@
 #include "smtc_modem_hal_dbg_trace.h"
 #include "circularfs.h"
 
+#ifndef MIN
+#define MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
+#endif
+
 /**
  * @}
  * @defgroup sector status
@@ -711,6 +715,7 @@ void circularfs_dump( struct circularfs* fs )
 {
 #if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     const char* description;
+    char        slots_description[170];
 
     SMTC_MODEM_HAL_TRACE_PRINTF( "CIRCULARFS read: {%d,%d} cursor: {%d,%d} write: {%d,%d}\n", fs->read.sector,
                                  fs->read.slot, fs->cursor.sector, fs->cursor.slot, fs->write.sector, fs->write.slot );
@@ -750,37 +755,43 @@ void circularfs_dump( struct circularfs* fs )
             break;
         }
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "[%04d] [v=0x%08" PRIx32 "] [%-10s] ", sector, header_version, description );
-
         for( int32_t slot = 0; slot < fs->slots_per_sector; slot++ )
         {
-            struct circularfs_loc loc    = { sector, slot };
-            uint32_t              status = 0;
-            _slot_get_status( fs, &loc, &status );
-
-            switch( status )
+            if( slot < ( int32_t ) ( sizeof( slots_description ) - 1 ) )
             {
-            case SLOT_ERASED:
-                description = "E";
-                break;
-            case SLOT_RESERVED:
-                description = "R";
-                break;
-            case SLOT_VALID:
-                description = "V";
-                break;
-            case SLOT_GARBAGE:
-                description = "G";
-                break;
-            default:
-                description = "?";
+                struct circularfs_loc loc    = { sector, slot };
+                uint32_t              status = 0;
+                _slot_get_status( fs, &loc, &status );
+
+                switch( status )
+                {
+                case SLOT_ERASED:
+                    slots_description[slot] = 'E';
+                    break;
+                case SLOT_RESERVED:
+                    slots_description[slot] = 'R';
+                    break;
+                case SLOT_VALID:
+                    slots_description[slot] = 'V';
+                    break;
+                case SLOT_GARBAGE:
+                    slots_description[slot] = 'G';
+                    break;
+                default:
+                    slots_description[slot] = '?';
+                    break;
+                }
+            }
+            else
+            {
+                SMTC_MODEM_HAL_TRACE_WARNING( "%s: buffer trace too short\n", __func__ );
                 break;
             }
-
-            SMTC_MODEM_HAL_TRACE_PRINTF( "%s", description );
         }
+        slots_description[MIN( fs->slots_per_sector, ( int32_t ) ( sizeof( slots_description ) - 1 ) )] = '\0';
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "[%04d] [v=0x%08" PRIx32 "] [%-10s] %s\n", sector, header_version, description,
+                                     slots_description );
     }
 #endif  // MODEM_HAL_DBG_TRACE
 }

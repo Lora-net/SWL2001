@@ -47,10 +47,174 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
+#define SX126X_LP_MIN_OUTPUT_POWER -17
+#define SX126X_LP_MAX_OUTPUT_POWER 15
+
+#define SX126X_HP_MIN_OUTPUT_POWER -9
+#define SX126X_HP_MAX_OUTPUT_POWER 22
+
+#define SX126X_LP_CONVERT_TABLE_INDEX_OFFSET 17
+#define SX126X_HP_CONVERT_TABLE_INDEX_OFFSET 9
+
+// TODO: check values
+#define SX126X_GFSK_RX_CONSUMPTION_DCDC 4200
+#define SX126X_GFSK_RX_BOOSTED_CONSUMPTION_DCDC 4800
+
+#define SX126X_GFSK_RX_CONSUMPTION_LDO 8000
+#define SX126X_GFSK_RX_BOOSTED_CONSUMPTION_LDO 9300
+
+#define SX126X_LORA_RX_CONSUMPTION_DCDC 4600
+#define SX126X_LORA_RX_BOOSTED_CONSUMPTION_DCDC 5300
+
+#define SX126X_LORA_RX_CONSUMPTION_LDO 8880
+#define SX126X_LORA_RX_BOOSTED_CONSUMPTION_LDO 10100
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
+
+static const uint32_t ral_sx126x_convert_tx_dbm_to_ua_reg_mode_dcdc_lp[] = {
+    5200,   // -17 dBm
+    5400,   // -16 dBm
+    5600,   // -15 dBm
+    5700,   // -14 dBm
+    5800,   // -13 dBm
+    6000,   // -12 dBm
+    6100,   // -11 dBm
+    6200,   // -10 dBm
+    6500,   //  -9 dBm
+    6800,   //  -8 dBm
+    7000,   //  -7 dBm
+    7300,   //  -6 dBm
+    7500,   //  -5 dBm
+    7900,   //  -4 dBm
+    8300,   //  -3 dBm
+    8800,   //  -2 dBm
+    9300,   //  -1 dBm
+    9800,   //   0 dBm
+    10600,  //   1 dBm
+    11400,  //   2 dBm
+    12200,  //   3 dBm
+    12900,  //   4 dBm
+    13800,  //   5 dBm
+    14700,  //   6 dBm
+    15700,  //   7 dBm
+    16600,  //   8 dBm
+    17900,  //   9 dBm
+    18500,  //  10 dBm
+    20500,  //  11 dBm
+    21900,  //  12 dBm
+    23500,  //  13 dBm
+    25500,  //  14 dBm
+    32500,  //  15 dBm
+};
+
+static const uint32_t ral_sx126x_convert_tx_dbm_to_ua_reg_mode_ldo_lp[] = {
+    9800,   // -17 dBm
+    10300,  // -16 dBm
+    10500,  // -15 dBm
+    10800,  // -14 dBm
+    11100,  // -13 dBm
+    11300,  // -12 dBm
+    11600,  // -11 dBm
+    11900,  // -10 dBm
+    12400,  //  -9 dBm
+    12900,  //  -8 dBm
+    13400,  //  -7 dBm
+    13900,  //  -6 dBm
+    14500,  //  -5 dBm
+    15300,  //  -4 dBm
+    16000,  //  -3 dBm
+    17000,  //  -2 dBm
+    18000,  //  -1 dBm
+    19000,  //   0 dBm
+    20600,  //   1 dBm
+    22000,  //   2 dBm
+    23500,  //   3 dBm
+    24900,  //   4 dBm
+    26600,  //   5 dBm
+    28400,  //   6 dBm
+    30200,  //   7 dBm
+    32000,  //   8 dBm
+    34300,  //   9 dBm
+    36600,  //  10 dBm
+    39200,  //  11 dBm
+    41700,  //  12 dBm
+    44700,  //  13 dBm
+    48200,  //  14 dBm
+    52200,  //  15 dBm
+};
+
+static const uint32_t ral_sx126x_convert_tx_dbm_to_ua_reg_mode_dcdc_hp[] = {
+    24000,   //  -9 dBm
+    25400,   //  -8 dBm
+    26700,   //  -7 dBm
+    28000,   //  -6 dBm
+    30600,   //  -5 dBm
+    31900,   //  -4 dBm
+    33200,   //  -3 dBm
+    35700,   //  -2 dBm
+    38200,   //  -1 dBm
+    40600,   //   0 dBm
+    42900,   //   1 dBm
+    46200,   //   2 dBm
+    48200,   //   3 dBm
+    51800,   //   4 dBm
+    54100,   //   5 dBm
+    57000,   //   6 dBm
+    60300,   //   7 dBm
+    63500,   //   8 dBm
+    67100,   //   9 dBm
+    70500,   //  10 dBm
+    74200,   //  11 dBm
+    78400,   //  12 dBm
+    83500,   //  13 dBm
+    89300,   //  14 dBm
+    92400,   //  15 dBm
+    94500,   //  16 dBm
+    95400,   //  17 dBm
+    97500,   //  18 dBm
+    100100,  //  19 dBm
+    103800,  //  20 dBm
+    109100,  //  21 dBm
+    117900,  //  22 dBm
+};
+
+static const uint32_t ral_sx126x_convert_tx_dbm_to_ua_reg_mode_ldo_hp[] = {
+    25900,   //  -9 dBm
+    27400,   //  -8 dBm
+    28700,   //  -7 dBm
+    30000,   //  -6 dBm
+    32600,   //  -5 dBm
+    33900,   //  -4 dBm
+    35200,   //  -3 dBm
+    37700,   //  -2 dBm
+    40100,   //  -1 dBm
+    42600,   //   0 dBm
+    44900,   //   1 dBm
+    48200,   //   2 dBm
+    50200,   //   3 dBm
+    53800,   //   4 dBm
+    56100,   //   5 dBm
+    59000,   //   6 dBm
+    62300,   //   7 dBm
+    65500,   //   8 dBm
+    69000,   //   9 dBm
+    72500,   //  10 dBm
+    76200,   //  11 dBm
+    80400,   //  12 dBm
+    85400,   //  13 dBm
+    90200,   //  14 dBm
+    94400,   //  15 dBm
+    96500,   //  16 dBm
+    97700,   //  17 dBm
+    99500,   //  18 dBm
+    102100,  //  19 dBm
+    105800,  //  20 dBm
+    111000,  //  21 dBm
+    119800,  //  22 dBm
+};
 
 /*
  * -----------------------------------------------------------------------------
@@ -172,10 +336,127 @@ void ral_sx126x_bsp_get_ocp_value( const void* context, uint8_t* ocp_in_step_of_
     // Do nothing, let the driver choose the default values
 }
 
-void ral_sx126x_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
-                                           uint8_t* in_out_cad_det_peak )
+void ral_sx126x_bsp_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                           ral_lora_cad_symbs_t nb_symbol, uint8_t* in_out_cad_det_peak )
 {
     // Function used to fine tune the cad detection peak, update if needed
+
+    // The DetPeak value set in the sx126x Radio Abstraction Layer is too close to the sensitivity for BW500 and SF>=9
+    if( bw >= RAL_LORA_BW_500_KHZ )
+    {
+        if( sf >= RAL_LORA_SF9 )
+        {
+            *in_out_cad_det_peak += 11;
+        }
+    }
+}
+
+ral_status_t ral_sx126x_bsp_get_instantaneous_tx_power_consumption( const void *context,
+    const ral_sx126x_bsp_tx_cfg_output_params_t* tx_cfg_output_params, sx126x_reg_mod_t radio_reg_mode,
+    uint32_t* pwr_consumption_in_ua )
+{
+    // SX1261
+    if( tx_cfg_output_params->pa_cfg.device_sel == 0x01 )
+    {
+        uint8_t index = 0;
+
+        if( tx_cfg_output_params->chip_output_pwr_in_dbm_expected > SX126X_LP_MAX_OUTPUT_POWER )
+        {
+            index = SX126X_LP_MAX_OUTPUT_POWER + SX126X_LP_CONVERT_TABLE_INDEX_OFFSET;
+        }
+        else if( tx_cfg_output_params->chip_output_pwr_in_dbm_expected < SX126X_LP_MIN_OUTPUT_POWER )
+        {
+            index = SX126X_LP_MIN_OUTPUT_POWER + SX126X_LP_CONVERT_TABLE_INDEX_OFFSET;
+        }
+        else
+        {
+            index = tx_cfg_output_params->chip_output_pwr_in_dbm_expected + SX126X_LP_CONVERT_TABLE_INDEX_OFFSET;
+        }
+
+        if( radio_reg_mode == SX126X_REG_MODE_DCDC )
+        {
+            *pwr_consumption_in_ua = ral_sx126x_convert_tx_dbm_to_ua_reg_mode_dcdc_lp[index];
+        }
+        else
+        {
+            *pwr_consumption_in_ua = ral_sx126x_convert_tx_dbm_to_ua_reg_mode_ldo_lp[index];
+        }
+    }
+    // SX1262
+    else if( tx_cfg_output_params->pa_cfg.device_sel == 0x00 )
+    {
+        uint8_t index = 0;
+
+        if( tx_cfg_output_params->chip_output_pwr_in_dbm_expected > SX126X_HP_MAX_OUTPUT_POWER )
+        {
+            index = SX126X_HP_MAX_OUTPUT_POWER + SX126X_HP_CONVERT_TABLE_INDEX_OFFSET;
+        }
+        else if( tx_cfg_output_params->chip_output_pwr_in_dbm_expected < SX126X_HP_MIN_OUTPUT_POWER )
+        {
+            index = SX126X_HP_MIN_OUTPUT_POWER + SX126X_HP_CONVERT_TABLE_INDEX_OFFSET;
+        }
+        else
+        {
+            index = tx_cfg_output_params->chip_output_pwr_in_dbm_expected + SX126X_HP_CONVERT_TABLE_INDEX_OFFSET;
+        }
+
+        if( radio_reg_mode == SX126X_REG_MODE_DCDC )
+        {
+            *pwr_consumption_in_ua = ral_sx126x_convert_tx_dbm_to_ua_reg_mode_dcdc_hp[index];
+        }
+        else
+        {
+            *pwr_consumption_in_ua = ral_sx126x_convert_tx_dbm_to_ua_reg_mode_ldo_hp[index];
+        }
+    }
+    else
+    {
+        return RAL_STATUS_UNKNOWN_VALUE;
+    }
+
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx126x_bsp_get_instantaneous_gfsk_rx_power_consumption( const void *context,
+                                                                         sx126x_reg_mod_t radio_reg_mode,
+                                                                         bool             rx_boosted,
+                                                                         uint32_t*        pwr_consumption_in_ua )
+{
+    // TODO: find the br/bw dependent values
+
+    if( radio_reg_mode == SX126X_REG_MODE_DCDC )
+    {
+        *pwr_consumption_in_ua =
+            ( rx_boosted ) ? SX126X_GFSK_RX_BOOSTED_CONSUMPTION_DCDC : SX126X_GFSK_RX_CONSUMPTION_DCDC;
+    }
+    else
+    {
+        *pwr_consumption_in_ua =
+            ( rx_boosted ) ? SX126X_GFSK_RX_BOOSTED_CONSUMPTION_LDO : SX126X_GFSK_RX_CONSUMPTION_LDO;
+    }
+
+    return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx126x_bsp_get_instantaneous_lora_rx_power_consumption( const void *context,
+                                                                         sx126x_reg_mod_t radio_reg_mode,
+                                                                         bool             rx_boosted,
+                                                                         uint32_t*        pwr_consumption_in_ua )
+{
+    // TODO: find the bw dependent values
+
+    if( radio_reg_mode == SX126X_REG_MODE_DCDC )
+    {
+        *pwr_consumption_in_ua =
+            ( rx_boosted ) ? SX126X_LORA_RX_BOOSTED_CONSUMPTION_DCDC : SX126X_LORA_RX_CONSUMPTION_DCDC;
+    }
+    else
+    {
+        *pwr_consumption_in_ua =
+            ( rx_boosted ) ? SX126X_LORA_RX_BOOSTED_CONSUMPTION_LDO : SX126X_LORA_RX_CONSUMPTION_LDO;
+    }
+
+    return RAL_STATUS_OK;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

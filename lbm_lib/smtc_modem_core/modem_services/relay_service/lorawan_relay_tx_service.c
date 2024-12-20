@@ -114,6 +114,7 @@ typedef struct lorawan_relay_tx_ctx_s
     uint8_t stack_id;
     uint8_t task_id;
     bool    enabled;
+    uint8_t spare[62];
 
 } lorawan_relay_tx_ctx_t;
 
@@ -211,7 +212,7 @@ static uint8_t lorawan_relay_tx_service_downlink_handler( lr1_stack_mac_down_dat
 
     if( stack_id >= NUMBER_OF_RELAY_TX_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 

@@ -4,23 +4,46 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.8.0] 2024-12-20
+
+### Added
+
+* Add relay rx event
+  * `SMTC_MODEM_EVENT_RELAY_RX_RUNNING` : Relay Rx enabled by network server
+* Add test mode event
+  * `SMTC_MODEM_EVENT_TEST_MODE`: to be inform of the test mode status
+* Add duty-cycle event
+  * `SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE`: when the regional duty-cycle constraint is reached or released
+* For FUOTA with R11XX Crypto Engine
+  * `smtc_modem_get_data_block_int_key()` Get Fragmented DataBlockIntKey
+  * `smtc_modem_derive_and_set_data_block_int_key()` Derive and set DataBlockIntKey
+
+### Changed
+
+* `smtc_modem_api.h`
+  * function `smtc_modem_csma_set_parameters()` reverse some parameters to be consistent
+  * function `smtc_modem_get_rp_stats_to_array()` update output parameter
+* `smtc_modem_test_api.h` globally reworked to be more generic and use smtc_ral value
+
 ## [v4.5.0] 2024-05-06
 
 ### Added
+
 * All events and API defined in the v4.4.0
 
 ## [v4.4.0] 2023-12-21
 
 ### Added
+
 * Add `smtc_modem_relay_tx_disable` function to disable the relay tx feature (disable the WOR frame)
 * Add `smtc_modem_relay_tx_enable` function to enable the relay tx feature (enable the WOR frame)
 * Add `smtc_modem_relay_tx_get_activation_mode` function to get the current relay tx mode activation
-* Add `smtc_modem_relay_tx_get_sync_status` function to get the current synchronisation status with a relay rx
+* Add `smtc_modem_relay_tx_get_sync_status` function to get the current synchronization status with a relay rx
 * Add `smtc_modem_relay_tx_is_enable` function to get if the relay tx feature is currently enable
-* Add relay tx event 
+* Add relay tx event
   * `SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC` : Relay TX dynamic mode has enable or disable the WOR protocol
   * `SMTC_MODEM_EVENT_RELAY_TX_MODE` : Relay TX activation has been updated via a MAC command
-  * `SMTC_MODEM_EVENT_RELAY_TX_SYNC` : Relay TX synchronisation has changed
+  * `SMTC_MODEM_EVENT_RELAY_TX_SYNC` : Relay TX synchronization has changed
 
 ## [v4.3.0] 2023-12-15
 
@@ -31,20 +54,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 * Add `smtc_modem_get_certification_mode` to get the current certification mode status
 * Add `smtc_modem_adr_get_profile` to get current Datarate Profile of the modem
 * Add or re-add functions related to LoRaCloud:
-  * Almanac update service: 
-    * function `smtc_modem_almanac_start` (new) 
+  * Almanac update service:
+    * function `smtc_modem_almanac_start` (new)
     * function `smtc_modem_almanac_stop` (new)
-  * Stream service: 
+  * Stream service:
     * Re-add `smtc_modem_stream_init`
     * Re-add `smtc_modem_stream_add_data`
     * Re-add `smtc_modem_stream_status`
     * Re-add related event `SMTC_MODEM_EVENT_STREAM_DONE`
-  * Large File Update service: 
+  * Large File Update service:
     * Re-add `smtc_modem_file_upload_init`
     * Re-add `smtc_modem_file_upload_start`
     * Re-add `smtc_modem_file_upload_reset`
     * Re-add related event `SMTC_MODEM_EVENT_UPLOAD_DONE`
-  * Device Mangament service: 
+  * Device Management service:
     * `smtc_modem_dm_enable` (new)
     * `smtc_modem_dm_get_fport`
     * `smtc_modem_dm_set_fport`
@@ -57,7 +80,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     * `smtc_modem_dm_get_user_data`
     * `smtc_modem_dm_handle_alcsync` (new)
     * Re-add related events `SMTC_MODEM_EVENT_DM_SET_CONF` and `SMTC_MODEM_EVENT_MUTE`
-* Add Store and Forward service: 
+* Add Store and Forward service:
   * `smtc_modem_store_and_forward_set_state`
   * `smtc_modem_store_and_forward_get_state`
   * `smtc_modem_store_and_forward_flash_add_data`

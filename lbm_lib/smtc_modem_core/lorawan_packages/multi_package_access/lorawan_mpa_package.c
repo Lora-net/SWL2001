@@ -415,8 +415,8 @@ void lorawan_mpa_package_service_on_launch( void* service_id )
 
             SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_mpa_package launch ANS_CMD_TASK n" );
             SMTC_MODEM_HAL_TRACE_ARRAY( "MPA ans", tmp_ans, tmp_ans_size );
-            if( tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
-                    MPA_PORT, true, tmp_ans, tmp_ans_size, UNCONF_DATA_UP,
+            if( tx_protocol_manager_request(
+                    TX_PROTOCOL_TRANSMIT_LORA, MPA_PORT, true, tmp_ans, tmp_ans_size, UNCONF_DATA_UP,
                     smtc_modem_hal_get_time_in_ms( ) + smtc_modem_hal_get_random_nb_in_range( 0, 2000 ),
                     ctx->stack_id ) == OKLORAWAN )
             {
@@ -471,7 +471,7 @@ uint8_t lorawan_mpa_package_service_downlink_handler( lr1_stack_mac_down_data_t*
 
     if( stack_id >= NUMBER_OF_MPA_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -676,7 +676,7 @@ static bool mpa_package_parser_internal( uint8_t stack_id, uint8_t* payload_in, 
 
     if( stack_id >= NUMBER_OF_MPA_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return false;
     }
 
@@ -696,14 +696,16 @@ static bool mpa_package_parser_internal( uint8_t stack_id, uint8_t* payload_in, 
 
     switch( cmd_id )
     {
-    case MPA_PKG_VERSION_REQ: {
+    case MPA_PKG_VERSION_REQ:
+    {
         ans_buffer_tmp[ans_index++] = MPA_PKG_VERSION_ANS;
         ans_buffer_tmp[ans_index++] = MPA_ID;
         ans_buffer_tmp[ans_index++] = MPA_VERSION;
         break;
     }
 
-    case MPA_DEV_PACKAGE_REQ: {
+    case MPA_DEV_PACKAGE_REQ:
+    {
         uint8_t pkt_id;
         uint8_t pkt_version;
         uint8_t pkt_port;
@@ -720,7 +722,8 @@ static bool mpa_package_parser_internal( uint8_t stack_id, uint8_t* payload_in, 
         }
         break;
     }
-    case MPA_MULTI_PACK_BUFFER_REQ: {
+    case MPA_MULTI_PACK_BUFFER_REQ:
+    {
         ctx->start_byte_pending = payload_in[mpa_package_rx_buffer_index + 1];
         ctx->stop_byte_pending  = payload_in[mpa_package_rx_buffer_index + 2];
 

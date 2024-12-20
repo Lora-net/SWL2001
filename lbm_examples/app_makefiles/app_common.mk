@@ -215,14 +215,15 @@ COMMON_C_DEFS += \
 LBM_BUILD_OPTIONS += LBM_FUOTA=yes LBM_FUOTA_VERSION=$(FUOTA_VERSION)
 endif
 
-
 ifeq ($(ALLOW_RELAY_TX),yes)
-LBM_BUILD_OPTIONS += RELAY_TX_ENABLE=yes
-BUILD_TARGET := $(BUILD_TARGET)
-COMMON_C_DEFS += \
-    -DUSE_RELAY_TX\
-	-DADD_CSMA\
-	-DENABLE_CSMA_BY_DEFAULT
+LBM_BUILD_OPTIONS += LBM_RELAY_TX_ENABLE=yes LBM_CSMA=yes USE_CSMA_BY_DEFAULT=yes
+COMMON_C_DEFS += -DUSE_RELAY_TX
+BUILD_TARGET := $(BUILD_TARGET)_relay_tx
+endif
+
+ifeq ($(ALLOW_RELAY_RX),yes)
+LBM_BUILD_OPTIONS += LBM_RELAY_RX_ENABLE=yes
+BUILD_TARGET := $(BUILD_TARGET)_relay_rx
 endif
 
 ifeq ($(ALLOW_STORE_AND_FORWARD),yes)
@@ -283,13 +284,6 @@ APP_C_SOURCES += \
 	main_examples/main_periodical_uplink.c
 endif
 
-ifeq ($(MODEM_APP),RELAY_TX)
-APP_C_SOURCES += \
-	main_examples/main_periodical_uplink.c
-
-LBM_BUILD_OPTIONS += RELAY_TX_ENABLE=yes
-endif
-
 ifeq ($(MODEM_APP),PORTING_TESTS)
 APP_C_SOURCES += \
 	main_examples/main_porting_tests.c
@@ -316,7 +310,7 @@ COMMON_C_INCLUDES += \
 	-Ihw_modem
 endif
 
-# For this specific example, a radio access is needed to mimic modem behavior, exceptionnaly include internal folder of lbm
+# For this specific example, a radio access is needed to mimic modem behavior, exceptionally include internal folder of lbm
 ifeq ($(MODEM_APP),PORTING_TESTS)
 MODEM_C_INCLUDES += \
 	-I$(LORA_BASICS_MODEM)/smtc_modem_core/smtc_ralf/src

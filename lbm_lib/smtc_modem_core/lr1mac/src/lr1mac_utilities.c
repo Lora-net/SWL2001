@@ -66,7 +66,7 @@ uint32_t lr1mac_utilities_get_symb_time_us( const uint16_t nb_symb, const ral_lo
     uint32_t sf_val;
     uint32_t bw_khz;
 
-    // clang-format off
+    /* clang-format off */
     switch(sf)
     {
         case RAL_LORA_SF5:  sf_val = 5;     break;
@@ -101,7 +101,7 @@ uint32_t lr1mac_utilities_get_symb_time_us( const uint16_t nb_symb, const ral_lo
             return 0;
             break;
     }
-    // clang-format on
+    /* clang-format on */
 
     return ( ( ( uint32_t ) nb_symb * 1000 ) << sf_val ) / bw_khz;
 }

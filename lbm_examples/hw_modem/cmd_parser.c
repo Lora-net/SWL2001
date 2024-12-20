@@ -138,108 +138,108 @@ static cmd_serial_rc_code_t                   gnss_scan_done_rc = CMD_RC_FAIL;
  *
  */
 static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
-//  [CMD_xxx]                                   = {availability, len_min, len_max}
-    [CMD_RESET]                                 = { 1, 0, 0 },
-    [CMD_SET_REGION]                            = { 1, 1, 1 },
-    [CMD_GET_REGION]                            = { 1, 0, 0 },
-    [CMD_JOIN_NETWORK]                          = { 1, 0, 0 },
-    [CMD_REQUEST_UPLINK]                        = { 1, 2, 244 },
-    [CMD_GET_EVENT]                             = { 1, 0, 0 },
-    [CMD_GET_DOWNLINK_DATA]                     = { 1, 0, 0 },
-    [CMD_GET_DOWNLINK_METADATA]                 = { 1, 0, 0 },
-    [CMD_GET_JOIN_EUI]                          = { 1, 0, 0 },
-    [CMD_SET_JOIN_EUI]                          = { 1, 8, 8 },
-    [CMD_GET_DEV_EUI]                           = { 1, 0, 0 },
-    [CMD_SET_DEV_EUI]                           = { 1, 8, 8 },
-    [CMD_SET_NWKKEY]                            = { 1, 16, 16 },
-    [CMD_GET_PIN]                               = { 1, 0, 0 },
-    [CMD_GET_CHIP_EUI]                          = { 1, 0, 0 },
-    [CMD_DERIVE_KEYS]                           = { 1, 0, 0 },
-    [CMD_GET_MODEM_VERSION]                     = { 1, 0, 0 },
-    [CMD_LORAWAN_GET_LOST_CONNECTION_COUNTER]   = { 1, 0, 0 },
-    [CMD_SET_CERTIFICATION_MODE]                = { 1, 1, 1 },
-    [CMD_EMERGENCY_UPLINK]                      = { 1, 2, 244 },
-    [CMD_REQUEST_EMPTY_UPLINK]                  = { 1, 3, 3 },
-    [CMD_LEAVE_NETWORK]                         = { 1, 0, 0 },
-    [CMD_ALARM_START_TIMER]                     = { 1, 4, 4 },
-    [CMD_ALARM_CLEAR_TIMER]                     = { 1, 0, 0 },
-    [CMD_ALARM_GET_REMAINING_TIME]              = { 1, 0, 0 },
-    [CMD_GET_NEXT_TX_MAX_PAYLOAD]               = { 1, 0, 0 },
-    [CMD_GET_DUTY_CYCLE_STATUS]                 = { 1, 0, 0 },
-    [CMD_SET_NETWORK_TYPE]                      = { 1, 1, 1 },
-    [CMD_SET_JOIN_DR_DISTRIBUTION]              = { 1, 16, 16 },
-    [CMD_SET_ADR_PROFILE]                       = { 1, 1, 17 },
-    [CMD_SET_NB_TRANS]                          = { 1, 1, 1 },
-    [CMD_GET_NB_TRANS]                          = { 1, 0, 0 },
-    [CMD_GET_ENABLED_DATARATE]                  = { 1, 0, 0 },
-    [CMD_SET_ADR_ACK_LIMIT_DELAY]               = { 1, 2, 2},
-    [CMD_GET_ADR_ACK_LIMIT_DELAY]               = { 1, 0, 0},
-    [CMD_SET_CRYSTAL_ERR]                       = { 1, 4, 4 },
-    [CMD_LBT_SET_PARAMS]                        = { 1, 10, 10 },
-    [CMD_LBT_GET_PARAMS]                        = { 1, 0, 0 },
-    [CMD_LBT_SET_STATE]                         = { 1, 1, 1 },
-    [CMD_LBT_GET_STATE]                         = { 1, 0, 0 },
-    [CMD_GET_CHARGE]                            = { 1, 0, 0 },
-    [CMD_RESET_CHARGE]                          = { 1, 0, 0 },
-    [CMD_SET_CLASS]                             = { 1, 1, 1 },
-    [CMD_CLASS_B_SET_PING_SLOT_PERIODICITY]     = { 1, 1, 1, },
-    [CMD_CLASS_B_GET_PING_SLOT_PERIODICITY]     = { 1, 0, 0, },
-    [CMD_MULTICAST_SET_GROUP_CONFIG]            = { 1, 37, 37 },
-    [CMD_MULTICAST_GET_GROUP_CONFIG]            = { 1, 1, 1 },
-    [CMD_MULTICAST_CLASS_C_START_SESSION]       = { 1, 6, 6 },
-    [CMD_MULTICAST_CLASS_C_GET_SESSION_STATUS]  = { 1, 1, 1 },
-    [CMD_MULTICAST_CLASS_C_STOP_SESSION]        = { 1, 1, 1 },
-    [CMD_MULTICAST_CLASS_C_STOP_ALL_SESSIONS]   = { 1, 0, 0 },
-    [CMD_MULTICAST_CLASS_B_START_SESSION]       = { 1, 7, 7 },
-    [CMD_MULTICAST_CLASS_B_GET_SESSION_STATUS]  = { 1, 1, 1 },
-    [CMD_MULTICAST_CLASS_B_STOP_SESSION]        = { 1, 1, 1 },
-    [CMD_MULTICAST_CLASS_B_STOP_ALL_SESSIONS]   = { 1, 0, 0 },
-    [CMD_START_ALCSYNC_SERVICE]                 = { 1, 0, 0 },
-    [CMD_STOP_ALCSYNC_SERVICE]                  = { 1, 0, 0 },
-    [CMD_GET_ALCSYNC_TIME]                      = { 1, 0, 0 },
-    [CMD_TRIG_ALCSYNC_REQUEST]                  = { 1, 0, 0 },
-    [CMD_LORAWAN_MAC_REQUEST]                   = { 1, 1, 1 },
-    [CMD_GET_LORAWAN_TIME]                      = { 1, 0, 0},
-    [CMD_GET_LINK_CHECK_DATA]                   = { 1, 0, 0 },
-    [CMD_SET_DUTY_CYCLE_STATE]                  = { 1, 1, 1 },
-    [CMD_DEBUG_CONNECT_WITH_ABP]                = { 1, 36, 36 },
-    [CMD_TEST]                                  = { 1, 1, 255 },
-    [CMD_GET_TX_POWER_OFFSET]                   = { 1, 0, 0 },
-    [CMD_SET_TX_POWER_OFFSET]                   = { 1, 1, 1 },
-    [CMD_CSMA_SET_STATE]                        = { 1, 1, 1 },
-    [CMD_CSMA_GET_STATE]                        = { 1, 0, 0 },
-    [CMD_CSMA_SET_PARAMETERS]                   = { 1, 3, 3 },
-    [CMD_CSMA_GET_PARAMETERS]                   = { 1, 0, 0 },
-    [CMD_STREAM_INIT]                           = { 1, 3, 3 },
-    [CMD_STREAM_ADD_DATA]                       = { 1, 1, 255 },
-    [CMD_STREAM_STATUS]                         = { 1, 0, 0 },
-    [CMD_LFU_INIT]                              = { 1, 6, 6 },
-    [CMD_LFU_DATA]                              = { 1, 0, 255 },
-    [CMD_LFU_START]                             = { 1, 4, 4 },
-    [CMD_LFU_RESET]                             = { 1, 0, 0 },
-    [CMD_DM_ENABLE]                             = { 1, 1, 1 },
-    [CMD_DM_GET_PORT]                           = { 1, 0, 0 },
-    [CMD_DM_SET_PORT]                           = { 1, 1, 1 },
-    [CMD_DM_GET_INFO_INTERVAL]                  = { 1, 0, 0 },
-    [CMD_DM_SET_INFO_INTERVAL]                  = { 1, 1, 1 },
-    [CMD_DM_GET_PERIODIC_INFO_FIELDS]           = { 1, 0, 0 },
-    [CMD_DM_SET_PERIODIC_INFO_FIELDS]           = { 1, 0, MODEM_MAX_INFO_FIELD_SIZE },
-    [CMD_DM_REQUEST_IMMEDIATE_INFO_FIELDS]      = { 1, 0, MODEM_MAX_INFO_FIELD_SIZE },
-    [CMD_DM_SET_USER_DATA]                      = { 1, SMTC_MODEM_DM_USER_DATA_LENGTH, SMTC_MODEM_DM_USER_DATA_LENGTH },
-    [CMD_DM_GET_USER_DATA]                      = { 1, 0, 0 },
-    [CMD_GET_STATUS]                            = { 1, 0, 0 },
-    [CMD_SUSPEND_RADIO_COMMUNICATIONS]          = { 1, 1, 1 },
-    [CMD_GET_SUSPEND_RADIO_COMMUNICATIONS]      = { 1, 0, 0 },
-    [CMD_DM_HANDLE_ALCSYNC]                     = { 1, 1, 1 },
-    [CMD_SET_APPKEY]                            = { 1, 16, 16 },
-    [CMD_GET_ADR_PROFILE]                       = { 1, 0, 0 },
-    [CMD_GET_CERTIFICATION_MODE]                = { 1, 0, 0 },
+    //  [CMD_xxx]                              = {availability, len_min, len_max}
+    [CMD_RESET]                                = { 1, 0, 0 },
+    [CMD_SET_REGION]                           = { 1, 1, 1 },
+    [CMD_GET_REGION]                           = { 1, 0, 0 },
+    [CMD_JOIN_NETWORK]                         = { 1, 0, 0 },
+    [CMD_REQUEST_UPLINK]                       = { 1, 2, 244 },
+    [CMD_GET_EVENT]                            = { 1, 0, 0 },
+    [CMD_GET_DOWNLINK_DATA]                    = { 1, 0, 0 },
+    [CMD_GET_DOWNLINK_METADATA]                = { 1, 0, 0 },
+    [CMD_GET_JOIN_EUI]                         = { 1, 0, 0 },
+    [CMD_SET_JOIN_EUI]                         = { 1, 8, 8 },
+    [CMD_GET_DEV_EUI]                          = { 1, 0, 0 },
+    [CMD_SET_DEV_EUI]                          = { 1, 8, 8 },
+    [CMD_SET_NWKKEY]                           = { 1, 16, 16 },
+    [CMD_GET_PIN]                              = { 1, 0, 0 },
+    [CMD_GET_CHIP_EUI]                         = { 1, 0, 0 },
+    [CMD_DERIVE_KEYS]                          = { 1, 0, 0 },
+    [CMD_GET_MODEM_VERSION]                    = { 1, 0, 0 },
+    [CMD_LORAWAN_GET_LOST_CONNECTION_COUNTER]  = { 1, 0, 0 },
+    [CMD_SET_CERTIFICATION_MODE]               = { 1, 1, 1 },
+    [CMD_EMERGENCY_UPLINK]                     = { 1, 2, 244 },
+    [CMD_REQUEST_EMPTY_UPLINK]                 = { 1, 3, 3 },
+    [CMD_LEAVE_NETWORK]                        = { 1, 0, 0 },
+    [CMD_ALARM_START_TIMER]                    = { 1, 4, 4 },
+    [CMD_ALARM_CLEAR_TIMER]                    = { 1, 0, 0 },
+    [CMD_ALARM_GET_REMAINING_TIME]             = { 1, 0, 0 },
+    [CMD_GET_NEXT_TX_MAX_PAYLOAD]              = { 1, 0, 0 },
+    [CMD_GET_DUTY_CYCLE_STATUS]                = { 1, 0, 0 },
+    [CMD_SET_NETWORK_TYPE]                     = { 1, 1, 1 },
+    [CMD_SET_JOIN_DR_DISTRIBUTION]             = { 1, 16, 16 },
+    [CMD_SET_ADR_PROFILE]                      = { 1, 1, 17 },
+    [CMD_SET_NB_TRANS]                         = { 1, 1, 1 },
+    [CMD_GET_NB_TRANS]                         = { 1, 0, 0 },
+    [CMD_GET_ENABLED_DATARATE]                 = { 1, 0, 0 },
+    [CMD_SET_ADR_ACK_LIMIT_DELAY]              = { 1, 2, 2 },
+    [CMD_GET_ADR_ACK_LIMIT_DELAY]              = { 1, 0, 0 },
+    [CMD_SET_CRYSTAL_ERR]                      = { 1, 4, 4 },
+    [CMD_LBT_SET_PARAMS]                       = { 1, 10, 10 },
+    [CMD_LBT_GET_PARAMS]                       = { 1, 0, 0 },
+    [CMD_LBT_SET_STATE]                        = { 1, 1, 1 },
+    [CMD_LBT_GET_STATE]                        = { 1, 0, 0 },
+    [CMD_GET_CHARGE]                           = { 1, 0, 0 },
+    [CMD_RESET_CHARGE]                         = { 1, 0, 0 },
+    [CMD_SET_CLASS]                            = { 1, 1, 1 },
+    [CMD_CLASS_B_SET_PING_SLOT_PERIODICITY]    = { 1, 1, 1 },
+    [CMD_CLASS_B_GET_PING_SLOT_PERIODICITY]    = { 1, 0, 0 },
+    [CMD_MULTICAST_SET_GROUP_CONFIG]           = { 1, 37, 37 },
+    [CMD_MULTICAST_GET_GROUP_CONFIG]           = { 1, 1, 1 },
+    [CMD_MULTICAST_CLASS_C_START_SESSION]      = { 1, 6, 6 },
+    [CMD_MULTICAST_CLASS_C_GET_SESSION_STATUS] = { 1, 1, 1 },
+    [CMD_MULTICAST_CLASS_C_STOP_SESSION]       = { 1, 1, 1 },
+    [CMD_MULTICAST_CLASS_C_STOP_ALL_SESSIONS]  = { 1, 0, 0 },
+    [CMD_MULTICAST_CLASS_B_START_SESSION]      = { 1, 7, 7 },
+    [CMD_MULTICAST_CLASS_B_GET_SESSION_STATUS] = { 1, 1, 1 },
+    [CMD_MULTICAST_CLASS_B_STOP_SESSION]       = { 1, 1, 1 },
+    [CMD_MULTICAST_CLASS_B_STOP_ALL_SESSIONS]  = { 1, 0, 0 },
+    [CMD_START_ALCSYNC_SERVICE]                = { 1, 0, 0 },
+    [CMD_STOP_ALCSYNC_SERVICE]                 = { 1, 0, 0 },
+    [CMD_GET_ALCSYNC_TIME]                     = { 1, 0, 0 },
+    [CMD_TRIG_ALCSYNC_REQUEST]                 = { 1, 0, 0 },
+    [CMD_LORAWAN_MAC_REQUEST]                  = { 1, 1, 1 },
+    [CMD_GET_LORAWAN_TIME]                     = { 1, 0, 0 },
+    [CMD_GET_LINK_CHECK_DATA]                  = { 1, 0, 0 },
+    [CMD_SET_DUTY_CYCLE_STATE]                 = { 1, 1, 1 },
+    [CMD_DEBUG_CONNECT_WITH_ABP]               = { 1, 36, 36 },
+    [CMD_TEST]                                 = { 1, 1, 255 },
+    [CMD_GET_TX_POWER_OFFSET]                  = { 1, 0, 0 },
+    [CMD_SET_TX_POWER_OFFSET]                  = { 1, 1, 1 },
+    [CMD_CSMA_SET_STATE]                       = { 1, 1, 1 },
+    [CMD_CSMA_GET_STATE]                       = { 1, 0, 0 },
+    [CMD_CSMA_SET_PARAMETERS]                  = { 1, 3, 3 },
+    [CMD_CSMA_GET_PARAMETERS]                  = { 1, 0, 0 },
+    [CMD_STREAM_INIT]                          = { 1, 3, 3 },
+    [CMD_STREAM_ADD_DATA]                      = { 1, 1, 255 },
+    [CMD_STREAM_STATUS]                        = { 1, 0, 0 },
+    [CMD_LFU_INIT]                             = { 1, 6, 6 },
+    [CMD_LFU_DATA]                             = { 1, 0, 255 },
+    [CMD_LFU_START]                            = { 1, 4, 4 },
+    [CMD_LFU_RESET]                            = { 1, 0, 0 },
+    [CMD_DM_ENABLE]                            = { 1, 1, 1 },
+    [CMD_DM_GET_PORT]                          = { 1, 0, 0 },
+    [CMD_DM_SET_PORT]                          = { 1, 1, 1 },
+    [CMD_DM_GET_INFO_INTERVAL]                 = { 1, 0, 0 },
+    [CMD_DM_SET_INFO_INTERVAL]                 = { 1, 1, 1 },
+    [CMD_DM_GET_PERIODIC_INFO_FIELDS]          = { 1, 0, 0 },
+    [CMD_DM_SET_PERIODIC_INFO_FIELDS]          = { 1, 0, MODEM_MAX_INFO_FIELD_SIZE },
+    [CMD_DM_REQUEST_IMMEDIATE_INFO_FIELDS]     = { 1, 0, MODEM_MAX_INFO_FIELD_SIZE },
+    [CMD_DM_SET_USER_DATA]                     = { 1, SMTC_MODEM_DM_USER_DATA_LENGTH, SMTC_MODEM_DM_USER_DATA_LENGTH },
+    [CMD_DM_GET_USER_DATA]                     = { 1, 0, 0 },
+    [CMD_GET_STATUS]                           = { 1, 0, 0 },
+    [CMD_SUSPEND_RADIO_COMMUNICATIONS]         = { 1, 1, 1 },
+    [CMD_GET_SUSPEND_RADIO_COMMUNICATIONS]     = { 1, 0, 0 },
+    [CMD_DM_HANDLE_ALCSYNC]                    = { 1, 1, 1 },
+    [CMD_SET_APPKEY]                           = { 1, 16, 16 },
+    [CMD_GET_ADR_PROFILE]                      = { 1, 0, 0 },
+    [CMD_GET_CERTIFICATION_MODE]               = { 1, 0, 0 },
 #if defined( STM32L476xx )
-    [CMD_STORE_AND_FORWARD_SET_STATE]           = { 1, 1, 1 },
-    [CMD_STORE_AND_FORWARD_GET_STATE]           = { 1, 0, 0 },
-    [CMD_STORE_AND_FORWARD_ADD_DATA]            = { 1, 2, 244 }, 
-    [CMD_STORE_AND_FORWARD_CLEAR_DATA]          = { 1, 0, 0 },
-    [CMD_STORE_AND_FORWARD_GET_FREE_SLOT]       = { 1, 0, 0 },
+    [CMD_STORE_AND_FORWARD_SET_STATE]     = { 1, 1, 1 },
+    [CMD_STORE_AND_FORWARD_GET_STATE]     = { 1, 0, 0 },
+    [CMD_STORE_AND_FORWARD_ADD_DATA]      = { 1, 2, 244 },
+    [CMD_STORE_AND_FORWARD_CLEAR_DATA]    = { 1, 0, 0 },
+    [CMD_STORE_AND_FORWARD_GET_FREE_SLOT] = { 1, 0, 0 },
 #endif  // STM32L476xx
 #if defined( ADD_APP_GEOLOCATION ) && defined( STM32L476xx )
     [CMD_GNSS_SCAN]                             = { 1, 5, 5 },
@@ -267,15 +267,18 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_WIFI_SET_PAYLOAD_FORMAT]               = { 1, 1, 1 },
     [CMD_LR11XX_RADIO_READ]                     = { 1, 0, 255 },
     [CMD_LR11XX_RADIO_WRITE]                    = { 1, 0, 255 },
-
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
-    [CMD_SET_RTC_OFFSET]                        ={1,4,4},
+
+    [CMD_SET_RTC_OFFSET] = { 1, 4, 4 },
+
 #if defined( USE_RELAY_TX )
-    [CMD_SET_RELAY_CONFIG]                      ={1,10,24},
-    [CMD_GET_RELAY_CONFIG]                      ={1,0,0},
-#endif  // ADD_RELAY_TX_CMD
-    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = { 1, 0, 0 },
-    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = { 1, 1, 1 },
+    [CMD_SET_RELAY_CONFIG] = { 1, 10, 24 },
+    [CMD_GET_RELAY_CONFIG] = { 1, 0, 0 },
+#endif  // USE_RELAY_TX
+
+    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = { 1, 0, 0 },
+    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = { 1, 1, 1 },
+    [CMD_MODEM_GET_CRASHLOG]                 = { 1, 0, 0 },
 };
 
 /**
@@ -284,25 +287,25 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
  */
 static const uint8_t host_cmd_test_tab[CMD_TST_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     // [CMD_xxx] = {availability, len_min, len_max}
-    [CMD_TST_START]                = { 1, 8, 8 },
-    [CMD_TST_NOP]                  = { 1, 0, 0 },
-    [CMD_TST_TX_SINGLE]            = { 1, 9, 9 },
-    [CMD_TST_TX_CONT]              = { 1, 9, 9 },
-    [CMD_TST_TX_HOP]               = { 1, 4, 4 },
-    [CMD_TST_NA_1]                 = { 1, 0, 0 },
-    [CMD_TST_TX_CW]                = { 1, 5, 5 },
-    [CMD_TST_RX_CONT]              = { 1, 7, 7 },
-    [CMD_TST_RSSI]                 = { 1, 7, 7 },
-    [CMD_TST_RADIO_RST]            = { 1, 0, 0 },
-    [CMD_TST_EXIT]                 = { 1, 0, 0 },
-    [CMD_TST_BUSYLOOP]             = { 1, 0, 0 },
-    [CMD_TST_PANIC]                = { 1, 0, 0 },
-    [CMD_TST_WATCHDOG]             = { 1, 0, 0 },
-    [CMD_TST_RADIO_READ]           = { 1, 0, 255 },
-    [CMD_TST_RADIO_WRITE]          = { 1, 0, 255 },
-    [CMD_TST_TX_SINGLE_PREAM]      = { 1, 11, 11 },
-    [CMD_TST_RSSI_GET]             = { 1, 0, 0 },
-    [CMD_TST_READ_NB_PKTS_RX_CONT] = { 1, 0, 0 },
+    [CMD_TST_START]            = { 1, 8, 8 },    //
+    [CMD_TST_EXIT]             = { 1, 0, 0 },    //
+    [CMD_TST_NOP]              = { 1, 0, 0 },    //
+    [CMD_TST_TX_LORA]          = { 1, 25, 25 },  //
+    [CMD_TST_TX_FSK]           = { 1, 14, 14 },  //
+    [CMD_TST_TX_LRFHSS]        = { 1, 18, 18 },  //
+    [CMD_TST_TX_CW]            = { 1, 5, 5 },    //
+    [CMD_TST_RX_LORA]          = { 1, 16, 16 },  //
+    [CMD_TST_RX_FSK_CONT]      = { 1, 4, 4 },    //
+    [CMD_TST_READ_NB_PKTS_RX]  = { 1, 0, 0 },    //
+    [CMD_TST_READ_LAST_RX_PKT] = { 1, 0, 0 },    //
+    [CMD_TST_RSSI]             = { 1, 10, 10 },  //
+    [CMD_TST_RSSI_GET]         = { 1, 0, 0 },    //
+    [CMD_TST_RADIO_RST]        = { 1, 0, 0 },    //
+    [CMD_TST_BUSYLOOP]         = { 1, 0, 0 },    //
+    [CMD_TST_PANIC]            = { 1, 0, 0 },    //
+    [CMD_TST_WATCHDOG]         = { 1, 0, 0 },    //
+    [CMD_TST_RADIO_READ]       = { 1, 0, 255 },  //
+    [CMD_TST_RADIO_WRITE]      = { 1, 0, 255 },  //
 };
 
 #if HAL_DBG_TRACE == HAL_FEATURE_ON
@@ -439,15 +442,15 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_WIFI_SET_PAYLOAD_FORMAT]               = "CMD_MODEM_WIFI_SET_PAYLOAD_FORMAT",
     [CMD_LR11XX_RADIO_READ]                     = "CMD_LR11XX_RADIO_READ",
     [CMD_LR11XX_RADIO_WRITE]                    = "CMD_LR11XX_RADIO_WRITE",
-    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = "CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
-    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]    = "CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
-
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
     [CMD_SET_RTC_OFFSET] = "CMD_SET_RTC_OFFSET",
 #if defined( USE_RELAY_TX )
     [CMD_SET_RELAY_CONFIG] = "CMD_SET_RELAY_CONFIG",
     [CMD_GET_RELAY_CONFIG] = "CMD_GET_RELAY_CONFIG",
 #endif
+    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = "CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
+    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = "CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
+    [CMD_MODEM_GET_CRASHLOG]                 = "CMD_GET_CRASHLOG",
 };
 #endif
 
@@ -457,82 +460,38 @@ static const char* host_cmd_str[CMD_MAX] = {
  *
  */
 static const char* host_cmd_test_str[CMD_TST_MAX] = {
-    [CMD_TST_START]                = "START",
-    [CMD_TST_NOP]                  = "NOP",
-    [CMD_TST_TX_SINGLE]            = "TX_SINGLE",
-    [CMD_TST_TX_CONT]              = "TX_CONT",
-    [CMD_TST_TX_HOP]               = "TX_HOP",
-    [CMD_TST_NA_1]                 = "NA_1",
-    [CMD_TST_TX_CW]                = "TX_CW",
-    [CMD_TST_RX_CONT]              = "RX_CONT",
-    [CMD_TST_RSSI]                 = "RSSI",
-    [CMD_TST_RADIO_RST]            = "RADIO_RST",
-    [CMD_TST_EXIT]                 = "EXIT",
-    [CMD_TST_BUSYLOOP]             = "BUSYLOOP",
-    [CMD_TST_PANIC]                = "PANIC",
-    [CMD_TST_WATCHDOG]             = "WATCHDOG",
-    [CMD_TST_RADIO_READ]           = "RADIO_READ",
-    [CMD_TST_RADIO_WRITE]          = "RADIO_WRITE",
-    [CMD_TST_TX_SINGLE_PREAM]      = "TX_SINGLE_PREAM",
-    [CMD_TST_RSSI_GET]             = "TST_RSSI_GET",
-    [CMD_TST_READ_NB_PKTS_RX_CONT] = "READ_NB_PKTS_RX_CONT",
+    [CMD_TST_START]            = "START",
+    [CMD_TST_EXIT]             = "EXIT",
+    [CMD_TST_NOP]              = "NOP",
+    [CMD_TST_TX_LORA]          = "TX_LORA",
+    [CMD_TST_TX_FSK]           = "TX_FSK",
+    [CMD_TST_TX_LRFHSS]        = "TX_LRFHSS",
+    [CMD_TST_TX_CW]            = "TX_CW",
+    [CMD_TST_RX_LORA]          = "RX_LORA",
+    [CMD_TST_RX_FSK_CONT]      = "RX_FSK_CONT",
+    [CMD_TST_READ_NB_PKTS_RX]  = "READ_NB_PKTS_RX",
+    [CMD_TST_READ_LAST_RX_PKT] = "READ_LAST_RX_PKT",
+    [CMD_TST_RSSI]             = "RSSI",
+    [CMD_TST_RSSI_GET]         = "TST_RSSI_GET",
+    [CMD_TST_RADIO_RST]        = "RADIO_RST",
+    [CMD_TST_BUSYLOOP]         = "BUSYLOOP",
+    [CMD_TST_PANIC]            = "PANIC",
+    [CMD_TST_WATCHDOG]         = "WATCHDOG",
+    [CMD_TST_RADIO_READ]       = "RADIO_READ",
+    [CMD_TST_RADIO_WRITE]      = "RADIO_WRITE",
 };
 #endif
 
 /* clang-format off */
 
 /**
- * @brief Spreading factor conversion table from hw modem command format to test modem api
- *
- */
-static const smtc_modem_test_sf_t cmd_test_sf_table[SMTC_MODEM_TEST_LORA_SF_COUNT] = {
-    SMTC_MODEM_TEST_FSK,
-    SMTC_MODEM_TEST_LORA_SF7,
-    SMTC_MODEM_TEST_LORA_SF8,
-    SMTC_MODEM_TEST_LORA_SF9,
-    SMTC_MODEM_TEST_LORA_SF10,
-    SMTC_MODEM_TEST_LORA_SF11,
-    SMTC_MODEM_TEST_LORA_SF12,
-    SMTC_MODEM_TEST_LORA_SF5,
-    SMTC_MODEM_TEST_LORA_SF6
-};
-
-/**
- * @brief Bandwidth conversion table from hw modem command format to test modem api
- *
- */
-static const smtc_modem_test_bw_t cmd_test_bw_table[SMTC_MODEM_TEST_BW_COUNT] = {
-    SMTC_MODEM_TEST_BW_125_KHZ,
-    SMTC_MODEM_TEST_BW_250_KHZ,
-    SMTC_MODEM_TEST_BW_500_KHZ,
-    SMTC_MODEM_TEST_BW_200_KHZ,
-    SMTC_MODEM_TEST_BW_400_KHZ,
-    SMTC_MODEM_TEST_BW_800_KHZ,
-    SMTC_MODEM_TEST_BW_1600_KHZ,
-};
-
-/**
- * @brief Coding rate conversion table from hw modem command format to test modem api
- *
- */
-static const smtc_modem_test_cr_t cmd_test_cr_table[SMTC_MODEM_TEST_CR_COUNT] = {
-    SMTC_MODEM_TEST_CR_4_5,
-    SMTC_MODEM_TEST_CR_4_6,
-    SMTC_MODEM_TEST_CR_4_7,
-    SMTC_MODEM_TEST_CR_4_8,
-    SMTC_MODEM_TEST_CR_LI_4_5,
-    SMTC_MODEM_TEST_CR_LI_4_6,
-    SMTC_MODEM_TEST_CR_LI_4_8
-};
-
-/**
  * @brief Modem class conversion table from hw modem command format to modem api
  *
  */
-static const smtc_modem_class_t  cmd_modem_class_table[]={
+static const smtc_modem_class_t cmd_modem_class_table[] = {
     SMTC_MODEM_CLASS_A,
     SMTC_MODEM_CLASS_C,
-    SMTC_MODEM_CLASS_B,
+    SMTC_MODEM_CLASS_B
 };
 
 /**
@@ -569,8 +528,12 @@ static const uint8_t events_lut[SMTC_MODEM_EVENT_MAX] = {
     [SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC]                  = 0x30,
     [SMTC_MODEM_EVENT_RELAY_TX_MODE]                     = 0x31,
     [SMTC_MODEM_EVENT_RELAY_TX_SYNC]                     = 0x32,
+    [SMTC_MODEM_EVENT_RELAY_RX_RUNNING]                  = 0x33,
+    [SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE]               = 0x34,
+    [SMTC_MODEM_EVENT_TEST_MODE]                         = 0x35,             //!< Test mode event
 
 };
+
 
 /**
  * @brief Look Up Table for hw modem return code opcodes
@@ -611,16 +574,6 @@ static cmd_length_valid_t cmd_parser_check_cmd_size( host_cmd_id_t cmd_id, uint8
  * @return cmd_length_valid_t
  */
 static cmd_length_valid_t cmd_test_parser_check_cmd_size( host_cmd_test_id_t test_id, uint8_t length );
-
-/**
- * @brief Check if received sf, bw and cr are acceptable
- *
- * @param [in] sf  Received spreading factor
- * @param [in] bw  Received bandwidth
- * @param [in] cr  Received coding rate
- * @return cmd_parse_status_t
- */
-static cmd_parse_status_t cmd_test_parser_check_sf_bw_cr( uint8_t sf, uint8_t bw, uint8_t cr );
 
 /**
  * @brief Crc function used for LFU (Large File Upload)
@@ -754,7 +707,18 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             cmd_output->buffer[2] = current_event.event_data.relay_tx.status;
             cmd_output->length    = 3;
             break;
-
+        case SMTC_MODEM_EVENT_RELAY_RX_RUNNING:
+            cmd_output->buffer[2] = current_event.event_data.relay_rx.status;
+            cmd_output->length    = 3;
+            break;
+        case SMTC_MODEM_EVENT_TEST_MODE:
+            cmd_output->buffer[2] = current_event.event_data.test_mode_status.status;
+            cmd_output->length    = 3;
+            break;
+        case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
+            cmd_output->buffer[2] = current_event.event_data.regional_duty_cycle.status;
+            cmd_output->length    = 3;
+            break;
         default:
             cmd_output->length = 0;
             break;
@@ -1873,6 +1837,22 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             rc_lut[smtc_modem_set_join_duty_cycle_backoff_bypass( STACK_ID, cmd_input->buffer[0] )];
         break;
     }
+    case CMD_MODEM_GET_CRASHLOG:
+    {
+        uint8_t crash_string_length = 0;
+
+        cmd_output->buffer[0] = smtc_modem_hal_crashlog_get_status( );
+        smtc_modem_hal_crashlog_restore( &cmd_output->buffer[1], &crash_string_length );
+
+        memset( &cmd_output->buffer[crash_string_length + 1], 0, CRASH_LOG_SIZE - crash_string_length );
+
+        // clear status but not the data to be read if needed
+        smtc_modem_hal_crashlog_set_status( false );
+
+        cmd_output->length      = CRASH_LOG_SIZE + 1;  // +1 crashlog status
+        cmd_output->return_code = CMD_RC_OK;
+        break;
+    }
 #if defined( STM32L476xx )
     case CMD_STORE_AND_FORWARD_SET_STATE:
     {
@@ -2219,7 +2199,7 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
 
             for( uint8_t scan_index = 0; scan_index < wifi_scan_done_data.nbr_results; scan_index++ )
             {
-                // copy LR11XX_WIFI_MAC_ADDRESS_LENGTH bytes of mac adress
+                // copy LR11XX_WIFI_MAC_ADDRESS_LENGTH bytes of mac address
                 memcpy( &cmd_output->buffer[index], wifi_scan_done_data.results[scan_index].mac_address,
                         LR11XX_WIFI_MAC_ADDRESS_LENGTH );
                 index += LR11XX_WIFI_MAC_ADDRESS_LENGTH;
@@ -2391,79 +2371,133 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
 
         break;
     }
+    case CMD_TST_EXIT:
+    {
+        cmd_tst_output->return_code = rc_lut[smtc_modem_test_stop( )];
+        if( cmd_tst_output->return_code == CMD_RC_OK )
+        {
+            modem_in_test_mode = false;
+        }
+        break;
+    }
     case CMD_TST_NOP:
     {
-        cmd_tst_output->return_code = rc_lut[smtc_modem_test_nop( )];
+        cmd_tst_output->return_code = rc_lut[smtc_modem_test_nop( true )];
         break;
     }
-    case CMD_TST_TX_SINGLE:
+    case CMD_TST_TX_LORA:
     {
-        uint8_t raw_sf = cmd_tst_input->buffer[5];
-        uint8_t raw_bw = cmd_tst_input->buffer[6];
-        uint8_t raw_cr = cmd_tst_input->buffer[7];
+        uint32_t freq = 0;
+        freq |= cmd_tst_input->buffer[0] << 24;
+        freq |= cmd_tst_input->buffer[1] << 16;
+        freq |= cmd_tst_input->buffer[2] << 8;
+        freq |= cmd_tst_input->buffer[3];
 
-        // integrity of the data shall be tested here as we perform a data change using LUT before calling api
-        // function
-        if( cmd_test_parser_check_sf_bw_cr( raw_sf, raw_bw, raw_cr ) == PARSE_OK )
+        int8_t  pw  = cmd_tst_input->buffer[4];
+        uint8_t len = cmd_tst_input->buffer[5];
+
+        uint8_t sf = cmd_tst_input->buffer[6];
+        uint8_t bw = cmd_tst_input->buffer[7];
+
+        if( bw < RAL_LORA_BW_010_KHZ )
         {
-            smtc_modem_test_sf_t sf = cmd_test_sf_table[raw_sf];
-            smtc_modem_test_bw_t bw = cmd_test_bw_table[raw_bw];
-            smtc_modem_test_cr_t cr = cmd_test_cr_table[raw_cr];
-
-            int8_t  pw  = cmd_tst_input->buffer[4];
-            uint8_t len = cmd_tst_input->buffer[8];
-
-            uint32_t freq = 0;
-            freq |= cmd_tst_input->buffer[0] << 24;
-            freq |= cmd_tst_input->buffer[1] << 16;
-            freq |= cmd_tst_input->buffer[2] << 8;
-            freq |= cmd_tst_input->buffer[3];
-
-            cmd_tst_output->return_code = rc_lut[smtc_modem_test_tx( NULL, len, freq, pw, sf, bw, cr, 8, false )];
+            cmd_tst_output->return_code = CMD_RC_INVALID;
         }
         else
         {
-            // one of the data is not in the accepted range => reject command
-            cmd_tst_output->return_code = CMD_RC_INVALID;
+            uint8_t cr = cmd_tst_input->buffer[8];
+
+            uint8_t                  invert_iq   = cmd_tst_input->buffer[9] & 0x01;
+            uint8_t                  crc_is_on   = cmd_tst_input->buffer[10] & 0x01;
+            ral_lora_pkt_len_modes_t header_type = cmd_tst_input->buffer[11] & 0x01;
+
+            uint32_t preamble_size = 0;
+            preamble_size |= cmd_tst_input->buffer[12] << 24;
+            preamble_size |= cmd_tst_input->buffer[13] << 16;
+            preamble_size |= cmd_tst_input->buffer[14] << 8;
+            preamble_size |= cmd_tst_input->buffer[15];
+
+            uint32_t nb_of_tx = 0;
+            nb_of_tx |= cmd_tst_input->buffer[16] << 24;
+            nb_of_tx |= cmd_tst_input->buffer[17] << 16;
+            nb_of_tx |= cmd_tst_input->buffer[18] << 8;
+            nb_of_tx |= cmd_tst_input->buffer[19];
+
+            uint32_t delay_ms = 0;
+            delay_ms |= cmd_tst_input->buffer[20] << 24;
+            delay_ms |= cmd_tst_input->buffer[21] << 16;
+            delay_ms |= cmd_tst_input->buffer[22] << 8;
+            delay_ms |= cmd_tst_input->buffer[23];
+
+            uint8_t sync_word = cmd_tst_input->buffer[24];
+
+            cmd_tst_output->return_code =
+                rc_lut[smtc_modem_test_tx_lora( NULL, len, freq, pw, sf, bw, cr, sync_word, invert_iq, crc_is_on,
+                                                header_type, preamble_size, nb_of_tx, delay_ms )];
         }
         break;
     }
-    case CMD_TST_TX_CONT:
+    case CMD_TST_TX_FSK:
     {
-        uint8_t raw_sf = cmd_tst_input->buffer[5];
-        uint8_t raw_bw = cmd_tst_input->buffer[6];
-        uint8_t raw_cr = cmd_tst_input->buffer[7];
+        uint32_t freq = 0;
+        freq |= cmd_tst_input->buffer[0] << 24;
+        freq |= cmd_tst_input->buffer[1] << 16;
+        freq |= cmd_tst_input->buffer[2] << 8;
+        freq |= cmd_tst_input->buffer[3];
 
-        // integrity of the data shall be tested here as we perform a data change using LUT before calling api
-        // function
-        if( cmd_test_parser_check_sf_bw_cr( raw_sf, raw_bw, raw_cr ) == PARSE_OK )
-        {
-            smtc_modem_test_sf_t sf = cmd_test_sf_table[raw_sf];
-            smtc_modem_test_bw_t bw = cmd_test_bw_table[raw_bw];
-            smtc_modem_test_cr_t cr = cmd_test_cr_table[raw_cr];
+        int8_t  pw  = cmd_tst_input->buffer[4];
+        uint8_t len = cmd_tst_input->buffer[5];
 
-            int8_t  pw  = cmd_tst_input->buffer[4];
-            uint8_t len = cmd_tst_input->buffer[8];
+        uint32_t nb_of_tx = 0;
+        nb_of_tx |= cmd_tst_input->buffer[6] << 24;
+        nb_of_tx |= cmd_tst_input->buffer[7] << 16;
+        nb_of_tx |= cmd_tst_input->buffer[8] << 8;
+        nb_of_tx |= cmd_tst_input->buffer[9];
 
-            uint32_t freq = 0;
-            freq |= cmd_tst_input->buffer[0] << 24;
-            freq |= cmd_tst_input->buffer[1] << 16;
-            freq |= cmd_tst_input->buffer[2] << 8;
-            freq |= cmd_tst_input->buffer[3];
+        uint32_t delay_ms = 0;
+        delay_ms |= cmd_tst_input->buffer[10] << 24;
+        delay_ms |= cmd_tst_input->buffer[11] << 16;
+        delay_ms |= cmd_tst_input->buffer[12] << 8;
+        delay_ms |= cmd_tst_input->buffer[13];
 
-            cmd_tst_output->return_code = rc_lut[smtc_modem_test_tx( NULL, len, freq, pw, sf, bw, cr, 8, true )];
-        }
-        else
-        {
-            // one of the data is not in the accepted range => reject command
-            cmd_tst_output->return_code = CMD_RC_INVALID;
-        }
+        cmd_tst_output->return_code = rc_lut[smtc_modem_test_tx_fsk( NULL, len, freq, pw, nb_of_tx, delay_ms )];
+
         break;
     }
-    case CMD_TST_TX_HOP:
+    case CMD_TST_TX_LRFHSS:
     {
-        cmd_tst_output->return_code = CMD_RC_NOT_IMPLEMENTED;
-        cmd_tst_output->length      = 0;
+        uint32_t freq = 0;
+        freq |= cmd_tst_input->buffer[0] << 24;
+        freq |= cmd_tst_input->buffer[1] << 16;
+        freq |= cmd_tst_input->buffer[2] << 8;
+        freq |= cmd_tst_input->buffer[3];
+
+        int8_t  pw  = cmd_tst_input->buffer[4];
+        uint8_t len = cmd_tst_input->buffer[5];
+
+        uint8_t grid = cmd_tst_input->buffer[6];
+        uint8_t bw   = cmd_tst_input->buffer[7];
+        uint8_t cr   = cmd_tst_input->buffer[8];
+
+        SMTC_HAL_TRACE_PRINTF( "grid:%u, bw:%u,cr:%u\n", grid, bw, cr );
+
+        uint32_t nb_of_tx = 0;
+        nb_of_tx |= cmd_tst_input->buffer[9] << 24;
+        nb_of_tx |= cmd_tst_input->buffer[10] << 16;
+        nb_of_tx |= cmd_tst_input->buffer[11] << 8;
+        nb_of_tx |= cmd_tst_input->buffer[12];
+
+        uint32_t delay_ms = 0;
+        delay_ms |= cmd_tst_input->buffer[13] << 24;
+        delay_ms |= cmd_tst_input->buffer[14] << 16;
+        delay_ms |= cmd_tst_input->buffer[15] << 8;
+        delay_ms |= cmd_tst_input->buffer[16];
+
+        bool enable_hopping = cmd_tst_input->buffer[17] & 0x01;
+
+        cmd_tst_output->return_code =
+            rc_lut[smtc_modem_test_tx_lrfhss( NULL, len, freq, pw, cr, bw, grid, enable_hopping, nb_of_tx, delay_ms )];
+
         break;
     }
     case CMD_TST_TX_CW:
@@ -2479,36 +2513,48 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
         cmd_tst_output->return_code = rc_lut[smtc_modem_test_tx_cw( freq, pw )];
         break;
     }
-    case CMD_TST_RX_CONT:
+    case CMD_TST_RX_LORA:
     {
-        uint8_t raw_sf = cmd_tst_input->buffer[4];
-        uint8_t raw_bw = cmd_tst_input->buffer[5];
-        uint8_t raw_cr = cmd_tst_input->buffer[6];
+        uint32_t freq = 0;
+        freq |= cmd_tst_input->buffer[0] << 24;
+        freq |= cmd_tst_input->buffer[1] << 16;
+        freq |= cmd_tst_input->buffer[2] << 8;
+        freq |= cmd_tst_input->buffer[3];
 
-        // integrity of the data shall be tested here as we perform a data change using LUT before calling api
-        // function
-        if( cmd_test_parser_check_sf_bw_cr( raw_sf, raw_bw, raw_cr ) == PARSE_OK )
-        {
-            smtc_modem_test_sf_t sf = cmd_test_sf_table[raw_sf];
-            smtc_modem_test_bw_t bw = cmd_test_bw_table[raw_bw];
-            smtc_modem_test_cr_t cr = cmd_test_cr_table[raw_cr];
+        uint8_t sf = cmd_tst_input->buffer[4];
+        uint8_t bw = cmd_tst_input->buffer[5];
+        uint8_t cr = cmd_tst_input->buffer[6];
 
-            uint32_t freq = 0;
-            freq |= cmd_tst_input->buffer[0] << 24;
-            freq |= cmd_tst_input->buffer[1] << 16;
-            freq |= cmd_tst_input->buffer[2] << 8;
-            freq |= cmd_tst_input->buffer[3];
+        uint8_t                  sync_word   = cmd_tst_input->buffer[7];
+        uint8_t                  invert_iq   = cmd_tst_input->buffer[8] & 0x01;
+        uint8_t                  crc_is_on   = cmd_tst_input->buffer[9] & 0x01;
+        ral_lora_pkt_len_modes_t header_type = cmd_tst_input->buffer[10] & 0x01;
 
-            cmd_tst_output->return_code = rc_lut[smtc_modem_test_rx_continuous( freq, sf, bw, cr )];
-        }
-        else
-        {
-            // one of the data is not in the accepted range => reject command
-            cmd_tst_output->return_code = CMD_RC_INVALID;
-        }
+        uint32_t preamble_size = 0;
+        preamble_size |= cmd_tst_input->buffer[11] << 24;
+        preamble_size |= cmd_tst_input->buffer[12] << 16;
+        preamble_size |= cmd_tst_input->buffer[13] << 8;
+        preamble_size |= cmd_tst_input->buffer[14];
+
+        uint8_t nb_symb_timeout     = cmd_tst_input->buffer[15];
+        cmd_tst_output->return_code = rc_lut[smtc_modem_test_rx_lora( freq, sf, bw, cr, sync_word, invert_iq, crc_is_on,
+                                                                      header_type, preamble_size, nb_symb_timeout )];
+
         break;
     }
-    case CMD_TST_READ_NB_PKTS_RX_CONT:
+    case CMD_TST_RX_FSK_CONT:
+    {
+        uint32_t freq = 0;
+        freq |= cmd_tst_input->buffer[0] << 24;
+        freq |= cmd_tst_input->buffer[1] << 16;
+        freq |= cmd_tst_input->buffer[2] << 8;
+        freq |= cmd_tst_input->buffer[3];
+
+        cmd_tst_output->return_code = rc_lut[smtc_modem_test_rx_fsk_continuous( freq )];
+
+        break;
+    }
+    case CMD_TST_READ_NB_PKTS_RX:
     {
         uint32_t nb_read_pkt        = 0;
         cmd_tst_output->return_code = rc_lut[smtc_modem_test_get_nb_rx_packets( &nb_read_pkt )];
@@ -2519,30 +2565,39 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
         cmd_tst_output->length      = 4;
         break;
     }
+    case CMD_TST_READ_LAST_RX_PKT:
+    {
+        int16_t rssi;
+        int16_t snr;
+        uint8_t rx_payload_length;
+        cmd_tst_output->return_code =
+            rc_lut[smtc_modem_test_get_last_rx_packets( &rssi, &snr, &cmd_tst_output->buffer[4], &rx_payload_length )];
+        cmd_tst_output->buffer[0] = ( snr >> 8 ) & 0xFF;
+        cmd_tst_output->buffer[1] = ( snr & 0xFF );
+        cmd_tst_output->buffer[2] = ( rssi >> 8 ) & 0xFF;
+        cmd_tst_output->buffer[3] = ( rssi & 0xFF );
+        cmd_tst_output->length    = 4 + rx_payload_length;
+        break;
+    }
     case CMD_TST_RSSI:
     {
-        uint8_t raw_bw = cmd_tst_input->buffer[6];
-        if( raw_bw < SMTC_MODEM_TEST_BW_COUNT )
-        {
-            smtc_modem_test_bw_t bw = cmd_test_bw_table[raw_bw];
+        uint32_t freq = 0;
+        freq |= cmd_tst_input->buffer[0] << 24;
+        freq |= cmd_tst_input->buffer[1] << 16;
+        freq |= cmd_tst_input->buffer[2] << 8;
+        freq |= cmd_tst_input->buffer[3];
 
-            uint32_t freq = 0;
-            freq |= cmd_tst_input->buffer[0] << 24;
-            freq |= cmd_tst_input->buffer[1] << 16;
-            freq |= cmd_tst_input->buffer[2] << 8;
-            freq |= cmd_tst_input->buffer[3];
+        uint16_t time_ms = 0;
+        time_ms |= cmd_tst_input->buffer[4] << 8;
+        time_ms |= cmd_tst_input->buffer[5];
 
-            uint16_t time_ms = 0;
-            time_ms |= cmd_tst_input->buffer[4] << 8;
-            time_ms |= cmd_tst_input->buffer[5];
+        uint32_t bw = 0;
+        bw |= cmd_tst_input->buffer[6] << 24;
+        bw |= cmd_tst_input->buffer[7] << 16;
+        bw |= cmd_tst_input->buffer[8] << 8;
+        bw |= cmd_tst_input->buffer[9];
 
-            cmd_tst_output->return_code = rc_lut[smtc_modem_test_rssi( freq, bw, time_ms )];
-        }
-        else
-        {
-            // bw is not in the accepted range => reject command
-            cmd_tst_output->return_code = CMD_RC_INVALID;
-        }
+        cmd_tst_output->return_code = rc_lut[smtc_modem_test_rssi_lbt( freq, bw, time_ms )];
         break;
     }
     case CMD_TST_RSSI_GET:
@@ -2556,15 +2611,6 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
     case CMD_TST_RADIO_RST:
     {
         cmd_tst_output->return_code = rc_lut[smtc_modem_test_radio_reset( )];
-        break;
-    }
-    case CMD_TST_EXIT:
-    {
-        cmd_tst_output->return_code = rc_lut[smtc_modem_test_stop( )];
-        if( cmd_tst_output->return_code == CMD_RC_OK )
-        {
-            modem_in_test_mode = false;
-        }
         break;
     }
     case CMD_TST_BUSYLOOP:
@@ -2623,10 +2669,19 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
         uint8_t data_length = cmd_tst_input->buffer[command_length + 1];
         uint8_t data[255]   = { 0 };
 
-        cmd_tst_output->return_code =
-            rc_lut[smtc_modem_test_direct_radio_read( command, command_length, data, data_length )];
-        memcpy( cmd_tst_output->buffer, data, data_length );
-        cmd_tst_output->length = data_length;
+        smtc_modem_return_code_t rc = smtc_modem_test_direct_radio_read( command, command_length, data, data_length );
+        cmd_tst_output->return_code = rc_lut[rc];
+
+        if( rc != SMTC_MODEM_RC_OK )
+        {
+            cmd_tst_output->length = 0;
+        }
+        else
+        {
+            memcpy( cmd_tst_output->buffer, data, data_length );
+            cmd_tst_output->length = data_length;
+        }
+
         break;
     }
     case CMD_TST_RADIO_WRITE:
@@ -2642,42 +2697,6 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
         cmd_tst_output->return_code =
             rc_lut[smtc_modem_test_direct_radio_write( command, command_length, data, data_length )];
         cmd_tst_output->length = 0;
-        break;
-    }
-    case CMD_TST_TX_SINGLE_PREAM:
-    {
-        uint8_t raw_sf = cmd_tst_input->buffer[5];
-        uint8_t raw_bw = cmd_tst_input->buffer[6];
-        uint8_t raw_cr = cmd_tst_input->buffer[7];
-
-        // integrity of the data shall be tested here as we perform a data change using LUT before calling api
-        // function
-        if( cmd_test_parser_check_sf_bw_cr( raw_sf, raw_bw, raw_cr ) == PARSE_OK )
-        {
-            smtc_modem_test_sf_t sf  = cmd_test_sf_table[raw_sf];
-            smtc_modem_test_bw_t bw  = cmd_test_bw_table[raw_bw];
-            smtc_modem_test_cr_t cr  = cmd_test_cr_table[raw_cr];
-            int8_t               pw  = cmd_tst_input->buffer[4];
-            uint8_t              len = cmd_tst_input->buffer[8];
-
-            uint32_t freq = 0;
-            freq |= cmd_tst_input->buffer[0] << 24;
-            freq |= cmd_tst_input->buffer[1] << 16;
-            freq |= cmd_tst_input->buffer[2] << 8;
-            freq |= cmd_tst_input->buffer[3];
-
-            uint16_t preamble_length = 0;
-            preamble_length |= cmd_tst_input->buffer[9] << 8;
-            preamble_length |= cmd_tst_input->buffer[10];
-
-            cmd_tst_output->return_code =
-                rc_lut[smtc_modem_test_tx( NULL, len, freq, pw, sf, bw, cr, preamble_length, false )];
-        }
-        else
-        {
-            // one of the data is not in the accepted range => reject command
-            cmd_tst_output->return_code = CMD_RC_INVALID;
-        }
         break;
     }
     default:
@@ -2732,26 +2751,6 @@ static cmd_length_valid_t cmd_test_parser_check_cmd_size( host_cmd_test_id_t tst
         return CMD_LENGTH_NOT_VALID;
     }
     return CMD_LENGTH_VALID;
-}
-
-static cmd_parse_status_t cmd_test_parser_check_sf_bw_cr( uint8_t sf, uint8_t bw, uint8_t cr )
-{
-    if( sf >= SMTC_MODEM_TEST_LORA_SF_COUNT )
-    {
-        return PARSE_ERROR;
-    }
-    else if( bw >= SMTC_MODEM_TEST_BW_COUNT )
-    {
-        return PARSE_ERROR;
-    }
-    else if( cr >= SMTC_MODEM_TEST_CR_COUNT )
-    {
-        return PARSE_ERROR;
-    }
-    else
-    {
-        return PARSE_OK;
-    }
 }
 
 uint32_t cmd_parser_crc( const uint8_t* buf, int len )

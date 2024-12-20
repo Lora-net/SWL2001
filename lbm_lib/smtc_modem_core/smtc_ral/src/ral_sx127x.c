@@ -253,8 +253,8 @@ ral_status_t ral_sx127x_set_tx_cfg( const void* context, const int8_t output_pwr
     ral_status_t                               status               = RAL_STATUS_ERROR;
     ral_sx127x_bsp_tx_cfg_output_params_t      tx_cfg_output_params = { 0 };
     const ral_sx127x_bsp_tx_cfg_input_params_t tx_cfg_input_params  = {
-         .freq_in_hz               = rf_freq_in_hz,
-         .system_output_pwr_in_dbm = output_pwr_in_dbm,
+        .freq_in_hz               = rf_freq_in_hz,
+        .system_output_pwr_in_dbm = output_pwr_in_dbm,
     };
 
     ral_sx127x_bsp_get_tx_cfg( context, &tx_cfg_input_params, &tx_cfg_output_params );
@@ -593,7 +593,13 @@ ral_status_t ral_sx127x_set_flrc_sync_word( const void* context, const uint8_t* 
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_sx127x_set_gfsk_crc_params( const void* context, const uint16_t seed, const uint16_t polynomial )
+ral_status_t ral_sx127x_set_gfsk_crc_params( const void* context, const uint32_t seed, const uint32_t polynomial )
+{
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx127x_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                              const uint8_t braodcast_address )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
@@ -698,20 +704,27 @@ ral_status_t ral_sx127x_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr
 ral_status_t ral_sx127x_get_tx_consumption_in_ua( const void* context, const int8_t output_pwr_in_dbm,
                                                   const uint32_t rf_freq_in_hz, uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    ral_sx127x_bsp_tx_cfg_output_params_t      tx_cfg_output_params;
+    const ral_sx127x_bsp_tx_cfg_input_params_t tx_cfg_input_params = {
+        .freq_in_hz               = rf_freq_in_hz,
+        .system_output_pwr_in_dbm = output_pwr_in_dbm,
+    };
+    ral_sx127x_bsp_get_tx_cfg( context, &tx_cfg_input_params, &tx_cfg_output_params );
+
+    return ral_sx127x_bsp_get_instantaneous_tx_power_consumption( context, &tx_cfg_output_params, pwr_consumption_in_ua );
 }
 
 ral_status_t ral_sx127x_get_gfsk_rx_consumption_in_ua( const void* context, const uint32_t br_in_bps,
                                                        const uint32_t bw_dsb_in_hz, const bool rx_boosted,
                                                        uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    return ral_sx127x_bsp_get_instantaneous_gfsk_rx_power_consumption( context, rx_boosted, pwr_consumption_in_ua );
 }
 
 ral_status_t ral_sx127x_get_lora_rx_consumption_in_ua( const void* context, const ral_lora_bw_t bw,
                                                        const bool rx_boosted, uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    return ral_sx127x_bsp_get_instantaneous_lora_rx_power_consumption( context, rx_boosted, pwr_consumption_in_ua );
 }
 
 ral_status_t ral_sx127x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )

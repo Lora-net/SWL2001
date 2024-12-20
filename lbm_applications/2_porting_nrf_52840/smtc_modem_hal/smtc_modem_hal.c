@@ -142,7 +142,7 @@ uint32_t smtc_modem_hal_get_time_in_ms( void )
 
 void smtc_modem_hal_start_timer( const uint32_t milliseconds, void ( *callback )( void* context ), void* context )
 {
-    hal_lp_timer_start( milliseconds, &( hal_lp_timer_irq_t ){ .context = context, .callback = callback } );
+    hal_lp_timer_start( milliseconds, &( hal_lp_timer_irq_t ) { .context = context, .callback = callback } );
 }
 
 void smtc_modem_hal_stop_timer( void )
@@ -278,9 +278,11 @@ void smtc_modem_hal_crashlog_set_status( bool available )
     crashlog_available_noinit = available;
 }
 
-bool smtc_modem_hal_crashlog_get_status( void )
+volatile bool temp = 0x1;  // solve new behaviour introduce with gcc11 compilo
+bool          smtc_modem_hal_crashlog_get_status( void )
 {
-    return crashlog_available_noinit;
+    bool temp2 = crashlog_available_noinit & temp;
+    return temp2;
 }
 
 /* ------------ assert management ------------*/
@@ -317,11 +319,6 @@ void smtc_modem_hal_irq_config_radio_irq( void ( *callback )( void* context ), v
     radio_dio_irq.context  = context;
 
     hal_gpio_irq_attach( &radio_dio_irq );
-}
-
-void smtc_modem_hal_radio_irq_clear_pending( void )
-{
-    hal_gpio_clear_pending_irq( RADIO_DIOX );
 }
 
 void smtc_modem_hal_start_radio_tcxo( void )

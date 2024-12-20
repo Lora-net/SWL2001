@@ -52,7 +52,7 @@ extern "C" {
  *-----------------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS -------------------------------------------------------------
  */
-// clang-format off
+/* clang-format off */
 #define LORAWAN_NVM_CTX_VERSION         (0)
 
 #define LORAWAN_VERSION_MAJOR           (1)
@@ -94,6 +94,7 @@ extern "C" {
 #define MAX_TX_PAYLOAD_SIZE             (255)
 #define FHDROFFSET                      (8)  // MHDR+FHDR offset if OPT = 0
 #define MICSIZE                         (4)
+#define MHDRSIZE                        (1)
 #define LR1MAC_PROTOCOL_VERSION         (0x00010300)
 #define GFSK_WHITENING_SEED             (0x01FF)
 #define GFSK_CRC_SEED                   (0x1D0F)
@@ -130,7 +131,7 @@ extern "C" {
 
 // #define MAX_FCNT_GAP 16384
 
-// clang-format on
+/* clang-format on */
 
 /*
  *-----------------------------------------------------------------------------------
@@ -156,7 +157,7 @@ typedef enum lr1mac_states_e
     LWPSTATE_RX1,
     LWPSTATE_RX2,
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     LWPSTATE_RXR,
 #endif
 
@@ -304,6 +305,7 @@ typedef enum dr_strategy_e
     MOBILE_LOWPER_DR_DISTRIBUTION,     // for Mobile Devices with strong Low power requirement
     USER_DR_DISTRIBUTION,              // User distribution
     JOIN_DR_DISTRIBUTION,              // Dedicated for Join requests
+    JOIN_DR_DISTRIBUTION_LONG_TERM,    // Dedicated for Join requests when join duty cycle = 1/10000
     UNKNOWN_DR,
 } dr_strategy_t;
 
@@ -332,7 +334,7 @@ typedef enum rx_win_type_e
 {
     RX1 = 0,
     RX2,
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     RXR,
 #endif
 } rx_win_type_t;
@@ -433,7 +435,7 @@ typedef enum receive_win_s
 #endif
     RECEIVE_ON_RXBEACON = 13,
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     RECEIVE_ON_RXR = 14,
 #endif
 } receive_win_t;

@@ -286,6 +286,33 @@ lr11xx_status_t lr11xx_radio_set_lora_public_network( const void*               
 lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout_in_ms );
 
 /*!
+ * @brief Start RX operations with a timeout in millisecond and configure the LNA LF0 mode
+ *
+ * This command sets the LR11XX to RX mode and configures the LNA LF0 mode. The radio must have been configured before
+ * using this command with @ref lr11xx_radio_set_pkt_type
+ *
+ * This command must be issued only for sub-GHz RX operations as it configures the LNA LF0, which is only used for
+ * sub-GHz Rx operations.
+ *
+ * By default, the timeout parameter allows to return automatically to standby RC mode if no packets have been received
+ * after a certain amount of time. This behavior can be altered by @ref lr11xx_radio_set_rx_tx_fallback_mode and @ref
+ * lr11xx_radio_auto_tx_rx.
+ *
+ * @remark To set the radio in Rx continuous mode, the function @ref lr11xx_radio_set_rx_with_timeout_in_rtc_step has to
+ * be called with \p timeout_in_rtc_step set to 0xFFFFFF
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] timeout_in_ms The timeout configuration for RX operation
+ * @param [in] lna_mode Path to use for reception
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_rx_tx_fallback_mode, lr11xx_radio_set_lna_mode
+ */
+lr11xx_status_t lr11xx_radio_set_rx_and_lna_mode( const void* context, const uint32_t timeout_in_ms,
+                                                  lr11xx_radio_lna_mode_t lna_mode );
+
+/*!
  * @brief Start RX operations with a timeout in RTC step
  *
  * This command sets the LR11XX to RX mode. The radio must have been configured before using this command with @ref
@@ -317,6 +344,44 @@ lr11xx_status_t lr11xx_radio_set_rx( const void* context, const uint32_t timeout
  * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_rx_tx_fallback_mode
  */
 lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step( const void* context, const uint32_t timeout_in_rtc_step );
+
+/*!
+ * @brief Start RX operations with a timeout in RTC step and configure the LNA LF0 mode
+ *
+ * This command sets the LR11XX to RX mode and configures the LNA LF0 mode. The radio must have been configured before
+ * using this command with @ref lr11xx_radio_set_pkt_type It internally calls lr11xx_radio_set_lna_mode. This command
+ * must be issued only for sub-GHz RX operations as it configures the LNA LF0, which is only used for sub-GHz Rx
+ * operations.
+ *
+ * By default, the timeout parameter allows to return automatically to standby RC mode if no packets have been received
+ * after a certain amount of time. This behavior can be altered by @ref lr11xx_radio_set_rx_tx_fallback_mode and @ref
+ * lr11xx_radio_auto_tx_rx.
+ *
+ * The timeout duration is obtained by:
+ * \f$ timeout\_duration\_ms = timeout \times \frac{1}{32.768} \f$
+ *
+ * Maximal timeout value is 0xFFFFFF, which gives a maximal timeout of 511 seconds.
+ *
+ * The timeout argument can also have the following special values:
+ * <table>
+ * <tr><th> Special values </th><th> Meaning </th>
+ * <tr><td> 0x000000 </td><td> RX single: LR11XX stays in RX mode until a
+ * packet is received, then switch to standby RC mode <tr><td> 0xFFFFFF
+ * </td><td> RX continuous: LR11XX stays in RX mode even after reception of a
+ * packet
+ * </table>
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] timeout_in_rtc_step The timeout configuration for RX operation
+ * @param [in] lna_mode Path to use for reception
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_pkt_type, lr11xx_radio_set_rx_tx_fallback_mode
+ */
+lr11xx_status_t lr11xx_radio_set_rx_with_timeout_in_rtc_step_and_lna_mode( const void*             context,
+                                                                           const uint32_t          timeout_in_rtc_step,
+                                                                           lr11xx_radio_lna_mode_t lna_mode );
 
 /*!
  * @brief Start TX operations
@@ -953,6 +1018,22 @@ lr11xx_status_t lr11xx_radio_apply_high_acp_workaround( const void* context );
  * nb_of_symb = mant * 2 ^ (2 * exp + 1)
  */
 uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uint8_t* mant, uint8_t* exp );
+
+/**
+ * @brief Configure LNA LF0 mode
+ *
+ * @remark This function shall be called after each call to lr11xx_radio_set_rx or
+ * lr11xx_radio_set_rx_with_timeout_in_rtc_step to be taken into account. Helper functions
+ * lr11xx_radio_set_rx_on_lna_path or lr11xx_radio_set_rx_with_timeout_in_rtc_step_on_lna_path can be used instead.
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] lna_mode Value to put in the register, enum type
+ *
+ * @returns Operation status
+ *
+ * @see lr11xx_radio_set_rx_on_lna_path, lr11xx_radio_set_rx_with_timeout_in_rtc_step_on_lna_path
+ */
+lr11xx_status_t lr11xx_radio_set_lna_mode( const void* context, lr11xx_radio_lna_mode_t lna_mode );
 
 #ifdef __cplusplus
 }

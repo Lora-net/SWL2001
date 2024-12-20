@@ -68,7 +68,7 @@ extern "C" {
  */
 #define LORAWAN_CERTIFICATION_PACKAGE_VERSION_REQ_SIZE 1
 #define LORAWAN_CERTIFICATION_PACKAGE_VERSION_ANS_SIZE 2
-#define LORAWAN_CERTIFICATION_DUT_REST_REQ_SIZE 1
+#define LORAWAN_CERTIFICATION_DUT_RESET_REQ_SIZE 1
 #define LORAWAN_CERTIFICATION_DUT_JOIN_REQ_SIZE 1
 #define LORAWAN_CERTIFICATION_SWITCH_CLASS_REQ_SIZE 2
 #define LORAWAN_CERTIFICATION_ADR_BIT_CHANGE_REQ_SIZE 2
@@ -95,6 +95,8 @@ extern "C" {
 #define LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ_SIZE 1
 
 #define LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ_SIZE 2
+
+#define LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_SIZE 2
 
 #define LORAWAN_CERTIFICATION_FPORT 224
 /*
@@ -123,7 +125,7 @@ typedef enum lorawan_certification_cid_dut_e
     LORAWAN_CERTIFICATION_ECHO_PLAY_ANS        = 0x08,
     LORAWAN_CERTIFICATION_RX_APP_CNT_ANS       = 0x09,
     LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND = 0x41,
-    LORAWAN_CERTIFICATION_BEACON_CNT_ANS       = 0x42,
+    LORAWAN_CERTIFICATION_BEACON_CNT_ANS       = 0x43,
     LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_ANS = 0x52,
     LORAWAN_CERTIFICATION_DUT_VERSION_ANS      = 0x7F,
 } lorawan_certification_cid_dut_t;
@@ -136,7 +138,7 @@ typedef enum lorawan_certification_cid_dut_e
 typedef enum lorawan_certification_cid_tcl_e
 {
     LORAWAN_CERTIFICATION_PACKAGE_VERSION_REQ          = 0x00,
-    LORAWAN_CERTIFICATION_DUT_REST_REQ                 = 0x01,
+    LORAWAN_CERTIFICATION_DUT_RESET_REQ                = 0x01,
     LORAWAN_CERTIFICATION_DUT_JOIN_REQ                 = 0x02,
     LORAWAN_CERTIFICATION_SWITCH_CLASS_REQ             = 0x03,
     LORAWAN_CERTIFICATION_ADR_BIT_CHANGE_REQ           = 0x04,
@@ -151,8 +153,9 @@ typedef enum lorawan_certification_cid_tcl_e
     LORAWAN_CERTIFICATION_PING_SLOT_INFO_REQ           = 0x22,
     LORAWAN_CERTIFICATION_BEACON_RX_STATUS_IND_CTRL    = 0x40,
     LORAWAN_CERTIFICATION_BEACON_CNT_REQ               = 0x42,
-    LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ           = 0x43,
+    LORAWAN_CERTIFICATION_BEACON_CNT_RST_REQ           = 0x44,
     LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ         = 0x52,
+    LORAWAN_CERTIFICATION_RELAY_MODE_CTRL_REQ          = 0x53,
     LORAWAN_CERTIFICATION_TX_CW_REQ                    = 0x7D,
     LORAWAN_CERTIFICATION_DUT_FPORT_224_DISABLE_REQ    = 0x7E,
     LORAWAN_CERTIFICATION_DUT_VERSION_REQ              = 0x7F,
@@ -241,6 +244,12 @@ typedef enum lorawan_certification_requested_tx_type_e
     LORAWAN_CERTIFICATION_JOIN_REQ      = 0x03,
 } lorawan_certification_requested_tx_type_t;
 
+typedef enum lorawan_certification_relay_tx_enabled_e
+{
+    LORAWAN_CERTIFICATION_RELAY_TX_OFF = 0x00,
+    LORAWAN_CERTIFICATION_RELAY_TX_ON,
+} lorawan_certification_relay_tx_enabled_t;
+
 /**
  * @brief LoRaWAN Certification Object
  *
@@ -292,7 +301,7 @@ typedef struct lorawan_certification_s
  */
 void lorawan_certification_services_init( uint8_t* service_id, uint8_t task_id,
                                           uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                          void    ( **on_launch_callback )( void* ),
+                                          void ( **on_launch_callback )( void* ),
                                           void ( **on_update_callback )( void* ), void** context_callback );
 
 ////////////////////////////////////////////////////////

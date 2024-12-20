@@ -109,18 +109,22 @@ struct
     stask_manager task_manager;
 
     void* supervisor_context_callback[NUMBER_OF_TASKS];
-    void  ( *supervisor_on_launch_func[NUMBER_OF_TASKS] )( void* );
-    void  ( *supervisor_on_update_func[NUMBER_OF_TASKS] )( void* );
+    void ( *supervisor_on_launch_func[NUMBER_OF_TASKS] )( void* );
+    void ( *supervisor_on_update_func[NUMBER_OF_TASKS] )( void* );
+
+    bool is_duty_cycle_constraint_enabled[NUMBER_OF_STACKS];
 } modem_supervisor_context;
 
-// clang-format off
+/* clang-format off */
 #define task_manager modem_supervisor_context.task_manager
 
 #define supervisor_context_callback modem_supervisor_context.supervisor_context_callback
 #define supervisor_on_launch_func modem_supervisor_context.supervisor_on_launch_func
 #define supervisor_on_update_func modem_supervisor_context.supervisor_on_update_func
 
-// clang-format on
+#define is_duty_cycle_constraint_enabled modem_supervisor_context.is_duty_cycle_constraint_enabled
+
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------
@@ -162,6 +166,7 @@ void modem_supervisor_init( void )
     for( uint8_t i = 0; i < NUMBER_OF_STACKS; i++ )
     {
         task_manager.modem_mute_with_priority[i] = TASK_LOW_PRIORITY;
+        is_duty_cycle_constraint_enabled[i]      = false;
     }
 
     modem_supervisor_init_callback( IDLE_TASK, supervisor_idle_task_on_launch, supervisor_idle_task_on_update,
@@ -256,15 +261,14 @@ uint32_t modem_supervisor_engine( void )
 {
     uint32_t sleep_time       = 0;
     uint32_t sleep_time_alarm = 0;
-    sleep_time = tx_protocol_manager_is_busy ();
-    sleep_time_alarm = supervisor_check_user_alarm( );
+    sleep_time                = tx_protocol_manager_is_busy( );
+    sleep_time_alarm          = supervisor_check_user_alarm( );
     if( sleep_time > 0 )
     {
         sleep_time = MIN( sleep_time, sleep_time_alarm * 1000 );
         return ( sleep_time );
-    }    
-    sleep_time       = supervisor_run_lorawan_engine( STACK_ID_CURRENT_TASK );
- 
+    }
+    sleep_time = supervisor_run_lorawan_engine( STACK_ID_CURRENT_TASK );
 
     if( sleep_time > 0 )
     {
@@ -299,7 +303,7 @@ uint32_t modem_supervisor_engine( void )
         task_manager.modem_task[task_manager.next_task_id].priority = TASK_FINISH;
     }
     uint32_t alarm                 = modem_get_user_alarm( );
-    int32_t user_alarm_in_seconds = MODEM_MAX_ALARM_S / 1000;
+    int32_t  user_alarm_in_seconds = MODEM_MAX_ALARM_S / 1000;
     if( alarm != 0 )
     {
         user_alarm_in_seconds = ( int32_t ) ( alarm - smtc_modem_hal_get_time_in_s( ) );
@@ -368,7 +372,7 @@ static uint32_t supervisor_run_lorawan_engine( uint8_t stack_id )
 
     if( lorawan_state == LWPSTATE_TX_WAIT )
     {
-         tx_protocol_manager_lr1mac_stand_alone_tx ();
+        tx_protocol_manager_lr1mac_stand_alone_tx( );
         sleep_time = ( LR1MAC_PERIOD_RETRANS_MS );
     }
     else if( ( lorawan_state != LWPSTATE_IDLE ) && ( lorawan_state != LWPSTATE_ERROR ) )
@@ -395,6 +399,25 @@ static uint32_t supervisor_find_next_task( void )
         if( dtc_ms > dtc_ms_tmp )
         {
             dtc_ms = dtc_ms_tmp;
+        }
+
+        // Generate event for duty-cycle busy
+        if( available_stack[i] == 0 )
+        {
+            if( is_duty_cycle_constraint_enabled[i] == false )
+            {
+                is_duty_cycle_constraint_enabled[i] = true;
+                increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE, 1, i );
+            }
+        }
+        // Generate event for duty-cycle free
+        else
+        {
+            if( is_duty_cycle_constraint_enabled[i] == true )
+            {
+                is_duty_cycle_constraint_enabled[i] = false;
+                increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE, 0, i );
+            }
         }
     }
 

@@ -3,11 +3,12 @@
  *
  * \brief     Ping Slot management for LoRaWAN class B devices
  *
- * Revised BSD License
- * Copyright Semtech Corporation 2020. All rights reserved.
+ * The Clear BSD License
+ * Copyright Semtech Corporation 2021. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are permitted (subject to the limitations in the disclaimer
+ * below) provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -17,16 +18,18 @@
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL SEMTECH CORPORATION BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY
+ * THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
+ * NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SEMTECH CORPORATION BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /*
@@ -358,9 +361,9 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
 
             lora_param.pkt_params.header_type = RAL_LORA_PKT_EXPLICIT;
 
-            // +5 for MIC + FPort
             lora_param.pkt_params.pld_len_in_bytes =
-                5 + smtc_real_get_max_payload_size( ping_slot_obj->lr1_mac->real, ping_slot_dr, DOWN_LINK );
+                smtc_real_get_max_payload_size( ping_slot_obj->lr1_mac->real, ping_slot_dr, DOWN_LINK ) + MHDRSIZE +
+                MICSIZE;
             lora_param.pkt_params.crc_is_on       = false;
             lora_param.pkt_params.invert_iq_is_on = true;
             // lora_param.pkt_params.preamble_len_in_symb = 255; // for D2D with longue preamble
@@ -506,7 +509,8 @@ void smtc_ping_slot_mac_rp_callback( smtc_ping_slot_t* ping_slot_obj )
     case RP_STATUS_TX_DONE:
         break;
 
-    case RP_STATUS_RX_PACKET: {
+    case RP_STATUS_RX_PACKET:
+    {
         int status = OKLORAWAN;
 
         if( RX_SESSION_PARAM_CURRENT->enabled == false )
@@ -520,16 +524,27 @@ void smtc_ping_slot_mac_rp_callback( smtc_ping_slot_t* ping_slot_obj )
 
             // save rssi and snr
             RX_DOWN_DATA.rx_metadata.timestamp_ms = tcurrent_ms;
-            RX_DOWN_DATA.rx_metadata.rx_snr =
-                ping_slot_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
-            RX_DOWN_DATA.rx_metadata.rx_rssi =
-                ping_slot_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
-            RX_DOWN_DATA.rx_payload_size = ( uint8_t ) ping_slot_obj->rp->rx_payload_size[from_hook_id];
+            if( ping_slot_obj->rp->radio_params[from_hook_id].pkt_type == RAL_PKT_TYPE_LORA )
+            {
+                RX_DOWN_DATA.rx_metadata.rx_snr =
+                    ping_slot_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
+                RX_DOWN_DATA.rx_metadata.rx_rssi =
+                    ping_slot_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
+            }
+            else if( ping_slot_obj->rp->radio_params[from_hook_id].pkt_type == RAL_PKT_TYPE_GFSK )
+            {
+                RX_DOWN_DATA.rx_metadata.rx_snr = 0;
+                RX_DOWN_DATA.rx_metadata.rx_rssi =
+                    ping_slot_obj->rp->radio_params[from_hook_id].rx.gfsk_pkt_status.rssi_avg_in_dbm;
+            }
+            else
+            {
+                SMTC_MODEM_HAL_PANIC( );
+            }
 
-            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
-                "payload size receive = %u, snr = %u , rssi = %u\n", RX_DOWN_DATA.rx_payload_size,
-                ping_slot_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.snr_pkt_in_db,
-                ping_slot_obj->rp->radio_params[from_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm );
+            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "payload size receive = %u, snr = %u , rssi = %u\n",
+                                               RX_DOWN_DATA.rx_payload_size, RX_DOWN_DATA.rx_metadata.rx_snr,
+                                               RX_DOWN_DATA.rx_metadata.rx_rssi );
 
             SMTC_MODEM_HAL_TRACE_ARRAY_DEBUG( "RxB Payload", RX_DOWN_DATA.rx_payload, RX_DOWN_DATA.rx_payload_size );
 

@@ -64,7 +64,7 @@ typedef enum smtc_modem_relay_tx_activation_mode_e
     SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DISABLED,
     SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ENABLE,
     SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DYNAMIC,
-    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLED,
+    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLLED,
 } smtc_modem_relay_tx_activation_mode_t;
 
 typedef enum smtc_modem_relay_tx_sync_status_e
@@ -110,7 +110,6 @@ typedef struct smtc_modem_relay_tx_config_s
 smtc_modem_return_code_t smtc_modem_relay_tx_get_activation_mode( uint8_t                                stack_id,
                                                                   smtc_modem_relay_tx_activation_mode_t* mode );
 
-
 /**
  * @brief Return the relay configuration tx
  *
@@ -123,7 +122,7 @@ smtc_modem_return_code_t smtc_modem_relay_tx_get_activation_mode( uint8_t       
  */
 smtc_modem_return_code_t smtc_modem_relay_tx_get_config( uint8_t stack_id, smtc_modem_relay_tx_config_t* config );
 /**
- * @brief Return the synchronisation status of the relay tx stacl
+ * @brief Return the synchronisation status of the relay tx stack
  *
  * @param[in]   stack_id    Stack identifier
  * @param[out]  status      Synchronisation status
@@ -155,7 +154,7 @@ smtc_modem_return_code_t smtc_modem_relay_tx_is_enable( uint8_t stack_id, bool* 
 /**
  * @brief Enable the relay tx
  *
- * Only works if the ED is in SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLED
+ * Only works if the ED is in SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLLED
  * @param[in]   stack_id        Stack identifier
  * @param[in]   smtc_modem_relay_tx_config_t   full relay config
  *
@@ -165,21 +164,24 @@ smtc_modem_return_code_t smtc_modem_relay_tx_is_enable( uint8_t stack_id, bool* 
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK                Command executed without errors
  * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
- * @retval SMTC_MODEM_RC_FAIL              This stack doesn't have the relay tx feature or is not in ED controled mode
+ * @retval SMTC_MODEM_RC_FAIL              This stack doesn't have the relay tx feature
+ *                                          or is not in ED controlled mode
+ *                                          or Relay Rx enabled by the network
  * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
  */
-smtc_modem_return_code_t smtc_modem_relay_tx_enable( uint8_t stack_id,  const smtc_modem_relay_tx_config_t* relay_config );
+smtc_modem_return_code_t smtc_modem_relay_tx_enable( uint8_t                             stack_id,
+                                                     const smtc_modem_relay_tx_config_t* relay_config );
 
 /**
  * @brief Disable the relay tx
  *
- * Only works if the ED is in SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLED
+ * Only works if the ED is in SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLLED
  * @param[in]   stack_id    Stack identifier
  *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  * @retval SMTC_MODEM_RC_OK                Command executed without errors
  * @retval SMTC_MODEM_RC_BUSY              Modem is currently in test mode
- * @retval SMTC_MODEM_RC_FAIL              This stack doesn't have the relay tx feature or is not in ED controled mode
+ * @retval SMTC_MODEM_RC_FAIL              This stack doesn't have the relay tx feature or is not in ED controlled mode
  * @retval SMTC_MODEM_RC_INVALID_STACK_ID  Invalid \p stack_id
  */
 smtc_modem_return_code_t smtc_modem_relay_tx_disable( uint8_t stack_id );

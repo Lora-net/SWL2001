@@ -118,7 +118,14 @@
 #define FRAGMENTATION_PORT 201
 #define FRAGMENTATION_ID 3
 #define FRAGMENTATION_VERSION 2
+
+#if !defined( FRAGMENTATION_MAX_NB_SESSIONS )
 #define FRAGMENTATION_MAX_NB_SESSIONS 4
+#else
+#if ( FRAGMENTATION_MAX_NB_SESSIONS > 4 )
+#error "FRAGMENTATION_MAX_NB_SESSIONS MAX is 4"
+#endif
+#endif
 // Request message sizes (with header)
 #define FRAGMENTATION_PKG_VERSION_REQ_SIZE ( 1 )
 #define FRAGMENTATION_SESSION_STATUS_REQ_SIZE ( 2 )
@@ -169,6 +176,7 @@ typedef struct lorawan_fragmentation_package_s
     bool     is_pending_task;
     bool     enabled;
     uint8_t  frag_index_data_block_rcv_req;
+    uint32_t file_done_size;
 
 } lorawan_fragmentation_package_ctx_t;
 
@@ -204,12 +212,21 @@ typedef struct frag_session_data_s
     int32_t               frag_decoder_process_status;
 } frag_session_data_t;
 
-static uint8_t                nb_transmit_ans;
-static frag_session_data_t    frag_session_data[FRAGMENTATION_MAX_NB_SESSIONS];
-static FragDecoderCallbacks_t frag_decoder_callback;
-static int8_t                 frag_decoder_write( uint32_t addr, uint8_t* data, uint32_t size );
-static int8_t                 frag_decoder_read( uint32_t addr, uint8_t* data, uint32_t size );
-static uint8_t                compute_data_block_integrity_ckeck( uint8_t frag_index, uint8_t stack_id );
+typedef struct lr1_frag_pkg_s
+{
+    uint8_t                nb_transmit_ans;
+    frag_session_data_t    frag_session_data[FRAGMENTATION_MAX_NB_SESSIONS];
+    FragDecoderCallbacks_t frag_decoder_callback;
+} lr1_frag_pkg_t;
+
+static lr1_frag_pkg_t lr1_frag_pkg_ctx;
+#define nb_transmit_ans lr1_frag_pkg_ctx.nb_transmit_ans
+#define frag_session_data lr1_frag_pkg_ctx.frag_session_data
+#define frag_decoder_callback lr1_frag_pkg_ctx.frag_decoder_callback
+
+static int8_t  frag_decoder_write( uint32_t addr, uint8_t* data, uint32_t size );
+static int8_t  frag_decoder_read( uint32_t addr, uint8_t* data, uint32_t size );
+static uint8_t compute_data_block_integrity_ckeck( uint8_t frag_index, uint8_t stack_id );
 
 /* -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
@@ -325,7 +342,7 @@ uint8_t lorawan_fragmentation_package_service_downlink_handler( lr1_stack_mac_do
     uint8_t stack_id = rx_down_data->stack_id;
     if( stack_id >= NUMBER_OF_FRAGMENTED_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -395,7 +412,7 @@ bool lorawan_fragmentation_package_service_mpa_injector( uint8_t stack_id, uint8
 
     if( stack_id >= NUMBER_OF_FRAGMENTED_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return false;
     }
 
@@ -446,6 +463,14 @@ bool lorawan_fragmentation_package_service_mpa_injector( uint8_t stack_id, uint8
     }
 }
 
+void lorawan_fragmentation_package_get_file_size( uint8_t stack_id, uint32_t* file_size )
+{
+    uint8_t                              service_id;
+    lorawan_fragmentation_package_ctx_t* ctx =
+        lorawan_fragmentation_package_get_ctx_from_stack_id( stack_id, &service_id );
+
+    *file_size = ctx->file_done_size;
+}
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -519,7 +544,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
     {
         switch( fragmentation_package_rx_buffer[fragmentation_package_rx_buffer_index] )
         {
-        case FRAGMENTATION_PKG_VERSION_REQ: {
+        case FRAGMENTATION_PKG_VERSION_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_PKG_VERSION_REQ_SIZE );
             fragmentation_package_rx_buffer_index += FRAGMENTATION_PKG_VERSION_REQ_SIZE;
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
@@ -536,7 +562,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             break;
         }
 
-        case FRAGMENTATION_SESSION_STATUS_REQ: {
+        case FRAGMENTATION_SESSION_STATUS_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_SESSION_STATUS_REQ_SIZE );
 
             uint8_t frag_index =
@@ -592,7 +619,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             }
             break;
         }
-        case FRAGMENTATION_SESSION_SETUP_REQ: {
+        case FRAGMENTATION_SESSION_SETUP_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_SESSION_SETUP_REQ_SIZE );
 
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
@@ -707,10 +735,12 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                 ctx->fragmentation_tx_payload_ans[ans_index++] = FRAGMENTATION_SESSION_SETUP_ANS;
                 ctx->fragmentation_tx_payload_ans[ans_index++] = status;
             }
+            ctx->file_done_size = 0;
 
             break;
         }
-        case FRAGMENTATION_SESSION_DELETE_REQ: {
+        case FRAGMENTATION_SESSION_DELETE_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_SESSION_DELETE_REQ_SIZE );
 
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
@@ -740,7 +770,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
             break;
         }
-        case FRAGMENTATION_DATA_FRAGMENT: {
+        case FRAGMENTATION_DATA_FRAGMENT:
+        {
             uint8_t  frag_index   = 0;
             uint16_t frag_counter = 0;
 
@@ -756,45 +787,48 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             SMTC_MODEM_HAL_TRACE_PRINTF( "Fuota fragmentation_package_rx_window %d\n",
                                          fragmentation_package_rx_window );
 
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x1 ) == 0x1 )
+            if( frag_index < FRAGMENTATION_MAX_NB_SESSIONS )
             {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP0 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP0 ) )
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x1 ) == 0x1 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP0 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP0 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x2 ) == 0x2 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP1 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP1 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x4 ) == 0x4 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP2 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP2 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x8 ) == 0x8 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP3 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP3 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( is_received_on_multicast_window( fragmentation_package_rx_window ) == false )
                 {
                     accept_data = true;
                 }
-            }
-
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x2 ) == 0x2 )
-            {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP1 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP1 ) )
-                {
-                    accept_data = true;
-                }
-            }
-
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x4 ) == 0x4 )
-            {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP2 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP2 ) )
-                {
-                    accept_data = true;
-                }
-            }
-
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x8 ) == 0x8 )
-            {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP3 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP3 ) )
-                {
-                    accept_data = true;
-                }
-            }
-
-            if( is_received_on_multicast_window( fragmentation_package_rx_window ) == false )
-            {
-                accept_data = true;
             }
 
             if( accept_data == true )
@@ -864,13 +898,22 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                     uint8_t status = ( frag_session_data[frag_index].frag_decoder_process_status < 255 )
                                          ? frag_session_data[frag_index].frag_decoder_process_status
                                          : 255;
+                    if( status == FRAG_SESSION_FINISHED_SUCCESSFULLY )
+                    {
+                        ctx->file_done_size = frag_session_data[frag_index].frag_group_data.frag_nb *
+                                                  frag_session_data[frag_index].frag_group_data.frag_size -
+                                              frag_session_data[frag_index].frag_group_data.padding;
+                    }
                     increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_LORAWAN_FUOTA_DONE, status, stack_id );
                 }
             }
-            fragmentation_package_rx_buffer_index += frag_session_data[frag_index].frag_group_data.frag_size + 3;
+            // A message MAY carry more than one command, except for the DataFragment command,
+            // which SHALL be the only command in a message’s payload
+            fragmentation_package_rx_buffer_index += fragmentation_package_rx_buffer_length;
             break;
         }
-        case FRAGMENTATION_DATA_BLOCK_RECEIVED_ANS: {
+        case FRAGMENTATION_DATA_BLOCK_RECEIVED_ANS:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_DATA_BLOCK_RECEIVED_ANS_SIZE );
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
             {
@@ -930,10 +973,17 @@ static uint8_t compute_data_block_integrity_ckeck( uint8_t frag_index, uint8_t s
     // Derive key
     b0[0] = 0x30;
 
+#if defined( USE_LR11XX_CE )
+    if( smtc_modem_get_data_block_int_key( stack_id, key ) != SMTC_MODEM_RC_OK )
+    {
+        return 1;
+    }
+#else
     if( smtc_secure_element_aes_encrypt( b0, 16, SMTC_SE_APP_KEY, key, stack_id ) != SMTC_SE_RC_SUCCESS )
     {
         return 1;
     }
+#endif  // USE_LR11XX_CE
 
     uint32_t size = frag_session_data[frag_index].frag_group_data.frag_nb *
                         frag_session_data[frag_index].frag_group_data.frag_size -
@@ -968,12 +1018,12 @@ static uint8_t compute_data_block_integrity_ckeck( uint8_t frag_index, uint8_t s
     AES_CMAC_Init( &aes_cmac_ctx );
     AES_CMAC_SetKey( &aes_cmac_ctx, key );
     AES_CMAC_Update( &aes_cmac_ctx, b0, 16 );
+
     for( uint32_t i = 0; i < size; i++ )
     {
         frag_decoder_read( i, &d, 1 );
         AES_CMAC_Update( &aes_cmac_ctx, &d, 1 );
     }
-
     AES_CMAC_Final( cmac, &aes_cmac_ctx );
     uint32_t computed_mic = ( uint32_t ) ( ( uint32_t ) cmac[3] << 24 | ( uint32_t ) cmac[2] << 16 |
                                            ( uint32_t ) cmac[1] << 8 | ( uint32_t ) cmac[0] );

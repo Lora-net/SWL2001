@@ -286,7 +286,7 @@ void region_ww2g4_enable_all_channels_with_valid_freq( smtc_real_t* real )
 
 modulation_type_t region_ww2g4_get_modulation_type_from_datarate( uint8_t datarate )
 {
-    if( datarate <= 7 )
+    if( datarate <= DR7 )
     {
         return LORA;
     }
@@ -299,7 +299,7 @@ modulation_type_t region_ww2g4_get_modulation_type_from_datarate( uint8_t datara
 
 void region_ww2g4_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    if( in_dr <= 7 )
+    if( in_dr <= DR7 )
     {
         *out_sf = datarates_to_sf_ww2g4[in_dr];
         *out_bw = datarates_to_bandwidths_ww2g4[in_dr];

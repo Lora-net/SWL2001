@@ -55,7 +55,6 @@ static status_lorawan_t region_as_923_relay_get_default( uint8_t idx, uint8_t* d
     switch( idx )
     {
     case 0:
-    case 1:
         *freq_wor = 923600000;
         *freq_ack = 923800000;
         break;
@@ -281,16 +280,8 @@ static status_lorawan_t region_ru_864_relay_get_default( uint8_t idx, uint8_t* d
         break;
     }
     *datarate = 3;
-    smtc_duty_cycle_update( );
-    if( smtc_duty_cycle_is_channel_free( *freq_wor ) == true )
-    {
-        return OKLORAWAN;
-    }
-    else
-    {
-        SMTC_MODEM_HAL_TRACE_MSG( "NO More Duty cycle to transmit WOR\n" );
-        return ERRORLORAWAN;
-    }
+
+    return OKLORAWAN;
 }
 #endif
 
@@ -362,16 +353,44 @@ static status_lorawan_t region_eu_868_relay_get_default( uint8_t idx, uint8_t* d
         break;
     }
     *datarate = 3;
-    smtc_duty_cycle_update( );
-    if( smtc_duty_cycle_is_channel_free( *freq_wor ) == true )
+
+    return OKLORAWAN;
+}
+#endif
+
+#if defined( REGION_WW2G4 )
+/**
+ * @brief Return default value for relay channel for WW2G4
+ *
+ * @param[in]   idx         Index of the chanel (0 or 1)
+ * @param[out]  datarate    Datarate for the channel index idx
+ * @param[out]  freq_wor    Frequency in Hz for WOR
+ * @param[out]  freq_ack    Frequency in Hz for WOR ACK
+ * @return OKLORAWAN a valid config exist for this channel
+ * @return ERRORLORAWAN no valid config exist for this channel
+ */
+static status_lorawan_t region_ww2g4_relay_get_default( uint8_t idx, uint8_t* datarate, uint32_t* freq_wor,
+                                                        uint32_t* freq_ack )
+{
+    switch( idx )
     {
-        return OKLORAWAN;
-    }
-    else
-    {
-        SMTC_MODEM_HAL_TRACE_MSG( "NO More Duty cycle to transmit WOR\n" );
+    case 0:
+        *freq_wor = 2423000000;
+        *freq_ack = 2477000000;
+        break;
+
+    case 1:
+        *freq_wor = 2423000000;
+        *freq_ack = 2477000000;
+        break;
+
+    default:
         return ERRORLORAWAN;
+        break;
     }
+
+    *datarate = 3;
+    return OKLORAWAN;
 }
 #endif
 
@@ -436,7 +455,10 @@ status_lorawan_t smtc_relay_get_default_channel_config( const smtc_real_t* real,
 #endif
 
 #if defined( REGION_WW2G4 )
-    case SMTC_REAL_REGION_WW2G4:
+    case SMTC_REAL_REGION_WW2G4: {
+        return region_ww2g4_relay_get_default( idx, datarate, freq_wor, freq_ack );
+        break;
+    }
 #endif
     default:
         SMTC_MODEM_HAL_PANIC( );

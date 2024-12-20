@@ -219,7 +219,7 @@ else
     LBM_C_DEFS += \
     	-DADD_CLASS_C
     endif
-    
+
     ifeq ($(LBM_MULTICAST),yes)
     LBM_C_DEFS += \
     	-DSMTC_MULTICAST
@@ -384,6 +384,7 @@ LBM_C_INCLUDES +=  \
 	-I.\
 	-Ismtc_modem_api\
 	-Ismtc_modem_core\
+	-Ismtc_modem_core/logging\
 	-Ismtc_modem_core/modem_supervisor\
 	-Ismtc_modem_core/modem_utilities\
 	-Ismtc_modem_core/lorawan_packages\
@@ -444,12 +445,12 @@ else
     	-Ismtc_modem_core/modem_services/beacon_tx_service
     endif
     endif
-    
+
     ifeq ($(LBM_CLASS_C),yes)
     LBM_C_INCLUDES +=  \
     	-Ismtc_modem_core/lr1mac/src/lr1mac_class_c
     endif
-    
+
     ifeq ($(LBM_MULTICAST),yes)
     LBM_C_INCLUDES +=  \
     	-Ismtc_modem_core/lr1mac/src/services/smtc_multicast

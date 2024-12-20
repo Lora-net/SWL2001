@@ -62,11 +62,11 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
-// clang-format off
+/* clang-format off */
 #define LR1MAC_RCX_MIN_DURATION_MS   20
 #define LR1MAC_NUMBER_OF_RXC_SESSION RX_SESSION_COUNT // Unicast + Multicast
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

@@ -54,7 +54,7 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 #define NUMBER_OF_CHANNEL_EU_868            (16)
 #define NUMBER_OF_BOOT_TX_CHANNEL_EU_868    (3)             // define the number of channel at boot
 #define JOIN_ACCEPT_DELAY1_EU_868           (5)             // define in seconds
@@ -104,7 +104,7 @@ extern "C" {
 
 // LR-FHSS
 #define LR_FHSS_NA                          (0xFFFFFFFF) // LR-FHSS Not Applicable
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

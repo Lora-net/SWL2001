@@ -53,101 +53,6 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-#define SX128X_CONVERT_TABLE_INDEX_OFFSET 18
-
-static const uint32_t ral_sx128x_convert_tx_dbm_to_ua_reg_mode_dcdc[] = {
-    6200,   // -18 dBm
-    6300,   // -17 dBm
-    6400,   // -16 dBm
-    6500,   // -15 dBm
-    6600,   // -14 dBm
-    6700,   // -13 dBm
-    6800,   // -12 dBm
-    7000,   // -11 dBm
-    7100,   // -10 dBm
-    7300,   //  -9 dBm
-    7400,   //  -8 dBm
-    7700,   //  -7 dBm
-    7900,   //  -6 dBm
-    8100,   //  -5 dBm
-    8500,   //  -4 dBm
-    8800,   //  -3 dBm
-    9200,   //  -2 dBm
-    9700,   //  -1 dBm
-    10100,  //   0 dBm
-    10700,  //   1 dBm
-    11300,  //   2 dBm
-    12000,  //   3 dBm
-    12700,  //   4 dBm
-    13600,  //   5 dBm
-    14500,  //   6 dBm
-    15500,  //   7 dBm
-    16800,  //   8 dBm
-    17700,  //   9 dBm
-    18600,  //  10 dBm
-    20300,  //  11 dBm
-    22000,  //  12 dBm
-    24000,  //  13 dBm
-};
-
-static const uint32_t ral_sx128x_convert_tx_dbm_to_ua_reg_mode_ldo[] = {
-    11800,  // -18 dBm
-    12000,  // -17 dBm
-    12200,  // -16 dBm
-    12400,  // -15 dBm
-    12600,  // -14 dBm
-    12800,  // -13 dBm
-    13000,  // -12 dBm
-    13300,  // -11 dBm
-    13500,  // -10 dBm
-    14000,  //  -9 dBm
-    14200,  //  -8 dBm
-    14700,  //  -7 dBm
-    15200,  //  -6 dBm
-    15600,  //  -5 dBm
-    16300,  //  -4 dBm
-    17000,  //  -3 dBm
-    17700,  //  -2 dBm
-    18600,  //  -1 dBm
-    19600,  //   0 dBm
-    20700,  //   1 dBm
-    21900,  //   2 dBm
-    23200,  //   3 dBm
-    24600,  //   4 dBm
-    26300,  //   5 dBm
-    28000,  //   6 dBm
-    30000,  //   7 dBm
-    32200,  //   8 dBm
-    34500,  //   9 dBm
-    36800,  //  10 dBm
-    39200,  //  11 dBm
-    41900,  //  12 dBm
-    45500,  //  13 dBm
-};
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_200_DCDC 5500
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_200_DCDC 6200
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_400_DCDC 6000
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_400_DCDC 6700
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_800_DCDC 7000
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_800_DCDC 7700
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_1600_DCDC 7500
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_1600_DCDC 8200
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_200_LDO 10800
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_200_LDO 12200
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_400_LDO 11800
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_400_LDO 13200
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_800_LDO 13700
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_800_LDO 15200
-
-#define SX128X_LORA_RX_CONSUMPTION_BW_1600_LDO 14800
-#define SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_1600_LDO 16300
 
 /*
  * -----------------------------------------------------------------------------
@@ -683,6 +588,12 @@ ral_status_t ral_sx128x_set_gfsk_pkt_params( const void* context, const ral_gfsk
     return ( ral_status_t ) sx128x_set_gfsk_pkt_params( context, &radio_pkt_params );
 }
 
+ral_status_t ral_sx128x_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                              const uint8_t braodcast_address )
+{
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
 ral_status_t ral_sx128x_set_lora_mod_params( const void* context, const ral_lora_mod_params_t* params )
 {
     ral_status_t             status = RAL_STATUS_ERROR;
@@ -870,17 +781,17 @@ ral_status_t ral_sx128x_set_flrc_sync_word( const void* context, const uint8_t* 
     return ( ral_status_t ) sx128x_set_flrc_sync_word( context, 1, sync_word );
 }
 
-ral_status_t ral_sx128x_set_gfsk_crc_params( const void* context, const uint16_t seed, const uint16_t polynomial )
+ral_status_t ral_sx128x_set_gfsk_crc_params( const void* context, const uint32_t seed, const uint32_t polynomial )
 {
     ral_status_t status = RAL_STATUS_ERROR;
 
-    status = ( ral_status_t ) sx128x_set_gfsk_crc_seed( context, seed );
+    status = ( ral_status_t ) sx128x_set_gfsk_crc_seed( context, ( uint16_t ) seed );
     if( status != RAL_STATUS_OK )
     {
         return status;
     }
 
-    status = ( ral_status_t ) sx128x_set_gfsk_crc_polynomial( context, polynomial );
+    status = ( ral_status_t ) sx128x_set_gfsk_crc_polynomial( context, ( uint16_t ) polynomial );
     if( status != RAL_STATUS_OK )
     {
         return status;
@@ -1003,134 +914,37 @@ ral_status_t ral_sx128x_get_tx_consumption_in_ua( const void* context, const int
                                                   const uint32_t rf_freq_in_hz, uint32_t* pwr_consumption_in_ua )
 {
     sx128x_reg_mod_t                           reg_mode;
-    uint8_t                                    index;
     ral_sx128x_bsp_tx_cfg_output_params_t      tx_cfg_output_params;
     const ral_sx128x_bsp_tx_cfg_input_params_t tx_cfg_input_params = {
         .freq_in_hz               = rf_freq_in_hz,
         .system_output_pwr_in_dbm = output_pwr_in_dbm,
     };
-
     ral_sx128x_bsp_get_reg_mode( context, &reg_mode );
     ral_sx128x_bsp_get_tx_cfg( context, &tx_cfg_input_params, &tx_cfg_output_params );
 
-    if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected > SX128X_PWR_MAX )
-    {
-        index = SX128X_PWR_MAX + SX128X_CONVERT_TABLE_INDEX_OFFSET;
-    }
-    else if( tx_cfg_output_params.chip_output_pwr_in_dbm_expected < SX128X_PWR_MIN )
-    {
-        index = SX128X_PWR_MIN + SX128X_CONVERT_TABLE_INDEX_OFFSET;
-    }
-    else
-    {
-        index = tx_cfg_output_params.chip_output_pwr_in_dbm_expected + SX128X_CONVERT_TABLE_INDEX_OFFSET;
-    }
-
-    if( reg_mode == SX128X_REG_MODE_DCDC )
-    {
-        *pwr_consumption_in_ua = ral_sx128x_convert_tx_dbm_to_ua_reg_mode_dcdc[index];
-    }
-    else if( reg_mode == SX128X_REG_MODE_LDO )
-    {
-        *pwr_consumption_in_ua = ral_sx128x_convert_tx_dbm_to_ua_reg_mode_ldo[index];
-    }
-    else
-    {
-        return RAL_STATUS_UNKNOWN_VALUE;
-    }
-
-    return RAL_STATUS_OK;
+    return ral_sx128x_bsp_get_instantaneous_tx_power_consumption( context, tx_cfg_output_params, reg_mode,
+                                                                  pwr_consumption_in_ua );
 }
 
 ral_status_t ral_sx128x_get_gfsk_rx_consumption_in_ua( const void* context, const uint32_t br_in_bps,
                                                        const uint32_t bw_dsb_in_hz, const bool rx_boosted,
                                                        uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    sx128x_reg_mod_t radio_reg_mode;
+    ral_sx128x_bsp_get_reg_mode( context, &radio_reg_mode );
+
+    return ral_sx128x_bsp_get_instantaneous_gfsk_rx_power_consumption( context, radio_reg_mode, rx_boosted,
+                                                                       pwr_consumption_in_ua );
 }
 
 ral_status_t ral_sx128x_get_lora_rx_consumption_in_ua( const void* context, const ral_lora_bw_t bw,
                                                        const bool rx_boosted, uint32_t* pwr_consumption_in_ua )
 {
     sx128x_reg_mod_t reg_mode;
-
     ral_sx128x_bsp_get_reg_mode( context, &reg_mode );
 
-    switch( reg_mode )
-    {
-    case SX128X_REG_MODE_DCDC:
-    {
-        switch( bw )
-        {
-        case RAL_LORA_BW_200_KHZ:
-        {
-            *pwr_consumption_in_ua = ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_200_DCDC
-                                                    : SX128X_LORA_RX_CONSUMPTION_BW_200_DCDC;
-            return RAL_STATUS_OK;
-        }
-        case RAL_LORA_BW_400_KHZ:
-        {
-            *pwr_consumption_in_ua = ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_400_DCDC
-                                                    : SX128X_LORA_RX_CONSUMPTION_BW_400_DCDC;
-            return RAL_STATUS_OK;
-        }
-        case RAL_LORA_BW_800_KHZ:
-        {
-            *pwr_consumption_in_ua = ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_800_DCDC
-                                                    : SX128X_LORA_RX_CONSUMPTION_BW_800_DCDC;
-            return RAL_STATUS_OK;
-        }
-        case RAL_LORA_BW_1600_KHZ:
-        {
-            *pwr_consumption_in_ua = ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_1600_DCDC
-                                                    : SX128X_LORA_RX_CONSUMPTION_BW_1600_DCDC;
-            return RAL_STATUS_OK;
-        }
-        default:
-            return RAL_STATUS_UNKNOWN_VALUE;
-        }
-        break;
-    }
-    case SX128X_REG_MODE_LDO:
-    {
-        switch( bw )
-        {
-        case RAL_LORA_BW_200_KHZ:
-        {
-            *pwr_consumption_in_ua =
-                ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_200_LDO : SX128X_LORA_RX_CONSUMPTION_BW_200_LDO;
-            return RAL_STATUS_OK;
-        }
-        case RAL_LORA_BW_400_KHZ:
-        {
-            *pwr_consumption_in_ua =
-                ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_400_LDO : SX128X_LORA_RX_CONSUMPTION_BW_400_LDO;
-            return RAL_STATUS_OK;
-        }
-        case RAL_LORA_BW_800_KHZ:
-        {
-            *pwr_consumption_in_ua =
-                ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_800_LDO : SX128X_LORA_RX_CONSUMPTION_BW_800_LDO;
-            return RAL_STATUS_OK;
-        }
-        case RAL_LORA_BW_1600_KHZ:
-        {
-            *pwr_consumption_in_ua = ( rx_boosted ) ? SX128X_LORA_RX_BOOSTED_CONSUMPTION_BW_1600_LDO
-                                                    : SX128X_LORA_RX_CONSUMPTION_BW_1600_LDO;
-            return RAL_STATUS_OK;
-        }
-        default:
-        {
-            return RAL_STATUS_UNKNOWN_VALUE;
-        }
-        }
-        break;
-    }
-    default:
-    {
-        return RAL_STATUS_UNKNOWN_VALUE;
-    }
-    }
+    return ral_sx128x_bsp_get_instantaneous_lora_rx_power_consumption( context, reg_mode, bw, rx_boosted,
+                                                                       pwr_consumption_in_ua );
 }
 
 ral_status_t ral_sx128x_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )

@@ -57,6 +57,8 @@ help:
 	$(call echo_help, " * LBM_DEVICE_MANAGEMENT=yes/no            : choose to build Cloud Device Management service (default: no)")
 	$(call echo_help, " * LBM_GEOLOCATION=yes/no                  : choose to build Geolocation service (default: no)")
 	$(call echo_help, " * LBM_STORE_AND_FORWARD=yes/no            : choose to build Store and Forward service (default: no)")
+	$(call echo_help, " * LBM_RELAY_TX_ENABLE=yes/no              : choose to build Relay Tx service (default: no)")
+	$(call echo_help, " * LBM_RELAY_RX_ENABLE=yes/no              : choose to build Relay Rx service (default: no)")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------- Optional makefile parameters --------------------------")
 	$(call echo_help, " * EXTRAFLAGS=xxx                          : Add specific compilation flag for LBM lib build")
@@ -161,9 +163,16 @@ ifeq ($(RADIO),nc)
 	$(call echo_error,"No radio selected! Please specified the target radio  using RADIO=radio_name option")
 else
 ifneq ($(CRYPTO),SOFT)
-ifeq ($(RELAY_TX_ENABLE),yes)
+ifeq ($(LBM_RELAY_TX_ENABLE),yes)
 	$(call echo_error, "------------------------------------------------------------")
-	$(call echo_error, "When relay feature is enable: only soft crypto can be used")	
+	$(call echo_error, "When Relay Tx feature is enable: only soft crypto can be used")	
+	$(call echo_error, "Please use CRYPTO=SOFT option")
+	$(call echo_error, "------------------------------------------------------------")
+	exit 1
+endif
+ifeq ($(LBM_RELAY_RX_ENABLE),yes)
+	$(call echo_error, "------------------------------------------------------------")
+	$(call echo_error, "When Relay Rx feature is enable: only soft crypto can be used")	
 	$(call echo_error, "Please use CRYPTO=SOFT option")
 	$(call echo_error, "------------------------------------------------------------")
 	exit 1

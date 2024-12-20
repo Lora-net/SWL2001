@@ -126,7 +126,7 @@ extern "C" {
 #define PING_SLOT_FREQ_START_AU_915         (923300000) // Hz
 #define PING_SLOT_STEP_AU_915               (600000)    // Hz
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

@@ -94,9 +94,9 @@ const relay_cid_info_t relay_tx_cid_infos[] = {
     },
 };
 
-const uint8_t  nb_relay_mac_cmd     = ( sizeof( relay_tx_cid_infos ) / sizeof( relay_cid_info_t ) );
-const uint16_t ack_offset_khz[]     = { 0, 200, 400, 800, 1600, 3200 };
-const char*    ack_offset_khz_str[] = { "0 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz", "32 kHz" };
+const uint8_t  nb_relay_mac_cmd_relay_tx     = ( sizeof( relay_tx_cid_infos ) / sizeof( relay_cid_info_t ) );
+const uint16_t ack_offset_khz_realy_tx[]     = { 0, 200, 400, 800, 1600, 3200 };
+
 
 /*
  *-----------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ const char*    ack_offset_khz_str[] = { "0 kHz", "2 kHz", "4 kHz", "8 kHz", "16 
 
 bool relay_tx_mac_parser( lr1_stack_mac_t* lr1_mac )
 {
-    return relay_mac_parser( lr1_mac, relay_tx_cid_infos, nb_relay_mac_cmd );
+    return relay_mac_parser( lr1_mac, relay_tx_cid_infos, nb_relay_mac_cmd_relay_tx );
 }
 
 /*
@@ -167,7 +167,7 @@ static bool relay_tx_mac_update_config_ed_parser( lr1_stack_mac_t* lr1_mac, rela
         }
         else
         {
-            config.second_ch.ack_freq_hz = config.second_ch.freq_hz + ack_offset_khz[ack_offset_khz_idx] * 1000;
+            config.second_ch.ack_freq_hz = config.second_ch.freq_hz + ack_offset_khz_realy_tx[ack_offset_khz_idx] * 1000;
 
             SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel ACK freq: %d Hz\n", config.second_ch.ack_freq_hz );
             if( smtc_real_is_frequency_valid( lr1_mac->real, config.second_ch.ack_freq_hz ) != OKLORAWAN )

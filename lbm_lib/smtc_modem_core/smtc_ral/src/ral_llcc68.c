@@ -531,6 +531,12 @@ ral_status_t ral_llcc68_set_gfsk_pkt_params( const void* context, const ral_gfsk
     return ( ral_status_t ) llcc68_set_gfsk_pkt_params( context, &radio_pkt_params );
 }
 
+ral_status_t ral_llcc68_set_gfsk_pkt_address( const void* context, const uint8_t node_address,
+                                              const uint8_t braodcast_address )
+{
+    return ( ral_status_t ) llcc68_set_gfsk_pkt_address( context, node_address, braodcast_address );
+}
+
 ral_status_t ral_llcc68_set_lora_mod_params( const void* context, const ral_lora_mod_params_t* params )
 {
     ral_status_t             status = RAL_STATUS_ERROR;
@@ -692,17 +698,17 @@ ral_status_t ral_llcc68_set_flrc_sync_word( const void* context, const uint8_t* 
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_llcc68_set_gfsk_crc_params( const void* context, const uint16_t seed, const uint16_t polynomial )
+ral_status_t ral_llcc68_set_gfsk_crc_params( const void* context, const uint32_t seed, const uint32_t polynomial )
 {
     ral_status_t status = RAL_STATUS_ERROR;
 
-    status = ( ral_status_t ) llcc68_set_gfsk_crc_seed( context, seed );
+    status = ( ral_status_t ) llcc68_set_gfsk_crc_seed( context, ( uint16_t ) seed );
     if( status != RAL_STATUS_OK )
     {
         return status;
     }
 
-    status = ( ral_status_t ) llcc68_set_gfsk_crc_polynomial( context, polynomial );
+    status = ( ral_status_t ) llcc68_set_gfsk_crc_polynomial( context, ( uint16_t ) polynomial );
     if( status != RAL_STATUS_OK )
     {
         return status;
@@ -796,20 +802,38 @@ ral_status_t ral_llcc68_get_lora_rx_pkt_cr_crc( const void* context, ral_lora_cr
 ral_status_t ral_llcc68_get_tx_consumption_in_ua( const void* context, const int8_t output_pwr_in_dbm,
                                                   const uint32_t rf_freq_in_hz, uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    llcc68_reg_mod_t                           radio_reg_mode;
+    ral_llcc68_bsp_tx_cfg_output_params_t      tx_cfg_output_params;
+    const ral_llcc68_bsp_tx_cfg_input_params_t tx_cfg_input_params = {
+        .freq_in_hz               = rf_freq_in_hz,
+        .system_output_pwr_in_dbm = output_pwr_in_dbm,
+    };
+    ral_llcc68_bsp_get_tx_cfg( context, &tx_cfg_input_params, &tx_cfg_output_params );
+    ral_llcc68_bsp_get_reg_mode( context, &radio_reg_mode );
+
+    return ral_llcc68_bsp_get_instantaneous_tx_power_consumption( context, &tx_cfg_output_params, radio_reg_mode,
+                                                                  pwr_consumption_in_ua );
 }
 
 ral_status_t ral_llcc68_get_gfsk_rx_consumption_in_ua( const void* context, const uint32_t br_in_bps,
                                                        const uint32_t bw_dsb_in_hz, const bool rx_boosted,
                                                        uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    llcc68_reg_mod_t radio_reg_mode;
+    ral_llcc68_bsp_get_reg_mode( context, &radio_reg_mode );
+
+    return ral_llcc68_bsp_get_instantaneous_gfsk_rx_power_consumption( context, radio_reg_mode, rx_boosted,
+                                                                       pwr_consumption_in_ua );
 }
 
 ral_status_t ral_llcc68_get_lora_rx_consumption_in_ua( const void* context, const ral_lora_bw_t bw,
                                                        const bool rx_boosted, uint32_t* pwr_consumption_in_ua )
 {
-    return RAL_STATUS_UNSUPPORTED_FEATURE;
+    llcc68_reg_mod_t radio_reg_mode;
+    ral_llcc68_bsp_get_reg_mode( context, &radio_reg_mode );
+
+    return ral_llcc68_bsp_get_instantaneous_lora_rx_power_consumption( context, radio_reg_mode, rx_boosted,
+                                                                       pwr_consumption_in_ua );
 }
 
 ral_status_t ral_llcc68_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
@@ -920,7 +944,7 @@ ral_status_t ral_llcc68_get_lora_cad_det_peak( const void* context, ral_lora_sf_
         break;
     }
 
-    ral_llcc68_bsp_get_lora_cad_det_peak( sf, bw, nb_symbol, cad_det_peak );
+    ral_llcc68_bsp_get_lora_cad_det_peak( context, sf, bw, nb_symbol, cad_det_peak );
 
     return RAL_STATUS_OK;
 }

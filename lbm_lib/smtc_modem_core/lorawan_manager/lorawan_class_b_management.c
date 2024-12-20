@@ -53,10 +53,8 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
-#define CURRENT_STACK ( task_id / NUMBER_OF_TASKS )
-#define STACK_ID_CURRENT_TASK \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].stack_id
-#define CURRENT_TASK_ID ( ( stask_manager* ) context )->next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
+#define VIRTUAL_TASK_ID ( ( stask_manager* ) context )->next_task_id
+#define STACK_ID_CURRENT_TASK ( ( stask_manager* ) context )->modem_task[VIRTUAL_TASK_ID].stack_id
 
 /**
  * @brief Check is the index is valid before accessing the object
@@ -315,7 +313,7 @@ static uint8_t lorawan_class_b_management_service_downlink_handler( lr1_stack_ma
 
     if( stack_id >= NUMBER_MAX_OF_CLASS_B_MANAGEMENT_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 

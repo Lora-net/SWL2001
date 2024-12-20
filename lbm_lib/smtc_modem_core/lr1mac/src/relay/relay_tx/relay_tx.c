@@ -36,21 +36,19 @@
  * --- DEPENDENCIES -----------------------------------------------------------------
  */
 #include "relay_tx_api.h"
-
 #include "wake_on_radio.h"
 #include "wake_on_radio_ral.h"
 #include "radio_planner.h"
-
 #include "relay_real.h"
 #include "lr1mac_core.h"
 #include "lr1mac_defs.h"
 #include "lr1mac_utilities.h"
-
 #include "smtc_modem_hal_dbg_trace.h"
 #include "smtc_modem_api.h"
 #include "modem_event_utilities.h"
 #include "lorawan_api.h"
 #include "smtc_real.h"
+#include "smtc_duty_cycle.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -84,7 +82,7 @@ typedef struct relay_tx_s
     uint32_t ref_timestamp_ms;  // Estimated time when the relay performed CAD
 
     uint8_t               ref_channel_idx;  // Channel use
-    uint8_t               ref_defaut_idx;   // Index (0 or 1) of the default channel
+    uint8_t               ref_default_idx;   // Index (0 or 1) of the default channel
     wor_cad_periodicity_t ref_cad_period;   // Real period used by relay (default is 1s)
 
     // Information about the last WOR frame
@@ -92,7 +90,7 @@ typedef struct relay_tx_s
     uint32_t last_preamble_len_ms;    // preamble length in ms
     uint32_t last_timestamp_ms;       // Time of send
     uint8_t  last_ch_idx;             // Channel used (default or additionnal)
-    uint8_t  last_defaut_idx;         // Index (0 or 1) of the default channel
+    uint8_t  last_default_idx;         // Index (0 or 1) of the default channel
 
     uint8_t relay_xtal_drift_ppm;  // xtal drift of the relay
     uint8_t relay_cad_to_rx;       // Delay for a relay to switch from CAD to RX
@@ -106,17 +104,20 @@ typedef struct relay_tx_s
     uint8_t  backoff_cnt;          // Number of WOR without valid WOR ACK
     uint8_t  lr1_payload_len;
 
-    bool              last_ack_valid;
-    wor_ack_infos_t   last_ack;
-    bool              need_key_derivation;
-    relay_tx_config_t relay_tx_config;
+    bool               last_ack_valid;
+    wor_ack_infos_t    last_ack;
+    bool               need_key_derivation;
+    relay_tx_config_t  relay_tx_config;
+    wor_ack_mic_info_t ack_mic_info;
+
+    uint32_t target_timer_lr1;
 } relay_tx_t;
 
 /*
  *-----------------------------------------------------------------------------------
  *--- PRIVATE VARIABLES -------------------------------------------------------------
  */
-static relay_tx_t relay_tx_declare[NUMBER_OF_STACKS] = { 0 };
+static relay_tx_t relay_tx_declare[NUMBER_OF_STACKS];
 
 /*
  *-----------------------------------------------------------------------------------
@@ -163,10 +164,8 @@ bool smtc_relay_tx_init( uint8_t relay_stack_id, radio_planner_t* rp, smtc_real_
                          void ( *busy_callback )( void* busy_context ), void*   busy_context,
                          void ( *abort_callback )( void* abort_context ), void* abort_context )
 {
-    relay_tx_t* relay_tx_declare_temp = &( relay_tx_declare[relay_stack_id] );
-    memset( relay_tx_declare_temp, 0, sizeof( relay_tx_t ) );
-
     relay_tx_t* infos = &( relay_tx_declare[relay_stack_id] );
+    memset( infos, 0, sizeof( relay_tx_t ) );
 
     if( ( free_callback == NULL ) || ( abort_callback == NULL ) )
     {
@@ -194,7 +193,7 @@ bool smtc_relay_tx_init( uint8_t relay_stack_id, radio_planner_t* rp, smtc_real_
     infos->relay_cad_to_rx      = DEFAULT_CAD_TO_RX;
     infos->ref_cad_period       = DEFAULT_CAD_PERIOD;
     infos->activation_mode      = DEFAULT_ACTIVATION_MODE;
-    infos->last_defaut_idx      = 1;
+    infos->last_default_idx      = 1;
 
     memset( &( infos->relay_tx_config ), 0, sizeof( relay_tx_config_t ) );
     infos->relay_tx_config.second_ch_enable                                = false;
@@ -283,7 +282,6 @@ bool smtc_relay_tx_update_config( uint8_t relay_stack_id, const relay_tx_config_
     uint8_t temp_number_of_miss_wor_ack_to_switch_in_nosync_mode = 8;
     if( relay_config->activation == RELAY_TX_ACTIVATION_MODE_ED_CONTROLED )
     {
-        
         temp_number_of_miss_wor_ack_to_switch_in_nosync_mode =
             infos->relay_tx_config.number_of_miss_wor_ack_to_switch_in_nosync_mode;
     }
@@ -344,16 +342,12 @@ bool smtc_relay_tx_prepare_wor( uint8_t relay_stack_id, uint32_t target_time, co
     infos->last_ch_idx = 0;
     if( infos->sync_status == RELAY_TX_SYNC_STATUS_INIT )
     {
-        // Manage the 2 value of the default channel
-        infos->last_defaut_idx = ( infos->last_defaut_idx == 0 ? 1 : 0 );
+        // Manage the 2 values of the default channel
+        infos->last_default_idx = ( infos->last_default_idx == 0 ? 1 : 0 );
 
-        if( smtc_relay_get_default_channel_config( infos->real, infos->last_defaut_idx, &infos->default_ch_config.dr,
-                                                   &infos->default_ch_config.freq_hz,
-                                                   &infos->default_ch_config.ack_freq_hz ) == ERRORLORAWAN )
-        {
-            // no more duty cycle
-            return false;
-        }
+        smtc_relay_get_default_channel_config( infos->real, infos->last_default_idx, &infos->default_ch_config.dr,
+                                               &infos->default_ch_config.freq_hz,
+                                               &infos->default_ch_config.ack_freq_hz );
     }
     else
     {
@@ -365,16 +359,18 @@ bool smtc_relay_tx_prepare_wor( uint8_t relay_stack_id, uint32_t target_time, co
                 // If last channel used was the default -> remove half cad period
                 ref_timestamp -= cad_period_ms >> 1;
             }
+             smtc_duty_cycle_update( );
+            if( smtc_duty_cycle_is_channel_free(  infos->relay_tx_config.second_ch.freq_hz) == false )
+            {
+                SMTC_MODEM_HAL_TRACE_PRINTF( "no more duty cycle for second_ch wor channel\n" );
+                return false;
+            }
         }
         else
         {
-            if( smtc_relay_get_default_channel_config( infos->real, infos->last_defaut_idx,
-                                                       &infos->default_ch_config.dr, &infos->default_ch_config.freq_hz,
-                                                       &infos->default_ch_config.ack_freq_hz ) == ERRORLORAWAN )
-            {
-                // no more duty cycle
-                return false;
-            }
+            smtc_relay_get_default_channel_config( infos->real, infos->last_default_idx, &infos->default_ch_config.dr,
+                                                   &infos->default_ch_config.freq_hz,
+                                                   &infos->default_ch_config.ack_freq_hz );
         }
     }
 
@@ -430,6 +426,9 @@ bool smtc_relay_tx_prepare_wor( uint8_t relay_stack_id, uint32_t target_time, co
             .rf_infos.freq_hz = conf->freq_hz,
             .rf_infos.dr      = conf->dr,
         };
+        // store wor frequency and wor datarate for future mic wor_ack computation
+        infos->ack_mic_info.wor_frequency_hz = wor.uplink.freq_hz;
+        infos->ack_mic_info.wor_datarate     = wor.uplink.dr;
 
         infos->buffer_len = wor_generate_wor( infos->buffer, &wor );
     }
@@ -576,6 +575,19 @@ void smtc_relay_tx_data_receive_on_rxr( uint8_t relay_stack_id )
     }
 }
 
+int32_t smtc_relay_tx_free_duty_cycle_ms_get( uint8_t relay_stack_id )
+{
+    relay_tx_t* infos        = &( relay_tx_declare[relay_stack_id] );
+    uint32_t    tx_freq_list = infos->default_ch_config.freq_hz;
+    if( infos->relay_tx_config.second_ch_enable == true )
+    {
+        tx_freq_list = infos->relay_tx_config.second_ch.freq_hz;
+    }
+    int32_t relay_tx_duty_cycle =
+        smtc_relay_tx_is_enable( relay_stack_id ) ? smtc_duty_cycle_get_next_free_time_ms( 1, &tx_freq_list ) : 0;
+    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "relay_tx_duty_cycle = %d\n", relay_tx_duty_cycle );
+    return ( relay_tx_duty_cycle );
+}
 /*
  *-----------------------------------------------------------------------------------
  *--- PRIVATE FUNCTIONS DEFINITIONS -------------------------------------------------
@@ -596,17 +608,13 @@ static bool relay_tx_check_decode_ack( uint8_t relay_stack_id, wor_ack_infos_t* 
     const relay_tx_channel_config_t* conf =
         ( infos->last_ch_idx == 0 ) ? &infos->default_ch_config : &( infos->relay_tx_config.second_ch );
 
-    wor_ack_mic_info_t ack_mic_info = {
-        .dev_addr     = lorawan_api_devaddr_get( relay_stack_id ),
-        .wfcnt        = infos->fcnt,
-        .frequency_hz = conf->freq_hz,
-        .datarate     = conf->dr,
-    };
+    infos->ack_mic_info.dev_addr = lorawan_api_devaddr_get( relay_stack_id );
+    infos->ack_mic_info.wfcnt    = infos->fcnt;
 
     // SMTC_MODEM_HAL_TRACE_PRINTF( "frequency_hz = %d, infos->last_ch_idx = %d ,  .dev_addr   = %x, datarate = %d\n",
     // conf->ack_freq_hz,infos->last_ch_idx,lorawan_api_devaddr_get( relay_stack_id ),conf->dr);
     //  Key is set to NULL because it is already save in the crypto element (soft or hard)
-    const uint32_t mic_calc    = wor_compute_mic_ack( &ack_mic_info, infos->buffer, NULL );
+    const uint32_t mic_calc    = wor_compute_mic_ack( &( infos->ack_mic_info ), infos->buffer, NULL );
     const uint32_t mic_receive = wor_extract_mic_ack( infos->buffer );
 
     if( mic_calc != mic_receive )
@@ -616,21 +624,20 @@ static bool relay_tx_check_decode_ack( uint8_t relay_stack_id, wor_ack_infos_t* 
         return false;
     }
 
-    ack_mic_info.frequency_hz = conf->ack_freq_hz;
-
-    wor_decrypt_ack( infos->buffer, &ack_mic_info, ack, NULL );
+    infos->ack_mic_info.frequency_hz = conf->ack_freq_hz;
+    infos->ack_mic_info.datarate     = conf->dr;
+    wor_decrypt_ack( infos->buffer, &( infos->ack_mic_info ), ack, NULL );
     return true;
 }
 
 static void relay_tx_callback_rp( uint8_t* stack_id )
 {
-    rp_status_t     rp_status;
-    uint32_t        timestamp_irq;
-    static uint32_t target_timer_lr1      = 0;
-    bool            has_to_send_data      = false;
-    bool            cancel_lr1mac_process = false;
-    const uint8_t   relay_stack_id        = *stack_id;
-    relay_tx_t*     infos                 = &( relay_tx_declare[relay_stack_id] );
+    rp_status_t   rp_status;
+    uint32_t      timestamp_irq;
+    bool          has_to_send_data      = false;
+    bool          cancel_lr1mac_process = false;
+    const uint8_t relay_stack_id        = *stack_id;
+    relay_tx_t*   infos                 = &( relay_tx_declare[relay_stack_id] );
 
     rp_get_status( infos->rp, RP_HOOK_ID_RELAY_TX + relay_stack_id, &timestamp_irq, &rp_status );
 
@@ -675,7 +682,7 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
                     has_to_send_data = true;
                 }
             }
-            target_timer_lr1 =
+            infos->target_timer_lr1 =
                 infos->time_tx_done + infos->toa_ack[infos->last_ch_idx] + DELAY_WOR_TO_WORACK_MS +
                 DELAY_WORACK_TO_UPLINK_MS;  // don't add "- smtc_modem_hal_get_radio_tcxo_startup_delay_ms( )" due to
                                             // the fact that lr1mac do it by itself-
@@ -685,9 +692,10 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
         {
             // WOR join Req has been send, send uplink
             has_to_send_data = true;
-            target_timer_lr1 = timestamp_irq +
-                               DELAY_WOR_TO_JOINREQ_MS;  // don't add "- smtc_modem_hal_get_radio_tcxo_startup_delay_ms(
-                                                         // )" due to the fact that lr1mac do it by itself
+            infos->target_timer_lr1 =
+                timestamp_irq +
+                DELAY_WOR_TO_JOINREQ_MS;  // don't add "- smtc_modem_hal_get_radio_tcxo_startup_delay_ms(
+                                          // )" due to the fact that lr1mac do it by itself
         }
         break;
     }
@@ -720,7 +728,7 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
             relay_tx_update_sync_status( relay_stack_id, RELAY_TX_SYNC_STATUS_SYNC );
             infos->ref_cad_period       = ack.period;
             infos->ref_channel_idx      = infos->last_ch_idx;
-            infos->ref_defaut_idx       = infos->last_defaut_idx;
+            infos->ref_default_idx       = infos->last_default_idx;
             infos->relay_xtal_drift_ppm = wor_convert_ppm( ack.relay_ppm );
             infos->relay_cad_to_rx      = wor_convert_cadtorx( ack.cad_to_rx );
 
@@ -797,7 +805,7 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
     {
         cb_return_param_t cb_param = {
             .abort      = false,
-            .lr1_timing = target_timer_lr1,
+            .lr1_timing = infos->target_timer_lr1,
             .stack_id   = relay_stack_id,
         };
 
@@ -820,9 +828,9 @@ static void relay_tx_update_sync_status( uint8_t relay_stack_id, relay_tx_sync_s
 static void relay_tx_print_conf( uint8_t relay_stack_id )
 {
     relay_tx_t* infos = &( relay_tx_declare[relay_stack_id] );
-
+#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     const char* name_activation[] = { "DISABLED", "ENABLE", "DYNAMIC", "ED_CONTROLED" };
-
+#endif
     SMTC_MODEM_HAL_TRACE_PRINTF( "\n------------------------------\n" );
     SMTC_MODEM_HAL_TRACE_PRINTF( "END DEVICE RELAY CONFIGURATION\n" );
     SMTC_MODEM_HAL_TRACE_PRINTF( "Activation :  %s\n", name_activation[infos->relay_tx_config.activation] );

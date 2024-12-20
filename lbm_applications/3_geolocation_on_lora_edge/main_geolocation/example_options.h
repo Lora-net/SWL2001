@@ -75,8 +75,6 @@ extern "C" {
  */
 #define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_EU_868
 
-// clang-format on
-
 #ifdef __cplusplus
 }
 #endif

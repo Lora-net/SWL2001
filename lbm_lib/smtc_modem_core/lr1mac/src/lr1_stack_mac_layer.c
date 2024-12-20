@@ -50,7 +50,12 @@
 #include "lr1mac_config.h"
 #include "smtc_modem_crypto.h"
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_RX )
+#include "relay_rx_mac_parser.h"
+#include "relay_def.h"
+#endif
+
+#if defined( ADD_RELAY_TX )
 #include "relay_tx_api.h"
 #include "relay_tx_mac_parser.h"
 #include "relay_def.h"
@@ -70,8 +75,8 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
-#if defined( RELAY_TX )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if defined( ADD_RELAY_TX )
 static const char* smtc_name_rx_windows[] = { "RX1", "RX2", "RXR" };
 #else
 static const char* smtc_name_rx_windows[] = { "RX1", "RX2" };
@@ -224,11 +229,17 @@ void lr1_stack_mac_tx_frame_encrypt( lr1_stack_mac_t* lr1_mac )
     {
         tx_fopts_length = lr1_mac->tx_fopts_current_length;
     }
-
+    smtc_se_key_identifier_t enc_key = ( lr1_mac->tx_fport == PORTNWK ) ? SMTC_SE_NWK_S_ENC_KEY : SMTC_SE_APP_S_KEY;
+#if defined( ADD_RELAY_RX )
+    if( lr1_mac->tx_fport == FPORT_RELAY )
+    {
+        enc_key = SMTC_SE_NWK_S_ENC_KEY;
+    }
+#endif
     if( smtc_modem_crypto_payload_encrypt(
             &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + tx_fopts_length], lr1_mac->app_payload_size,
-            ( lr1_mac->tx_fport == PORTNWK ) ? SMTC_SE_NWK_S_ENC_KEY : SMTC_SE_APP_S_KEY, lr1_mac->dev_addr, UP_LINK,
-            lr1_mac->fcnt_up, &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + tx_fopts_length],
+            enc_key, lr1_mac->dev_addr, UP_LINK, lr1_mac->fcnt_up,
+            &lr1_mac->tx_payload[FHDROFFSET + lr1_mac->tx_fport_present + tx_fopts_length],
             lr1_mac->stack_id ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
     {
         SMTC_MODEM_HAL_PANIC( "Crypto error during payload encryption\n" );
@@ -253,7 +264,7 @@ void lr1_stack_mac_tx_lora_launch_callback_for_rp( void* rp_void )
     SMTC_MODEM_HAL_PANIC_ON_FAILURE(
         ral_set_pkt_payload( &( rp->radio->ral ), rp->payload[id], rp->payload_buffer_size[id] ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
         // Do nothing
     }
@@ -274,7 +285,7 @@ void lr1_stack_mac_tx_gfsk_launch_callback_for_rp( void* rp_void )
     SMTC_MODEM_HAL_PANIC_ON_FAILURE(
         ral_set_pkt_payload( &( rp->radio->ral ), rp->payload[id], rp->payload_buffer_size[id] ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
     // At this time only tcxo startup delay is remaining
@@ -303,7 +314,7 @@ void lr1_stack_mac_tx_lr_fhss_launch_callback_for_rp( void* rp_void )
                                  rp->radio_params[id].tx.lr_fhss.hop_sequence_id, rp->payload[id],
                                  rp->payload_buffer_size[id] ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
         // Do nothing
     }
@@ -324,7 +335,7 @@ void lr1_stack_mac_rx_lora_launch_callback_for_rp( void* rp_void )
         ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT | RAL_IRQ_RX_HDR_ERROR |
                                                          RAL_IRQ_RX_CRC_ERROR ) == RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
     // At this time only tcxo startup delay is remaining
@@ -345,7 +356,7 @@ void lr1_stack_mac_rx_gfsk_launch_callback_for_rp( void* rp_void )
         ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT | RAL_IRQ_RX_CRC_ERROR ) ==
         RAL_STATUS_OK );
     // Wait the exact expected time (ie target - tcxo startup delay)
-    while( ( int32_t )( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
     {
     }
     // At this time only tcxo startup delay is remaining
@@ -450,12 +461,6 @@ void lr1_stack_mac_tx_radio_start( lr1_stack_mac_t* lr1_mac )
         lr_fhss_param.output_pwr_in_dbm = smtc_real_clamp_output_power_eirp_vs_freq_and_dr(
             lr1_mac->real, lr1_mac->tx_power, lr1_mac->tx_frequency, lr1_mac->tx_data_rate );
 
-        unsigned int nb_max_hop_sequence = 0;
-        SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_lr_fhss_get_hop_sequence_count( &lr1_mac->rp->radio->ral,
-                                                                             &lr_fhss_param.ral_lr_fhss_params,
-                                                                             &nb_max_hop_sequence ) == RAL_STATUS_OK );
-        lr_fhss_param.hop_sequence_id =
-            smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence - 1 );
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.modulation_type = LR_FHSS_V1_MODULATION_TYPE_GMSK_488;
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.cr              = tx_cr;
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.grid            = smtc_real_lr_fhss_get_grid( lr1_mac->real );
@@ -465,6 +470,13 @@ void lr1_stack_mac_tx_radio_start( lr1_stack_mac_t* lr1_mac )
         lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.sync_word = smtc_real_get_lr_fhss_sync_word( lr1_mac->real );
         lr_fhss_param.ral_lr_fhss_params.center_frequency_in_hz   = lr1_mac->tx_frequency;
         lr_fhss_param.ral_lr_fhss_params.device_offset            = 0;
+
+        unsigned int nb_max_hop_sequence = 0;
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_lr_fhss_get_hop_sequence_count( &lr1_mac->rp->radio->ral,
+                                                                             &lr_fhss_param.ral_lr_fhss_params,
+                                                                             &nb_max_hop_sequence ) == RAL_STATUS_OK );
+        lr_fhss_param.hop_sequence_id =
+            smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence - 1 );
 
         radio_params.tx.lr_fhss = lr_fhss_param;
 
@@ -525,7 +537,7 @@ void lr1_stack_mac_rx_radio_start( lr1_stack_mac_t* lr1_mac, const rx_win_type_t
     case RX2:
         rx_frequency = lr1_mac->rx2_frequency;
         break;
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     case RXR:
         smtc_relay_tx_get_rxr_param( lr1_mac->stack_id, lr1_mac->tx_data_rate, NULL, &rx_frequency );
         break;
@@ -555,9 +567,8 @@ void lr1_stack_mac_rx_radio_start( lr1_stack_mac_t* lr1_mac, const rx_win_type_t
 
         lora_param.pkt_params.header_type = RAL_LORA_PKT_EXPLICIT;
 
-        // +5 for MIC + FPort
         lora_param.pkt_params.pld_len_in_bytes =
-            5 + smtc_real_get_max_payload_size( lr1_mac->real, rx_datarate, DOWN_LINK );
+            smtc_real_get_max_payload_size( lr1_mac->real, rx_datarate, DOWN_LINK ) + MHDRSIZE + MICSIZE;
 
         lora_param.pkt_params.crc_is_on       = false;
         lora_param.pkt_params.invert_iq_is_on = true;
@@ -616,9 +627,9 @@ void lr1_stack_mac_rx_radio_start( lr1_stack_mac_t* lr1_mac, const rx_win_type_t
         .launch_task_callbacks = ( radio_params.pkt_type == RAL_PKT_TYPE_LORA )
                                      ? lr1_stack_mac_rx_lora_launch_callback_for_rp
                                      : lr1_stack_mac_rx_gfsk_launch_callback_for_rp,
-        .state            = RP_TASK_STATE_SCHEDULE,
-        .start_time_ms    = time_to_start,
-        .duration_time_ms = lr1_mac->rx_timeout_symb_in_ms,
+        .state                 = RP_TASK_STATE_SCHEDULE,
+        .start_time_ms         = time_to_start,
+        .duration_time_ms      = lr1_mac->rx_timeout_symb_in_ms,
     };
 
     if( rp_task_enqueue( lr1_mac->rp, &rp_task, lr1_mac->rx_down_data.rx_payload, 255, &radio_params ) ==
@@ -664,16 +675,30 @@ void lr1_stack_mac_rp_callback( lr1_stack_mac_t* lr1_mac )
     case RP_STATUS_RX_PACKET:
         // save rssi and snr
         lr1_mac->rx_down_data.rx_metadata.timestamp_ms = tcurrent_ms;
-        lr1_mac->rx_down_data.rx_metadata.rx_snr =
-            lr1_mac->rp->radio_params[my_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
-        lr1_mac->rx_down_data.rx_metadata.rx_rssi =
-            lr1_mac->rp->radio_params[my_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
+
+        if( lr1_mac->rp->radio_params[my_hook_id].pkt_type == RAL_PKT_TYPE_LORA )
+        {
+            lr1_mac->rx_down_data.rx_metadata.rx_snr =
+                lr1_mac->rp->radio_params[my_hook_id].rx.lora_pkt_status.snr_pkt_in_db;
+            lr1_mac->rx_down_data.rx_metadata.rx_rssi =
+                lr1_mac->rp->radio_params[my_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
+        }
+        else if( lr1_mac->rp->radio_params[my_hook_id].pkt_type == RAL_PKT_TYPE_GFSK )
+        {
+            lr1_mac->rx_down_data.rx_metadata.rx_snr = 0;
+            lr1_mac->rx_down_data.rx_metadata.rx_rssi =
+                lr1_mac->rp->radio_params[my_hook_id].rx.gfsk_pkt_status.rssi_avg_in_dbm;
+        }
+        else
+        {
+            SMTC_MODEM_HAL_PANIC( );
+        }
+
         lr1_mac->rx_down_data.rx_payload_size = ( uint8_t ) lr1_mac->rp->rx_payload_size[my_hook_id];
 
-        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "payload size receive = %u, snr = %d , rssi = %d\n",
-                                           lr1_mac->rx_down_data.rx_payload_size,
-                                           lr1_mac->rp->radio_params[my_hook_id].rx.lora_pkt_status.snr_pkt_in_db,
-                                           lr1_mac->rp->radio_params[my_hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
+            "payload size receive = %u, snr = %d , rssi = %d\n", lr1_mac->rx_down_data.rx_payload_size,
+            lr1_mac->rx_down_data.rx_metadata.rx_snr, lr1_mac->rx_down_data.rx_metadata.rx_rssi );
 
         if( lr1_stack_mac_downlink_check_under_it( lr1_mac ) != OKLORAWAN )
         {  // Case receive a packet but it isn't a valid packet
@@ -687,7 +712,8 @@ void lr1_stack_mac_rp_callback( lr1_stack_mac_t* lr1_mac )
         SMTC_MODEM_HAL_TRACE_PRINTF( "RP_STATUS_RX_CRC_ERROR\n" );
         break;
 
-    case RP_STATUS_RX_TIMEOUT: {
+    case RP_STATUS_RX_TIMEOUT:
+    {
 #ifndef BSP_LR1MAC_DISABLE_FINE_TUNE
         uint32_t rx_timestamp_calibration = tcurrent_ms;
         uint32_t rx_delay_ms              = 0;
@@ -700,7 +726,7 @@ void lr1_stack_mac_rp_callback( lr1_stack_mac_t* lr1_mac )
         {
             rx_delay_ms = lr1_mac->rx1_delay_s + 1;
         }
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
         else if( lr1_mac->current_win == RXR )
         {
             rx_delay_ms = RXR_WINDOWS_DELAY_S;
@@ -788,7 +814,7 @@ bool lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
         lr1_mac->rx_data_rate = lr1_mac->rx2_data_rate;
         break;
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     case RXR:
         delay_ms = RXR_WINDOWS_DELAY_S;
         smtc_relay_tx_get_rxr_param( lr1_mac->stack_id, lr1_mac->tx_data_rate, &lr1_mac->rx_data_rate, NULL );
@@ -829,7 +855,7 @@ bool lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
                                   +smtc_modem_hal_get_board_delay_ms( ) +
                                   lr1_mac->fine_tune_board_setting_delay_ms[lr1_mac->rx_data_rate];
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
         uint32_t crystal_error = lr1_mac->crystal_error;
         if( type == RXR )
         {
@@ -853,7 +879,7 @@ bool lr1_stack_mac_rx_timer_configure( lr1_stack_mac_t* lr1_mac, const rx_win_ty
             lr1_mac->rx_timeout_symb_in_ms, lr1_mac->rx_window_symb, board_delay_ms );
 
         int32_t talarm_ms =
-            delay_ms + ( int32_t )( lr1_mac->isr_tx_done_radio_timestamp - tcurrent_ms ) + lr1_mac->rx_offset_ms;
+            delay_ms + ( int32_t ) ( lr1_mac->isr_tx_done_radio_timestamp - tcurrent_ms ) + lr1_mac->rx_offset_ms;
         if( talarm_ms < 0 )
         {
             lr1_mac->radio_process_state = RADIOSTATE_RX_FINISHED;
@@ -968,7 +994,7 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
             {
                 lr1_mac->rx_down_data.rx_metadata.rx_frequency_hz = lr1_mac->rx2_frequency;
             }
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
             else if( lr1_mac->current_win == RXR )
             {
                 smtc_relay_tx_get_rxr_param( lr1_mac->stack_id, lr1_mac->tx_data_rate, NULL,
@@ -991,7 +1017,22 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
                 // => set rx_packet_type = NWKRXPACKET
                 // => if ack bit is set to one : notify the upper layer that the stack have received an ack bit
 
+#if defined( ADD_RELAY_RX )
+                bool decode_with_nwk_s_key = false;
+
                 if( lr1_mac->rx_down_data.rx_metadata.rx_fport == 0 )
+                {
+                    decode_with_nwk_s_key = true;
+                }
+
+                if( lr1_mac->rx_down_data.rx_metadata.rx_fport == FPORT_RELAY )
+                {
+                    decode_with_nwk_s_key = true;
+                }
+                if( decode_with_nwk_s_key == true )
+#else
+                if( lr1_mac->rx_down_data.rx_metadata.rx_fport == 0 )
+#endif
                 {  // receive a mac management frame without fopts
                     if( lr1_mac->rx_fopts_length == 0 )
                     {
@@ -1125,8 +1166,8 @@ void lr1_stack_mac_update( lr1_stack_mac_t* lr1_mac )
     if( lr1_mac->join_status == JOINING )
     {
         // get current timestamp to check which duty cycle will be applied
-        uint32_t current_time_s = smtc_modem_hal_get_time_in_s( );
-
+        uint32_t current_time_s  = smtc_modem_hal_get_time_in_s( );
+        lr1_mac->adr_mode_select = JOIN_DR_DISTRIBUTION;
         lr1_mac->retry_join_cpt++;
 
         if( current_time_s + ( ( lr1_stack_toa_get( lr1_mac ) ) / 10 ) < ( lr1_mac->first_join_timestamp + 3600 ) )
@@ -1139,13 +1180,16 @@ void lr1_stack_mac_update( lr1_stack_mac_t* lr1_mac )
         {
             // during the 10 hours following first hour after first join try => duty cycle of 1/1000 ie 36s over 10
             // hours
-            lr1_mac->next_time_to_join_seconds = current_time_s + ( lr1_stack_toa_get( lr1_mac ) );
+            lr1_mac->next_time_to_join_seconds = current_time_s + ( ( ( lr1_stack_toa_get( lr1_mac ) * 12 ) / 10 ) );
             // ts=cur_ts+(toa_s*1000) = cur_ts + (toa_ms / 1000) * 1000 = cur_ts + toa_ms
+            // *12/10 to round the number of JoinReq to the worst case
         }
         else
         {
             // Following the first 11 hours after first join try => duty cycle of 1/10000 ie 8.7s over 24 hours
-            lr1_mac->next_time_to_join_seconds = current_time_s + ( lr1_stack_toa_get( lr1_mac ) ) * 10;
+            lr1_mac->next_time_to_join_seconds =
+                current_time_s + ( lr1_stack_toa_get( lr1_mac ) ) * 12;  // *12 to avoid to launch 6 JoinReq by 24h
+            lr1_mac->adr_mode_select = JOIN_DR_DISTRIBUTION_LONG_TERM;
             // ts=cur_ts+(toa_s*10000) = cur_ts + (toa_ms / 1000) * 10000 = cur_ts + toa_ms*10
         }
 
@@ -1315,7 +1359,8 @@ status_lorawan_t lr1_stack_mac_cmd_parse( lr1_stack_mac_t* lr1_mac )
             dl_channel_parser( lr1_mac );
             break;
 
-        case DEVICE_TIME_ANS: {
+        case DEVICE_TIME_ANS:
+        {
             if( device_time_ans_parser( lr1_mac ) == OKLORAWAN )
             {
                 lr1_mac->timestamp_tx_done_device_time_req_ms = lr1_mac->timestamp_tx_done_device_time_req_ms_tmp;
@@ -1325,7 +1370,8 @@ status_lorawan_t lr1_stack_mac_cmd_parse( lr1_stack_mac_t* lr1_mac )
         }
 
         // Class B
-        case PING_SLOT_INFO_ANS: {
+        case PING_SLOT_INFO_ANS:
+        {
             if( ping_slot_info_ans_parser( lr1_mac ) == OKLORAWAN )
             {
                 lr1_mac->ping_slot_periodicity_ans = lr1_mac->ping_slot_periodicity_req;
@@ -1341,13 +1387,29 @@ status_lorawan_t lr1_stack_mac_cmd_parse( lr1_stack_mac_t* lr1_mac )
             beacon_freq_req_parser( lr1_mac );
             break;
 
-#if defined( RELAY_TX )
-        default: {
-            const bool mac_is_known = relay_tx_mac_parser( lr1_mac );
-            if( mac_is_known == false )
+#if defined( ADD_RELAY_TX ) || defined( ADD_RELAY_RX )
+        default:
+        {
+            bool mac_is_known_relay_tx = false;
+            bool mac_is_known_relay_rx = false;
+#if defined( ADD_RELAY_TX )
+            mac_is_known_relay_tx = relay_tx_mac_parser( lr1_mac );
+#endif
+#if defined( ADD_RELAY_RX )
+
+            if( ( lr1_mac->rx_down_data.rx_metadata.rx_fport_present == true ) &&
+                ( lr1_mac->rx_down_data.rx_metadata.rx_fport == FPORT_RELAY ) )
+            {
+                mac_is_known_relay_rx = false;  // Don't process data on FPORT 226 as MAC command
+            }
+            else
+            {
+                mac_is_known_relay_rx = relay_rx_mac_parser( lr1_mac );
+            }
+#endif
+            if( ( mac_is_known_relay_tx == false ) && ( mac_is_known_relay_rx == false ) )
             {
                 lr1_mac->nwk_payload_size = 0;
-                SMTC_MODEM_HAL_TRACE_PRINTF( " Unknown mac command %02x\n", cmd_identifier );
             }
         }
         break;
@@ -1390,8 +1452,8 @@ void lr1_stack_mac_join_request_build( lr1_stack_mac_t* lr1_mac )
         lr1_mac->tx_payload[1 + i] = join_eui[7 - i];
         lr1_mac->tx_payload[9 + i] = dev_eui[7 - i];
     }
-    lr1_mac->tx_payload[17]  = ( uint8_t )( ( lr1_mac->dev_nonce & 0x00FF ) );
-    lr1_mac->tx_payload[18]  = ( uint8_t )( ( lr1_mac->dev_nonce & 0xFF00 ) >> 8 );
+    lr1_mac->tx_payload[17]  = ( uint8_t ) ( ( lr1_mac->dev_nonce & 0x00FF ) );
+    lr1_mac->tx_payload[18]  = ( uint8_t ) ( ( lr1_mac->dev_nonce & 0xFF00 ) >> 8 );
     lr1_mac->tx_payload_size = 19;
     uint32_t mic;
     //    FcntUp = 1;
@@ -1410,7 +1472,6 @@ status_lorawan_t lr1_stack_mac_join_accept( lr1_stack_mac_t* lr1_mac )
     uint8_t  join_nonce[6];    // JoinNonce + NetID
     uint32_t join_nonce_tmp;   // JoinNonce only
     uint32_t join_nonce_prev;  // JoinNonce only
-    uint32_t i;
 
     memcpy( join_nonce, &lr1_mac->rx_down_data.rx_payload[1], 6 );
 
@@ -1440,16 +1501,19 @@ status_lorawan_t lr1_stack_mac_join_accept( lr1_stack_mac_t* lr1_mac )
     lr1_stack_mac_session_init( lr1_mac );
     smtc_real_config_session( lr1_mac->real );
 
+    bool is_valid_join_cflist = false;
+
     if( lr1_mac->rx_down_data.rx_payload_size > 13 )  // MIC has been removed (17 bytes - 4 bytes MIC)
     {                                                 // cflist are presents
-        for( i = 0; i < 16; i++ )
-        {
-            lr1_mac->cf_list[i] = lr1_mac->rx_down_data.rx_payload[13 + i];
-        }
+        memcpy( lr1_mac->cf_list, &lr1_mac->rx_down_data.rx_payload[13], 16 );
 
-        smtc_real_update_cflist( lr1_mac->real, lr1_mac->cf_list );
+        if( smtc_real_update_cflist( lr1_mac->real, lr1_mac->cf_list ) == OKLORAWAN )
+        {
+            is_valid_join_cflist = true;
+        }
     }
-    else
+
+    if( is_valid_join_cflist == false )
     {
         smtc_real_init_after_join_snapshot_channel_mask( lr1_mac->real, lr1_mac->tx_data_rate, lr1_mac->tx_frequency );
     }
@@ -1462,7 +1526,7 @@ status_lorawan_t lr1_stack_mac_join_accept( lr1_stack_mac_t* lr1_mac )
     lr1_mac->rx1_delay_s   = ( lr1_mac->rx_down_data.rx_payload[12] & 0x0F );
     if( lr1_mac->rx1_delay_s == 0 )
     {
-        lr1_mac->rx1_delay_s = 1;  // Lorawan standart define 0 such as a delay of 1
+        lr1_mac->rx1_delay_s = 1;  // Lorawan standard define 0 such as a delay of 1
     }
 
     if( smtc_real_is_rx1_dr_offset_valid( lr1_mac->real, lr1_mac->rx1_dr_offset ) != OKLORAWAN )
@@ -1679,13 +1743,13 @@ static void mac_header_set( lr1_stack_mac_t* lr1_mac )
 
 static void frame_header_set( lr1_stack_mac_t* lr1_mac )
 {
-    lr1_mac->tx_payload[1] = ( uint8_t )( ( lr1_mac->dev_addr & 0x000000FF ) );
-    lr1_mac->tx_payload[2] = ( uint8_t )( ( lr1_mac->dev_addr & 0x0000FF00 ) >> 8 );
-    lr1_mac->tx_payload[3] = ( uint8_t )( ( lr1_mac->dev_addr & 0x00FF0000 ) >> 16 );
-    lr1_mac->tx_payload[4] = ( uint8_t )( ( lr1_mac->dev_addr & 0xFF000000 ) >> 24 );
+    lr1_mac->tx_payload[1] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0x000000FF ) );
+    lr1_mac->tx_payload[2] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0x0000FF00 ) >> 8 );
+    lr1_mac->tx_payload[3] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0x00FF0000 ) >> 16 );
+    lr1_mac->tx_payload[4] = ( uint8_t ) ( ( lr1_mac->dev_addr & 0xFF000000 ) >> 24 );
     lr1_mac->tx_payload[5] = lr1_mac->tx_fctrl;
-    lr1_mac->tx_payload[6] = ( uint8_t )( ( lr1_mac->fcnt_up & 0x000000FF ) );
-    lr1_mac->tx_payload[7] = ( uint8_t )( ( lr1_mac->fcnt_up & 0x0000FF00 ) >> 8 );
+    lr1_mac->tx_payload[6] = ( uint8_t ) ( ( lr1_mac->fcnt_up & 0x000000FF ) );
+    lr1_mac->tx_payload[7] = ( uint8_t ) ( ( lr1_mac->fcnt_up & 0x0000FF00 ) >> 8 );
 
     if( lr1_mac->tx_fport == PORTNWK )
     {
@@ -1730,24 +1794,25 @@ static void link_check_parser( lr1_stack_mac_t* lr1_mac )
 }
 
 /**********************************************************************************************************************/
-/*                                               Private NWK MANAGEMENTS :                                            */
-/* LinkADR                                                                                                            */
-/*  Note : describe multiple adr specification                                                                        */
+/*                                               Private NWK MANAGEMENTS : */
+/* LinkADR */
+/*  Note : describe multiple adr specification */
 /*                                                                                                                    */
-/*  Step 1 : Create a "unwrapped channel mask" in case of multiple adr cmd with both Channem Mask and ChannnelMaskCntl*/
-/*       2 : Extract from the last adr cmd datarate candidate                                                         */
-/*       3 : Extract from the last adr cmd TxPower candidate                                                          */
-/*       4 : Extract from the last adr cmd NBRetry candidate                                                          */
-/*       5 : Check errors cases (described below)                                                                     */
-/*       6 : If No error Set new channel mask, txpower,datarate and nbretry                                           */
-/*       7 : Compute duplicated LinkAdrAns                                                                            */
+/*  Step 1 : Create a "unwrapped channel mask" in case of multiple adr cmd with both Channel Mask and
+ * ChannnelMaskCntl*/
+/*       2 : Extract from the last adr cmd datarate candidate */
+/*       3 : Extract from the last adr cmd TxPower candidate */
+/*       4 : Extract from the last adr cmd NBRetry candidate */
+/*       5 : Check errors cases (described below) */
+/*       6 : If No error Set new channel mask, txpower,datarate and nbretry */
+/*       7 : Compute duplicated LinkAdrAns */
 /*                                                                                                                    */
-/*  Error cases    1 : Channel Cntl mask RFU for each adr cmd (in case of  multiple cmd)                              */
-/*                 2 : Undefined channel ( freq = 0 ) for active bit in the unwrapped channel mask                    */
-/*                 3 : Unwrapped channel mask = 0 (none active channel)                                               */
-/*                 4 : For the last adr cmd not valid tx power                                                        */
-/*                 5 : For the last adr cmd not valid datarate                                                        */
-/*                     ( datarate > dRMax or datarate < dRMin for all active channel )                                */
+/*  Error cases    1 : Channel Cntl mask RFU for each adr cmd (in case of  multiple cmd) */
+/*                 2 : Undefined channel ( freq = 0 ) for active bit in the unwrapped channel mask */
+/*                 3 : Unwrapped channel mask = 0 (none active channel) */
+/*                 4 : For the last adr cmd not valid tx power */
+/*                 5 : For the last adr cmd not valid datarate */
+/*                     ( datarate > dRMax or datarate < dRMin for all active channel ) */
 /**********************************************************************************************************************/
 static void link_adr_parser( lr1_stack_mac_t* lr1_mac )
 {
@@ -1789,7 +1854,7 @@ static void link_adr_parser( lr1_stack_mac_t* lr1_mac )
 
         uint8_t ch_mask_cntl_temp =
             ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + ( i * LINK_ADR_REQ_SIZE ) + 4] & 0x70 ) >> 4;
-        SMTC_MODEM_HAL_TRACE_PRINTF( "%u - LINK ADR REQ , channel mask = 0x%x , ChMAstCntl = 0x%x\n", i + 1,
+        SMTC_MODEM_HAL_TRACE_PRINTF( "%u - LINK ADR REQ , channel mask = 0x%x , ChMaskCntl = 0x%x\n", i + 1,
                                      channel_mask_temp, ch_mask_cntl_temp );
 
         status_channel = smtc_real_build_channel_mask( lr1_mac->real, ch_mask_cntl_temp, channel_mask_temp );
@@ -1806,42 +1871,42 @@ static void link_adr_parser( lr1_stack_mac_t* lr1_mac )
         SMTC_MODEM_HAL_TRACE_WARNING( "INVALID CHANNEL MASK\n" );
     }
 
+    uint8_t dr_tmp =
+        ( ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + ( ( nb_link_adr_req - 1 ) * LINK_ADR_REQ_SIZE ) + 1] &
+            0xF0 ) >>
+          4 );
+
+    uint8_t tx_power_tmp =
+        ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + ( ( nb_link_adr_req - 1 ) * LINK_ADR_REQ_SIZE ) + 1] &
+          0x0F );
+
     // At This point global temporary channel mask is built and validated
     if( lr1_mac->adr_mode_select != STATIC_ADR_MODE )
     {
-        if( status_ans == 7 )  // mean none ERROR_CHANNEL_CNTL or  ERROR_CHANNEL_MASK so valid channel mask only bit
-                               // 1 is really tested
+        // If datarate == 0x0F, ignore the value else answer an ERROR and don't change anything
+        if( dr_tmp != 0x0F )
         {
-            // check if new proposal channel mask is compatible with our mobile distribution
-            if( smtc_real_is_channel_mask_for_mobile_mode( lr1_mac->real ) == ERRORLORAWAN )
-            {
-                status_ans = 0x0;  // reject the cmd because even if the channel mask is valid it is not compatible
-                                   // with our current adr distribution
-                SMTC_MODEM_HAL_TRACE_WARNING( "INVALID CHANNEL MASK in Mobile Mode\n" );
-            }
-            else
-            {
-                // new channel mask is acceptable :
-                smtc_real_set_channel_mask( lr1_mac->real );
-                // set this flag at true to notify upper layer that end device has received a valid link adr
-                lr1_mac->available_link_adr = true;
-                status_ans                  = 0x1;  // Only the ChMask could be acked, other parameters are discarded
-            }
+            status_ans &= 0x5;
+            SMTC_MODEM_HAL_TRACE_WARNING( "INVALID DATARATE\n" );
         }
-        else  // rejected because channel mask not valid
+
+        // If power id is 0x0F, ignore the value else answer an ERROR and don't change anything
+        if( tx_power_tmp != 0x0F )
         {
-            status_ans = 0x0;
-            SMTC_MODEM_HAL_TRACE_WARNING( "INVALID CHANNEL MASK\n" );
+            status_ans &= 0x3;
+            SMTC_MODEM_HAL_TRACE_WARNING( "INVALID TXPOWER\n" );
+        }
+        // check if new proposal channel mask is compatible with our mobile distribution
+        if( smtc_real_is_channel_mask_for_mobile_mode( lr1_mac->real ) == ERRORLORAWAN )
+        {
+            status_ans &= 0x6;  // reject the cmd because even if the channel mask is valid,  it is not compatible
+                                // with our current adr distribution
+            SMTC_MODEM_HAL_TRACE_WARNING( "INVALID CHANNEL MASK in Mobile Mode\n" );
         }
     }
     else  // static mode
     {
         // Valid the last DataRate
-        uint8_t dr_tmp =
-            ( ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + ( ( nb_link_adr_req - 1 ) * LINK_ADR_REQ_SIZE ) + 1] &
-                0xF0 ) >>
-              4 );
-
         // If datarate requested is 0x0F, ignore the value
         if( dr_tmp != 0x0F )
         {
@@ -2158,7 +2223,7 @@ static void rx_timing_setup_parser( lr1_stack_mac_t* lr1_mac )
     lr1_mac->rx1_delay_s = ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 1] & 0xF );
     if( lr1_mac->rx1_delay_s == 0 )
     {
-        lr1_mac->rx1_delay_s = 1;  // Lorawan standart define 0 such as a delay of 1
+        lr1_mac->rx1_delay_s = 1;  // Lorawan standard define 0 such as a delay of 1
     }
 
     lr1_mac->nwk_payload_index += RXTIMING_SETUP_REQ_SIZE;
@@ -2208,6 +2273,9 @@ static void tx_param_setup_parser( lr1_stack_mac_t* lr1_mac )
 
     lr1_mac->max_erp_dbm =
         ( max_erp_dbm_tmp > real_const.const_tx_power_dbm ) ? real_const.const_tx_power_dbm : max_erp_dbm_tmp;
+
+    lr1_mac->tx_power = ( lr1_mac->tx_power > lr1_mac->max_erp_dbm ) ? lr1_mac->max_erp_dbm : lr1_mac->tx_power;
+
     smtc_real_set_uplink_dwell_time( lr1_mac->real,
                                      ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 1] & 0x10 ) >> 4 );
 
@@ -2310,7 +2378,7 @@ static void dl_channel_parser( lr1_stack_mac_t* lr1_mac )
 
 status_lorawan_t lr1mac_rx_payload_max_size_check( lr1_stack_mac_t* lr1_mac, uint8_t size, uint8_t rx_datarate )
 {
-    uint8_t size_max = smtc_real_get_max_payload_size( lr1_mac->real, rx_datarate, DOWN_LINK ) + 1 + 4;  // + MHDR + CRC
+    uint8_t size_max = smtc_real_get_max_payload_size( lr1_mac->real, rx_datarate, DOWN_LINK ) + MHDRSIZE + MICSIZE;
     if( size > size_max )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "size (%d)> size_max (%d)", size, size_max );
@@ -2348,7 +2416,7 @@ static status_lorawan_t device_time_ans_parser( lr1_stack_mac_t* lr1_mac )
         lr1_mac->seconds_since_epoch |= ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 3] << 16 );
         lr1_mac->seconds_since_epoch |= ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 4] << 24 );
 
-        lr1_mac->fractional_second = ( uint32_t )( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 5] * 1000 ) >> 8;
+        lr1_mac->fractional_second = ( uint32_t ) ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + 5] * 1000 ) >> 8;
 
         SMTC_MODEM_HAL_TRACE_PRINTF( "SecondsSinceEpoch %u, FractionalSecond %u\n", lr1_mac->seconds_since_epoch,
                                      lr1_mac->fractional_second );

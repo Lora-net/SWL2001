@@ -272,10 +272,11 @@ void smtc_modem_hal_crashlog_set_status(bool available)
 {
     crashlog_available_noinit = available;
 }
-
+volatile static bool temp = 0x1; // solve new behaviour introduce with gcc11 compilo
 bool smtc_modem_hal_crashlog_get_status(void)
 {
-    return crashlog_available_noinit;
+    bool temp2 = crashlog_available_noinit & temp;
+    return temp2;
 }
 
 /* ------------ assert management ------------*/
@@ -317,11 +318,6 @@ void smtc_modem_hal_irq_config_radio_irq(void (*callback)(void *context), void *
 void smtc_modem_hal_software_radio_irq(void)
 {
     radio_dio_irq.callback(radio_dio_irq.context);
-}
-
-void smtc_modem_hal_radio_irq_clear_pending(void)
-{
-    hal_gpio_clear_pending_irq(RADIO_DIOX);
 }
 
 void smtc_modem_hal_start_radio_tcxo(void)

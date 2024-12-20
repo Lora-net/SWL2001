@@ -79,21 +79,22 @@ void geolocation_bsp_get_lr11xx_reg_mode( const void* context, lr11xx_system_reg
     *reg_mode = LR11XX_SYSTEM_REG_MODE_DCDC;
 }
 
-void geolocation_bsp_gnss_get_consumption( lr11xx_gnss_instantaneous_power_consumption_ua_t* instantaneous_power_consumption_ua )
+void geolocation_bsp_gnss_get_consumption(
+    lr11xx_gnss_instantaneous_power_consumption_ua_t* instantaneous_power_consumption_ua )
 {
     /* These value are for EVK board in DC DC mode with Xtal 32KHz and a TCXO 32MHz*/
-    instantaneous_power_consumption_ua->board_voltage_mv              = 3300;
-    instantaneous_power_consumption_ua->init_ua                       = 3150;
-    instantaneous_power_consumption_ua->phase1_gps_capture_ua         = 11900;
-    instantaneous_power_consumption_ua->phase1_gps_process_ua         = 3340;
-    instantaneous_power_consumption_ua->multiscan_gps_capture_ua      = 10700;
-    instantaneous_power_consumption_ua->multiscan_gps_process_ua      = 4180;
-    instantaneous_power_consumption_ua->phase1_beidou_capture_ua      = 13500;
-    instantaneous_power_consumption_ua->phase1_beidou_process_ua      = 3190;
-    instantaneous_power_consumption_ua->multiscan_beidou_capture_ua   = 12600;
-    instantaneous_power_consumption_ua->multiscan_beidou_process_ua   = 3430;
-    instantaneous_power_consumption_ua->sleep_32k_ua                  = 1210;
-    instantaneous_power_consumption_ua->demod_sleep_32m_ua            = 2530;
+    instantaneous_power_consumption_ua->board_voltage_mv            = 3300;
+    instantaneous_power_consumption_ua->init_ua                     = 3150;
+    instantaneous_power_consumption_ua->phase1_gps_capture_ua       = 11900;
+    instantaneous_power_consumption_ua->phase1_gps_process_ua       = 3340;
+    instantaneous_power_consumption_ua->multiscan_gps_capture_ua    = 10700;
+    instantaneous_power_consumption_ua->multiscan_gps_process_ua    = 4180;
+    instantaneous_power_consumption_ua->phase1_beidou_capture_ua    = 13500;
+    instantaneous_power_consumption_ua->phase1_beidou_process_ua    = 3190;
+    instantaneous_power_consumption_ua->multiscan_beidou_capture_ua = 12600;
+    instantaneous_power_consumption_ua->multiscan_beidou_process_ua = 3430;
+    instantaneous_power_consumption_ua->sleep_32k_ua                = 1210;
+    instantaneous_power_consumption_ua->demod_sleep_32m_ua          = 2530;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

@@ -117,7 +117,14 @@
 #define FRAGMENTATION_PORT 201
 #define FRAGMENTATION_ID 3
 #define FRAGMENTATION_VERSION 1
+
+#if !defined( FRAGMENTATION_MAX_NB_SESSIONS )
 #define FRAGMENTATION_MAX_NB_SESSIONS 4
+#else
+#if ( FRAGMENTATION_MAX_NB_SESSIONS > 4 )
+#error "FRAGMENTATION_MAX_NB_SESSIONS MAX is 4"
+#endif
+#endif
 // Request message sizes (with header)
 #define FRAGMENTATION_PKG_VERSION_REQ_SIZE ( 1 )
 #define FRAGMENTATION_SESSION_STATUS_REQ_SIZE ( 2 )
@@ -249,7 +256,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
 void lorawan_fragmentation_package_services_init( uint8_t* service_id, uint8_t task_id,
                                                   uint8_t ( **downlink_callback )( lr1_stack_mac_down_data_t* ),
-                                                  void    ( **on_launch_callback )( void* ),
+                                                  void ( **on_launch_callback )( void* ),
                                                   void ( **on_update_callback )( void* ), void** context_callback )
 {
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
@@ -279,8 +286,8 @@ void lorawan_fragmentation_package_service_on_launch( void* service_id )
 {
     if( lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans_size > 0 )
     {
-        tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
-            FRAGMENTATION_PORT, true,
+        tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_LORA, FRAGMENTATION_PORT, true,
             lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans,
             lorawan_fragmentation_package_ctx[*( uint8_t* ) service_id].fragmentation_tx_payload_ans_size,
             UNCONF_DATA_UP,
@@ -306,7 +313,7 @@ uint8_t lorawan_fragmentation_package_service_downlink_handler( lr1_stack_mac_do
     uint8_t stack_id = rx_down_data->stack_id;
     if( stack_id >= NUMBER_OF_FRAGMENTED_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return MODEM_DOWNLINK_UNCONSUMED;
     }
 
@@ -360,7 +367,7 @@ bool lorawan_fragmentation_package_service_mpa_injector( uint8_t stack_id, uint8
 
     if( stack_id >= NUMBER_OF_FRAGMENTED_PACKAGE_OBJ )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "stack id not valid %u \n", stack_id );
+        SMTC_MODEM_HAL_TRACE_WARNING( "%s: stack id not valid %u \n", __func__, stack_id );
         return false;
     }
 
@@ -484,7 +491,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
     {
         switch( fragmentation_package_rx_buffer[fragmentation_package_rx_buffer_index] )
         {
-        case FRAGMENTATION_PKG_VERSION_REQ: {
+        case FRAGMENTATION_PKG_VERSION_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_PKG_VERSION_REQ_SIZE );
             fragmentation_package_rx_buffer_index += FRAGMENTATION_PKG_VERSION_REQ_SIZE;
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
@@ -501,7 +509,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             break;
         }
 
-        case FRAGMENTATION_SESSION_STATUS_REQ: {
+        case FRAGMENTATION_SESSION_STATUS_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_SESSION_STATUS_REQ_SIZE );
 
             uint8_t frag_index =
@@ -524,7 +533,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                     ctx->fragmentation_tx_payload_ans[ans_index++] =
                         ( frag_index << 6 ) | ( ( nb_frag_received >> 8 ) & 0x3F );
                     ctx->fragmentation_tx_payload_ans[ans_index++] =
-                         frag_session_data[frag_index].frag_decoder_status.MissingFrag;
+                        frag_session_data[frag_index].frag_decoder_status.MissingFrag;
                     ctx->fragmentation_tx_payload_ans[ans_index++] =
                         frag_session_data[frag_index].frag_decoder_status.MatrixError & 0x01;
 
@@ -535,7 +544,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             }
             break;
         }
-        case FRAGMENTATION_SESSION_SETUP_REQ: {
+        case FRAGMENTATION_SESSION_SETUP_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_SESSION_SETUP_REQ_SIZE );
 
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
@@ -626,7 +636,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
             break;
         }
-        case FRAGMENTATION_SESSION_DELETE_REQ: {
+        case FRAGMENTATION_SESSION_DELETE_REQ:
+        {
             IS_VALID_PKG_CMD( FRAGMENTATION_SESSION_DELETE_REQ_SIZE );
 
             if( is_received_on_multicast_window( fragmentation_package_rx_window ) == true )
@@ -656,7 +667,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
             break;
         }
-        case FRAGMENTATION_DATA_FRAGMENT: {
+        case FRAGMENTATION_DATA_FRAGMENT:
+        {
             uint8_t  frag_index   = 0;
             uint16_t frag_counter = 0;
 
@@ -672,45 +684,48 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             SMTC_MODEM_HAL_TRACE_PRINTF( "Fuota fragmentation_package_rx_window %d\n",
                                          fragmentation_package_rx_window );
 
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x1 ) == 0x1 )
+            if( frag_index < FRAGMENTATION_MAX_NB_SESSIONS )
             {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP0 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP0 ) )
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x1 ) == 0x1 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP0 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP0 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x2 ) == 0x2 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP1 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP1 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x4 ) == 0x4 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP2 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP2 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x8 ) == 0x8 )
+                {
+                    if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP3 ) ||
+                        ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP3 ) )
+                    {
+                        accept_data = true;
+                    }
+                }
+
+                if( is_received_on_multicast_window( fragmentation_package_rx_window ) == false )
                 {
                     accept_data = true;
                 }
-            }
-
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x2 ) == 0x2 )
-            {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP1 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP1 ) )
-                {
-                    accept_data = true;
-                }
-            }
-
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x4 ) == 0x4 )
-            {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP2 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP2 ) )
-                {
-                    accept_data = true;
-                }
-            }
-
-            if( ( frag_session_data[frag_index].frag_group_data.frag_session.mc_group_bit_mask & 0x8 ) == 0x8 )
-            {
-                if( ( fragmentation_package_rx_window == RECEIVE_ON_RXB_MC_GRP3 ) ||
-                    ( fragmentation_package_rx_window == RECEIVE_ON_RXC_MC_GRP3 ) )
-                {
-                    accept_data = true;
-                }
-            }
-
-            if( is_received_on_multicast_window( fragmentation_package_rx_window ) == false )
-            {
-                accept_data = true;
             }
 
             if( accept_data == true )
@@ -759,7 +774,9 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                     increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_LORAWAN_FUOTA_DONE, status, stack_id );
                 }
             }
-            fragmentation_package_rx_buffer_index += frag_session_data[frag_index].frag_group_data.frag_size + 3;
+            // A message MAY carry more than one command, except for the DataFragment command,
+            // which SHALL be the only command in a message’s payload
+            fragmentation_package_rx_buffer_index += fragmentation_package_rx_buffer_length;
             break;
         }
         default:

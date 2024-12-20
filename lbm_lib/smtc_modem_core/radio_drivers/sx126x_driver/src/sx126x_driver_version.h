@@ -56,7 +56,7 @@ extern "C" {
 
 #define SX126X_DRIVER_VERSION_MAJOR 2
 #define SX126X_DRIVER_VERSION_MINOR 3
-#define SX126X_DRIVER_VERSION_PATCH 1
+#define SX126X_DRIVER_VERSION_PATCH 2
 
 /*
  * -----------------------------------------------------------------------------

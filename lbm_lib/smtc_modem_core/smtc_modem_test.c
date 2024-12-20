@@ -57,7 +57,10 @@
 #include "smtc_lora_cad_bt.h"
 #include "ralf.h"
 #include "radio_planner.h"
-
+#include "radio_planner_hook_id_defs.h"
+#include "modem_tx_protocol_manager.h"
+#include "smtc_modem_test.h"
+#include "modem_event_utilities.h"
 #if defined( SX128X )
 #include "sx128x_hal.h"
 #elif defined( SX126X )
@@ -85,81 +88,15 @@
  */
 static const uint8_t sync_word_gfsk[] = { 0xC1, 0x94, 0xC1 };
 
-/* clang-format off */
 /*!
- * \brief   Conversion table for Spreading Factor
+ * \brief   LoRaWAN LR_FHSS sync word
  */
-static const uint8_t modem_test_sf_convert[SMTC_MODEM_TEST_LORA_SF_COUNT] = {
-    [SMTC_MODEM_TEST_LORA_SF5]  = RAL_LORA_SF5,
-    [SMTC_MODEM_TEST_LORA_SF6]  = RAL_LORA_SF6,
-    [SMTC_MODEM_TEST_LORA_SF7]  = RAL_LORA_SF7,
-    [SMTC_MODEM_TEST_LORA_SF8]  = RAL_LORA_SF8,
-    [SMTC_MODEM_TEST_LORA_SF9]  = RAL_LORA_SF9,
-    [SMTC_MODEM_TEST_LORA_SF10] = RAL_LORA_SF10,
-    [SMTC_MODEM_TEST_LORA_SF11] = RAL_LORA_SF11,
-    [SMTC_MODEM_TEST_LORA_SF12] = RAL_LORA_SF12,
-};
-
-/*!
- * \brief   Conversion table for BandWidth
- */
-static const uint8_t modem_test_bw_convert[SMTC_MODEM_TEST_BW_COUNT] = {
-    [SMTC_MODEM_TEST_BW_125_KHZ]  = RAL_LORA_BW_125_KHZ,
-    [SMTC_MODEM_TEST_BW_250_KHZ]  = RAL_LORA_BW_250_KHZ,
-    [SMTC_MODEM_TEST_BW_500_KHZ]  = RAL_LORA_BW_500_KHZ,
-    [SMTC_MODEM_TEST_BW_200_KHZ]  = RAL_LORA_BW_200_KHZ,
-    [SMTC_MODEM_TEST_BW_400_KHZ]  = RAL_LORA_BW_400_KHZ,
-    [SMTC_MODEM_TEST_BW_800_KHZ]  = RAL_LORA_BW_800_KHZ,
-    [SMTC_MODEM_TEST_BW_1600_KHZ] = RAL_LORA_BW_1600_KHZ,
-};
-
-/*!
- * \brief   Conversion table for Coding Rate
- */
-static const uint8_t modem_test_cr_convert[SMTC_MODEM_TEST_CR_COUNT] = {
-    [SMTC_MODEM_TEST_CR_4_5] = RAL_LORA_CR_4_5,
-    [SMTC_MODEM_TEST_CR_4_6] = RAL_LORA_CR_4_6,
-    [SMTC_MODEM_TEST_CR_4_7] = RAL_LORA_CR_4_7,
-    [SMTC_MODEM_TEST_CR_4_8] = RAL_LORA_CR_4_8,
-    [SMTC_MODEM_TEST_CR_LI_4_5] = RAL_LORA_CR_LI_4_5,
-    [SMTC_MODEM_TEST_CR_LI_4_6] = RAL_LORA_CR_LI_4_6,
-    [SMTC_MODEM_TEST_CR_LI_4_8] = RAL_LORA_CR_LI_4_8,
-};
-/*!
- * \brief   Helper table for gfsk Bandwidth
- */
-static const uint32_t modem_test_bw_helper[SMTC_MODEM_TEST_BW_COUNT] = {
-    [SMTC_MODEM_TEST_BW_125_KHZ]  = 125000,
-    [SMTC_MODEM_TEST_BW_250_KHZ]  = 250000,
-    [SMTC_MODEM_TEST_BW_500_KHZ]  = 100000,
-    [SMTC_MODEM_TEST_BW_200_KHZ]  = 200000,
-    [SMTC_MODEM_TEST_BW_400_KHZ]  = 400000,
-    [SMTC_MODEM_TEST_BW_800_KHZ]  = 800000,
-    [SMTC_MODEM_TEST_BW_1600_KHZ] = 1600000,
-};
-/* clang-format on */
+static const uint8_t sync_word_lr_fhss[] = { 0x2C, 0x0F, 0x79, 0x95 };
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
-
-/*!
- * \typedef modem_test_context_t
- * \brief   Test context
- */
-typedef struct modem_test_context
-{
-    radio_planner_t* rp;                  //!< Radio planner instance
-    lr1_stack_mac_t* lr1_mac_obj;         //!< Lorawan lr1mac instance
-    uint8_t          hook_id;             //!< Lorawan lr1mac hook id used for test
-    uint8_t          tx_rx_payload[255];  //!< Transmit/Received buffer
-    int16_t          rssi;                //!< Placeholder for mean rssi
-    bool             rssi_ready;          //!< True when rssi mean test is finished
-    uint32_t         total_rx_packets;    //!< Number of received packet
-    bool             random_payload;      //!< True in case of random payload
-    smtc_lbt_t       lbt_obj;
-} modem_test_context_t;
 
 /*
  * -----------------------------------------------------------------------------
@@ -168,14 +105,18 @@ typedef struct modem_test_context
 
 modem_test_context_t modem_test_context;
 
+static rp_task_t         rp_task;
+static rp_radio_params_t rp_radio_params;
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
+static void modem_test_enqueue_task( uint8_t* payload, uint8_t payload_length );
 /*!
  * \brief   Empty callback for test
  * \retval [out]    context*                  - modem_test_context_t
  */
+
 void modem_test_empty_callback( modem_test_context_t* context );
 
 void modem_test_compute_rssi_callback( modem_test_context_t* context );
@@ -220,6 +161,8 @@ smtc_modem_return_code_t smtc_modem_test_start( void )
     modem_set_test_mode_status( true );
     SMTC_MODEM_HAL_TRACE_INFO( "TST MODE: START\n" );
     memset( &modem_test_context, 0, sizeof( modem_test_context_t ) );
+    memset( &rp_task, 0, sizeof( rp_task_t ) );
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
 
     modem_test_context.rp = modem_get_rp( );
     // modem_test_context.lr1_mac_obj = lorawan_api_stack_mac_get( TEST_STACK_ID_0 );
@@ -242,7 +185,7 @@ smtc_modem_return_code_t smtc_modem_test_stop( void )
         return SMTC_MODEM_RC_INVALID;
     }
 
-    if( smtc_modem_test_nop( ) != SMTC_MODEM_RC_OK )
+    if( smtc_modem_test_nop( true ) != SMTC_MODEM_RC_OK )
     {
         return SMTC_MODEM_RC_FAIL;
     }
@@ -265,171 +208,235 @@ smtc_modem_return_code_t smtc_modem_test_tx_hop( void )
     return SMTC_MODEM_RC_FAIL;
 }
 
-smtc_modem_return_code_t smtc_modem_test_nop( void )
+smtc_modem_return_code_t smtc_modem_test_nop( bool reset_radio )
 {
     if( modem_get_test_mode_status( ) == false )
     {
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
+    modem_test_context.nb_of_repetition = 1;
     rp_task_abort( modem_test_context.rp, modem_test_context.hook_id );
     // force a call of rp_callback to re-arbitrate the radio planner before the next loop
     rp_callback( modem_test_context.rp );
-    smtc_modem_test_radio_reset( );
+    if( reset_radio )
+    {
+        smtc_modem_test_radio_reset( );
+    }
     // Re enable failsafe on radio planner
     rp_disable_failsafe( modem_test_context.rp, false );
     return SMTC_MODEM_RC_OK;
 }
 
-smtc_modem_return_code_t smtc_modem_test_tx( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
-                                             int8_t tx_power_dbm, smtc_modem_test_sf_t sf, smtc_modem_test_bw_t bw,
-                                             smtc_modem_test_cr_t cr, uint32_t preamble_size, bool continuous_tx )
+smtc_modem_return_code_t smtc_modem_test_tx_lora( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
+                                                  int8_t tx_power_dbm, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                                  ral_lora_cr_t cr, smtc_modem_test_mode_sync_word_t sync_word,
+                                                  bool invert_iq, bool crc_is_on, ral_lora_pkt_len_modes_t header_type,
+                                                  uint32_t preamble_size, uint32_t nb_of_tx, uint32_t delay_ms )
 {
     if( modem_get_test_mode_status( ) == false )
     {
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( sf >= SMTC_MODEM_TEST_LORA_SF_COUNT )
+    if( ( sf < RAL_LORA_SF5 ) || ( sf > RAL_LORA_SF12 ) )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid sf %d\n", sf );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( bw >= SMTC_MODEM_TEST_BW_COUNT )
+    if( bw > RAL_LORA_BW_1600_KHZ )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid bw %d\n", bw );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( cr >= SMTC_MODEM_TEST_CR_COUNT )
+    if( ( cr < RAL_LORA_CR_4_5 ) || ( cr > RAL_LORA_CR_LI_4_8 ) )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid cr %d\n", cr );
         return SMTC_MODEM_RC_INVALID;
     }
-
-    rp_task_t         rp_task         = { 0 };
-    rp_radio_params_t rp_radio_params = { 0 };
-
-    rp_task.hook_id = modem_test_context.hook_id;
-    rp_task.state   = RP_TASK_STATE_ASAP;
-
-    if( sf == SMTC_MODEM_TEST_FSK )  // FSK
+    if( payload_length == 0 )
     {
-        ralf_params_gfsk_t gfsk_param;
-        memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
-
-        gfsk_param.rf_freq_in_hz     = frequency_hz;
-        gfsk_param.output_pwr_in_dbm = tx_power_dbm;
-        gfsk_param.sync_word         = ( uint8_t* ) sync_word_gfsk;
-        gfsk_param.whitening_seed    = GFSK_WHITENING_SEED;
-        gfsk_param.crc_seed          = GFSK_CRC_SEED;
-        gfsk_param.crc_polynomial    = GFSK_CRC_POLYNOMIAL;
-
-        gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
-        gfsk_param.pkt_params.pld_len_in_bytes      = payload_length;
-        gfsk_param.pkt_params.preamble_len_in_bits  = 40;
-        gfsk_param.pkt_params.preamble_detector     = RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS;
-        gfsk_param.pkt_params.sync_word_len_in_bits = 24;
-        gfsk_param.pkt_params.crc_type              = RAL_GFSK_CRC_2_BYTES_INV;
-        gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
-
-        gfsk_param.mod_params.br_in_bps    = 50000;
-        gfsk_param.mod_params.fdev_in_hz   = 25000;
-        gfsk_param.mod_params.bw_dsb_in_hz = 100000;
-        gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
-
-        rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
-        rp_radio_params.tx.gfsk  = gfsk_param;
-
-        SMTC_MODEM_HAL_TRACE_PRINTF( "GFSK Tx - Freq:%d, Power:%d, length:%u\n", frequency_hz, tx_power_dbm,
-                                     payload_length );
-
-        rp_task.type                  = RP_TASK_TYPE_TX_FSK;
-        rp_task.launch_task_callbacks = lr1_stack_mac_tx_gfsk_launch_callback_for_rp;
-        rp_task.duration_time_ms      = ral_get_gfsk_time_on_air_in_ms( &( modem_test_context.rp->radio->ral ),
-                                                                        &( rp_radio_params.tx.gfsk.pkt_params ),
-                                                                        &( rp_radio_params.tx.gfsk.mod_params ) );
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid payload_length %d\n", payload_length );
+        return SMTC_MODEM_RC_INVALID;
     }
-    else  // LoRa
+    modem_test_context.tx_frequency     = frequency_hz;
+    modem_test_context.sf               = sf;
+    modem_test_context.bw               = bw;
+    modem_test_context.invert_iq        = invert_iq;
+    modem_test_context.nb_of_repetition = nb_of_tx;
+    modem_test_context.delay_ms         = delay_ms;
+    modem_test_context.modulation_type  = LORA;
+    // config lora parameters
+    ralf_params_lora_t lora_param;
+    memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
+    lora_param.rf_freq_in_hz                   = frequency_hz;
+    lora_param.output_pwr_in_dbm               = tx_power_dbm;
+    lora_param.sync_word                       = sync_word;
+    lora_param.pkt_params.preamble_len_in_symb = preamble_size;
+    lora_param.pkt_params.header_type          = header_type;
+    lora_param.pkt_params.pld_len_in_bytes     = payload_length;
+    lora_param.pkt_params.crc_is_on            = crc_is_on;
+    lora_param.pkt_params.invert_iq_is_on      = invert_iq;
+    lora_param.mod_params.sf                   = sf;
+    lora_param.mod_params.bw                   = bw;
+    lora_param.mod_params.cr                   = cr;
+    lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
+
+    // config radio parameters
+    rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
+    rp_radio_params.tx.lora  = lora_param;
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Tx - Freq:%u, Power:%d, sf:%u, bw:%u, length:%u, nb_of_repetition:%u\n",
+                                 frequency_hz, tx_power_dbm, rp_radio_params.tx.lora.mod_params.sf,
+                                 rp_radio_params.tx.lora.mod_params.bw, payload_length,
+                                 modem_test_context.nb_of_repetition );
+
+    rp_task.type                  = RP_TASK_TYPE_TX_LORA;
+    rp_task.launch_task_callbacks = lr1_stack_mac_tx_lora_launch_callback_for_rp;
+    rp_task.duration_time_ms =
+        ral_get_lora_time_on_air_in_ms( &( modem_test_context.rp->radio->ral ), &( rp_radio_params.tx.lora.pkt_params ),
+                                        &( rp_radio_params.tx.lora.mod_params ) );
+
+    modem_test_enqueue_task( payload, payload_length );
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_test_tx_fsk( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
+                                                 int8_t tx_power_dbm, uint32_t nb_of_tx, uint32_t delay_ms )
+{
+    if( modem_get_test_mode_status( ) == false )
     {
-        ralf_params_lora_t lora_param;
-        memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
-
-        lora_param.rf_freq_in_hz     = frequency_hz;
-        lora_param.output_pwr_in_dbm = tx_power_dbm;
-        if( frequency_hz >= 2400000000 )
-        {
-            lora_param.sync_word = 0x12;
-        }
-        else
-        {
-            lora_param.sync_word = 0x34;
-        }
-
-        lora_param.pkt_params.preamble_len_in_symb = preamble_size;
-        lora_param.pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
-        lora_param.pkt_params.pld_len_in_bytes     = payload_length;
-        lora_param.pkt_params.crc_is_on            = true;
-        lora_param.pkt_params.invert_iq_is_on      = false;
-
-        lora_param.mod_params.sf   = ( ral_lora_sf_t ) modem_test_sf_convert[sf];
-        lora_param.mod_params.bw   = ( ral_lora_bw_t ) modem_test_bw_convert[bw];
-        lora_param.mod_params.cr   = ( ral_lora_cr_t ) modem_test_cr_convert[cr];
-        lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
-
-        rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
-        rp_radio_params.tx.lora  = lora_param;
-
-        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Tx - Freq:%u, Power:%d, sf:%u, bw:%u, cr:%u, length:%u\n", frequency_hz,
-                                     tx_power_dbm, rp_radio_params.tx.lora.mod_params.sf, lora_param.mod_params.bw,
-                                     lora_param.mod_params.cr, payload_length );
-
-        rp_task.type                  = RP_TASK_TYPE_TX_LORA;
-        rp_task.launch_task_callbacks = lr1_stack_mac_tx_lora_launch_callback_for_rp;
-        rp_task.duration_time_ms      = ral_get_lora_time_on_air_in_ms( &( modem_test_context.rp->radio->ral ),
-                                                                        &( rp_radio_params.tx.lora.pkt_params ),
-                                                                        &( rp_radio_params.tx.lora.mod_params ) );
+        SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
+        return SMTC_MODEM_RC_INVALID;
     }
 
-    if( smtc_modem_test_nop( ) != SMTC_MODEM_RC_OK )
+    if( payload_length == 0 )
     {
-        return SMTC_MODEM_RC_FAIL;
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid payload_length %d\n", payload_length );
+        return SMTC_MODEM_RC_INVALID;
+    }
+    modem_test_context.tx_frequency     = frequency_hz;
+    modem_test_context.nb_of_repetition = nb_of_tx;
+    modem_test_context.delay_ms         = delay_ms;
+    modem_test_context.modulation_type  = FSK;
+
+    ralf_params_gfsk_t gfsk_param;
+    memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
+
+    gfsk_param.rf_freq_in_hz     = frequency_hz;
+    gfsk_param.output_pwr_in_dbm = tx_power_dbm;
+    gfsk_param.sync_word         = ( uint8_t* ) sync_word_gfsk;
+    gfsk_param.whitening_seed    = GFSK_WHITENING_SEED;
+    gfsk_param.crc_seed          = GFSK_CRC_SEED;
+    gfsk_param.crc_polynomial    = GFSK_CRC_POLYNOMIAL;
+
+    gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
+    gfsk_param.pkt_params.pld_len_in_bytes      = payload_length;
+    gfsk_param.pkt_params.preamble_len_in_bits  = 40;
+    gfsk_param.pkt_params.preamble_detector     = RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS;
+    gfsk_param.pkt_params.sync_word_len_in_bits = 24;
+    gfsk_param.pkt_params.crc_type              = RAL_GFSK_CRC_2_BYTES_INV;
+    gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
+
+    gfsk_param.mod_params.br_in_bps    = 50000;
+    gfsk_param.mod_params.fdev_in_hz   = 25000;
+    gfsk_param.mod_params.bw_dsb_in_hz = 100000;
+    gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
+
+    rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
+    rp_radio_params.tx.gfsk  = gfsk_param;
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "GFSK Tx - Freq:%d, Power:%d, length:%u\n", frequency_hz, tx_power_dbm,
+                                 payload_length );
+
+    rp_task.type                  = RP_TASK_TYPE_TX_FSK;
+    rp_task.launch_task_callbacks = lr1_stack_mac_tx_gfsk_launch_callback_for_rp;
+    rp_task.duration_time_ms =
+        ral_get_gfsk_time_on_air_in_ms( &( modem_test_context.rp->radio->ral ), &( rp_radio_params.tx.gfsk.pkt_params ),
+                                        &( rp_radio_params.tx.gfsk.mod_params ) );
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "nb_of_repetition:%u\n", modem_test_context.nb_of_repetition );
+
+    modem_test_enqueue_task( payload, payload_length );
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_test_tx_lrfhss( uint8_t* payload, uint8_t payload_length, uint32_t frequency_hz,
+                                                    int8_t tx_power_dbm, lr_fhss_v1_cr_t tx_cr, lr_fhss_v1_bw_t tx_bw,
+                                                    lr_fhss_v1_grid_t tx_grid, bool enable_hopping, uint32_t nb_of_tx,
+                                                    uint32_t delay_ms )
+{
+    if( modem_get_test_mode_status( ) == false )
+    {
+        SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
+        return SMTC_MODEM_RC_INVALID;
     }
 
-    if( continuous_tx == false )  // single tx
+    if( ( tx_cr != LR_FHSS_V1_CR_1_3 ) && ( tx_cr != LR_FHSS_V1_CR_2_3 ) )
     {
-        rp_release_hook( modem_test_context.rp, modem_test_context.hook_id );
-        rp_hook_init( modem_test_context.rp, modem_test_context.hook_id,
-                      ( void ( * )( void* ) )( modem_test_empty_callback ), &modem_test_context );
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid cr %d\n", tx_cr );
+        return SMTC_MODEM_RC_INVALID;
     }
-    else
+    if( tx_bw > LR_FHSS_V1_BW_1574219_HZ )
     {
-        rp_release_hook( modem_test_context.rp, modem_test_context.hook_id );
-        rp_hook_init( modem_test_context.rp, modem_test_context.hook_id,
-                      ( void ( * )( void* ) )( modem_test_tx_callback ), &modem_test_context );
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid bw %d\n", tx_bw );
+        return SMTC_MODEM_RC_INVALID;
     }
-
-    if( payload == NULL )
+    if( tx_grid > LR_FHSS_V1_GRID_3906_HZ )
     {
-        // user payload is NULL=> generate a random before at next step
-        modem_test_context.random_payload = true;
-        for( uint8_t i = 0; i < payload_length; i++ )
-        {
-            modem_test_context.tx_rx_payload[i] = smtc_modem_hal_get_random_nb_in_range( 0, 0xFF );
-        }
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid grid %d\n", tx_grid );
+        return SMTC_MODEM_RC_INVALID;
     }
-    else
+    if( payload_length == 0 )
     {
-        modem_test_context.random_payload = false;
-        // save tx payload in context
-        memcpy( modem_test_context.tx_rx_payload, payload, payload_length );
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid payload_length %d\n", payload_length );
+        return SMTC_MODEM_RC_INVALID;
     }
 
-    rp_task.start_time_ms = smtc_modem_hal_get_time_in_ms( ) + 20;
+    modem_test_context.tx_frequency     = frequency_hz;
+    modem_test_context.nb_of_repetition = nb_of_tx;
+    modem_test_context.delay_ms         = delay_ms;
+    modem_test_context.modulation_type  = LR_FHSS;
+    ralf_params_lr_fhss_t lr_fhss_param;
+    memset( &lr_fhss_param, 0, sizeof( ralf_params_lr_fhss_t ) );
 
-    // Enqueue task in radio planner
-    rp_task_enqueue( modem_test_context.rp, &rp_task, modem_test_context.tx_rx_payload, payload_length,
-                     &rp_radio_params );
+    lr_fhss_param.output_pwr_in_dbm = tx_power_dbm;
 
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.modulation_type = LR_FHSS_V1_MODULATION_TYPE_GMSK_488;
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.cr              = tx_cr;
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.grid            = tx_grid;
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.enable_hopping  = enable_hopping;
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.bw              = tx_bw;
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.header_count    = smtc_real_lr_fhss_get_header_count( tx_cr );
+    lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.sync_word       = ( uint8_t* ) sync_word_lr_fhss;
+
+    lr_fhss_param.ral_lr_fhss_params.center_frequency_in_hz = frequency_hz;
+    lr_fhss_param.ral_lr_fhss_params.device_offset          = 0;
+
+    unsigned int nb_max_hop_sequence = 0;
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_lr_fhss_get_hop_sequence_count( &( modem_test_context.rp->radio->ral ),
+                                                                         &( lr_fhss_param.ral_lr_fhss_params ),
+                                                                         &nb_max_hop_sequence ) == RAL_STATUS_OK );
+    lr_fhss_param.hop_sequence_id = smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence - 1 );
+
+    rp_radio_params.tx.lr_fhss = lr_fhss_param;
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "LR_FHSS Tx - Freq:%u, Power:%d, grid:%u, bw:%u, cr:%u, length:%u\n", frequency_hz,
+                                 tx_power_dbm, lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.grid,
+                                 lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.bw,
+                                 lr_fhss_param.ral_lr_fhss_params.lr_fhss_params.cr, payload_length );
+
+    ral_lr_fhss_get_time_on_air_in_ms( &( modem_test_context.rp->radio->ral ), &( lr_fhss_param.ral_lr_fhss_params ),
+                                       payload_length, &rp_task.duration_time_ms );
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "  Hop ID = %d\n", lr_fhss_param.hop_sequence_id );
+
+    rp_task.type                  = RP_TASK_TYPE_TX_LR_FHSS;
+    rp_task.launch_task_callbacks = lr1_stack_mac_tx_lr_fhss_launch_callback_for_rp;
+
+    SMTC_MODEM_HAL_TRACE_PRINTF( "nb_of_repetition:%u\n", modem_test_context.nb_of_repetition );
+
+    modem_test_enqueue_task( payload, payload_length );
     return SMTC_MODEM_RC_OK;
 }
 
@@ -442,6 +449,7 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
     }
 
     ralf_params_lora_t lora_param;
+    modem_test_context.tx_frequency = frequency_hz;
     memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
     lora_param.rf_freq_in_hz     = frequency_hz;
@@ -461,51 +469,104 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
         lora_param.sync_word     = 0x34;
     }
 
-    rp_radio_params_t radio_params = { 0 };
-    radio_params.pkt_type          = RAL_PKT_TYPE_LORA;
-    radio_params.tx.lora           = lora_param;
+    rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
+    rp_radio_params.tx.lora  = lora_param;
 
-    rp_task_t rp_task             = { 0 };
     rp_task.hook_id               = modem_test_context.hook_id;
     rp_task.state                 = RP_TASK_STATE_ASAP;
     rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 2;
-    rp_task.duration_time_ms      = 2000;  // toa;
+    rp_task.duration_time_ms      = 2000;
     rp_task.type                  = RP_TASK_TYPE_TX_LORA;
     rp_task.launch_task_callbacks = test_mode_cw_callback_for_rp;
 
     // First disable failsafe check for radio planner as the task can be longer than failsafe value
     rp_disable_failsafe( modem_test_context.rp, true );
 
-    if( rp_task_enqueue( modem_test_context.rp, &rp_task, NULL, 0, &radio_params ) != RP_HOOK_STATUS_OK )
+    if( tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_TEST_MODE, 0, false, modem_test_context.tx_rx_payload, 0, 0,
+                                     rp_task.start_time_ms, TEST_STACK_ID_0 ) == ERRORLORAWAN )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "Radio planner hook %d is busy \n", rp_task.hook_id );
+        modem_test_empty_callback( NULL );
     }
 
     SMTC_MODEM_HAL_TRACE_PRINTF( "Tx CW - Freq:%u, Power:%d\n", frequency_hz, lora_param.output_pwr_in_dbm );
     return SMTC_MODEM_RC_OK;
 }
 
-smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, smtc_modem_test_sf_t sf,
-                                                        smtc_modem_test_bw_t bw, smtc_modem_test_cr_t cr )
+smtc_modem_return_code_t smtc_modem_test_rx_lora( uint32_t frequency_hz, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                                  ral_lora_cr_t cr, smtc_modem_test_mode_sync_word_t sync_word,
+                                                  bool invert_iq, bool crc_is_on, ral_lora_pkt_len_modes_t header_type,
+                                                  uint32_t preamble_size, uint8_t symb_nb_timeout )
 {
     if( modem_get_test_mode_status( ) == false )
     {
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( sf >= SMTC_MODEM_TEST_LORA_SF_COUNT )
+    if( ( sf < RAL_LORA_SF5 ) || ( sf > RAL_LORA_SF12 ) )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid sf %d\n", sf );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( bw >= SMTC_MODEM_TEST_BW_COUNT )
+    if( bw > RAL_LORA_BW_1600_KHZ )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid bw %d\n", bw );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( cr >= SMTC_MODEM_TEST_CR_COUNT )
+    if( ( cr < RAL_LORA_CR_4_5 ) || ( cr > RAL_LORA_CR_LI_4_8 ) )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "Invalid cr %d\n", cr );
+        return SMTC_MODEM_RC_INVALID;
+    }
+
+    // reset number of received packets
+    modem_test_context.total_rx_packets = 0;
+
+    // config  lora parameters
+    ralf_params_lora_t lora_param;
+    memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
+    lora_param.rf_freq_in_hz                   = frequency_hz;
+    lora_param.sync_word                       = sync_word;
+    lora_param.pkt_params.preamble_len_in_symb = preamble_size;
+    lora_param.pkt_params.header_type          = header_type;
+    lora_param.pkt_params.crc_is_on            = crc_is_on;
+    lora_param.pkt_params.invert_iq_is_on      = invert_iq;
+    lora_param.mod_params.sf                   = sf;
+    lora_param.mod_params.bw                   = bw;
+    lora_param.mod_params.cr                   = cr;
+    lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
+    lora_param.symb_nb_timeout = symb_nb_timeout;
+    lora_param.pkt_params.pld_len_in_bytes = 255;
+    // config radio parameters
+    rp_radio_params_t rp_radio_params = { 0 };
+    rp_radio_params.rx.timeout_in_ms  = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
+    rp_radio_params.pkt_type          = RAL_PKT_TYPE_LORA;
+    rp_radio_params.rx.lora           = lora_param;
+
+    // config radio planner task parameters
+    rp_task.hook_id               = modem_test_context.hook_id;
+    rp_task.state                 = RP_TASK_STATE_ASAP;
+    rp_task.type                  = RP_TASK_TYPE_RX_LORA;
+    rp_task.launch_task_callbacks = lr1_stack_mac_rx_lora_launch_callback_for_rp;
+    rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 20;
+    rp_task.duration_time_ms      = 20;  // will be extended by the radio planner
+    rp_disable_failsafe( modem_test_context.rp, true );
+    rp_release_hook( modem_test_context.rp, modem_test_context.hook_id );
+    rp_hook_init( modem_test_context.rp, modem_test_context.hook_id, ( void ( * )( void* ) )( modem_test_rx_callback ),
+                  &modem_test_context );
+
+    if( rp_task_enqueue( modem_test_context.rp, &rp_task, modem_test_context.tx_rx_payload, 255, &rp_radio_params ) !=
+        RP_HOOK_STATUS_OK )
+    {
+        return SMTC_MODEM_RC_FAIL;
+    }
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_test_rx_fsk_continuous( uint32_t frequency_hz )
+{
+    if( modem_get_test_mode_status( ) == false )
+    {
+        SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
 
@@ -515,107 +576,51 @@ smtc_modem_return_code_t smtc_modem_test_rx_continuous( uint32_t frequency_hz, s
     rp_radio_params_t rp_radio_params = { 0 };
     rp_radio_params.rx.timeout_in_ms  = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
 
-    rp_task_t rp_task = { 0 };
-    rp_task.hook_id   = modem_test_context.hook_id;
-    rp_task.state     = RP_TASK_STATE_ASAP;
+    // Radio config for FSK
+    ralf_params_gfsk_t gfsk_param;
+    memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
 
-    if( sf == 0 )  // FSK
-    {
-        // Radio config for FSK
-        ralf_params_gfsk_t gfsk_param;
-        memset( &gfsk_param, 0, sizeof( ralf_params_gfsk_t ) );
+    gfsk_param.rf_freq_in_hz  = frequency_hz;
+    gfsk_param.sync_word      = ( uint8_t* ) sync_word_gfsk;
+    gfsk_param.whitening_seed = GFSK_WHITENING_SEED;
+    gfsk_param.crc_seed       = GFSK_CRC_SEED;
+    gfsk_param.crc_polynomial = GFSK_CRC_POLYNOMIAL;
 
-        gfsk_param.rf_freq_in_hz  = frequency_hz;
-        gfsk_param.sync_word      = ( uint8_t* ) sync_word_gfsk;
-        gfsk_param.whitening_seed = GFSK_WHITENING_SEED;
-        gfsk_param.crc_seed       = GFSK_CRC_SEED;
-        gfsk_param.crc_polynomial = GFSK_CRC_POLYNOMIAL;
+    gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
+    gfsk_param.pkt_params.pld_len_in_bytes      = 255;
+    gfsk_param.pkt_params.preamble_len_in_bits  = 40;
+    gfsk_param.pkt_params.preamble_detector     = RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS;
+    gfsk_param.pkt_params.sync_word_len_in_bits = 24;
+    gfsk_param.pkt_params.crc_type              = RAL_GFSK_CRC_2_BYTES_INV;
+    gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
 
-        gfsk_param.pkt_params.header_type           = RAL_GFSK_PKT_VAR_LEN;
-        gfsk_param.pkt_params.pld_len_in_bytes      = 255;
-        gfsk_param.pkt_params.preamble_len_in_bits  = 40;
-        gfsk_param.pkt_params.preamble_detector     = RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS;
-        gfsk_param.pkt_params.sync_word_len_in_bits = 24;
-        gfsk_param.pkt_params.crc_type              = RAL_GFSK_CRC_2_BYTES_INV;
-        gfsk_param.pkt_params.dc_free               = RAL_GFSK_DC_FREE_WHITENING;
+    gfsk_param.mod_params.br_in_bps    = 50000;
+    gfsk_param.mod_params.fdev_in_hz   = 25000;
+    gfsk_param.mod_params.bw_dsb_in_hz = 100000;
+    gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
 
-        gfsk_param.mod_params.br_in_bps    = 50000;
-        gfsk_param.mod_params.fdev_in_hz   = 25000;
-        gfsk_param.mod_params.bw_dsb_in_hz = 100000;
-        gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
+    rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
+    rp_radio_params.rx.gfsk  = gfsk_param;
 
-        rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
-        rp_radio_params.rx.gfsk  = gfsk_param;
+    SMTC_MODEM_HAL_TRACE_PRINTF( "GFSK Rx - Freq:%d\n", frequency_hz );
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "GFSK Rx - Freq:%d\n", frequency_hz );
-
-        // Radio planner task config
-        rp_task.type                  = RP_TASK_TYPE_RX_FSK;
-        rp_task.launch_task_callbacks = lr1_stack_mac_rx_gfsk_launch_callback_for_rp;
-    }
-    else  // LoRa
-    {
-        // Radio config for LoRa
-        ralf_params_lora_t lora_param;
-        memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
-
-        lora_param.rf_freq_in_hz = frequency_hz;
-        if( frequency_hz >= 2400000000 )
-        {
-            lora_param.sync_word = 0x12;
-            if( ( sf == 5 ) || ( sf == 6 ) )
-            {
-                lora_param.pkt_params.preamble_len_in_symb = 12;
-            }
-            else
-            {
-                lora_param.pkt_params.preamble_len_in_symb = 8;
-            }
-        }
-        else
-        {
-            lora_param.sync_word                       = 0x34;
-            lora_param.pkt_params.preamble_len_in_symb = 8;
-        }
-        lora_param.symb_nb_timeout = 0;
-
-        // lora_param.pkt_params.preamble_len_in_symb =
-        //     smtc_real_get_preamble_len( modem_test_context.lr1_mac_obj->real, modem_test_sf_convert[sf] );
-        lora_param.pkt_params.header_type      = RAL_LORA_PKT_EXPLICIT;
-        lora_param.pkt_params.pld_len_in_bytes = 255;
-        lora_param.pkt_params.crc_is_on        = false;
-        lora_param.pkt_params.invert_iq_is_on  = true;
-
-        lora_param.mod_params.sf   = ( ral_lora_sf_t ) modem_test_sf_convert[sf];
-        lora_param.mod_params.bw   = ( ral_lora_bw_t ) modem_test_bw_convert[bw];
-        lora_param.mod_params.cr   = ( ral_lora_cr_t ) modem_test_cr_convert[cr];
-        lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
-
-        rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
-        rp_radio_params.rx.lora  = lora_param;
-
-        SMTC_MODEM_HAL_TRACE_PRINTF( "LoRa Rx - Freq:%u, sf:%u, bw:%u, cr:%u\n", frequency_hz,
-                                     rp_radio_params.rx.lora.mod_params.sf, bw, cr );
-
-        // Radio planner task config
-        rp_task.type                  = RP_TASK_TYPE_RX_LORA;
-        rp_task.launch_task_callbacks = lr1_stack_mac_rx_lora_launch_callback_for_rp;
-    }
-
-    if( smtc_modem_test_nop( ) != SMTC_MODEM_RC_OK )
-    {
-        return SMTC_MODEM_RC_FAIL;
-    }
-
+    // Radio planner task config
+    rp_task.hook_id               = modem_test_context.hook_id;
+    rp_task.state                 = RP_TASK_STATE_ASAP;
+    rp_task.type                  = RP_TASK_TYPE_RX_FSK;
+    rp_task.launch_task_callbacks = lr1_stack_mac_rx_gfsk_launch_callback_for_rp;
+    rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 20;
+    rp_task.duration_time_ms      = 20;  // toa;
     rp_release_hook( modem_test_context.rp, modem_test_context.hook_id );
+    rp_disable_failsafe( modem_test_context.rp, true );
     rp_hook_init( modem_test_context.rp, modem_test_context.hook_id, ( void ( * )( void* ) )( modem_test_rx_callback ),
                   &modem_test_context );
 
-    rp_task.start_time_ms    = smtc_modem_hal_get_time_in_ms( ) + 20;
-    rp_task.duration_time_ms = 2000;  // toa;
-
-    rp_task_enqueue( modem_test_context.rp, &rp_task, modem_test_context.tx_rx_payload, 255, &rp_radio_params );
-
+    if( rp_task_enqueue( modem_test_context.rp, &rp_task, modem_test_context.tx_rx_payload, 255, &rp_radio_params ) !=
+        RP_HOOK_STATUS_OK )
+    {
+        return SMTC_MODEM_RC_FAIL;
+    }
     return SMTC_MODEM_RC_OK;
 }
 
@@ -629,28 +634,32 @@ smtc_modem_return_code_t smtc_modem_test_get_nb_rx_packets( uint32_t* nb_rx_pack
     *nb_rx_packets = modem_test_context.total_rx_packets;
     return SMTC_MODEM_RC_OK;
 }
-
-smtc_modem_return_code_t smtc_modem_test_rssi( uint32_t frequency_hz, smtc_modem_test_bw_t bw, uint16_t time_ms )
+smtc_modem_return_code_t smtc_modem_test_get_last_rx_packets( int16_t* rssi, int16_t* snr, uint8_t* rx_payload,
+                                                              uint8_t* rx_payload_length )
 {
     if( modem_get_test_mode_status( ) == false )
     {
         SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-    if( bw >= SMTC_MODEM_TEST_BW_COUNT )
+    *rssi              = modem_test_context.last_rx_payload_rssi;
+    *snr               = modem_test_context.last_rx_payload_snr;
+    *rx_payload_length = modem_test_context.last_rx_payload_length;
+    memcpy( rx_payload, modem_test_context.tx_rx_payload, modem_test_context.last_rx_payload_length );
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_test_rssi_lbt( uint32_t frequency_hz, uint32_t bw_hz, uint16_t time_ms )
+{
+    if( modem_get_test_mode_status( ) == false )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid bw %d\n", bw );
+        SMTC_MODEM_HAL_TRACE_WARNING( "TEST FUNCTION CANNOT BE CALLED: NOT IN TEST MODE\n" );
         return SMTC_MODEM_RC_INVALID;
     }
-
-    uint32_t bw_tmp = 0;
-    if( modem_test_bw_helper[bw] > 467000 )
+    if( ( bw_hz < 125000 ) || ( bw_hz > 467000 ) )  // 467000 Maximum supported GFSK BW
     {
-        bw_tmp = 467000;  // Maximum supported GFSK BW
-    }
-    else
-    {
-        bw_tmp = modem_test_bw_helper[bw];
+        SMTC_MODEM_HAL_TRACE_ERROR( "Invalid bw %d\n", bw_hz );
+        return SMTC_MODEM_RC_INVALID;
     }
 
     modem_test_context.rssi_ready = false;
@@ -659,7 +668,7 @@ smtc_modem_return_code_t smtc_modem_test_rssi( uint32_t frequency_hz, smtc_modem
                    ( void ( * )( void* ) ) modem_test_compute_rssi_callback, &modem_test_context,
                    ( void ( * )( void* ) ) modem_test_compute_rssi_callback, &modem_test_context,
                    ( void ( * )( void* ) ) modem_test_compute_rssi_callback, &modem_test_context );
-    smtc_lbt_set_parameters( &modem_test_context.lbt_obj, time_ms, 50, bw_tmp );
+    smtc_lbt_set_parameters( &modem_test_context.lbt_obj, time_ms, 50, bw_hz );
     smtc_lbt_set_state( &modem_test_context.lbt_obj, true );
     smtc_lbt_listen_channel( &modem_test_context.lbt_obj, frequency_hz, 0, smtc_modem_hal_get_time_in_ms( ), 0 );
 
@@ -776,7 +785,26 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_read( uint8_t* command, ui
     }
     return SMTC_MODEM_RC_OK;
 }
+status_lorawan_t test_mode_cb_tpm( uint8_t* payload, uint8_t payload_length, bool abort )
+{
+    if( abort == true )
+    {
+        increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TEST_MODE, SMTC_MODEM_EVENT_TEST_MODE_ENDED, 0xFF );
+        return ERRORLORAWAN;
+    }
+    // Enqueue task in radio planner
+    if( rp_task_enqueue( modem_test_context.rp, &rp_task, modem_test_context.tx_rx_payload, payload_length,
+                         &rp_radio_params ) != RP_HOOK_STATUS_OK )
+    {
+        return ERRORLORAWAN;
+    }
+    return OKLORAWAN;
+}
 
+modem_test_context_t* smtc_modem_test_get_context( void )
+{
+    return ( &modem_test_context );
+}
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -784,6 +812,7 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_read( uint8_t* command, ui
 
 void modem_test_empty_callback( modem_test_context_t* context )
 {
+    increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TEST_MODE, SMTC_MODEM_EVENT_TEST_MODE_ENDED, 0xFF );
     SMTC_MODEM_HAL_TRACE_PRINTF( "TEST mode Empty callback\n" );
 }
 
@@ -800,106 +829,147 @@ void modem_test_compute_rssi_callback( modem_test_context_t* context )
 
 void modem_test_tx_callback( modem_test_context_t* context )
 {
+    // SMTC_MODEM_HAL_TRACE_PRINTF( " modem_test_tx_callback %u\n", context->nb_of_repetition );
     smtc_modem_hal_reload_wdog( );
-    rp_status_t rp_status = context->rp->status[context->hook_id];
-    if( rp_status == RP_STATUS_TASK_ABORTED )
+    context->nb_of_repetition--;
+    if( context->nb_of_repetition == 0 )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( " modem_test_tx_callback ABORTED\n" );
+        increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TEST_MODE, SMTC_MODEM_EVENT_TEST_MODE_TX_COMPLETED, 0xFF );
+        SMTC_MODEM_HAL_TRACE_PRINTF( " modem_test_tx_callback finished\n" );
         return;
     }
-    rp_task_t rp_task = { 0 };
-
-    rp_task.hook_id       = context->hook_id;
-    rp_task.state         = RP_TASK_STATE_ASAP;
-    rp_task.start_time_ms = smtc_modem_hal_get_time_in_ms( ) + 20;
-
-    rp_radio_params_t radio_params = context->rp->radio_params[context->hook_id];
-
-    if( radio_params.pkt_type == RAL_PKT_TYPE_LORA )
+    else
     {
-        rp_task.type                  = RP_TASK_TYPE_TX_LORA;
+        increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TEST_MODE, SMTC_MODEM_EVENT_TEST_MODE_TX_DONE, 0xFF );
+    }
+
+    rp_task.start_time_ms = smtc_modem_hal_get_time_in_ms( ) + context->delay_ms;
+
+    rp_radio_params = context->rp->radio_params[context->hook_id];
+
+    if( rp_task.type == RP_TASK_TYPE_TX_LORA )
+    {
         rp_task.launch_task_callbacks = lr1_stack_mac_tx_lora_launch_callback_for_rp;
         if( context->random_payload == true )
         {
-            for( uint8_t i = 0; i < radio_params.tx.lora.pkt_params.pld_len_in_bytes; i++ )
+            for( uint8_t i = 0; i < rp_radio_params.tx.lora.pkt_params.pld_len_in_bytes; i++ )
             {
                 context->tx_rx_payload[i] = smtc_modem_hal_get_random_nb_in_range( 0, 0xFF );
             }
         }
 
-        rp_task.duration_time_ms = ral_get_lora_time_on_air_in_ms(
-            &( context->rp->radio->ral ), &( radio_params.tx.lora.pkt_params ), &( radio_params.tx.lora.mod_params ) );
+        rp_task.duration_time_ms =
+            ral_get_lora_time_on_air_in_ms( &( context->rp->radio->ral ), &( rp_radio_params.tx.lora.pkt_params ),
+                                            &( rp_radio_params.tx.lora.mod_params ) );
 
-        rp_task_enqueue( context->rp, &rp_task, context->tx_rx_payload,
-                         radio_params.tx.lora.pkt_params.pld_len_in_bytes, &radio_params );
+        if( tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_TEST_MODE, 0, false, context->tx_rx_payload,
+                                         rp_radio_params.tx.lora.pkt_params.pld_len_in_bytes, 0, rp_task.start_time_ms,
+                                         TEST_STACK_ID_0 ) == ERRORLORAWAN )
+        {
+            modem_test_empty_callback( NULL );
+        }
     }
-    else
+    else if( rp_task.type == RP_TASK_TYPE_TX_FSK )
     {
-        rp_task.type                  = RP_TASK_TYPE_TX_FSK;
         rp_task.launch_task_callbacks = lr1_stack_mac_tx_gfsk_launch_callback_for_rp;
 
         if( context->random_payload == true )
         {
-            for( uint8_t i = 0; i < radio_params.tx.gfsk.pkt_params.pld_len_in_bytes; i++ )
+            for( uint8_t i = 0; i < rp_radio_params.tx.gfsk.pkt_params.pld_len_in_bytes; i++ )
             {
                 context->tx_rx_payload[i] = smtc_modem_hal_get_random_nb_in_range( 0, 0xFF );
             }
         }
 
-        rp_task.duration_time_ms = ral_get_gfsk_time_on_air_in_ms(
-            &( context->rp->radio->ral ), &( radio_params.tx.gfsk.pkt_params ), &( radio_params.tx.gfsk.mod_params ) );
+        rp_task.duration_time_ms =
+            ral_get_gfsk_time_on_air_in_ms( &( context->rp->radio->ral ), &( rp_radio_params.tx.gfsk.pkt_params ),
+                                            &( rp_radio_params.tx.gfsk.mod_params ) );
+        if( tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_TEST_MODE, 0, false, context->tx_rx_payload,
+                                         rp_radio_params.tx.gfsk.pkt_params.pld_len_in_bytes, 0, rp_task.start_time_ms,
+                                         TEST_STACK_ID_0 ) == ERRORLORAWAN )
+        {
+            modem_test_empty_callback( NULL );
+        }
+    }
+    else if( rp_task.type == RP_TASK_TYPE_TX_LR_FHSS )
+    {
+        uint8_t payload_length        = context->rp->payload_buffer_size[context->hook_id];
+        rp_task.launch_task_callbacks = lr1_stack_mac_tx_lr_fhss_launch_callback_for_rp;
 
-        rp_task_enqueue( context->rp, &rp_task, context->tx_rx_payload,
-                         radio_params.tx.gfsk.pkt_params.pld_len_in_bytes, &radio_params );
+        ralf_params_lr_fhss_t* lr_fhss_param = &rp_radio_params.tx.lr_fhss;
+
+        // Hopping sequence must be different for each uplink
+        unsigned int nb_max_hop_sequence = 0;
+        SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_lr_fhss_get_hop_sequence_count( &( context->rp->radio->ral ),
+                                                                             &( lr_fhss_param->ral_lr_fhss_params ),
+                                                                             &nb_max_hop_sequence ) == RAL_STATUS_OK );
+        lr_fhss_param->hop_sequence_id =
+            smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence - 1 );
+
+        if( context->random_payload == true )
+        {
+            for( uint8_t i = 0; i < payload_length; i++ )
+            {
+                context->tx_rx_payload[i] = smtc_modem_hal_get_random_nb_in_range( 0, 0xFF );
+            }
+        }
+        rp_task.duration_time_ms = ral_lr_fhss_get_time_on_air_in_ms(
+            &( context->rp->radio->ral ), &( rp_radio_params.tx.lr_fhss.ral_lr_fhss_params ), payload_length,
+            &rp_task.duration_time_ms );
+
+        if( tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_TEST_MODE, 0, false, context->tx_rx_payload,
+                                         payload_length, 0, rp_task.start_time_ms, TEST_STACK_ID_0 ) == ERRORLORAWAN )
+        {
+            modem_test_empty_callback( NULL );
+        }
     }
 }
 
 void modem_test_rx_callback( modem_test_context_t* context )
 {
     smtc_modem_hal_reload_wdog( );
-    rp_status_t rp_status = context->rp->status[context->hook_id];
-
-    if( rp_status == RP_STATUS_RX_PACKET )
-    {
-        context->total_rx_packets++;
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
-        int16_t  snr              = context->rp->radio_params[context->hook_id].rx.lora_pkt_status.snr_pkt_in_db;
-        int16_t  rssi             = context->rp->radio_params[context->hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
-        uint32_t irq_timestamp_ms = context->rp->irq_timestamp_ms[context->hook_id];
-        SMTC_MODEM_HAL_TRACE_PRINTF( "t: %d, rp_status %u, snr: %d, rssi: %d\n", irq_timestamp_ms, rp_status, snr,
-                                     rssi );
-        SMTC_MODEM_HAL_TRACE_ARRAY( "rx_payload", context->tx_rx_payload,
-                                    context->rp->rx_payload_size[context->hook_id] );
-#endif
-    }
-    else if( rp_status == RP_STATUS_TASK_ABORTED )
-    {
-        SMTC_MODEM_HAL_TRACE_PRINTF( " modem_test_rx_callback ABORTED\n" );
-        return;
-    }
-
-    rp_task_t rp_task = { 0 };
-
-    rp_task.hook_id          = context->hook_id;
-    rp_task.state            = RP_TASK_STATE_ASAP;
+    rp_status_t rp_status    = context->rp->status[context->hook_id];
     rp_task.start_time_ms    = smtc_modem_hal_get_time_in_ms( ) + 20;
-    rp_task.duration_time_ms = 2000;  // toa;
+    rp_task.duration_time_ms = 20;  // will be extended by the radio planner
 
     rp_radio_params_t radio_params = context->rp->radio_params[context->hook_id];
 
-    if( radio_params.pkt_type == RAL_PKT_TYPE_LORA )
+    if( rp_status == RP_STATUS_RX_PACKET )
     {
-        rp_task.type                  = RP_TASK_TYPE_RX_LORA;
-        rp_task.launch_task_callbacks = lr1_stack_mac_rx_lora_launch_callback_for_rp;
-        rp_task_enqueue( context->rp, &rp_task, context->tx_rx_payload,
-                         radio_params.rx.lora.pkt_params.pld_len_in_bytes, &radio_params );
+        uint16_t payload_length;
+        if( radio_params.pkt_type == RAL_PKT_TYPE_LORA )
+        {
+            rp_task.type                  = RP_TASK_TYPE_RX_LORA;
+            rp_task.launch_task_callbacks = lr1_stack_mac_rx_lora_launch_callback_for_rp;
+            payload_length                = radio_params.rx.lora.pkt_params.pld_len_in_bytes;
+            context->last_rx_payload_snr = context->rp->radio_params[context->hook_id].rx.lora_pkt_status.snr_pkt_in_db;
+            context->last_rx_payload_rssi =
+                context->rp->radio_params[context->hook_id].rx.lora_pkt_status.rssi_pkt_in_dbm;
+        }
+        else
+        {
+            rp_task.type                  = RP_TASK_TYPE_RX_FSK;
+            rp_task.launch_task_callbacks = lr1_stack_mac_rx_gfsk_launch_callback_for_rp;
+            payload_length                = radio_params.rx.gfsk.pkt_params.pld_len_in_bytes;
+            context->last_rx_payload_snr  = 0;  // not available for GFSK
+            context->last_rx_payload_rssi =
+                context->rp->radio_params[context->hook_id].rx.gfsk_pkt_status.rssi_avg_in_dbm;
+        }
+
+        if( rp_task_enqueue( context->rp, &rp_task, context->tx_rx_payload, payload_length, &radio_params ) !=
+            RP_HOOK_STATUS_OK )
+        {
+            SMTC_MODEM_HAL_PANIC( );
+        }
+
+        context->total_rx_packets++;
+        context->last_rx_payload_length = context->rp->rx_payload_size[context->hook_id];
+        increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TEST_MODE, SMTC_MODEM_EVENT_TEST_MODE_RX_DONE, 0xFF );
     }
     else
-    {
-        rp_task.type                  = RP_TASK_TYPE_RX_FSK;
-        rp_task.launch_task_callbacks = lr1_stack_mac_rx_gfsk_launch_callback_for_rp;
-        rp_task_enqueue( context->rp, &rp_task, context->tx_rx_payload,
-                         radio_params.rx.gfsk.pkt_params.pld_len_in_bytes, &radio_params );
+    {  // RP_STATUS_RX_TIMEOUT or RP_STATUS_RX_ABORTED
+
+        increment_asynchronous_msgnumber( SMTC_MODEM_EVENT_TEST_MODE, SMTC_MODEM_EVENT_TEST_MODE_RX_ABORTED, 0xFF );
     }
 }
 
@@ -911,6 +981,38 @@ void test_mode_cw_callback_for_rp( void* rp_void )
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ralf_setup_lora( rp->radio, &rp->radio_params[id].tx.lora ) == RAL_STATUS_OK );
     smtc_modem_hal_set_ant_switch( true );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_tx_cw( &( rp->radio->ral ) ) == RAL_STATUS_OK );
+}
+
+static void modem_test_enqueue_task( uint8_t* payload, uint8_t payload_length )
+{
+    rp_task.hook_id = modem_test_context.hook_id;
+    rp_task.state   = RP_TASK_STATE_ASAP;
+    rp_release_hook( modem_test_context.rp, modem_test_context.hook_id );
+    rp_hook_init( modem_test_context.rp, modem_test_context.hook_id, ( void ( * )( void* ) )( modem_test_tx_callback ),
+                  &modem_test_context );
+
+    if( payload == NULL )
+    {
+        // user payload is NULL=> generate a random before at next step
+        modem_test_context.random_payload = true;
+        for( uint8_t i = 0; i < payload_length; i++ )
+        {
+            modem_test_context.tx_rx_payload[i] = smtc_modem_hal_get_random_nb_in_range( 0, 0xFF );
+        }
+    }
+    else
+    {
+        modem_test_context.random_payload = false;
+        // save tx payload in context
+        memcpy( modem_test_context.tx_rx_payload, payload, payload_length );
+    }
+    rp_task.start_time_ms = smtc_modem_hal_get_time_in_ms( ) + modem_test_context.delay_ms;
+
+    if( tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_TEST_MODE, 0, false, modem_test_context.tx_rx_payload,
+                                     payload_length, 0, rp_task.start_time_ms, TEST_STACK_ID_0 ) == ERRORLORAWAN )
+    {
+        modem_test_empty_callback( NULL );
+    }
 }
 
 /* --- EOF ------------------------------------------------------------------ */

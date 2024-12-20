@@ -59,7 +59,7 @@
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 
 // MCU Wake Up Time
 #define MIN_ALARM_DELAY_IN_TICKS       3U              // in ticks
@@ -101,7 +101,7 @@
 #define DAYS_IN_MONTH_CORRECTION_NORM  ( ( uint32_t ) 0x99AAA0 )
 #define DAYS_IN_MONTH_CORRECTION_LEAP  ( ( uint32_t ) 0x445550 )
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

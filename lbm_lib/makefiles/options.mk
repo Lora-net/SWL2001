@@ -125,3 +125,9 @@ LBM_STORE_AND_FORWARD ?= no
 
 # Multistack
 NB_OF_STACK ?= 1
+
+# Relay Tx
+LBM_RELAY_TX_ENABLE ?= no
+
+# Relay Rx
+LBM_RELAY_RX_ENABLE ?= no

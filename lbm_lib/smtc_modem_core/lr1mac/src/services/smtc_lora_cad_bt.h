@@ -82,13 +82,13 @@ typedef struct smtc_lora_cad_bt_s
     bool             is_at_time;
 
     /* Callback */
-    void  ( *ch_free_callback )( void* );
+    void ( *ch_free_callback )( void* );
     void* ch_free_context;
-    void  ( *ch_busy_callback_update_channel )( void* );
+    void ( *ch_busy_callback_update_channel )( void* );
     void* ch_busy_context_update_channel;
-    void  ( *ch_free_callback_on_back_off )( void* );
+    void ( *ch_free_callback_on_back_off )( void* );
     void* ch_free_context_on_back_off;
-    void  ( *abort_callback )( void* );
+    void ( *abort_callback )( void* );
     void* abort_context;
 
     /* data */
@@ -126,9 +126,9 @@ typedef struct smtc_lora_cad_bt_s
  */
 void smtc_lora_cad_bt_init( smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, uint8_t cad_id_rp,
                             void ( *ch_free_callback )( void* ch_free_context ), void* ch_free_context,
-                            void  ( *ch_busy_callback_update_channel )( void* ch_busy_context_update_channel ),
+                            void ( *ch_busy_callback_update_channel )( void* ch_busy_context_update_channel ),
                             void* ch_busy_context_update_channel,
-                            void  ( *ch_free_callback_on_back_off )( void* ch_free_context_on_back_off ),
+                            void ( *ch_free_callback_on_back_off )( void* ch_free_context_on_back_off ),
                             void* ch_free_context_on_back_off, void ( *abort_callback )( void* abort_context ),
                             void* abort_context );
 
@@ -141,8 +141,8 @@ void smtc_lora_cad_bt_init( smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, ui
  * @param [in] nb_bo_max Set the number max of multiple little CAD
  * @return smtc_lora_cad_status_t
  */
-smtc_lora_cad_status_t smtc_lora_cad_bt_set_parameters( smtc_lora_cad_bt_t* cad_obj, uint8_t nb_bo_max, bool bo_enabled,
-                                                        uint8_t max_ch_change );
+smtc_lora_cad_status_t smtc_lora_cad_bt_set_parameters( smtc_lora_cad_bt_t* cad_obj, uint8_t max_ch_change,
+                                                        bool bo_enabled, uint8_t nb_bo_max );
 
 /**
  * @brief Get the configured LoRa CAD parameters
@@ -178,29 +178,26 @@ bool smtc_lora_cad_bt_get_state( smtc_lora_cad_bt_t* cad_obj );
  *
  * @param cad_obj               pointer to cad_obj itself
  * @param freq_hz               targeted listen frequency in hertz
- * @param sf                    targeted listen spreading factor
- * @param bandwidth             targeted listen bandwidth
+ * @param sf                    targeted listen spreading factor (ral_lora_sf_t)
+ * @param bandwidth             targeted listen bandwidth (ral_lora_bw_t)
  * @param is_at_time            is a listen at time or asap
  * @param target_time_ms        time to start the listening
- * @param symbol_duration_us    duration of one symbols regarding ths SF and the bandwidth
  * @param tx_duration_ms        duration of the transmission if channel is free ( allow to book the radio planer )
  * @param nb_available_channel  the number of available channels in region for max_change
- * @param invert_iq_is_on       target iq invert 
+ * @param invert_iq_is_on       target iq invert
  */
-void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq_hz, uint8_t sf,
+void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq_hz, ral_lora_sf_t sf,
                                       ral_lora_bw_t bandwidth, bool is_at_time, uint32_t target_time_ms,
-                                      uint32_t symbol_duration_us, uint32_t tx_duration_ms,
-                                      uint8_t nb_available_channel, bool invert_iq_is_on );
+                                      uint32_t tx_duration_ms, uint8_t nb_available_channel, bool invert_iq_is_on );
 
 /**
  * @brief return the cad obj pointer with stack id as parameter
  * task
  *
  * @param stack_id  stack_id
- * @return smtc_lora_cad_bt_t object pointer 
+ * @return smtc_lora_cad_bt_t object pointer
  */
 smtc_lora_cad_bt_t* smtc_cad_get_obj( uint8_t stack_id );
-
 
 #ifdef __cplusplus
 }

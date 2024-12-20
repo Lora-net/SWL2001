@@ -474,6 +474,23 @@ static inline ral_status_t ral_set_gfsk_pkt_params( const ral_t* radio, const ra
 }
 
 /**
+ * @brief Set the parameters for GFSK address filtering
+ *
+ * @remark The command @ref ral_set_pkt_type with @ref RAL_PKT_TYPE_GFSK parameter must be called prior to this one.
+ *
+ * @param [in] radio   Pointer to radio data structure
+ * @param [in] node_address  node_address The node address used as filter
+ * @param [in] broadcast_address The broadcast address used as filter
+ *
+ * @returns Operation status
+ */
+static inline ral_status_t ral_set_gfsk_pkt_address( const ral_t* radio, const uint8_t node_address,
+                                                     const uint8_t broadcast_address )
+{
+    return radio->driver.set_gfsk_pkt_address( radio->context, node_address, broadcast_address );
+}
+
+/**
  * @brief Set the modulation parameters for LoRa packets
  *
  * @remark The command @ref ral_set_pkt_type with @ref RAL_PKT_TYPE_LORA parameter must be called prior to this one.
@@ -714,7 +731,7 @@ static inline ral_status_t ral_set_flrc_sync_word( const ral_t* radio, const uin
  *
  * @returns Operation status
  */
-static inline ral_status_t ral_set_gfsk_crc_params( const ral_t* radio, const uint16_t seed, const uint16_t polynomial )
+static inline ral_status_t ral_set_gfsk_crc_params( const ral_t* radio, const uint32_t seed, const uint32_t polynomial )
 {
     return radio->driver.set_gfsk_crc_params( radio->context, seed, polynomial );
 }

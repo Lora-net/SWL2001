@@ -51,7 +51,6 @@ extern "C" {
  *-----------------------------------------------------------------------------------
  * --- PUBLIC MACROS ----------------------------------------------------------------
  */
-#define SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( ... )  //@todo push it to the modem layer
 
 /*!
  * \brief Returns the minimum value between a and b

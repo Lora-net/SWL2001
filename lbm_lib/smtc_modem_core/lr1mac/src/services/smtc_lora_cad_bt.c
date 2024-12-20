@@ -100,15 +100,18 @@
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
 
+static smtc_lora_cad_bt_t cad_obj_declare[NUMBER_OF_STACKS];
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
-static void               smtc_cad_bt_launch_radio_callback_for_rp( void* rp_void );
-static void               smtc_lora_cad_bt_rp_callback( smtc_lora_cad_bt_t* cad_obj );
-static void               smtc_lora_cad_bt_reset_to_difs_phase( smtc_lora_cad_bt_t* cad_obj );
-static void               smtc_lora_cad_bt_channel_is_free( smtc_lora_cad_bt_t* cad_obj );
-static smtc_lora_cad_bt_t cad_obj_declare[NUMBER_OF_STACKS];
+static void     smtc_cad_bt_launch_radio_callback_for_rp( void* rp_void );
+static void     smtc_lora_cad_bt_rp_callback( smtc_lora_cad_bt_t* cad_obj );
+static void     smtc_lora_cad_bt_reset_to_difs_phase( smtc_lora_cad_bt_t* cad_obj );
+static void     smtc_lora_cad_bt_channel_is_free( smtc_lora_cad_bt_t* cad_obj );
+static uint32_t smtc_lora_cad_bt_get_symbol_duration_us( ral_lora_bw_t bw, ral_lora_sf_t sf );
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -154,8 +157,8 @@ void smtc_lora_cad_bt_init( smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, ui
     rp_hook_init( rp, cad_id_rp, ( void ( * )( void* ) )( smtc_lora_cad_bt_rp_callback ), cad_obj );
 }
 
-smtc_lora_cad_status_t smtc_lora_cad_bt_set_parameters( smtc_lora_cad_bt_t* cad_obj, uint8_t nb_bo_max, bool bo_enabled,
-                                                        uint8_t max_ch_change )
+smtc_lora_cad_status_t smtc_lora_cad_bt_set_parameters( smtc_lora_cad_bt_t* cad_obj, uint8_t max_ch_change,
+                                                        bool bo_enabled, uint8_t nb_bo_max )
 {
     if( ( max_ch_change > 0 ) && ( max_ch_change <= MAX_CH_CHANGES ) )
     {
@@ -198,10 +201,9 @@ bool smtc_lora_cad_bt_get_state( smtc_lora_cad_bt_t* cad_obj )
     return cad_obj->enabled;
 }
 
-void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq_hz, uint8_t sf,
+void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq_hz, ral_lora_sf_t sf,
                                       ral_lora_bw_t bandwidth, bool is_at_time, uint32_t target_time_ms,
-                                      uint32_t symbol_duration_us, uint32_t tx_duration_ms,
-                                      uint8_t nb_available_channel, bool invert_iq_is_on )
+                                      uint32_t tx_duration_ms, uint8_t nb_available_channel, bool invert_iq_is_on )
 {
     // SMTC_MODEM_HAL_TRACE_PRINTF( "smtc_lora_cad_bt_listen_channel\n" );
     if( cad_obj->is_cad_running == true )
@@ -220,6 +222,8 @@ void smtc_lora_cad_bt_listen_channel( smtc_lora_cad_bt_t* cad_obj, uint32_t freq
     rp_radio_params_t      radio_params       = { 0 };
     rp_task_t              rp_task            = { 0 };
     uint32_t               listen_duration_ms = 0;
+
+    uint32_t symbol_duration_us = smtc_lora_cad_bt_get_symbol_duration_us( bandwidth, sf );
 
     cad_obj->max_ch_change_cnt = MIN( cad_obj->max_ch_change_cnt, nb_available_channel );
 
@@ -356,6 +360,11 @@ static void smtc_cad_bt_launch_radio_callback_for_rp( void* rp_void )
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_dio_irq_params( &( rp->radio->ral ), RAL_IRQ_CAD_DONE | RAL_IRQ_CAD_OK ) ==
                                      RAL_STATUS_OK );
 
+    // Wait the exact expected time (ie target - tcxo startup delay)
+    while( ( int32_t ) ( rp->tasks[id].start_time_ms - smtc_modem_hal_get_time_in_ms( ) ) > 0 )
+    {
+        // Do nothing
+    }
     smtc_modem_hal_start_radio_tcxo( );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_lora_cad( &( rp->radio->ral ) ) == RAL_STATUS_OK );
 
@@ -446,6 +455,60 @@ static void smtc_lora_cad_bt_channel_is_free( smtc_lora_cad_bt_t* cad_obj )
 {
     cad_obj->ch_free_callback( cad_obj->ch_free_context );
     smtc_lora_cad_bt_reset_to_difs_phase( cad_obj );
+}
+
+static uint32_t smtc_lora_cad_bt_get_symbol_duration_us( ral_lora_bw_t bw, ral_lora_sf_t sf )
+{
+    uint32_t bw_temp = 125;  // temporary variable to store the bandwidth
+    switch( bw )
+    {
+    case RAL_LORA_BW_007_KHZ:
+        bw_temp = 7;
+        break;
+    case RAL_LORA_BW_010_KHZ:
+        bw_temp = 10;
+        break;
+    case RAL_LORA_BW_015_KHZ:
+        bw_temp = 15;
+        break;
+    case RAL_LORA_BW_020_KHZ:
+        bw_temp = 20;
+        break;
+    case RAL_LORA_BW_031_KHZ:
+        bw_temp = 31;
+        break;
+    case RAL_LORA_BW_041_KHZ:
+        bw_temp = 41;
+        break;
+    case RAL_LORA_BW_062_KHZ:
+        bw_temp = 62;
+        break;
+    case RAL_LORA_BW_125_KHZ:
+        bw_temp = 125;
+        break;
+    case RAL_LORA_BW_200_KHZ:
+        bw_temp = 200;
+        break;
+    case RAL_LORA_BW_250_KHZ:
+        bw_temp = 250;
+        break;
+    case RAL_LORA_BW_400_KHZ:
+        bw_temp = 400;
+        break;
+    case RAL_LORA_BW_500_KHZ:
+        bw_temp = 500;
+        break;
+    case RAL_LORA_BW_800_KHZ:
+        bw_temp = 800;
+        break;
+    case RAL_LORA_BW_1600_KHZ:
+        bw_temp = 1600;
+        break;
+    default:
+        SMTC_MODEM_HAL_PANIC( " invalid BW " );
+        break;
+    }
+    return ( ( ( uint32_t ) ( ( 1 << sf ) * 1000 ) / bw_temp ) );
 }
 
 /* --- EOF ------------------------------------------------------------------ */

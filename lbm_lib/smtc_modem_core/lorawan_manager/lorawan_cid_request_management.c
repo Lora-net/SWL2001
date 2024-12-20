@@ -53,13 +53,9 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
-#define STACK_ID_CURRENT_TASK \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].stack_id
-#define CURRENT_TASK_ID ( ( stask_manager* ) context )->next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
-#define CURRENT_TASK_TIME \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].time_to_execute_s
-#define CURRENT_TASK_CONTEXT \
-    ( ( stask_manager* ) context )->modem_task[( ( stask_manager* ) context )->next_task_id].task_context
+#define VIRTUAL_TASK_ID ( ( stask_manager* ) context )->next_task_id
+#define STACK_ID_CURRENT_TASK ( ( stask_manager* ) context )->modem_task[VIRTUAL_TASK_ID].stack_id
+#define CURRENT_TASK_CONTEXT ( ( stask_manager* ) context )->modem_task[VIRTUAL_TASK_ID].task_context
 
 /**
  * @brief Check is the index is valid before accessing the object
@@ -182,8 +178,8 @@ static void lorawan_cid_request_management_on_launch( void* context )
 
     if( ( cid_request_size > 0 ) && ( cid_request_size <= MAX_NUMBER_OF_CIQ_REQUEST ) )
     {
-        tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
-                                  smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_CID, 0, false, cid_buffer, cid_request_size, 0,
+                                     smtc_modem_hal_get_time_in_ms( ), STACK_ID_CURRENT_TASK );
     }
 }
 

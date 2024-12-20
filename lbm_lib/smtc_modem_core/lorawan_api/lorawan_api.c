@@ -950,7 +950,7 @@ void lorawan_api_set_no_rx_windows( uint8_t stack_id, uint8_t disable_rx_windows
     lr1mac_core_set_no_rx_windows( &lr1_mac_obj[stack_id], disable_rx_windows );
 }
 
-uint8_t lorawan_api_get_no_rx_windows( uint8_t stack_id, uint8_t disable_rx_windows )
+uint8_t lorawan_api_get_no_rx_windows( uint8_t stack_id )
 {
     return lr1mac_core_get_no_rx_windows( &lr1_mac_obj[stack_id] );
 }

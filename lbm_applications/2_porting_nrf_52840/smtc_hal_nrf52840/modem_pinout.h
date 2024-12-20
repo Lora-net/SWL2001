@@ -57,7 +57,7 @@ extern "C" {
 /********************************************************************************/
 /*                         Application     dependant */
 /********************************************************************************/
-// clang-format off
+/* clang-format off */
 
 //Debug uart specific pinout for debug print
 #define DEBUG_UART_TX           P0_6
@@ -85,7 +85,7 @@ extern "C" {
 
 #define EXTI_BUTTON             P0_25 // BP4
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

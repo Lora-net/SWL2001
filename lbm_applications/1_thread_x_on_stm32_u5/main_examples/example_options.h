@@ -36,16 +36,17 @@
 #define EXAMPLE_OPTIONS_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-/*
- * -----------------------------------------------------------------------------
- * --- DEPENDENCIES ------------------------------------------------------------
- */
+    /*
+     * -----------------------------------------------------------------------------
+     * --- DEPENDENCIES ------------------------------------------------------------
+     */
 
-#include <stdint.h>   // C99 types
-#include <stdbool.h>  // bool type
+#include <stdint.h>  // C99 types
+#include <stdbool.h> // bool type
 
 #include "smtc_modem_api.h"
 
@@ -79,13 +80,10 @@ extern "C" {
  */
 #define MODEM_EXAMPLE_REGION SMTC_MODEM_REGION_EU_868
 
-
-// clang-format on
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // EXAMPLE_OPTIONS_H
+#endif // EXAMPLE_OPTIONS_H
 
 /* --- EOF ------------------------------------------------------------------ */

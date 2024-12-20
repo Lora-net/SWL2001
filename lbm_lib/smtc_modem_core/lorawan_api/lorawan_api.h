@@ -649,10 +649,9 @@ void lorawan_api_set_no_rx_windows( uint8_t stack_id, uint8_t disable_rx_windows
  * @brief Get the status disable/enable Rx windows after a Tx
  *
  * @param stack_id
- * @param disable_rx_windows
  * @return uint8_t
  */
-uint8_t lorawan_api_get_no_rx_windows( uint8_t stack_id, uint8_t disable_rx_windows );
+uint8_t lorawan_api_get_no_rx_windows( uint8_t stack_id );
 
 /**
  * @brief Set the threshold number of uplinks without downlink before reset stack
@@ -1071,7 +1070,7 @@ void lorawan_api_set_next_tx_at_time( uint8_t stack_id, bool is_send_at_time );
  * @param [in] stack_id Stack identifier
  * @param [in] join_status_t  join_status
  */
-void lorawan_api_set_join_status(uint8_t stack_id, join_status_t  join_status );
+void lorawan_api_set_join_status( uint8_t stack_id, join_status_t join_status );
 #ifdef __cplusplus
 }
 #endif

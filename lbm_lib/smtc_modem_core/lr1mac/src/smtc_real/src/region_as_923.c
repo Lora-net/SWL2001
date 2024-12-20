@@ -298,11 +298,11 @@ status_channel_t region_as_923_build_channel_mask( smtc_real_t* real, uint8_t ch
 
 modulation_type_t region_as_923_get_modulation_type_from_datarate( uint8_t datarate )
 {
-    if( datarate <= 6 )
+    if( datarate <= DR6 )
     {
         return LORA;
     }
-    else if( datarate == 7 )
+    else if( datarate == DR7 )
     {
         return FSK;
     }
@@ -315,7 +315,7 @@ modulation_type_t region_as_923_get_modulation_type_from_datarate( uint8_t datar
 
 void region_as_923_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw )
 {
-    if( in_dr <= 6 )
+    if( in_dr <= DR6 )
     {
         *out_sf = datarates_to_sf_as_923[in_dr];
         *out_bw = datarates_to_bandwidths_as_923[in_dr];
@@ -328,7 +328,7 @@ void region_as_923_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_band
 
 void region_as_923_fsk_dr_to_bitrate( uint8_t in_dr, uint8_t* out_bitrate )
 {
-    if( in_dr == 7 )
+    if( in_dr == DR7 )
     {
         *out_bitrate = 50;
     }

@@ -498,7 +498,7 @@ static void store_and_forward_flash_service_on_launch( void* service_id )
 
     bool     is_crc_ok    = false;
     int32_t  fetch_status = -1;
-    uint32_t rtc_ms       = smtc_modem_hal_get_time_in_ms( )  ;
+    uint32_t rtc_ms       = smtc_modem_hal_get_time_in_ms( );
 
     // TODO check payload len and adjust the datarate with custom profile
     // uint8_t max_payload = lorawan_api_next_max_payload_length_get( stack_id );
@@ -573,8 +573,8 @@ static void store_and_forward_flash_service_on_launch( void* service_id )
         }
 #endif
 
-        status_lorawan_t send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
-            entry.fport, true, entry.data, entry.data_len,
+        status_lorawan_t send_status = tx_protocol_manager_request(
+            TX_PROTOCOL_TRANSMIT_LORA, entry.fport, true, entry.data, entry.data_len,
             ( store_and_forward_flash_obj[idx].sending_with_ack == true ) ? CONF_DATA_UP : UNCONF_DATA_UP, rtc_ms,
             stack_id );
 
@@ -726,12 +726,17 @@ static void store_and_forward_flash_add_task( store_and_forward_flash_t* ctx, ui
 static uint32_t store_and_forward_flash_compute_next_delay_s( store_and_forward_flash_t* ctx )
 {
     // TODO implement the right algorithm to compute the delay between each retry to send the same packet not acked
-    uint32_t delay_s = ctx->sending_try_cpt * smtc_modem_hal_get_random_nb_in_range( 1, 5 );
+    if( ctx->sending_try_cpt == 0 )
+    {
+        return 0;
+    }
+    // Exponential backoff (2^sending_try_cpt * 60s)
+    uint32_t delay_s = ( 1 << ctx->sending_try_cpt ) * 60;
     if( delay_s > STORE_AND_FORWARD_DELAY_MAX_S )
     {
-        delay_s = STORE_AND_FORWARD_DELAY_MAX_S + smtc_modem_hal_get_random_nb_in_range( 0, 60 );
+        delay_s = STORE_AND_FORWARD_DELAY_MAX_S;
     }
-    return delay_s;
+    return delay_s + smtc_modem_hal_get_random_nb_in_range( 0, 60 );
 }
 
 static int32_t op_sector_erase( struct circularfs_flash_partition* flash, uint32_t address )

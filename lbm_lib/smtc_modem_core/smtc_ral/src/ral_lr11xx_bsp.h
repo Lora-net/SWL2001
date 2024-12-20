@@ -144,13 +144,14 @@ void ral_lr11xx_bsp_get_rssi_calibration_table( const void* context, const uint3
 /**
  * @brief Get the Channel Activity Detection (CAD) DetPeak value
  *
+ * @param [in] context Chip implementation context
  * @param [in] sf                       CAD LoRa spreading factor
  * @param [in] bw                       CAD LoRa bandwidth
  * @param [in] nb_symbol                CAD on number of symbols
  * @param [in, out] in_out_cad_det_peak  CAD DetPeak value proposed by the ral could be overwritten
  */
-void ral_lr11xx_bsp_get_lora_cad_det_peak( ral_lora_sf_t sf, ral_lora_bw_t bw, ral_lora_cad_symbs_t nb_symbol,
-                                           uint8_t* in_out_cad_det_peak );
+void ral_lr11xx_bsp_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
+                                           ral_lora_cad_symbs_t nb_symbol, uint8_t* in_out_cad_det_peak );
 
 /**
  * Get the Rx boost configuration
@@ -168,6 +169,42 @@ void ral_lr11xx_bsp_get_rx_boost_cfg( const void* context, bool* rx_boost_is_act
  */
 void ral_lr11xx_bsp_get_lfclk_cfg_in_sleep( const void* context, bool* lfclk_is_running );
 
+/**
+ * @brief Get the instantaneous power consumption for the given Tx configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] tx_cfg The Tx configuration
+ * @param [in] radio_reg_mode The regulator configuration
+ * @param [out] pwr_consumption_in_ua The corresponding instantaneous power consumption
+ * @return ral_status_t
+ */
+ral_status_t ral_lr11xx_bsp_get_instantaneous_tx_power_consumption( const void* context,
+    const ral_lr11xx_bsp_tx_cfg_output_params_t* tx_cfg, lr11xx_system_reg_mode_t radio_reg_mode,
+    uint32_t* pwr_consumption_in_ua );
+
+/**
+ * @brief Get the instantaneous power consumption for the given GFSK Rx configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param [in] radio_reg_mode The regulator configuration
+ * @param [in] rx_boosted The Rx boosted configuration
+ * @param [out] pwr_consumption_in_ua The corresponding instantaneous power consumption
+ * @return ral_status_t
+ */
+ral_status_t ral_lr11xx_bsp_get_instantaneous_gfsk_rx_power_consumption( const void* context,
+    lr11xx_system_reg_mode_t radio_reg_mode, bool rx_boosted, uint32_t* pwr_consumption_in_ua );
+
+/**
+ * @brief Get the instantaneous power consumption for the given LoRa Rx configuration
+ *
+ * @param [in] context Chip implementation context
+ * @param radio_reg_mode The regulator configuration
+ * @param rx_boosted The Rx boosted configuration
+ * @param pwr_consumption_in_ua The corresponding instantaneous power consumption
+ * @return ral_status_t
+ */
+ral_status_t ral_lr11xx_bsp_get_instantaneous_lora_rx_power_consumption( const void* context,
+    lr11xx_system_reg_mode_t radio_reg_mode, bool rx_boosted, uint32_t* pwr_consumption_in_ua );
 #ifdef __cplusplus
 }
 #endif

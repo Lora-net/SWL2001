@@ -58,7 +58,7 @@ extern "C" {
 /********************************************************************************/
 /*                         Application     dependant                            */
 /********************************************************************************/
-// clang-format off
+/* clang-format off */
 
 //Debug uart specific pinout for debug print
 #define DEBUG_UART_TX           PA_2
@@ -93,7 +93,7 @@ extern "C" {
 
 #define EXTI_BUTTON             PC_13
 
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

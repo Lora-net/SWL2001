@@ -52,7 +52,7 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 #define MODEM_HAL_FEATURE_OFF                             0
 #define MODEM_HAL_FEATURE_ON                              !MODEM_HAL_FEATURE_OFF
 
@@ -72,14 +72,14 @@ extern "C" {
 #ifndef MODEM_HAL_DEEP_DBG_TRACE
 #define MODEM_HAL_DEEP_DBG_TRACE                          MODEM_HAL_FEATURE_OFF
 #endif
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-// clang-format off
+/* clang-format off */
 #if ( MODEM_HAL_DBG_TRACE_COLOR == MODEM_HAL_FEATURE_ON )
     #define MODEM_HAL_DBG_TRACE_COLOR_BLACK   "\x1B[0;30m"
     #define MODEM_HAL_DBG_TRACE_COLOR_RED     "\x1B[0;31m"
@@ -229,7 +229,7 @@ extern "C" {
     #define SMTC_MODEM_HAL_RP_TRACE_MSG( msg )
     #define SMTC_MODEM_HAL_RP_TRACE_PRINTF( ... )
 #endif
-// clang-format on
+/* clang-format on */
 
 /*
  * -----------------------------------------------------------------------------

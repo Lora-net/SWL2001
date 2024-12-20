@@ -54,8 +54,9 @@
 #include "lr1mac_defs.h"
 #include "smtc_real.h"
 #include "smtc_lbt.h"
+#include "smtc_modem_test.h"
 #include "smtc_lora_cad_bt.h"
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
 #include "relay_tx_api.h"
 #include "relay_tx_mac_parser.h"
 #include "relay_def.h"
@@ -67,7 +68,7 @@
  */
 typedef enum tx_protocol_manager_state
 {
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     TPM_STATE_PREPARE_WOR,     //!<
     TPM_STATE_LBT_BEFORE_WOR,  //!<
 #if defined( ADD_CSMA )
@@ -81,7 +82,8 @@ typedef enum tx_protocol_manager_state
 #endif
     TPM_STATE_TX_LORA,      //!<
     TPM_STATE_NWK_TX_LORA,  //!<
-    TPM_STATE_IDLE,         //!<
+    TPM_STATE_TEST_MODE,
+    TPM_STATE_IDLE,  //!<
     TPM_NUMBER_OF_STATE,
 } tx_protocol_manager_state_t;
 #define ENABLE_DEBUG_TPM 0
@@ -99,10 +101,11 @@ typedef enum tx_protocol_manager_state
  * --- PRIVATE MACROS ----------------------------------------------------------------
  */
 #define STACK_ID_CURRENT_TASK task_manager.modem_task[task_manager.next_task_id].stack_id
-#define CURRENT_TASK_ID task_manager.next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
+#define VIRTUAL_TASK_ID task_manager.next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
 #ifndef MODEM_MIN_RANDOM_DELAY_MS
-#if defined( RELAY_TX )
-#define MODEM_MIN_RANDOM_DELAY_MS 3000
+
+#if defined( ADD_RELAY_TX )
+#define MODEM_MIN_RANDOM_DELAY_MS ( smtc_relay_tx_is_enable( current_tpm_stack_id ) == false ) ? 500 : 3000
 #else
 #define MODEM_MIN_RANDOM_DELAY_MS 500
 #endif
@@ -110,13 +113,30 @@ typedef enum tx_protocol_manager_state
 #ifndef MODEM_MAX_RANDOM_DELAY_MS
 #define MODEM_MAX_RANDOM_DELAY_MS 6000
 #endif
-#define MODEM_TASK_DELAY_MS \
-    ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) )
+
+#if defined( ADD_RELAY_TX )
+#define MODEM_TASK_DELAY_MS                                                \
+    ( ( ( request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE ) ||              \
+        ( ( request_type == TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION ) &&   \
+          ( smtc_relay_tx_is_enable( current_tpm_stack_id ) == false ) ) ) \
+          ? 0                                                              \
+      : ( ( request_type == TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION ) &&   \
+          ( smtc_relay_tx_is_enable( current_tpm_stack_id ) == true ) )    \
+          ? 2000                                                           \
+          : ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) ) )
+#else
+
+#define MODEM_TASK_DELAY_MS                                           \
+    ( ( ( request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE ) ||         \
+        ( request_type == TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION ) ) \
+          ? 0                                                         \
+          : ( smtc_modem_hal_get_random_nb_in_range( MODEM_MIN_RANDOM_DELAY_MS, MODEM_MAX_RANDOM_DELAY_MS ) ) )
+#endif
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE VARIABLES -------------------------------------------------------
  */
-
+#define NB_REQUEST_ACCEPTED 5
 static struct
 {
     tx_protocol_manager_tx_type_t current_tpm_request_type;
@@ -135,12 +155,24 @@ static struct
     bool                        current_tpm_transmit_at_time;
     uint32_t                    current_tpm_target_transmit_at_time;
     uint8_t                     current_tpm_stack_id;
-    uint8_t                     current_tpm_cpt_lbt_max_trial;
+    uint32_t                    current_tpm_cpt_lbt_max_trial;
     uint8_t                     current_tpm_cpt_relay_max_trial;
     uint32_t                    current_tpm_target_time_csma_before_wor_ms;
     uint32_t                    current_tpm_target_time_lbt_before_wor_ms;
     bool                        current_tpm_transmit_is_aborted;
     uint32_t                    current_tpm_failsafe_time_init;
+
+    tx_protocol_manager_tx_type_t next_tpm_request_type[NB_REQUEST_ACCEPTED];
+    tx_protocol_manager_state_t   next_tpm_state[NB_REQUEST_ACCEPTED];
+    uint8_t                       next_tpm_fport[NB_REQUEST_ACCEPTED];
+    bool                          next_tpm_fport_enabled[NB_REQUEST_ACCEPTED];
+    uint8_t*                      next_tpm_data[NB_REQUEST_ACCEPTED];
+    uint8_t                       next_tpm_data_len[NB_REQUEST_ACCEPTED];
+    lr1mac_layer_param_t          next_tpm_packet_type[NB_REQUEST_ACCEPTED];
+    uint32_t                      next_tpm_target_time_ms[NB_REQUEST_ACCEPTED];
+    uint8_t                       next_tpm_stack_id[NB_REQUEST_ACCEPTED];
+    bool                          next_tpm_stand_alone_stack_request[NB_REQUEST_ACCEPTED];
+    uint8_t                       next_tpm_pending_request;
 
 } modem_tpm_context;
 
@@ -165,6 +197,17 @@ static struct
 #define current_tpm_failsafe_time_init modem_tpm_context.current_tpm_failsafe_time_init
 #define current_tpm_add_delay_ms modem_tpm_context.current_tpm_add_delay_ms
 #define current_tpm_target_transmit_at_time modem_tpm_context.current_tpm_target_transmit_at_time
+#define next_tpm_request_type modem_tpm_context.next_tpm_request_type
+#define next_tpm_state modem_tpm_context.next_tpm_state
+#define next_tpm_fport modem_tpm_context.next_tpm_fport
+#define next_tpm_fport_enabled modem_tpm_context.next_tpm_fport_enabled
+#define next_tpm_data modem_tpm_context.next_tpm_data
+#define next_tpm_data_len modem_tpm_context.next_tpm_data_len
+#define next_tpm_packet_type modem_tpm_context.next_tpm_packet_type
+#define next_tpm_target_time_ms modem_tpm_context.next_tpm_target_time_ms
+#define next_tpm_stack_id modem_tpm_context.next_tpm_stack_id
+#define next_tpm_stand_alone_stack_request modem_tpm_context.next_tpm_stand_alone_stack_request
+#define next_tpm_pending_request modem_tpm_context.next_tpm_pending_request
 
 /*
  * -----------------------------------------------------------------------------
@@ -178,6 +221,7 @@ static void compute_tpm_list( void );
 static status_lorawan_t manage_tx_lora_state( void );
 static status_lorawan_t manage_tx_nwk_lora_state( void );
 static status_lorawan_t manage_idle_state( void );
+static status_lorawan_t manage_test_mode( void );
 static status_lorawan_t manage_lbt_state( void );
 static void             modem_tpm_radio_busy_lbt( void* context );
 static void             modem_tpm_radio_free_lbt( void* context );
@@ -189,7 +233,7 @@ static void             modem_tpm_radio_free_csma( void* context );
 static void             modem_tpm_radio_abort_csma( void* context );
 static void             modem_tpm_radio_free_cad_keep_channel( void* context );
 #endif
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
 static status_lorawan_t manage_relay_tx_state( void );
 static status_lorawan_t manage_lbt_before_wor_state( void );
 #if defined( ADD_CSMA )
@@ -210,10 +254,11 @@ static status_lorawan_t ( *launch_tpm_func[TPM_NUMBER_OF_STATE] )( void ) = {
     [TPM_STATE_NWK_TX_LORA] = &manage_tx_nwk_lora_state,
     [TPM_STATE_LBT]         = &manage_lbt_state,
     [TPM_STATE_IDLE]        = &manage_idle_state,
+    [TPM_STATE_TEST_MODE]   = &manage_test_mode,
 #if defined( ADD_CSMA )
     [TPM_STATE_CSMA] = &manage_csma_state,
 #endif
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     [TPM_STATE_RELAY_TX]       = &manage_relay_tx_state,
     [TPM_STATE_LBT_BEFORE_WOR] = &manage_lbt_before_wor_state,
 #if defined( ADD_CSMA )
@@ -232,7 +277,7 @@ static status_lorawan_t ( *launch_tpm_func[TPM_NUMBER_OF_STATE] )( void ) = {
  *
  * @param rp pointer to the radioplanner object
  */
-void modem_tx_protcol_manager_init( radio_planner_t* rp )
+void modem_tx_protocol_manager_init( radio_planner_t* rp )
 {
     memset( &modem_tpm_context, 0, sizeof( modem_tpm_context ) );
     current_tpm_rp_target                   = rp;
@@ -240,7 +285,7 @@ void modem_tx_protcol_manager_init( radio_planner_t* rp )
     current_tpm_transmit_at_time            = false;
     for( int i = 0; i < NUMBER_OF_STACKS; i++ )
     {
-        smtc_lbt_init( smtc_lbt_get_obj( i ), current_tpm_rp_target, RP_HOOK_ID_LBT,
+        smtc_lbt_init( smtc_lbt_get_obj( i ), current_tpm_rp_target, RP_HOOK_ID_LBT + i,
                        ( void ( * )( void* ) ) modem_tpm_radio_free_lbt, NULL,
                        ( void ( * )( void* ) ) modem_tpm_radio_busy_lbt, NULL,
                        ( void ( * )( void* ) ) modem_tpm_radio_abort_lbt, NULL );
@@ -254,7 +299,7 @@ void modem_tx_protcol_manager_init( radio_planner_t* rp )
         }
 
 #if defined( ADD_CSMA )
-        smtc_lora_cad_bt_init( smtc_cad_get_obj( i ), current_tpm_rp_target, RP_HOOK_ID_CAD,
+        smtc_lora_cad_bt_init( smtc_cad_get_obj( i ), current_tpm_rp_target, RP_HOOK_ID_CAD + i,
                                ( void ( * )( void* ) ) modem_tpm_radio_free_csma, NULL,
                                ( void ( * )( void* ) ) modem_tpm_radio_busy_csma, NULL,
                                ( void ( * )( void* ) ) modem_tpm_radio_free_cad_keep_channel, NULL,
@@ -263,7 +308,7 @@ void modem_tx_protcol_manager_init( radio_planner_t* rp )
         smtc_lora_cad_bt_set_state( smtc_cad_get_obj( i ), true );
 #endif
 #endif
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
         smtc_relay_tx_init( i, current_tpm_rp_target, lorawan_api_stack_mac_get( i )->real,
                             ( void ( * )( void* ) ) modem_tpm_radio_free_relay_tx, NULL, NULL, NULL,
                             ( void ( * )( void* ) ) modem_tpm_radio_abort_relay_tx, NULL );
@@ -285,11 +330,12 @@ void modem_tx_protcol_manager_init( radio_planner_t* rp )
 uint32_t tx_protocol_manager_is_busy( void )
 {
     uint32_t time_to_sleep = READY_FOR_LR1MAC_TX;
-    if( ( tpm_list_of_state_to_execute[0] == TPM_STATE_LBT )
+    if( ( tpm_list_of_state_to_execute[0] == TPM_STATE_LBT ) ||
+        ( tpm_list_of_state_to_execute[0] == TPM_STATE_TEST_MODE )
 #if defined( ADD_CSMA )
         || ( tpm_list_of_state_to_execute[0] == TPM_STATE_CSMA )
 #endif
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
         || ( tpm_list_of_state_to_execute[0] == TPM_STATE_LBT_BEFORE_WOR ) ||
 #if defined( ADD_CSMA )
         ( tpm_list_of_state_to_execute[0] == TPM_STATE_CSMA_BEFORE_WOR ) ||
@@ -300,7 +346,31 @@ uint32_t tx_protocol_manager_is_busy( void )
     )
     {
         time_to_sleep = SLEEP_UNTIL_RADIO_INTERRUPT_MS;
+        if( ( ( int32_t ) ( smtc_modem_hal_get_time_in_s( ) - current_tpm_failsafe_time_init - FAILSAFE_TPM_S ) > 0 ) )
+        {
+            tpm_abort( );
+            time_to_sleep = 0;
+        }
     }
+    if( ( tpm_list_of_state_to_execute[0] == TPM_STATE_IDLE ) && ( next_tpm_pending_request > 0 ) &&
+        ( next_tpm_pending_request <= NB_REQUEST_ACCEPTED ) )
+    {
+        next_tpm_pending_request--;
+        if( next_tpm_stand_alone_stack_request[next_tpm_pending_request] == false )
+        {
+            tx_protocol_manager_request(
+                next_tpm_request_type[next_tpm_pending_request], next_tpm_fport[next_tpm_pending_request],
+                next_tpm_fport_enabled[next_tpm_pending_request], next_tpm_data[next_tpm_pending_request],
+                next_tpm_data_len[next_tpm_pending_request], next_tpm_packet_type[next_tpm_pending_request],
+                next_tpm_target_time_ms[next_tpm_pending_request], next_tpm_stack_id[next_tpm_pending_request] );
+        }
+        else
+        {
+            tx_protocol_manager_lr1mac_stand_alone_tx( );
+        }
+        time_to_sleep = 0;
+    }
+
     return time_to_sleep;
 }
 
@@ -321,7 +391,26 @@ status_lorawan_t tx_protocol_manager_request( tx_protocol_manager_tx_type_t requ
                                               lr1mac_layer_param_t packet_type, uint32_t target_time_ms,
                                               uint8_t stack_id )
 {
-    status_lorawan_t status                 = ERRORLORAWAN;
+    status_lorawan_t status = ERRORLORAWAN;
+    if( next_tpm_pending_request >= NB_REQUEST_ACCEPTED )
+    {
+        return ERRORLORAWAN;
+    }
+    if( tpm_list_of_state_to_execute[0] != TPM_STATE_IDLE )
+    {
+        next_tpm_request_type[next_tpm_pending_request]              = request_type;
+        next_tpm_fport[next_tpm_pending_request]                     = fport;
+        next_tpm_target_time_ms[next_tpm_pending_request]            = target_time_ms;
+        next_tpm_fport_enabled[next_tpm_pending_request]             = fport_enabled;
+        next_tpm_data[next_tpm_pending_request]                      = ( uint8_t* ) data;
+        next_tpm_data_len[next_tpm_pending_request]                  = data_len;
+        next_tpm_packet_type[next_tpm_pending_request]               = packet_type;
+        next_tpm_stack_id[next_tpm_pending_request]                  = stack_id;
+        next_tpm_stand_alone_stack_request[next_tpm_pending_request] = false;
+        next_tpm_pending_request++;
+        return OKLORAWAN;
+    }
+
     current_tpm_failsafe_time_init          = smtc_modem_hal_get_time_in_s( );
     current_tpm_transaction_is_a_retransmit = false;
     current_tpm_transmit_is_aborted         = false;
@@ -374,7 +463,15 @@ status_lorawan_t tx_protocol_manager_request( tx_protocol_manager_tx_type_t requ
  */
 void tx_protocol_manager_lr1mac_stand_alone_tx( void )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "Lr1mac retransmission or Nwk Frame manage by TPM \n" );
+    if( next_tpm_pending_request >= NB_REQUEST_ACCEPTED )
+    {
+        return;
+    }
+    if( tpm_list_of_state_to_execute[0] != TPM_STATE_IDLE )
+    {
+        next_tpm_stand_alone_stack_request[next_tpm_pending_request] = true;
+        return;
+    }
     current_tpm_transaction_is_a_retransmit = true;
     current_tpm_cpt_relay_max_trial         = 0;
     current_tpm_cpt_lbt_max_trial           = 0;
@@ -507,11 +604,11 @@ static status_lorawan_t manage_tx_lora_state( void )
     switch( current_tpm_request_type )
     {
     case TX_PROTOCOL_JOIN_LORA:
-
         status = lorawan_api_join( current_tpm_target_time_ms, current_tpm_stack_id );
 
         break;
     case TX_PROTOCOL_TRANSMIT_LORA:
+    case TX_PROTOCOL_TRANSMIT_LORA_CERTIFICATION:
 
         status = lorawan_api_payload_send( current_tpm_fport, current_tpm_fport_enabled, current_tpm_data,
                                            current_tpm_data_len, current_tpm_packet_type, current_tpm_target_time_ms,
@@ -519,7 +616,7 @@ static status_lorawan_t manage_tx_lora_state( void )
 
         break;
     case TX_PROTOCOL_TRANSMIT_LORA_AT_TIME:
-        
+
         if( ( ( int32_t ) ( current_tpm_target_transmit_at_time + MODEM_MIN_RANDOM_DELAY_MS -
                             ( current_tpm_target_time_ms + update_add_delay_ms( ) ) ) < 0 ) )
         {
@@ -549,9 +646,9 @@ static status_lorawan_t manage_tx_lora_state( void )
     {
         lorawan_api_set_next_tx_at_time( current_tpm_stack_id, true );
     }
-    if (status == ERRORLORAWAN)
+    if( status == ERRORLORAWAN )
     {
-       tpm_abort( );  
+        tpm_abort( );
     }
     return status;
 }
@@ -571,7 +668,7 @@ static status_lorawan_t manage_tx_lora_state( void )
 
 // In the case where the channel is always busy, TPM tries MAX_TRIAL_LBT times to relaunch the LBT service before
 // aborting the current Tx transaction.
-#define MAX_TRIAL_LBT 10
+#define MAX_TRIAL_LBT ( ( current_tpm_request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE ) ? 10000UL : 10UL )
 
 /**
  * @brief this function is called by the service LBT when the channel is "busy" meaning interferer block the next
@@ -594,7 +691,7 @@ static status_lorawan_t manage_tx_lora_state( void )
 
 static void modem_tpm_radio_busy_lbt( void* context )
 {
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     // manage WOR LBT
     if( smtc_relay_tx_is_enable( current_tpm_stack_id ) == true )
     {
@@ -627,7 +724,7 @@ static void modem_tpm_radio_busy_lbt( void* context )
         {
             modem_tpm_radio_abort_lbt( context );
         }
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     }
 
 #endif
@@ -679,8 +776,16 @@ static void modem_tpm_radio_abort_lbt( void* context )
  */
 static status_lorawan_t manage_lbt_state( void )
 {
-    lr1_stack_mac_t* lr1mac_obj      = lorawan_api_stack_mac_get( current_tpm_stack_id );
-    uint32_t         target_time_lbt = current_tpm_target_time_ms;
+    uint32_t target_time_lbt = current_tpm_target_time_ms;
+
+    if( current_tpm_request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE )
+    {
+        smtc_lbt_listen_channel( smtc_lbt_get_obj( current_tpm_stack_id ),
+                                 ( smtc_modem_test_get_context ) ( )->tx_frequency, false, target_time_lbt, 0 );
+        return OKLORAWAN;
+    }
+    lr1_stack_mac_t* lr1mac_obj = lorawan_api_stack_mac_get( current_tpm_stack_id );
+
     if( current_tpm_transmit_at_time == true )
     {
         // this case covers the case where relay is on and to perform the lbt between wor_ack and  lr1mac transmission
@@ -732,7 +837,7 @@ static status_lorawan_t manage_lbt_state( void )
 #if defined( ADD_CSMA )
 static void modem_tpm_radio_busy_csma( void* context )
 {
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     // manage WOR CSMA
     if( smtc_relay_tx_is_enable( current_tpm_stack_id ) == true )
     {
@@ -764,7 +869,7 @@ static void modem_tpm_radio_busy_csma( void* context )
         {
             modem_tpm_radio_abort_csma( context );
         }
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     }
 
 #endif
@@ -791,7 +896,6 @@ static void modem_tpm_radio_free_csma( void* context )
     shift_left_tpm_list( );
     update_tpm_target_time( );
     modem_tx_protocol_manager_engine( );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "modem_tpm_radio_free_csma\n" );
 }
 /**
  * @brief this function is to abort the current tpm transmission
@@ -823,7 +927,7 @@ static void modem_tpm_radio_abort_csma( void* context )
  */
 static void modem_tpm_radio_free_cad_keep_channel( void* context )
 {
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     // manage WOR CSMA
     if( smtc_relay_tx_is_enable( current_tpm_stack_id ) == true )
     {
@@ -836,7 +940,7 @@ static void modem_tpm_radio_free_cad_keep_channel( void* context )
         // => so do not call compute_tpm_list( );
         update_tpm_target_time( );
         modem_tx_protocol_manager_engine( );
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     }
 #endif
 }
@@ -851,8 +955,19 @@ static void modem_tpm_radio_free_cad_keep_channel( void* context )
  */
 static status_lorawan_t manage_csma_state( void )
 {
-    lr1_stack_mac_t* lr1mac_obj       = lorawan_api_stack_mac_get( current_tpm_stack_id );
-    uint32_t         target_time_csma = current_tpm_target_time_ms;
+    uint32_t target_time_csma = current_tpm_target_time_ms;
+
+    if( current_tpm_request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE )
+    {
+        modem_test_context_t* test_mode_context = smtc_modem_test_get_context( );
+        smtc_lora_cad_bt_listen_channel(
+            smtc_cad_get_obj( current_tpm_stack_id ), test_mode_context->tx_frequency, test_mode_context->sf,
+            test_mode_context->bw, false, target_time_csma, 0,
+            16,  // 16 because the max trial of csma have to be manage only by cad user setting
+            test_mode_context->invert_iq );
+        return OKLORAWAN;
+    }
+    lr1_stack_mac_t* lr1mac_obj = lorawan_api_stack_mac_get( current_tpm_stack_id );
     if( smtc_real_get_modulation_type_from_datarate( lr1mac_obj->real, lr1mac_obj->tx_data_rate ) == LORA )
     {
         uint8_t            tx_sf;
@@ -860,9 +975,8 @@ static status_lorawan_t manage_csma_state( void )
         smtc_real_lora_dr_to_sf_bw( lr1mac_obj->real, lr1mac_obj->tx_data_rate, &tx_sf, &tx_bw );
 
         smtc_lora_cad_bt_listen_channel( smtc_cad_get_obj( current_tpm_stack_id ), lr1mac_obj->tx_frequency, tx_sf,
-                                         ( ral_lora_bw_t ) tx_bw, false, target_time_csma,
-                                         smtc_real_get_symbol_duration_us( lr1mac_obj->real, lr1mac_obj->tx_data_rate ),
-                                         0, lr1mac_obj->nb_available_tx_channel, false );
+                                         ( ral_lora_bw_t ) tx_bw, false, target_time_csma, 0,
+                                         lr1mac_obj->nb_available_tx_channel, false );
     }
     else
     {
@@ -884,7 +998,7 @@ static status_lorawan_t manage_csma_state( void )
  *Depending on the callback, TPM updates its state machine to launch the next task.
  ********************************************************************************************************************/
 
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
 // the wor_tx variable is updated by smtc_relay_tx_prepare_wor to provide every parameters required to start the wor
 // transmission at the right time this variable will be reuse by smtc_relay_tx_send_wor, manage_lbt_before_wor_state or
 // manage_csma_before_wor_state functions
@@ -956,10 +1070,8 @@ static status_lorawan_t manage_lbt_before_wor_state( void )
 #if defined( ADD_CSMA )
 static status_lorawan_t manage_csma_before_wor_state( void )
 {
-    lr1_stack_mac_t* lr1mac_obj = lorawan_api_stack_mac_get( current_tpm_stack_id );
     smtc_lora_cad_bt_listen_channel( smtc_cad_get_obj( current_tpm_stack_id ), wor_tx.freq_hz, wor_tx.sf, wor_tx.bw,
-                                     false, current_tpm_target_time_ms,
-                                     smtc_real_get_symbol_duration_us( lr1mac_obj->real, wor_tx.dr ), 0, MAX_TRIAL_RELAY, true );
+                                     false, current_tpm_target_time_ms, 0, MAX_TRIAL_RELAY, true );
 
     return OKLORAWAN;
 }
@@ -1022,7 +1134,7 @@ static void modem_tpm_radio_abort_relay_tx( void* context )
 /****************************************************************/
 static status_lorawan_t tpm_get_next_channel( void )
 {
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     if( ( tpm_list_of_state_to_execute[0] == TPM_STATE_LBT_BEFORE_WOR )
 #if defined( ADD_CSMA )
         || ( tpm_list_of_state_to_execute[0] == TPM_STATE_CSMA_BEFORE_WOR )
@@ -1032,6 +1144,10 @@ static status_lorawan_t tpm_get_next_channel( void )
         return ( OKLORAWAN );
     }
 #endif
+    if( current_tpm_request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE )
+    {
+        return ( OKLORAWAN );
+    }
 
     if( current_tpm_request_type == TX_PROTOCOL_JOIN_LORA )
     {
@@ -1076,12 +1192,54 @@ static uint32_t update_add_delay_ms( void )
 
     return ( current_tpm_add_delay_ms );
 }
+/**
+ * @brief This function compute and fix the order of the different state
+ **/
+/**
+ * @brief Computes the list of states to execute for the transmission protocol manager (TPM).
+ *
+ * This function determines the sequence of states that the TPM should execute based on the current
+ * request type and various conditions such as LBT (Listen Before Talk) and CSMA (Carrier Sense Multiple Access).
+ * The sequence of states is stored in the global array `tpm_list_of_state_to_execute`.
+ *
+ * The function handles different scenarios:
+ * - Transmit Test Mode: Adds TPM_STATE_LBT and TPM_STATE_TEST_MODE to the list.
+ * - Relay TX Mode: Adds a sequence of states including TPM_STATE_PREPARE_WOR, TPM_STATE_CSMA_BEFORE_WOR,
+ *   TPM_STATE_LBT_BEFORE_WOR, TPM_STATE_RELAY_TX, TPM_STATE_LBT, TPM_STATE_TX_LORA, or TPM_STATE_NWK_TX_LORA.
+ * - Default Mode: Adds a sequence of states including TPM_STATE_CSMA, TPM_STATE_LBT, TPM_STATE_TX_LORA, or
+ * TPM_STATE_NWK_TX_LORA.
+ *
+ * The function ensures that the index does not exceed the maximum list length and terminates the list with
+ * TPM_STATE_IDLE.
+ *
+ * @note This function uses conditional compilation to include or exclude CSMA and Relay TX functionality.
+ */
 static void compute_tpm_list( void )
 {
+#if defined( ADD_CSMA )
+    lr1_stack_mac_t* lr1mac_obj = lorawan_api_stack_mac_get( current_tpm_stack_id );
+#endif
     uint8_t index = 0;
     reset_tpm_list( );
-
-#if defined( RELAY_TX )
+    if( current_tpm_request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE )
+    {
+#if defined( ADD_CSMA )
+        modem_test_context_t* test_mode_context = smtc_modem_test_get_context( );
+        if( ( smtc_lora_cad_bt_get_state( smtc_cad_get_obj( current_tpm_stack_id ) ) == true ) &&
+            ( test_mode_context->modulation_type == LORA ) )
+        {
+            tpm_list_of_state_to_execute[index++] = TPM_STATE_CSMA;
+        }
+#endif
+        if( smtc_lbt_get_state( smtc_lbt_get_obj( current_tpm_stack_id ) ) == true )
+        {
+            tpm_list_of_state_to_execute[index++] = TPM_STATE_LBT;
+        }
+        tpm_list_of_state_to_execute[index++] = TPM_STATE_TEST_MODE;
+        tpm_list_of_state_to_execute[index]   = TPM_STATE_IDLE;
+        return;
+    }
+#if defined( ADD_RELAY_TX )
     ///////////////////////////////////////////////////////////////
     // SEQUENCE IS PREPARE_WOR,CSMA_WOR,LBT_WOR,WOR,LBT,TX_LORA  //
     ///////////////////////////////////////////////////////////////
@@ -1090,7 +1248,9 @@ static void compute_tpm_list( void )
         tpm_list_of_state_to_execute[index++] = TPM_STATE_PREPARE_WOR;
 
 #if defined( ADD_CSMA )
-        if( smtc_lora_cad_bt_get_state( smtc_cad_get_obj( current_tpm_stack_id ) ) == true )
+
+        if( ( smtc_lora_cad_bt_get_state( smtc_cad_get_obj( current_tpm_stack_id ) ) == true ) &&
+            ( smtc_real_get_modulation_type_from_datarate( lr1mac_obj->real, lr1mac_obj->tx_data_rate ) == LORA ) )
         {
             tpm_list_of_state_to_execute[index++] = TPM_STATE_CSMA_BEFORE_WOR;
         }
@@ -1121,7 +1281,8 @@ static void compute_tpm_list( void )
 #endif
 
 #if defined( ADD_CSMA )
-        if( smtc_lora_cad_bt_get_state( smtc_cad_get_obj( current_tpm_stack_id ) ) == true )
+        if( ( smtc_lora_cad_bt_get_state( smtc_cad_get_obj( current_tpm_stack_id ) ) == true ) &&
+            ( smtc_real_get_modulation_type_from_datarate( lr1mac_obj->real, lr1mac_obj->tx_data_rate ) == LORA ) )
         {
             tpm_list_of_state_to_execute[index++] = TPM_STATE_CSMA;
         }
@@ -1138,7 +1299,7 @@ static void compute_tpm_list( void )
         {
             tpm_list_of_state_to_execute[index++] = TPM_STATE_NWK_TX_LORA;
         }
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     }
 #endif
     if( index >= MAX_LIST_LENGTH )
@@ -1197,6 +1358,11 @@ static void tpm_abort( void )
 {
     reset_tpm_list( );
     current_tpm_transmit_is_aborted = true;
+    if( current_tpm_request_type == TX_PROTOCOL_TRANSMIT_TEST_MODE )
+    {
+        test_mode_cb_tpm( current_tpm_data, current_tpm_data_len, true );
+    }
+
     lorawan_api_core_abort( current_tpm_stack_id );
 }
 
@@ -1208,6 +1374,11 @@ static void tpm_abort( void )
 static status_lorawan_t manage_idle_state( void )
 {
     return OKLORAWAN;
+}
+static status_lorawan_t manage_test_mode( void )
+{
+    shift_left_tpm_list( );
+    return ( test_mode_cb_tpm( current_tpm_data, current_tpm_data_len, false ) );
 }
 static void update_tpm_target_time( void )
 {
@@ -1225,7 +1396,7 @@ static void tpm_debug_print( void )
 {
     switch( tpm_list_of_state_to_execute[0] )
     {
-#if defined( RELAY_TX )
+#if defined( ADD_RELAY_TX )
     case TPM_STATE_PREPARE_WOR:
         SMTC_MODEM_HAL_TRACE_PRINTF( "TPM Launch PREPARE_WOR Service at %d \n", smtc_modem_hal_get_time_in_ms( ) );
         break;
@@ -1255,6 +1426,9 @@ static void tpm_debug_print( void )
         break;
     case TPM_STATE_NWK_TX_LORA:
         SMTC_MODEM_HAL_TRACE_PRINTF( "TPM Launch NWK TX Lr1mac  at %d \n", smtc_modem_hal_get_time_in_ms( ) );
+        break;
+    case TPM_STATE_TEST_MODE:
+        SMTC_MODEM_HAL_TRACE_PRINTF( "TPM Launch TEST MODE at %d \n", smtc_modem_hal_get_time_in_ms( ) );
         break;
     case TPM_STATE_IDLE:
         SMTC_MODEM_HAL_TRACE_PRINTF( "TPM Launch idle task at %d \n", smtc_modem_hal_get_time_in_ms( ) );

@@ -95,6 +95,8 @@ typedef ral_status_t ( *ral_set_pkt_type_f )( const void* context, const ral_pkt
 typedef ral_status_t ( *ral_get_pkt_type_f )( const void* context, ral_pkt_type_t* pkt_type );
 typedef ral_status_t ( *ral_set_gfsk_mod_params_f )( const void* context, const ral_gfsk_mod_params_t* params );
 typedef ral_status_t ( *ral_set_gfsk_pkt_params_f )( const void* context, const ral_gfsk_pkt_params_t* params );
+typedef ral_status_t ( *ral_set_gfsk_pkt_address_f )( const void* context, const uint8_t node_address,
+                                                      const uint8_t braodcast_address );
 typedef ral_status_t ( *ral_set_lora_mod_params_f )( const void* context, const ral_lora_mod_params_t* params );
 typedef ral_status_t ( *ral_set_lora_pkt_params_f )( const void* context, const ral_lora_pkt_params_t* params );
 typedef ral_status_t ( *ral_set_lora_cad_params_f )( const void* context, const ral_lora_cad_params_t* params );
@@ -116,8 +118,8 @@ typedef ral_status_t ( *ral_set_gfsk_sync_word_f )( const void* context, const u
 typedef ral_status_t ( *ral_set_lora_sync_word_f )( const void* context, const uint8_t sync_word );
 typedef ral_status_t ( *ral_set_flrc_sync_word_f )( const void* context, const uint8_t* sync_word,
                                                     const uint8_t sync_word_len );
-typedef ral_status_t ( *ral_set_gfsk_crc_params_f )( const void* context, const uint16_t seed,
-                                                     const uint16_t polynomial );
+typedef ral_status_t ( *ral_set_gfsk_crc_params_f )( const void* context, const uint32_t seed,
+                                                     const uint32_t polynomial );
 typedef ral_status_t ( *ral_set_flrc_crc_params_f )( const void* context, const uint32_t seed );
 typedef ral_status_t ( *ral_set_gfsk_whitening_seed_f )( const void* context, const uint16_t seed );
 typedef ral_status_t ( *ral_lr_fhss_init_f )( const void* context, const ral_lr_fhss_params_t* lr_fhss_params );
@@ -182,6 +184,7 @@ typedef struct ral_drv_s
     ral_get_pkt_type_f                   get_pkt_type;
     ral_set_gfsk_mod_params_f            set_gfsk_mod_params;
     ral_set_gfsk_pkt_params_f            set_gfsk_pkt_params;
+    ral_set_gfsk_pkt_address_f           set_gfsk_pkt_address;
     ral_set_lora_mod_params_f            set_lora_mod_params;
     ral_set_lora_pkt_params_f            set_lora_pkt_params;
     ral_set_lora_cad_params_f            set_lora_cad_params;
