@@ -141,7 +141,7 @@ void hal_flash_read_buffer( uint32_t addr, uint8_t* buffer, uint32_t size )
 
     while( FlashIndex < size )
     {
-        data8 = *( __IO uint32_t* ) ( addr + FlashIndex );
+        data8 = *( __IO uint8_t* ) ( addr + FlashIndex );
 
         buffer[FlashIndex] = data8;
 
