@@ -69,6 +69,7 @@
 #include "lr11xx_hal.h"
 #elif defined( SX127X )
 #include "sx127x_hal.h"
+#elif defined( TRANSPARENT_RADIO )
 #else
 #error "Please select radio board.."
 #endif
@@ -748,6 +749,8 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_write( uint8_t* command, u
 #elif defined( SX127X )
     // if( sx127x_hal_write( ( sx127x_t* ) ( modem_test_context.rp->radio->ral.context ), command, data,
     //                       data_length ) != SX127X_HAL_STATUS_OK )
+#elif defined( TRANSPARENT_RADIO )
+    return SMTC_MODEM_RC_OK;
 #else
     return SMTC_MODEM_RC_FAIL;
 #endif
@@ -777,6 +780,8 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_read( uint8_t* command, ui
 #elif defined( SX127X )
     // if( sx127x_hal_read( ( sx127x_t* ) ( modem_test_context.rp->radio->ral.context ), command, data,
     //                      data_length ) != SX127X_HAL_STATUS_OK )
+#elif defined( TRANSPARENT_RADIO )
+    return SMTC_MODEM_RC_OK;
 #else
     return SMTC_MODEM_RC_FAIL;
 #endif

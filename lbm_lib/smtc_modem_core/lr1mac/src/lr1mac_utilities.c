@@ -46,6 +46,14 @@
 #include "smtc_modem_hal.h"
 #include "smtc_modem_hal_dbg_trace.h"
 
+static const uint8_t lr1mac_cmd_mac_ans_size[NB_MAC_CMD_ANS] = {
+    [LINK_CHECK_ANS] = LINK_CHECK_ANS_SIZE,         [LINK_ADR_ANS] = LINK_ADR_ANS_SIZE,
+    [DUTY_CYCLE_ANS] = DUTY_CYCLE_ANS_SIZE,         [RXPARRAM_SETUP_ANS] = RXPARRAM_SETUP_ANS_SIZE,
+    [DEV_STATUS_ANS] = DEV_STATUS_ANS_SIZE,         [NEW_CHANNEL_ANS] = NEW_CHANNEL_ANS_SIZE,
+    [RXTIMING_SETUP_ANS] = RXTIMING_SETUP_ANS_SIZE, [TXPARAM_SETUP_ANS] = TXPARAM_SETUP_ANS_SIZE,
+    [DL_CHANNEL_ANS] = DL_CHANNEL_ANS_SIZE,
+};
+
 uint32_t lr1mac_utilities_crc( uint8_t* buf, int len )
 {
     uint32_t crc = 0xFFFFFFFA;
