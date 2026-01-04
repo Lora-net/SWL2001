@@ -1,4 +1,4 @@
-/*!
+/*! 
  * \file      main_periodical_uplink.c
  *
  * \brief     main program for periodical example
@@ -165,6 +165,10 @@ static const uint8_t user_app_key[16]     = USER_LORAWAN_APP_KEY;
 #define DELAY_FIRST_MSG_AFTER_JOIN 60
 #endif
 
+/* ===================== Fallback SF10 por falhas de ACK (TXDONE) ===================== */
+#define ACK_FAILURES_THRESHOLD_TO_FALLBACK    5
+#define SF10_FALLBACK_USAGE_THRESHOLD_TO_EXIT 20
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -192,6 +196,34 @@ static smtc_modem_relay_tx_config_t relay_config = { 0 };
 static uint8_t chip_eui[SMTC_MODEM_EUI_LENGTH] = { 0 };
 static uint8_t chip_pin[SMTC_MODEM_PIN_LENGTH] = { 0 };
 #endif
+
+/* ===================== Estado do fallback SF10 (ACK) ===================== */
+static int  consecutive_ack_failures = 0;   // conta quantas tentativas seguidas não tiveram confirmação (ACK)
+static int  sf10_fallback_usage      = 0;   // conta quantos uplinks (ou ciclos) foram feitos sob o fallback SF10
+static bool sf10_fallback_active     = false; // indica se o modo fallback está ativo
+
+static bool last_uplink_confirmed_requested = false;
+
+// Distribuição custom: força DR0 (SF10 em AU915) como preferencial.
+static const uint8_t custom_adr_distribution_sf10[SMTC_MODEM_CUSTOM_ADR_DATA_LENGTH] = {
+    0xFF, // DR0
+    0x00, // DR1
+    0x00, // DR2
+    0x00, // DR3
+    0x00, // DR4
+    0x00, // DR5
+    0x00, // DR6
+    0x00, // DR7
+    0x00, // DR8
+    0x00, // DR9
+    0x00, // DR10
+    0x00, // DR11
+    0x00, // DR12
+    0x00, // DR13
+    0x00, // DR14
+    0x00  // DR15
+};
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
@@ -216,6 +248,11 @@ static void user_button_callback( void* context );
  * @brief Send the 32bits uplink counter on chosen port
  */
 static void send_uplink_counter_on_port( uint8_t port );
+
+/* Fallback SF10 por falhas de ACK (TXDONE) */
+static void apply_default_adr( const uint8_t stack_id );
+static void apply_sf10_fallback( const uint8_t stack_id );
+static void sf10_fallback_supervisor_on_txdone( const uint8_t stack_id, const smtc_modem_event_t* ev );
 
 /*
  * -----------------------------------------------------------------------------
@@ -289,6 +326,92 @@ void main_periodical_uplink( void )
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
+
+static void apply_default_adr( const uint8_t stack_id )
+{
+    // O array custom é ignorado nesse perfil com ADR normal, mas precisa existir.
+    uint8_t custom_vazio[SMTC_MODEM_CUSTOM_ADR_DATA_LENGTH];
+    memset( custom_vazio, 0, sizeof( custom_vazio ) );
+
+    (void) smtc_modem_adr_set_profile( stack_id, SMTC_MODEM_ADR_PROFILE_NETWORK_CONTROLLED, custom_vazio );
+
+    sf10_fallback_active     = false;
+    sf10_fallback_usage      = 0;
+    consecutive_ack_failures = 0;
+}
+
+static void apply_sf10_fallback( const uint8_t stack_id )
+{
+    // Entra no modo "forçar SF10" via perfil custom
+    (void) smtc_modem_adr_set_profile( stack_id, SMTC_MODEM_ADR_PROFILE_CUSTOM, custom_adr_distribution_sf10 );
+
+    sf10_fallback_active = true;
+    sf10_fallback_usage  = 0;
+}
+
+static void sf10_fallback_supervisor_on_txdone( const uint8_t stack_id, const smtc_modem_event_t* ev )
+{
+    if( ev == NULL )
+    {
+        return;
+    }
+
+    if( ev->event_type != SMTC_MODEM_EVENT_TXDONE )
+    {
+        return;
+    }
+
+    /* =========================
+     * 1) Se está em fallback, conta uso e avalia saída.
+     *    Em fallback, NÃO zera consecutive_ack_failures mesmo se TXDONE_CONFIRMED.
+     * ========================= */
+    if( sf10_fallback_active )
+    {
+        sf10_fallback_usage++;
+
+        if( sf10_fallback_usage >= SF10_FALLBACK_USAGE_THRESHOLD_TO_EXIT )
+        {
+            apply_default_adr( stack_id );
+            // apply_default_adr já zera sf10_fallback_usage e consecutive_ack_failures
+        }
+        return;
+    }
+
+    /* =========================
+     * 2) Contar ACK se o uplink foi solicitado como confirmado.
+     * ========================= */
+    if( last_uplink_confirmed_requested == false )
+    {
+        return;
+    }
+
+    /* =========================
+     * 3) Se houve ACK, zera falhas consecutivas.
+     * ========================= */
+    if( ev->event_data.txdone.status == SMTC_MODEM_EVENT_TXDONE_CONFIRMED )
+    {
+        consecutive_ack_failures = 0;
+        return;
+    }
+
+    /* =========================
+     * 4) Sem ACK -> incrementa falhas e pode entrar em fallback.
+     * ========================= */
+    consecutive_ack_failures++;
+
+    if( consecutive_ack_failures > ACK_FAILURES_THRESHOLD_TO_FALLBACK )
+    {
+        apply_sf10_fallback( stack_id );
+
+        // Ao entrar em fallback, uso_fallback_sf10 = 0
+        sf10_fallback_usage  = 0;
+        sf10_fallback_active = true;
+
+        return;
+    }
+
+    return;
+}
 
 static void modem_event_callback( void )
 {
@@ -380,6 +503,9 @@ static void modem_event_callback( void )
         case SMTC_MODEM_EVENT_TXDONE:
             SMTC_HAL_TRACE_INFO( "Event received: TXDONE\n" );
             SMTC_HAL_TRACE_INFO( "Transmission done \n" );
+
+            sf10_fallback_supervisor_on_txdone( stack_id, &current_event );
+
             break;
 
         case SMTC_MODEM_EVENT_DOWNDATA:
@@ -580,7 +706,13 @@ static void send_uplink_counter_on_port( uint8_t port )
     buff[1]         = ( uplink_counter >> 16 ) & 0xFF;
     buff[2]         = ( uplink_counter >> 8 ) & 0xFF;
     buff[3]         = ( uplink_counter & 0xFF );
-    ASSERT_SMTC_MODEM_RC( smtc_modem_request_uplink( STACK_ID, port, false, buff, 4 ) );
+
+    const bool confirmado = true;
+
+    // guarda se este uplink foi solicitado como confirmado
+    last_uplink_confirmed_requested = confirmado;
+
+    ASSERT_SMTC_MODEM_RC( smtc_modem_request_uplink( STACK_ID, port, confirmado, buff, 4 ) );
     // Increment uplink counter
     uplink_counter++;
 }

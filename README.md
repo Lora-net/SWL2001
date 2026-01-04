@@ -1,3 +1,6 @@
+## SF10 fallback supervisor (v4.8.0)  
+ - read some documentation: [README_SF10_FALLBACK.md](https://github.com/JulioFerreiraDev/SWL2001/blob/fa3afffdd08a38a8519973190d59865d6b38ec95/docs/README_SF10_FALLBACK.md)
+
 # LoRa Basic Modem
 
 **LoRa Basic Modem** proposes a full implementation of the [TS001-LoRaWAN L2 1.0.4](https://resources.lora-alliance.org/technical-specifications/ts001-1-0-4-lorawan-l2-1-0-4-specification) and [Regional Parameters RP2-1.0.3](https://resources.lora-alliance.org/technical-specifications/rp2-1-0-3-lorawan-regional-parameters) specifications.
