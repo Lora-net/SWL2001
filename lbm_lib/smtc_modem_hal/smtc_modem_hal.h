@@ -259,22 +259,23 @@ uint32_t smtc_modem_hal_get_random_nb_in_range( const uint32_t val_1, const uint
 /**
  * @brief Config the radio interruption callback
  *
- * @param [in] callback     Callback that will be called in case of timer irq
- * @param [in] context      Context that will be passed on callback argument
+ * @param [in] callback     Callback that is executed upon radio interrupt service request
+ * @param [in] context      Context that is provided to the callback
  *
  */
 void smtc_modem_hal_irq_config_radio_irq( void ( *callback )( void* context ), void* context );
 
+/* ------------ Radio management ------------ */
 
-
-/* ------------ Radio management ------------
- *@brief Check if the radio is free
+/**
+ * @brief Check if the radio is free
  * @remark except a very specific application, this function should always return false
  * @remark This function is used to check if the radio is use by an external stack
  *
  * @return bool False if the radio is free, false otherwise
  */
 bool smtc_modem_external_stack_currently_use_radio( void );
+
 /**
  * @brief Start radio tcxo
  *

@@ -112,7 +112,7 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
 /**
  * Get the XOSC configuration
  *
- * @remark If no TCXO is present, this function should set tcxo_is_radio_controlled to false, and return.
+ * @remark If no TCXO is present, this function should set xosc_cfg to RAL_XOSC_CFG_XTAL, and return.
  *
  * @param [in] context Chip implementation context
  * @param [out] xosc_cfg Let the caller know what kind of XOSC is used

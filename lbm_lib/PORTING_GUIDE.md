@@ -284,7 +284,7 @@ Store the callback and context argument that must be executed when a radio event
 |       |       |       |
 |---    |---    |---    |
 |[in]|callback|Callback that is executed upon radio interrupt service request|
-|[in]|context|Argument that is provided to callback|
+|[in]|context|Context that is provided to the callback|
 
 #### `void smtc_modem_hal_start_radio_tcxo( void )`
 
