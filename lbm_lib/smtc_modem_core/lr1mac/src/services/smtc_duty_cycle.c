@@ -68,7 +68,8 @@
 static struct
 {
     smtc_dtc_t* dtc_obj_ptr;
-#if defined( REGION_EU_868 ) || ( REGION_RU_864 )
+// TWTG CHANGE added AS923, and the missing defined() around REGION_RU_864
+#if defined( REGION_EU_868 ) || defined( REGION_RU_864 ) || defined( REGION_AS_923 )
     smtc_dtc_t dtc_obj_ctx;
 #endif
 } dtc_context;

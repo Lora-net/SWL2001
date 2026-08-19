@@ -172,6 +172,23 @@ status_lorawan_t lorawan_api_set_region( smtc_real_region_types_t region_type, u
         }
     }
 #endif
+// TWTG CHANGE AS923 has a duty-cycle lower than 1% (RP002-1.0.3)
+#if defined( REGION_AS_923 )
+    if( ( region_type == SMTC_REAL_REGION_AS_923 ) || ( region_type == SMTC_REAL_REGION_AS_923_GRP2 ) ||
+        ( region_type == SMTC_REAL_REGION_AS_923_GRP3 )
+#if defined( RP2_103 )
+        || ( region_type == SMTC_REAL_REGION_AS_923_GRP4 )
+#endif
+    )
+    {
+        // Configure duty-cycle object
+        for( int i = 0; i < BAND_AS923_MAX; i++ )
+        {
+            smtc_duty_cycle_config( BAND_AS923_MAX, i, duty_cycle_by_band_as_923[i],
+                                    frequency_range_by_band_as_923[i][0], frequency_range_by_band_as_923[i][1] );
+        }
+    }
+#endif
 
     // Enable duty-cycle constraint if one region need to support the duty cycle
     // Remark: In multi-stack EU868 and IN865 there is a bands overlapping, EU868 has a duty-cycle but not IN865, in
