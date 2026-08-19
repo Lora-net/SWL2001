@@ -40,6 +40,7 @@
 #include <string.h>  // memcpy
 #include "lr1mac_utilities.h"
 #include "smtc_modem_hal.h"
+#include "smtc_duty_cycle.h"  // TWTG CHANGE
 #include "region_as_923_defs.h"
 #include "region_as_923.h"
 #include "smtc_modem_hal_dbg_trace.h"
@@ -215,11 +216,15 @@ status_lorawan_t region_as_923_get_next_channel( smtc_real_t* real, uint8_t tx_d
     *active_channel_nb = 0;
     uint8_t active_channel_index[NUMBER_OF_CHANNEL_AS_923];
 
+    smtc_duty_cycle_update( );  // TWTG CHANGE
+
     for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
     {
         if( SMTC_GET_BIT8( channel_index_enabled, i ) == CHANNEL_ENABLED )
         {
-            if( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], tx_data_rate ) == 1 )
+            // TWTG CHANGE filter out the channels whose band has no time on air left
+            if( ( smtc_duty_cycle_is_channel_free( tx_frequency_channel[i] ) == true ) &&
+                ( SMTC_GET_BIT16( &dr_bitfield_tx_channel[i], tx_data_rate ) == 1 ) )
             {
                 active_channel_index[*active_channel_nb] = i;
                 ( *active_channel_nb )++;

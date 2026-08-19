@@ -91,7 +91,8 @@ extern "C" {
 #define NUMBER_OF_TX_DR_AS_923              (8)
 #define TX_PARAM_SETUP_REQ_SUPPORTED_AS_923 (true)
 #define NEW_CHANNEL_REQ_SUPPORTED_AS_923    (true)
-#define DTC_SUPPORTED_AS_923                (false)
+// TWTG CHANGE RP002-1.0.3 requires a duty-cycle lower than 1% on AS923, it is enabled when the region is selected
+#define DTC_SUPPORTED_AS_923                (true)
 #define LBT_SUPPORTED_AS_923                (true)
 #define LBT_SNIFF_DURATION_MS_AS_923        (5)
 #define LBT_THRESHOLD_DBM_AS_923            (int16_t)(-80)
@@ -120,6 +121,16 @@ typedef enum as_923_channels_bank_e
     BANK_1_AS923 = 1,  // 8 to 15 channels
     BANK_MAX_AS923
 } as_923_channels_bank_t;
+
+// TWTG CHANGE
+/**
+ * Bands enumeration
+ */
+typedef enum region_as_923_band_e
+{
+    BAND_AS923_GLOBAL = 0,  // RP002-1.0.3 defines no AS923 sub-band, the whole channel plan shares one limit
+    BAND_AS923_MAX
+} region_as_923_band_t;
 
 typedef struct region_as923_context_s
 {
@@ -269,6 +280,21 @@ static const uint8_t JOIN_DR_DISTRIBUTION_AS_923[] = { 0, 0, 4, 5, 5, 6, 0, 0 };
  * DR7:   0%
  */
 static const uint8_t DEFAULT_DR_DISTRIBUTION_AS_923[] = { 0, 0, 1, 0, 0, 0, 0, 0 };
+
+// TWTG CHANGE
+/**
+ * Duty Cycle table definition by bands
+ */
+static const uint16_t duty_cycle_by_band_as_923[BAND_AS923_MAX] = {
+    [BAND_AS923_GLOBAL] = 100,  // 1% RP002-1.0.3 Table 2, Table 68 and Table 69
+};
+
+static const uint32_t frequency_range_by_band_as_923[BAND_AS923_MAX][2] = {
+    // [ band x] = {freq min, freq max}
+    // The single band covers the four groups: GRP1 915-928, GRP2 920-923, GRP3 915-921 and GRP4 917-920 MHz.
+    // freq max is exclusive, hence the +1
+    [BAND_AS923_GLOBAL] = { FREQMIN_GRP1_AS_923, FREQMAX_GRP1_AS_923 + 1 },
+};
 
 /*
  * -----------------------------------------------------------------------------
