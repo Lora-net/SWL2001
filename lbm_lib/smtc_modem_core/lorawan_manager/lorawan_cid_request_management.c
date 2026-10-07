@@ -187,10 +187,18 @@ static void lorawan_cid_request_management_on_update( void* context )
 {
     uint8_t data_in_tmp  = CURRENT_TASK_CONTEXT;
     CURRENT_TASK_CONTEXT = 0;
+
+    // When the transmission that carried the requests was aborted before the
+    // frame was built (relay TX back-off with no WOR ACK, LBT/CSMA failure),
+    // lr1mac never moved the requests to REQUESTED, so a request still ACKED
+    // from an earlier answer would be reported as answered again with its old
+    // values. An aborted request cannot have been answered.
+    const bool tx_aborted = tx_protocol_manager_tx_is_aborted( );
     if( data_in_tmp & SMTC_MODEM_LORAWAN_MAC_REQ_DEVICE_TIME )
     {
         smtc_modem_event_mac_request_status_t dev_time_status = SMTC_MODEM_EVENT_MAC_REQUEST_NOT_ANSWERED;
-        if( lorawan_api_get_device_time_req_status( STACK_ID_CURRENT_TASK ) == OKLORAWAN )
+        if( ( tx_aborted == false ) &&
+            ( lorawan_api_get_device_time_req_status( STACK_ID_CURRENT_TASK ) == OKLORAWAN ) )
         {
             dev_time_status = SMTC_MODEM_EVENT_MAC_REQUEST_ANSWERED;
         }
@@ -201,7 +209,8 @@ static void lorawan_cid_request_management_on_update( void* context )
         uint8_t                               margin;
         uint8_t                               gw_cnt;
         smtc_modem_event_mac_request_status_t link_check_status = SMTC_MODEM_EVENT_MAC_REQUEST_NOT_ANSWERED;
-        if( lorawan_api_get_link_check_ans( &margin, &gw_cnt, STACK_ID_CURRENT_TASK ) == OKLORAWAN )
+        if( ( tx_aborted == false ) &&
+            ( lorawan_api_get_link_check_ans( &margin, &gw_cnt, STACK_ID_CURRENT_TASK ) == OKLORAWAN ) )
         {
             link_check_status = SMTC_MODEM_EVENT_MAC_REQUEST_ANSWERED;
         }
@@ -210,7 +219,8 @@ static void lorawan_cid_request_management_on_update( void* context )
     if( data_in_tmp & SMTC_MODEM_LORAWAN_MAC_REQ_PING_SLOT_INFO )
     {
         smtc_modem_event_mac_request_status_t ping_slot_info_status = SMTC_MODEM_EVENT_MAC_REQUEST_NOT_ANSWERED;
-        if( lorawan_api_get_ping_slot_info_req_status( STACK_ID_CURRENT_TASK ) == OKLORAWAN )
+        if( ( tx_aborted == false ) &&
+            ( lorawan_api_get_ping_slot_info_req_status( STACK_ID_CURRENT_TASK ) == OKLORAWAN ) )
         {
             ping_slot_info_status = SMTC_MODEM_EVENT_MAC_REQUEST_ANSWERED;
         }
