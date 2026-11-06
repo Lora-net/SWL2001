@@ -57,19 +57,14 @@ extern "C" {
  */
 
 /*!
- * @brief The maximal time to spend in preamble detection for each single scan, in ms
+ * @brief The maximal number of results to gather during the scan for MAC addresses. Maximum value is 32
  */
-#define WIFI_TIMEOUT_PER_SCAN_DEFAULT ( 90 )
+#define WIFI_MAX_BASIC_RESULTS ( 8 )
 
 /*!
- * @brief The time to spend scanning one channel, in ms
+ * @brief The maximal number of results to gather during the scan for SSID/Country code. Maximum value is 32
  */
-#define WIFI_TIMEOUT_PER_CHANNEL_DEFAULT ( 300 )
-
-/*!
- * @brief The maximal number of results to gather during the scan. Maximum value is 32
- */
-#define WIFI_MAX_RESULTS ( 8 )
+#define WIFI_MAX_EXTENDED_RESULTS ( 32 )
 
 /*!
  * @brief The maximal number of results to send. Maximum value is 32
@@ -87,10 +82,20 @@ extern "C" {
  */
 
 /*!
+ * @brief Enumeration representing the type of results
+ */
+typedef enum
+{
+    WIFI_RESULT_TYPE_BASIC,     //!< basic: mac_address, type, rssi, origin
+    WIFI_RESULT_TYPE_EXTENDED,  //!< extended: basic + country_code + ssid_bytes
+} wifi_result_type_t;
+
+/*!
  * @brief Structure representing the configuration of Wi-Fi scan
  */
 typedef struct
 {
+    lr11xx_wifi_mode_t             scan_mode;
     lr11xx_wifi_channel_mask_t     channels;             //!< A mask of the channels to be scanned
     lr11xx_wifi_signal_type_scan_t types;                //!< Wi-Fi types to be scanned
     uint8_t                        max_results;          //!< Maximum number of results expected for a scan
@@ -99,27 +104,30 @@ typedef struct
 } wifi_settings_t;
 
 /*!
- * @brief Structure representing a single scan result
+ * @brief Structure representing the information of a single Wi-Fi access point detected during a scan
  */
 typedef struct
 {
-    lr11xx_wifi_mac_address_t        mac_address;  //!< MAC address of the Wi-Fi access point which has been detected
-    lr11xx_wifi_channel_t            channel;      //!< Channel on which the access point has been detected
-    lr11xx_wifi_signal_type_result_t type;         //!< Type of Wi-Fi which has been detected
-    int8_t                           rssi;         //!< Strength of the detected signal
-    lr11xx_wifi_mac_origin_t origin;  //!< Estimation of the origin of a MAC address (fix or mobile Access Point)
+    wifi_result_type_t               result_type; /* basic or extended results */
+    lr11xx_wifi_mac_address_t        mac_address;
+    lr11xx_wifi_channel_t            channel;
+    lr11xx_wifi_signal_type_result_t type;
+    int8_t                           rssi;
+    lr11xx_wifi_mac_origin_t         origin;
+    uint8_t                          country_code[LR11XX_WIFI_STR_COUNTRY_CODE_SIZE]; /* only for extented results */
+    uint8_t                          ssid_bytes[LR11XX_WIFI_RESULT_SSID_LENGTH];      /* only for extented results */
 } wifi_scan_single_result_t;
 
 /*!
- * @brief Structure representing a collection of scan results
+ * @brief Structure representing the results of a Wi-Fi scan
  */
 typedef struct
 {
-    uint8_t                   nbr_results;                //!< Number of results
-    uint32_t                  power_consumption_nah;      //!< Power consumption to acquire this set of results
-    wifi_scan_single_result_t results[WIFI_MAX_RESULTS];  //!< Buffer containing the results
-    uint32_t                  scan_duration_ms;           //!< Duration of the scan in millisecond
-} wifi_scan_all_result_t;
+    uint8_t                   nbr_results;
+    uint32_t                  power_consumption_nah;
+    uint32_t                  scan_duration_ms;
+    wifi_scan_single_result_t results[WIFI_MAX_EXTENDED_RESULTS];
+} wifi_scan_result_t;
 
 #ifdef __cplusplus
 }

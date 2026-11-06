@@ -49,7 +49,6 @@ extern "C" {
 #include "smtc_real_defs.h"
 #include "wake_on_radio.h"
 
-
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC MACROS ----------------------------------------------------------
@@ -144,7 +143,6 @@ bool wor_schedule_rx_wor_ack( uint8_t hook_id, radio_planner_t* rp, wor_ack_rx_p
 void wor_ral_init_rx_wor( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, wor_cad_periodicity_t cad_period,
                           uint8_t max_payload, rp_radio_params_t* param );
 
-
 /**
  * @brief   Fill rp_radio_params_t struct for TX WOR frame
  *
@@ -186,6 +184,7 @@ void wor_ral_init_rx_msg( smtc_real_t* real, uint8_t max_payload, uint8_t dr, ui
 /**
  * @brief Fill rp_radio_params_t struct for periodic CAD
  *
+ * @param[in]   radio       radio pointer
  * @param[in]   lr1_mac     Lr1mac object
  * @param[in]   dr          Datarate of the CAD
  * @param[in]   cad_period  Period between 2 CAD
@@ -193,8 +192,8 @@ void wor_ral_init_rx_msg( smtc_real_t* real, uint8_t max_payload, uint8_t dr, ui
  * @param[in]   wor_toa_ms  TOA of the WOR to be received
  * @param[out]  param       Radio parameter structure with CAD infos
  */
-void wor_ral_init_cad( smtc_real_t* lr1_mac, uint8_t dr, wor_cad_periodicity_t cad_period, bool is_first,
-                       uint32_t wor_toa_ms, ral_lora_cad_params_t* param );
+void wor_ral_init_cad( const ralf_t* radio, smtc_real_t* lr1_mac, uint8_t dr, wor_cad_periodicity_t cad_period,
+                       bool is_first, uint32_t wor_toa_ms, ral_lora_cad_params_t* param );
 #ifdef _cplusplus
 }
 #endif

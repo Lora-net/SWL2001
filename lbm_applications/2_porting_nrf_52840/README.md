@@ -39,6 +39,13 @@ Build command example for lr1110 radio
 make lr1110 MODEM_APP=PERIODICAL_UPLINK
 ```
 
+or with cmake:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_RADIO=lr1110 -DAPP=periodical_uplink -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build
+```
+
 #### Hardware Modem
 
 This example proposes an implementation of a all integrated modem that can be addressed using UART RX/TX and 3 gpios for commands handling (command and busy) and events notification (event)
@@ -48,6 +55,13 @@ Build command example for lr1110 radio
 
 ```bash
 make lr1110 MODEM_APP=HW_MODEM
+```
+
+or with cmake:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_RADIO=lr1110 -DAPP=hw_modem -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build
 ```
 
 #### Porting tool
@@ -60,6 +74,13 @@ Build command example for lr1110 radio
 make lr1110 MODEM_APP=PORTING_TESTS
 ```
 
+or with cmake:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_RADIO=lr1110 -DAPP=porting_tests -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build
+```
+
 #### LCTT Certification
 
 This example provides an application that can be used to run the LCTT certification tool.  
@@ -70,6 +91,13 @@ Build command example for lr1110 radio
 
 ```bash
 make lr1110 MODEM_APP=LCTT_CERTIF
+```
+
+or with cmake:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_RADIO=lr1110 -DAPP=lctt_certif -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build
 ```
 
 ### MCU Porting
@@ -90,4 +118,4 @@ Any smtc_modem_hal function will be mapped with corresponding mcu porting functi
 
 ## Fuota support
 
-Once the Fuota services are enabled (refer to the main readme for instructions on how to activate Fuota), the periodical example is sufficient to launch a Fuota campaign. However, you will need to enable the flag `ALLOW_FUOTA` to "yes" in the `app_options.mk` file.
+Once the Fuota services are enabled (refer to the main readme for instructions on how to activate Fuota), the periodical example is sufficient to launch a Fuota campaign. However, you will need to enable the flag `USE_FUOTA` to "yes" in the `app_options.mk` file.

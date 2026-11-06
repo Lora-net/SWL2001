@@ -129,8 +129,10 @@ static upload_status_t upload_status                    = UPLOAD_NOT_INIT;
 
 #if defined( ADD_APP_GEOLOCATION ) && defined( STM32L476xx )
 // Geolocation handling
-static smtc_modem_gnss_event_data_scan_done_t gnss_scan_data    = { 0 };
-static cmd_serial_rc_code_t                   gnss_scan_done_rc = CMD_RC_FAIL;
+static smtc_modem_gnss_event_data_scan_done_t gnss_scan_data      = { 0 };
+static cmd_serial_rc_code_t                   gnss_scan_done_rc   = CMD_RC_FAIL;
+static smtc_modem_wifi_event_data_scan_done_t wifi_scan_done_data = { 0 };
+static cmd_serial_rc_code_t                   wifi_scan_done_rc   = CMD_RC_FAIL;
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
 
 /**
@@ -254,13 +256,16 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_GNSS_SCAN_AGGREGATE]                   = { 1, 1, 1 },
     [CMD_GNSS_SEND_MODE]                        = { 1, 1, 1 },
     [CMD_GNSS_ALM_DEMOD_START]                  = { 1, 0, 0 },
+    [CMD_GNSS_ALM_DEMOD_STOP]                   = { 1, 0, 0 },
     [CMD_GNSS_ALM_DEMOD_SET_CONSTEL]            = { 1, 1, 1 },
     [CMD_GNSS_ALM_DEMOD_GET_EVENT_DATA_ALM_UPD] = { 1, 0, 0 },
     [CMD_CLOUD_ALMANAC_START]                   = { 1, 0, 0 },
     [CMD_CLOUD_ALMANAC_STOP]                    = { 1, 0, 0 },
     [CMD_WIFI_SCAN_START]                       = { 1, 4, 4 },
     [CMD_WIFI_SCAN_CANCEL]                      = { 1, 0, 0 },
+    [CMD_WIFI_SCAN_MODE]                        = { 1, 1, 1 },
     [CMD_WIFI_GET_SCAN_DONE_SCAN_DATA]          = { 1, 0, 0 },
+    [CMD_WIFI_GET_SCAN_DONE_SCAN_DATA_RESULT]   = { 1, 1, 1 },
     [CMD_WIFI_GET_EVENT_DATA_TERMINATED]        = { 1, 0, 0 },
     [CMD_WIFI_SET_PORT]                         = { 1, 1, 1 },
     [CMD_WIFI_SEND_MODE]                        = { 1, 1, 1 },
@@ -276,9 +281,11 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_GET_RELAY_CONFIG] = { 1, 0, 0 },
 #endif  // USE_RELAY_TX
 
-    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = { 1, 0, 0 },
-    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = { 1, 1, 1 },
-    [CMD_MODEM_GET_CRASHLOG]                 = { 1, 0, 0 },
+    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]     = { 1, 0, 0 },
+    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]     = { 1, 1, 1 },
+    [CMD_MODEM_GET_CRASHLOG]                     = { 1, 0, 0 },
+    [CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER] = { 1, 0, 0 },
+    [CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER] = { 1, 1, 1 },
 };
 
 /**
@@ -429,13 +436,16 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_GNSS_SCAN_AGGREGATE]                   = "CMD_GNSS_SCAN_AGGREGATE",
     [CMD_GNSS_SEND_MODE]                        = "CMD_GNSS_SEND_MODE",
     [CMD_GNSS_ALM_DEMOD_START]                  = "CMD_GNSS_ALM_DEMOD_START",
+    [CMD_GNSS_ALM_DEMOD_STOP]                   = "CMD_GNSS_ALM_DEMOD_STOP",
     [CMD_GNSS_ALM_DEMOD_SET_CONSTEL]            = "CMD_GNSS_ALM_DEMOD_SET_CONSTEL",
     [CMD_GNSS_ALM_DEMOD_GET_EVENT_DATA_ALM_UPD] = "CMD_GNSS_ALM_DEMOD_GET_EVENT_DATA_ALM_UPD",
     [CMD_CLOUD_ALMANAC_START]                   = "CMD_CLOUD_ALMANAC_START",
     [CMD_CLOUD_ALMANAC_STOP]                    = "CMD_CLOUD_ALMANAC_STOP",
     [CMD_WIFI_SCAN_START]                       = "CMD_MODEM_WIFI_SCAN_START",
     [CMD_WIFI_SCAN_CANCEL]                      = "CMD_MODEM_WIFI_SCAN_CANCEL",
+    [CMD_WIFI_SCAN_MODE]                        = "CMD_MODEM_WIFI_SCAN_MODE",
     [CMD_WIFI_GET_SCAN_DONE_SCAN_DATA]          = "CMD_MODEM_WIFI_GET_SCAN_DONE_SCAN_DATA",
+    [CMD_WIFI_GET_SCAN_DONE_SCAN_DATA_RESULT]   = "CMD_WIFI_GET_SCAN_DONE_SCAN_DATA_RESULT",
     [CMD_WIFI_GET_EVENT_DATA_TERMINATED]        = "CMD_MODEM_WIFI_GET_EVENT_DATA_TERMINATED",
     [CMD_WIFI_SET_PORT]                         = "CMD_MODEM_WIFI_SET_PORT",
     [CMD_WIFI_SEND_MODE]                        = "CMD_MODEM_WIFI_SEND_MODE",
@@ -448,9 +458,11 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_SET_RELAY_CONFIG] = "CMD_SET_RELAY_CONFIG",
     [CMD_GET_RELAY_CONFIG] = "CMD_GET_RELAY_CONFIG",
 #endif
-    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = "CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
-    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF] = "CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
-    [CMD_MODEM_GET_CRASHLOG]                 = "CMD_GET_CRASHLOG",
+    [CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]     = "CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
+    [CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF]     = "CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF",
+    [CMD_MODEM_GET_CRASHLOG]                     = "CMD_GET_CRASHLOG",
+    [CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER] = "CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER",
+    [CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER] = "CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER",
 };
 #endif
 
@@ -531,6 +543,7 @@ static const uint8_t events_lut[SMTC_MODEM_EVENT_MAX] = {
     [SMTC_MODEM_EVENT_RELAY_RX_RUNNING]                  = 0x33,
     [SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE]               = 0x34,
     [SMTC_MODEM_EVENT_TEST_MODE]                         = 0x35,             //!< Test mode event
+    [SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD]             = 0x36,
 
 };
 
@@ -717,6 +730,10 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             break;
         case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
             cmd_output->buffer[2] = current_event.event_data.regional_duty_cycle.status;
+            cmd_output->length    = 3;
+            break;
+        case SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD:
+            cmd_output->buffer[2] = current_event.event_data.no_downlink.status;
             cmd_output->length    = 3;
             break;
         default:
@@ -1517,7 +1534,7 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     }
     case CMD_CSMA_SET_STATE:
     {
-#if defined( LR11XX ) || defined( SX126X )
+#if defined( LR11XX ) || defined( SX126X ) || defined( LR20XX )
         cmd_output->return_code = rc_lut[smtc_modem_csma_set_state( STACK_ID, cmd_input->buffer[0] )];
 #else
         cmd_output->return_code = CMD_RC_NOT_IMPLEMENTED;
@@ -1526,7 +1543,7 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     }
     case CMD_CSMA_GET_STATE:
     {
-#if defined( LR11XX ) || defined( SX126X )
+#if defined( LR11XX ) || defined( SX126X ) || defined( LR20XX )
         bool enable;
         cmd_output->return_code = rc_lut[smtc_modem_csma_get_state( STACK_ID, &enable )];
         if( cmd_output->return_code == CMD_RC_OK )
@@ -1541,7 +1558,7 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     }
     case CMD_CSMA_SET_PARAMETERS:
     {
-#if defined( LR11XX ) || defined( SX126X )
+#if defined( LR11XX ) || defined( SX126X ) || defined( LR20XX )
         if( cmd_input->buffer[1] > 1 )  // bo_enabled is a bool
         {
             cmd_output->return_code = CMD_RC_INVALID;
@@ -1558,7 +1575,7 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
     }
     case CMD_CSMA_GET_PARAMETERS:
     {
-#if defined( LR11XX ) || defined( SX126X )
+#if defined( LR11XX ) || defined( SX126X ) || defined( LR20XX )
         uint8_t max_ch_change;
         bool    bo_enabled;
         uint8_t nb_bo_max;
@@ -1853,6 +1870,31 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         cmd_output->return_code = CMD_RC_OK;
         break;
     }
+    case CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER:
+    {
+        bool report_all_downlinks = false;
+        cmd_output->return_code =
+            rc_lut[smtc_modem_get_report_all_downlinks_to_user( STACK_ID, &report_all_downlinks )];
+
+        cmd_output->buffer[0] = report_all_downlinks;
+        cmd_output->length    = 1;
+
+        break;
+    }
+    case CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER:
+    {
+        if( cmd_input->buffer[0] < 2 )  // check Bool value
+        {
+            cmd_output->return_code =
+                rc_lut[smtc_modem_set_report_all_downlinks_to_user( STACK_ID, cmd_input->buffer[0] )];
+        }
+        else
+        {
+            cmd_output->return_code = CMD_RC_INVALID;
+        }
+
+        break;
+    }
 #if defined( STM32L476xx )
     case CMD_STORE_AND_FORWARD_SET_STATE:
     {
@@ -1940,6 +1982,8 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             cmd_output->buffer[scan_done_offset++] = gnss_scan_data.is_valid;
 
             cmd_output->buffer[scan_done_offset++] = gnss_scan_data.token;
+
+            cmd_output->buffer[scan_done_offset++] = gnss_scan_data.time_available;
 
             cmd_output->buffer[scan_done_offset++] = gnss_scan_data.nb_scans_valid;
 
@@ -2102,6 +2146,11 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         cmd_output->return_code = rc_lut[smtc_modem_almanac_demodulation_start( STACK_ID )];
         break;
     }
+    case CMD_GNSS_ALM_DEMOD_STOP:
+    {
+        cmd_output->return_code = rc_lut[smtc_modem_almanac_demodulation_stop( STACK_ID )];
+        break;
+    }
     case CMD_GNSS_ALM_DEMOD_SET_CONSTEL:
     {
         cmd_output->return_code =
@@ -2116,6 +2165,8 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         if( cmd_output->return_code == CMD_RC_OK )
         {
             uint8_t index = 0;
+
+            cmd_output->buffer[index++] = event_data_alm_update.service_state;
 
             cmd_output->buffer[index++] = event_data_alm_update.status_gps;
             cmd_output->buffer[index++] = event_data_alm_update.status_beidou;
@@ -2177,11 +2228,21 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
         cmd_output->return_code = rc_lut[smtc_modem_wifi_scan_cancel( STACK_ID )];
         break;
     }
+    case CMD_WIFI_SCAN_MODE:
+    {
+        cmd_output->return_code = rc_lut[smtc_modem_wifi_set_scan_mode( STACK_ID, cmd_input->buffer[0] )];
+        break;
+    }
     case CMD_WIFI_GET_SCAN_DONE_SCAN_DATA:
     {
-        smtc_modem_wifi_event_data_scan_done_t wifi_scan_done_data = { 0 };
-        cmd_output->return_code = rc_lut[smtc_modem_wifi_get_event_data_scan_done( STACK_ID, &wifi_scan_done_data )];
-        if( cmd_output->return_code == CMD_RC_OK )
+        // Reset value of static scan data saved struct
+        memset( &wifi_scan_done_data, 0, sizeof( smtc_modem_wifi_event_data_scan_done_t ) );
+
+        // Get the value of the struct
+        wifi_scan_done_rc       = rc_lut[smtc_modem_wifi_get_event_data_scan_done( STACK_ID, &wifi_scan_done_data )];
+        cmd_output->return_code = wifi_scan_done_rc;
+
+        if( wifi_scan_done_rc == CMD_RC_OK )
         {
             uint8_t index = 0;
 
@@ -2197,17 +2258,42 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             cmd_output->buffer[index++] = ( wifi_scan_done_data.scan_duration_ms >> 8 ) & 0xff;
             cmd_output->buffer[index++] = ( wifi_scan_done_data.scan_duration_ms & 0xff );
 
-            for( uint8_t scan_index = 0; scan_index < wifi_scan_done_data.nbr_results; scan_index++ )
-            {
-                // copy LR11XX_WIFI_MAC_ADDRESS_LENGTH bytes of mac address
-                memcpy( &cmd_output->buffer[index], wifi_scan_done_data.results[scan_index].mac_address,
-                        LR11XX_WIFI_MAC_ADDRESS_LENGTH );
-                index += LR11XX_WIFI_MAC_ADDRESS_LENGTH;
+            cmd_output->length = index;
+        }
+        break;
+    }
+    case CMD_WIFI_GET_SCAN_DONE_SCAN_DATA_RESULT:
+    {
+        cmd_output->return_code = wifi_scan_done_rc;
+        if( cmd_output->return_code == CMD_RC_OK )
+        {
+            uint8_t scan_index = cmd_input->buffer[0];
+            uint8_t index      = 0;
 
-                cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].channel;
-                cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].type;
-                cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].rssi;
+            cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].result_type;
+
+            // copy LR11XX_WIFI_MAC_ADDRESS_LENGTH bytes of mac address
+            memcpy( &cmd_output->buffer[index], wifi_scan_done_data.results[scan_index].mac_address,
+                    LR11XX_WIFI_MAC_ADDRESS_LENGTH );
+            index += LR11XX_WIFI_MAC_ADDRESS_LENGTH;
+
+            cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].channel;
+            cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].type;
+            cmd_output->buffer[index++] = wifi_scan_done_data.results[scan_index].rssi;
+
+            if( wifi_scan_done_data.results[scan_index].result_type == WIFI_RESULT_TYPE_EXTENDED )
+            {
+                // copy LR11XX_WIFI_STR_COUNTRY_CODE_SIZE bytes of country code
+                memcpy( &cmd_output->buffer[index], wifi_scan_done_data.results[scan_index].country_code,
+                        LR11XX_WIFI_STR_COUNTRY_CODE_SIZE );
+                index += LR11XX_WIFI_STR_COUNTRY_CODE_SIZE;
+
+                // copy LR11XX_WIFI_RESULT_SSID_LENGTH bytes of SSID
+                memcpy( &cmd_output->buffer[index], wifi_scan_done_data.results[scan_index].ssid_bytes,
+                        LR11XX_WIFI_RESULT_SSID_LENGTH );
+                index += LR11XX_WIFI_RESULT_SSID_LENGTH;
             }
+
             cmd_output->length = index;
         }
         break;
@@ -2347,7 +2433,7 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
     cmd_tst_output->return_code = CMD_RC_OK;  // by default the return code is ok and length is 0
     cmd_tst_output->length      = 0;
 
-#if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
+#if HAL_DBG_TRACE == HAL_FEATURE_ON
     SMTC_HAL_TRACE_WARNING( "\tCMD_TST_%s (0x%02x)\n", host_cmd_test_str[cmd_tst_input->cmd_code],
                             cmd_tst_input->cmd_code );
 #endif
@@ -2399,42 +2485,36 @@ cmd_parse_status_t cmd_test_parser( cmd_tst_input_t* cmd_tst_input, cmd_tst_resp
         uint8_t sf = cmd_tst_input->buffer[6];
         uint8_t bw = cmd_tst_input->buffer[7];
 
-        if( bw < RAL_LORA_BW_010_KHZ )
-        {
-            cmd_tst_output->return_code = CMD_RC_INVALID;
-        }
-        else
-        {
-            uint8_t cr = cmd_tst_input->buffer[8];
+        uint8_t cr = cmd_tst_input->buffer[8];
 
-            uint8_t                  invert_iq   = cmd_tst_input->buffer[9] & 0x01;
-            uint8_t                  crc_is_on   = cmd_tst_input->buffer[10] & 0x01;
-            ral_lora_pkt_len_modes_t header_type = cmd_tst_input->buffer[11] & 0x01;
+        uint8_t                  invert_iq   = cmd_tst_input->buffer[9] & 0x01;
+        uint8_t                  crc_is_on   = cmd_tst_input->buffer[10] & 0x01;
+        ral_lora_pkt_len_modes_t header_type = cmd_tst_input->buffer[11] & 0x01;
 
-            uint32_t preamble_size = 0;
-            preamble_size |= cmd_tst_input->buffer[12] << 24;
-            preamble_size |= cmd_tst_input->buffer[13] << 16;
-            preamble_size |= cmd_tst_input->buffer[14] << 8;
-            preamble_size |= cmd_tst_input->buffer[15];
+        uint32_t preamble_size = 0;
+        preamble_size |= cmd_tst_input->buffer[12] << 24;
+        preamble_size |= cmd_tst_input->buffer[13] << 16;
+        preamble_size |= cmd_tst_input->buffer[14] << 8;
+        preamble_size |= cmd_tst_input->buffer[15];
 
-            uint32_t nb_of_tx = 0;
-            nb_of_tx |= cmd_tst_input->buffer[16] << 24;
-            nb_of_tx |= cmd_tst_input->buffer[17] << 16;
-            nb_of_tx |= cmd_tst_input->buffer[18] << 8;
-            nb_of_tx |= cmd_tst_input->buffer[19];
+        uint32_t nb_of_tx = 0;
+        nb_of_tx |= cmd_tst_input->buffer[16] << 24;
+        nb_of_tx |= cmd_tst_input->buffer[17] << 16;
+        nb_of_tx |= cmd_tst_input->buffer[18] << 8;
+        nb_of_tx |= cmd_tst_input->buffer[19];
 
-            uint32_t delay_ms = 0;
-            delay_ms |= cmd_tst_input->buffer[20] << 24;
-            delay_ms |= cmd_tst_input->buffer[21] << 16;
-            delay_ms |= cmd_tst_input->buffer[22] << 8;
-            delay_ms |= cmd_tst_input->buffer[23];
+        uint32_t delay_ms = 0;
+        delay_ms |= cmd_tst_input->buffer[20] << 24;
+        delay_ms |= cmd_tst_input->buffer[21] << 16;
+        delay_ms |= cmd_tst_input->buffer[22] << 8;
+        delay_ms |= cmd_tst_input->buffer[23];
 
-            uint8_t sync_word = cmd_tst_input->buffer[24];
+        uint8_t sync_word = cmd_tst_input->buffer[24];
 
-            cmd_tst_output->return_code =
-                rc_lut[smtc_modem_test_tx_lora( NULL, len, freq, pw, sf, bw, cr, sync_word, invert_iq, crc_is_on,
-                                                header_type, preamble_size, nb_of_tx, delay_ms )];
-        }
+        cmd_tst_output->return_code =
+            rc_lut[smtc_modem_test_tx_lora( NULL, len, freq, pw, sf, bw, cr, sync_word, invert_iq, crc_is_on,
+                                            header_type, preamble_size, nb_of_tx, delay_ms )];
+
         break;
     }
     case CMD_TST_TX_FSK:

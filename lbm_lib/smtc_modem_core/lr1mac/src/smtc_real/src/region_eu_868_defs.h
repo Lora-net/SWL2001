@@ -126,12 +126,13 @@ typedef enum eu_868_channels_bank_e
  */
 typedef enum region_eu_868_band_e
 {
-    BAND_EU868_0 = 0,
-    BAND_EU868_1,
-    BAND_EU868_2,
-    BAND_EU868_3,
-    BAND_EU868_4,
-    BAND_EU868_5,
+    BAND_EU868_0 = 0,   // h1.3
+    BAND_EU868_1,       // h1.4
+    BAND_EU868_2,       // h1.5
+    BAND_EU868_3,       // h1.6
+    BAND_EU868_4,       // h1.7
+    BAND_EU868_5,       // h1.9
+    BAND_EU868_GLOBAL,  // h1.2 Must be the last band, used as a garbage if there are gaps between sub-bands
     BAND_EU868_MAX
 } region_eu_868_band_t;
 
@@ -296,19 +297,21 @@ static const uint8_t DEFAULT_DR_DISTRIBUTION_EU_868[] = { 1, 0, 0, 0, 0, 0, 0, 0
  * Duty Cycle table definition by bands
  */
 static const uint16_t duty_cycle_by_band_eu_868[BAND_EU868_MAX] = {
-    [BAND_EU868_0] = 1000,  // 0.1%
-    [BAND_EU868_1] = 100,   //   1%
-    [BAND_EU868_2] = 100,   //   1%
-    [BAND_EU868_3] = 1000,  // 0.1%
-    [BAND_EU868_4] = 10,    //  10%
-    [BAND_EU868_5] = 100,   //   1%
+    [BAND_EU868_0]      = 1000,  // 0.1% h1.3
+    [BAND_EU868_1]      = 100,   //   1% h1.4
+    [BAND_EU868_2]      = 100,   //   1% h1.5
+    [BAND_EU868_3]      = 1000,  // 0.1% h1.6
+    [BAND_EU868_4]      = 10,    //  10% h1.7
+    [BAND_EU868_5]      = 100,   //   1% h1.9
+    [BAND_EU868_GLOBAL] = 1000,  // 0.1% h1.2
 };
 
 static const uint32_t frequency_range_by_band_eu_868[BAND_EU868_MAX][2] = {
     // [ band x] = {freq min, freq max}
-    [BAND_EU868_0] = { 863000000, 865000000 }, [BAND_EU868_1] = { 865000000, 868000001 },
-    [BAND_EU868_2] = { 868000001, 868600001 }, [BAND_EU868_3] = { 868700000, 869200001 },
-    [BAND_EU868_4] = { 869400000, 869650001 }, [BAND_EU868_5] = { 869700000, 870000001 },
+    [BAND_EU868_0] = { 863000000, 865000000 },      [BAND_EU868_1] = { 865000000, 868000001 },
+    [BAND_EU868_2] = { 868000001, 868600001 },      [BAND_EU868_3] = { 868700000, 869200001 },
+    [BAND_EU868_4] = { 869400000, 869650001 },      [BAND_EU868_5] = { 869700000, 870000001 },
+    [BAND_EU868_GLOBAL] = { 863000000, 870000001 },
 };
 
 /*

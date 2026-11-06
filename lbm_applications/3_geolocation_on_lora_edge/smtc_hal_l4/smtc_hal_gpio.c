@@ -186,7 +186,6 @@ uint32_t hal_gpio_get_value( const hal_gpio_pin_names_t pin )
     return ( HAL_GPIO_ReadPin( gpio_port, ( ( 1 << ( pin & 0x0F ) ) ) ) != GPIO_PIN_RESET ) ? 1 : 0;
 }
 
-
 void hal_gpio_clear_pending_irq( const hal_gpio_pin_names_t pin )
 {
     switch( pin & 0x0F )

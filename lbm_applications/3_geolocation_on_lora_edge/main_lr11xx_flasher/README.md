@@ -17,9 +17,20 @@ This header file can just be copied from the distributed header files in the fol
 
 https://github.com/Lora-net/radio_firmware_images
 
+Once the `lr11xx_fw.h` has been put in the `main_lr11xx_flasher` directory, the flasher tool can be compiled with CMake or make.
 
-Once the `lr11xx_fw.h` has been put in the `main_lr11xx_flasher` directory, the flasher tool can be compiled with:
+### With CMake
 
-```console
+``` bash
+cmake -B build -G Ninja -DLBM_RADIO=lr1110 -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_CMAKE_CONFIG_AUTO=ON -DAPP=lr11xx_flasher
+```
+
+``` bash
+ninja -C build
+```
+
+### With make
+
+```bash
 make full_lr1110 MODEM_APP=EXAMPLE_LR11XX_FLASHER
 ```

@@ -105,10 +105,13 @@ typedef struct lr11xx_pa_pwr_cfg_s
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
 
-const lr11xx_pa_pwr_cfg_t pa_lp_cfg_table[LR11XX_LP_MAX_OUTPUT_POWER - LR11XX_LP_MIN_OUTPUT_POWER + 1] = LR11XX_PA_LP_LF_CFG_TABLE;
-const lr11xx_pa_pwr_cfg_t pa_hp_cfg_table[LR11XX_HP_MAX_OUTPUT_POWER - LR11XX_HP_MIN_OUTPUT_POWER + 1] = LR11XX_PA_HP_LF_CFG_TABLE;
+const lr11xx_pa_pwr_cfg_t pa_lp_cfg_table[LR11XX_LP_MAX_OUTPUT_POWER - LR11XX_LP_MIN_OUTPUT_POWER + 1] =
+    LR11XX_PA_LP_LF_CFG_TABLE;
+const lr11xx_pa_pwr_cfg_t pa_hp_cfg_table[LR11XX_HP_MAX_OUTPUT_POWER - LR11XX_HP_MIN_OUTPUT_POWER + 1] =
+    LR11XX_PA_HP_LF_CFG_TABLE;
 
-const lr11xx_pa_pwr_cfg_t pa_hf_cfg_table[LR11XX_HF_MAX_OUTPUT_POWER - LR11XX_HF_MIN_OUTPUT_POWER + 1] = LR11XX_PA_HF_CFG_TABLE;
+const lr11xx_pa_pwr_cfg_t pa_hf_cfg_table[LR11XX_HF_MAX_OUTPUT_POWER - LR11XX_HF_MIN_OUTPUT_POWER + 1] =
+    LR11XX_PA_HF_CFG_TABLE;
 
 static const uint32_t ral_lr11xx_convert_tx_dbm_to_ua_reg_mode_dcdc_lp_vreg[] = {
     10820,  // -17 dBm
@@ -336,7 +339,7 @@ void ral_lr11xx_bsp_get_tx_cfg( const void* context, const ral_lr11xx_bsp_tx_cfg
     lr11xx_pa_type_t pa_type;
 
     // check frequency band first to choose LF of HF PA
-    if( input_params->freq_in_hz >= 2400000000 )
+    if( input_params->freq_in_hz >= 1600000000 )  // 1.6GHz
     {
         pa_type = LR11XX_WITH_HF_PA;
     }
@@ -358,14 +361,12 @@ void ral_lr11xx_bsp_get_reg_mode( const void* context, lr11xx_system_reg_mode_t*
 void ral_lr11xx_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   lr11xx_system_tcxo_supply_voltage_t* supply_voltage, uint32_t* startup_time_in_tick )
 {
-#if !defined( LR1121 )
     // Get startup value defined in modem_hal to avoid mis-alignment
     uint32_t startup_time_ms = smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
     *xosc_cfg                = RAL_XOSC_CFG_TCXO_RADIO_CTRL;
     *supply_voltage          = LR11XX_SYSTEM_TCXO_CTRL_1_8V;
     // tick is 30.52µs
     *startup_time_in_tick = lr11xx_radio_convert_time_in_ms_to_rtc_step( startup_time_ms );
-#endif  // !defined( LR1121 )
 }
 
 void ral_lr11xx_bsp_get_crc_state( const void* context, bool* crc_is_activated )
@@ -446,7 +447,7 @@ void ral_lr11xx_bsp_get_rssi_calibration_table( const void* context, const uint3
     }
 }
 
-void ral_lr11xx_bsp_get_lora_cad_det_peak( const void *context, ral_lora_sf_t sf, ral_lora_bw_t bw,
+void ral_lr11xx_bsp_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
                                            ral_lora_cad_symbs_t nb_symbol, uint8_t* in_out_cad_det_peak )
 {
     // Function used to fine tune the cad detection peak, update if needed
@@ -492,10 +493,10 @@ void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_
         {
             power = LR11XX_LP_MAX_OUTPUT_POWER;
         }
-        output_params->pa_cfg.pa_sel                     = LR11XX_RADIO_PA_SEL_LP;
-        output_params->pa_cfg.pa_reg_supply              = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
-        output_params->pa_cfg.pa_duty_cycle              = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].pa_duty_cycle;
-        output_params->pa_cfg.pa_hp_sel                  = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].pa_hp_sel;
+        output_params->pa_cfg.pa_sel        = LR11XX_RADIO_PA_SEL_LP;
+        output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
+        output_params->pa_cfg.pa_duty_cycle = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].pa_duty_cycle;
+        output_params->pa_cfg.pa_hp_sel     = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].pa_hp_sel;
         output_params->chip_output_pwr_in_dbm_configured = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].power;
         output_params->chip_output_pwr_in_dbm_expected   = power;
         break;
@@ -524,8 +525,8 @@ void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_
             output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VBAT;
         }
 
-        output_params->pa_cfg.pa_duty_cycle              = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].pa_duty_cycle;
-        output_params->pa_cfg.pa_hp_sel                  = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].pa_hp_sel;
+        output_params->pa_cfg.pa_duty_cycle = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].pa_duty_cycle;
+        output_params->pa_cfg.pa_hp_sel     = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].pa_hp_sel;
         output_params->chip_output_pwr_in_dbm_configured = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].power;
         break;
     }
@@ -548,7 +549,8 @@ void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_
             output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
             output_params->pa_cfg.pa_duty_cycle = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].pa_duty_cycle;
             output_params->pa_cfg.pa_hp_sel     = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].pa_hp_sel;
-            output_params->chip_output_pwr_in_dbm_configured = pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].power;
+            output_params->chip_output_pwr_in_dbm_configured =
+                pa_lp_cfg_table[power - LR11XX_LP_MIN_OUTPUT_POWER].power;
         }
         else
         {
@@ -556,7 +558,8 @@ void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_
             output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VBAT;
             output_params->pa_cfg.pa_duty_cycle = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].pa_duty_cycle;
             output_params->pa_cfg.pa_hp_sel     = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].pa_hp_sel;
-            output_params->chip_output_pwr_in_dbm_configured = pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].power;
+            output_params->chip_output_pwr_in_dbm_configured =
+                pa_hp_cfg_table[power - LR11XX_HP_MIN_OUTPUT_POWER].power;
         }
         break;
     }
@@ -571,10 +574,10 @@ void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_
         {
             power = LR11XX_HF_MAX_OUTPUT_POWER;
         }
-        output_params->pa_cfg.pa_sel                     = LR11XX_RADIO_PA_SEL_HF;
-        output_params->pa_cfg.pa_reg_supply              = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
-        output_params->pa_cfg.pa_duty_cycle              = pa_hf_cfg_table[power - LR11XX_HF_MIN_OUTPUT_POWER].pa_duty_cycle;
-        output_params->pa_cfg.pa_hp_sel                  = pa_hf_cfg_table[power - LR11XX_HF_MIN_OUTPUT_POWER].pa_hp_sel;
+        output_params->pa_cfg.pa_sel        = LR11XX_RADIO_PA_SEL_HF;
+        output_params->pa_cfg.pa_reg_supply = LR11XX_RADIO_PA_REG_SUPPLY_VREG;
+        output_params->pa_cfg.pa_duty_cycle = pa_hf_cfg_table[power - LR11XX_HF_MIN_OUTPUT_POWER].pa_duty_cycle;
+        output_params->pa_cfg.pa_hp_sel     = pa_hf_cfg_table[power - LR11XX_HF_MIN_OUTPUT_POWER].pa_hp_sel;
         output_params->chip_output_pwr_in_dbm_configured = pa_hf_cfg_table[power - LR11XX_HF_MIN_OUTPUT_POWER].power;
         output_params->chip_output_pwr_in_dbm_expected   = power;
         break;
@@ -582,7 +585,7 @@ void lr11xx_get_tx_cfg( lr11xx_pa_type_t pa_type, int8_t expected_output_pwr_in_
     }
 }
 
-ral_status_t ral_lr11xx_bsp_get_instantaneous_tx_power_consumption( const void *context,
+ral_status_t ral_lr11xx_bsp_get_instantaneous_tx_power_consumption( const void* context,
                                                                     const ral_lr11xx_bsp_tx_cfg_output_params_t* tx_cfg,
                                                                     lr11xx_system_reg_mode_t radio_reg_mode,
                                                                     uint32_t*                pwr_consumption_in_ua )
@@ -694,7 +697,7 @@ ral_status_t ral_lr11xx_bsp_get_instantaneous_tx_power_consumption( const void *
     return RAL_STATUS_OK;
 }
 
-ral_status_t ral_lr11xx_bsp_get_instantaneous_gfsk_rx_power_consumption( const void *context,
+ral_status_t ral_lr11xx_bsp_get_instantaneous_gfsk_rx_power_consumption( const void*              context,
                                                                          lr11xx_system_reg_mode_t radio_reg_mode,
                                                                          bool                     rx_boosted,
                                                                          uint32_t* pwr_consumption_in_ua )
@@ -714,7 +717,7 @@ ral_status_t ral_lr11xx_bsp_get_instantaneous_gfsk_rx_power_consumption( const v
     return RAL_STATUS_OK;
 }
 
-ral_status_t ral_lr11xx_bsp_get_instantaneous_lora_rx_power_consumption( const void *context,
+ral_status_t ral_lr11xx_bsp_get_instantaneous_lora_rx_power_consumption( const void*              context,
                                                                          lr11xx_system_reg_mode_t radio_reg_mode,
                                                                          const bool               rx_boosted,
                                                                          uint32_t* pwr_consumption_in_ua )

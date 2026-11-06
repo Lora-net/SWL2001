@@ -39,6 +39,7 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "smtc_modem_hal_dbg_trace.h"
 #include "circularfs.h"
@@ -377,7 +378,7 @@ int32_t circularfs_scan( struct circularfs* fs )
             ( ( header_status != SECTOR_ERASED ) && ( header_status != SECTOR_FREE ) &&
               ( header_status != SECTOR_IN_USE ) && ( header_status != SECTOR_ERASING ) ) )
         {
-            SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: partially formatted partition\r\n" );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: partially formatted partition\n" );
             return -1;
         }
 
@@ -391,7 +392,7 @@ int32_t circularfs_scan( struct circularfs* fs )
         /* Detect corrupted sectors. */
         if( header_status != SECTOR_FREE && header_status != SECTOR_IN_USE )
         {
-            SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: corrupted sector %d\r\n", sector );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: corrupted sector %d\n", sector );
             return -1;
         }
 
@@ -399,7 +400,7 @@ int32_t circularfs_scan( struct circularfs* fs )
          * could have been invalid due to a partial erase. */
         if( header_version != fs->version )
         {
-            SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: incompatible version 0x%08" PRIx32 "\r\n", header_version );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: incompatible version 0x%08" PRIx32 "\n", header_version );
             return -1;
         }
 
@@ -433,7 +434,7 @@ int32_t circularfs_scan( struct circularfs* fs )
     /* Detect the lack of a FREE sector. */
     if( !free_seen )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: invariant violated: no FREE sector found\r\n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_scan: invariant violated: no FREE sector found\n" );
         return -1;
     }
     ////////////
@@ -605,7 +606,7 @@ int32_t circularfs_append( struct circularfs* fs, const void* object )
     }
     else if( status != SECTOR_IN_USE )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_append: corrupted filesystem\r\n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "circularfs_append: corrupted filesystem\n" );
         return -1;
     }
 
@@ -713,9 +714,10 @@ int32_t circularfs_rewind( struct circularfs* fs )
 
 void circularfs_dump( struct circularfs* fs )
 {
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     const char* description;
-    char        slots_description[170];
+    const int   slots_per_line = 32;
+    char        slots_description[slots_per_line + 1];
 
     SMTC_MODEM_HAL_TRACE_PRINTF( "CIRCULARFS read: {%d,%d} cursor: {%d,%d} write: {%d,%d}\n", fs->read.sector,
                                  fs->read.slot, fs->cursor.sector, fs->cursor.slot, fs->write.sector, fs->write.slot );
@@ -755,43 +757,49 @@ void circularfs_dump( struct circularfs* fs )
             break;
         }
 
-        for( int32_t slot = 0; slot < fs->slots_per_sector; slot++ )
+        // Print lines of 32 slots for readability and smaller buffer
+        bool    first_line_printed = false;
+        int32_t slot               = 0;
+        while( slot < fs->slots_per_sector )
         {
-            if( slot < ( int32_t ) ( sizeof( slots_description ) - 1 ) )
+            struct circularfs_loc loc    = { sector, slot };
+            uint32_t              status = 0;
+            _slot_get_status( fs, &loc, &status );
+            switch( status )
             {
-                struct circularfs_loc loc    = { sector, slot };
-                uint32_t              status = 0;
-                _slot_get_status( fs, &loc, &status );
-
-                switch( status )
-                {
-                case SLOT_ERASED:
-                    slots_description[slot] = 'E';
-                    break;
-                case SLOT_RESERVED:
-                    slots_description[slot] = 'R';
-                    break;
-                case SLOT_VALID:
-                    slots_description[slot] = 'V';
-                    break;
-                case SLOT_GARBAGE:
-                    slots_description[slot] = 'G';
-                    break;
-                default:
-                    slots_description[slot] = '?';
-                    break;
-                }
-            }
-            else
-            {
-                SMTC_MODEM_HAL_TRACE_WARNING( "%s: buffer trace too short\n", __func__ );
+            case SLOT_ERASED:
+                slots_description[slot % slots_per_line] = 'E';
+                break;
+            case SLOT_RESERVED:
+                slots_description[slot % slots_per_line] = 'R';
+                break;
+            case SLOT_VALID:
+                slots_description[slot % slots_per_line] = 'V';
+                break;
+            case SLOT_GARBAGE:
+                slots_description[slot % slots_per_line] = 'G';
+                break;
+            default:
+                slots_description[slot % slots_per_line] = '?';
                 break;
             }
-        }
-        slots_description[MIN( fs->slots_per_sector, ( int32_t ) ( sizeof( slots_description ) - 1 ) )] = '\0';
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "[%04d] [v=0x%08" PRIx32 "] [%-10s] %s\n", sector, header_version, description,
-                                     slots_description );
+            if( slot % slots_per_line == slots_per_line - 1 || slot == fs->slots_per_sector - 1 )
+            {
+                slots_description[slot % slots_per_line + 1] = '\0';
+                if( !first_line_printed )
+                {
+                    first_line_printed = true;
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "[%04d] [v=0x%08" PRIx32 "] [%-10s] %s\n", sector, header_version,
+                                                 description, slots_description );
+                }
+                else
+                {
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "                                   %s\n", slots_description );
+                }
+            }
+            slot++;
+        }
     }
 #endif  // MODEM_HAL_DBG_TRACE
 }

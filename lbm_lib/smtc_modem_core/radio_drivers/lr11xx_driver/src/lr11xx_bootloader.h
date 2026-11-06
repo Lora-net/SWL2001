@@ -70,6 +70,17 @@ typedef uint32_t lr11xx_bootloader_irq_mask_t;
  */
 
 /*!
+ * @brief Get calculated hash of flash content.
+ *
+ * This method should be used to get the hash of flash content.
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @param [out] hash Pointer to the hash array to be populated with hash value
+ */
+lr11xx_status_t lr11xx_bootloader_get_hash( const void* context, lr11xx_bootloader_hash_t hash );
+
+/*!
  * @brief Return the status registers and interrupt flags
  *
  * @remark To simplify system integration, this function does not actually execute the GetStatus command, which would

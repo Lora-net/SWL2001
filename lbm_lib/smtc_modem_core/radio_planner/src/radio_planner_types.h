@@ -83,6 +83,12 @@ extern "C" {
 #define RP_SOMETHING_TO_DO                          1
 
 /*!
+ * Margin delay in milliseconds for radio preparation sequence before a radio task execution.
+ *   @note When using an RTOS (e.g. FreeRTOS), this margin must also account for:
+ *      - Thread scheduling latency
+ *      - Context switching time
+ *      - Thread priority effects
+ *
  * for 8 ms : 5MS FOR WAKE UP (2MS) + CONFIG TIMER (3MS FIX !) + 3 ms interrupt routine
  */
 #ifndef RP_MARGIN_DELAY

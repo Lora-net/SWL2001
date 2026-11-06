@@ -57,6 +57,7 @@ BOARD_C_SOURCES = \
 	smtc_hal_u5/smtc_hal_trace.c\
 	smtc_hal_u5/smtc_hal_uart.c\
 	smtc_hal_u5/smtc_hal_watchdog.c\
+	smtc_hal_u5/smtc_hal_libc_stub.c \
     smtc_hal_u5/threadx/common/src/tx_initialize_high_level.c \
 smtc_hal_u5/threadx/common/src/tx_initialize_kernel_enter.c \
 smtc_hal_u5/threadx/common/src/tx_initialize_kernel_setup.c \

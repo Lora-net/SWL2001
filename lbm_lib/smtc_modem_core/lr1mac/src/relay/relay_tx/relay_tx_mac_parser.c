@@ -147,7 +147,8 @@ static bool relay_tx_mac_update_config_ed_parser( lr1_stack_mac_t* lr1_mac, rela
         config.second_ch.dr = TAKE_N_BITS_FROM( settings, 3, 4 );
         SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel DR: %d \n", config.second_ch.dr );
 
-        if( smtc_real_is_tx_dr_valid( lr1_mac->real, config.second_ch.dr ) != OKLORAWAN )
+        // The Relay Tx must use Rx datarate listen by the Relay Rx
+        if( smtc_real_is_rx_dr_valid( lr1_mac->real, config.second_ch.dr ) != OKLORAWAN )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( " --> Invalid value\n" );
             ack_ret = RELAY_CLEAR_BIT( ack_ret, RELAY_TX_CID_CONFIG_ED_ACK_BIT_SECOND_CH_DR );

@@ -1,9 +1,9 @@
-# @file sx128x_driver_module.cmake
+# @file
 #
-# @brief Defines CMake source files and include directories for this module
+# @brief Sets CMake target_sources and target_include_directories
 #
 # --- The Clear BSD License ---
-# Copyright Semtech Corporation 2022. All rights reserved.
+# Copyright Semtech Corporation 2025. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted (subject to the limitations in the disclaimer
@@ -30,10 +30,21 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-set(SX128X_DRIVER_MODULE_C_SOURCES
-  ${CMAKE_CURRENT_LIST_DIR}/sx128x.c
-  )
+add_library(sx128x_driver STATIC
+    sx128x.c
+)
 
-set(SX128X_DRIVER_MODULE_C_INCLUDES
-  ${CMAKE_CURRENT_LIST_DIR}/.
-  )
+add_library(sx128x_driver::sx128x_driver ALIAS sx128x_driver)
+
+target_include_directories(sx128x_driver PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:>
+)
+
+install(TARGETS sx128x_driver
+    EXPORT Sx128xDriverTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)

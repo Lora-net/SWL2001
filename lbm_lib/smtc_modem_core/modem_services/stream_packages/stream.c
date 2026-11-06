@@ -46,9 +46,12 @@
 #include "lorawan_api.h"
 #include "modem_event_utilities.h"
 #include "device_management_defs.h"
-
 #include "rose.h"
 #include "stream.h"
+
+#if defined( ADD_SMTC_CLOUD_DEVICE_MANAGEMENT )
+#include "cloud_dm_package.h"
+#endif
 
 /*
  * -----------------------------------------------------------------------------

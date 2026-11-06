@@ -421,8 +421,7 @@ bool relay_start( void )
         smtc_duty_cycle_enable_set( relay_info.dtc_state );
     }
 
-    relay_info.current_ch_idx = relay_config.nb_wor_channel;  // to force to start at index 0
-    relay_info.is_started     = true;
+    relay_info.is_started = true;
 
     config_enqueue_next_cad( &relay_config, &relay_info );
 
@@ -709,8 +708,9 @@ void relay_get_stats( relay_stats_t* stat )
 
 void relay_print_stats( void )
 {
-    SMTC_MODEM_HAL_TRACE_PRINTF( "------------------------\nRelay stat at %d s\n------------------------\n",
-                                 smtc_modem_hal_get_time_in_s( ) );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "------------------------\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "Relay stat at %ds\n", smtc_modem_hal_get_time_in_s( ) );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "------------------------\n" );
     SMTC_MODEM_HAL_TRACE_PRINTF( " - Cad1       %d \n", relay_stat.nb_cad1 );
     SMTC_MODEM_HAL_TRACE_PRINTF( " - Cad2       %d \n", relay_stat.nb_cad2 );
     SMTC_MODEM_HAL_TRACE_PRINTF( " - Cad2 OK    %d \n", relay_stat.nb_cad2_ok );
@@ -1086,7 +1086,7 @@ static void config_enqueue_next_cad( const relay_config_t* config, relay_infos_t
     const relay_channel_config_t* channel_cfg = &config->channel_cfg[info->current_ch_idx];
     wor_ral_init_rx_wor( relay_info.lr1mac->real, channel_cfg->dr, channel_cfg->freq_hz, cad_period,
                          MAX( ( uint8_t ) WOR_JOINREQ_LENGTH, ( uint8_t ) WOR_UPLINK_LENGTH ), &rx_param );
-    wor_ral_init_cad( relay_info.lr1mac->real, channel_cfg->dr, cad_period, true,
+    wor_ral_init_cad( relay_info.radio, relay_info.lr1mac->real, channel_cfg->dr, cad_period, true,
                       relay_info.wor_toa_ms[info->current_ch_idx], &rx_param.rx.cad );
 
     const rp_task_t rp_task_cad = {
@@ -1116,7 +1116,7 @@ static void config_cad_to_rx_wor( const relay_config_t* config, relay_infos_t* i
 
     ral_lora_cad_params_t cad_param = { 0 };
 
-    wor_ral_init_cad( relay_info.lr1mac->real, channel_cfg->dr, cad_period, false,
+    wor_ral_init_cad( relay_info.radio, relay_info.lr1mac->real, channel_cfg->dr, cad_period, false,
                       relay_info.wor_toa_ms[info->current_ch_idx], &cad_param );
 
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_lora_cad_params( &( relay_info.radio->ral ), &cad_param ) ==
@@ -1350,7 +1350,8 @@ static void fwd_rx_msg( const wor_infos_t* wor, const relay_config_t* config, co
 
     lorawan_relay_rx_fwd_uplink(
         RELAY_STACK_ID, buffer, info->buffer_length + RELAY_FWD_UPLINK_BYTE_ORDER_UPLINK_PAYLOAD,
-        info->rx_uplink_timestamp_ms + RELAY_FWD_DELAY, ( wor->wor_type == WOR_MSG_TYPE_JOIN_REQUEST ? true : false ) );
+        info->rx_uplink_timestamp_ms + RELAY_FWD_DELAY,
+        ( wor->wor_type == WOR_MSG_TYPE_JOIN_REQUEST ? RELAY_SERVICE_FWD_FWD_JOIN : RELAY_SERVICE_FWD_FWD_UL ) );
 }
 
 static void notify_unknown_ed( const wor_infos_t* wor )
@@ -1381,8 +1382,8 @@ static void notify_unknown_ed( const wor_infos_t* wor )
     buffer[RELAY_NOTIFY_BYTE_ORDER_POWER_LEVEL_7_0]  = ( uint8_t ) ( power_level );
     buffer[RELAY_NOTIFY_BYTE_ORDER_POWER_LEVEL_15_8] = ( uint8_t ) ( power_level >> 8 );
 
-    lorawan_api_payload_send( 0, true, buffer, RELAY_NOTIFY_BYTE_ORDER_POWER_LEVEL_LENGTH, UNCONF_DATA_UP,
-                              smtc_modem_hal_get_time_in_ms( ) + 20, RELAY_STACK_ID );
+    lorawan_relay_rx_fwd_uplink( RELAY_STACK_ID, buffer, RELAY_NOTIFY_BYTE_ORDER_POWER_LEVEL_LENGTH,
+                                 smtc_modem_hal_get_time_in_ms( ) + 20, RELAY_SERVICE_NOTIFY_UNKNOWN_ED );
 }
 
 static int16_t relay_compute_rx_done_correction( uint8_t datarate, uint16_t payload_len )

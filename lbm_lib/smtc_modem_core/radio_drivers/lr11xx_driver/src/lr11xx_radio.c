@@ -107,6 +107,21 @@
  */
 #define LR11XX_RTC_FREQ_IN_HZ 32768UL
 
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define LR11XX_REG_GFSK_WORKAROUND_1 ( 0x00f20344 )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define LR11XX_REG_GFSK_WORKAROUND_2 ( 0x00f20348 )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define LR11XX_REG_GFSK_WORKAROUND_3 ( 0x00f20244 )
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -172,6 +187,8 @@ enum
  * @returns CRC length in byte
  */
 static inline uint32_t lr11xx_radio_get_gfsk_crc_len_in_bytes( lr11xx_radio_gfsk_crc_type_t crc_type );
+
+static lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_base( const void* context, uint32_t value );
 
 /*
  * -----------------------------------------------------------------------------
@@ -943,11 +960,11 @@ lr11xx_status_t lr11xx_radio_set_rssi_calibration( const void*                  
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g11 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g10 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13 & 0x0F ) << 4 ) + ( rssi_cal_table->gain_tune.g12 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp2 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp1 & 0x0F ) ),
+                     ( rssi_cal_table->gain_tune.g13hp1 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp4 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp3 & 0x0F ) ),
+                     ( rssi_cal_table->gain_tune.g13hp3 & 0x0F ) ),
         ( uint8_t ) ( ( ( rssi_cal_table->gain_tune.g13hp6 & 0x0F ) << 4 ) +
-                      ( rssi_cal_table->gain_tune.g13hp5 & 0x0F ) ),
+                     ( rssi_cal_table->gain_tune.g13hp5 & 0x0F ) ),
         ( uint8_t ) ( rssi_cal_table->gain_tune.g13hp7 & 0x0F ),
         ( uint8_t ) ( rssi_cal_table->gain_offset >> 8 ),
         ( uint8_t ) ( rssi_cal_table->gain_offset >> 0 ),
@@ -1322,6 +1339,56 @@ lr11xx_status_t lr11xx_radio_set_lna_mode( const void* context, lr11xx_radio_lna
 {
     return lr11xx_regmem_write_regmem32_mask( context, 0x00F3008C, 0xF0, lna_config << 4 );
 }
+
+lr11xx_status_t lr11xx_workaround_gfsk_1_2_kbps( const void* context )
+{
+    lr11xx_status_t status = LR11XX_STATUS_ERROR;
+
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_1, 0x30, 0x10 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_2, 0x05, 0x04 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_sub_ghz( const void* context )
+{
+    return lr11xx_workaround_gfsk_0_6_kbps_base( context, 0x0600 );
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_ghz( const void* context )
+{
+    return lr11xx_workaround_gfsk_0_6_kbps_base( context, 0x1100 );
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_reset( const void* context )
+{
+    lr11xx_status_t status = LR11XX_STATUS_ERROR;
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_1, 0x30, 0x10 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_2, 0x05, 0x01 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_3, 0x01ff03, 0x0a01 ) ) !=
+        LR11XX_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -1344,6 +1411,11 @@ static inline uint32_t lr11xx_radio_get_gfsk_crc_len_in_bytes( lr11xx_radio_gfsk
     }
 
     return 0;
+}
+
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_base( const void* context, uint32_t value )
+{
+    return lr11xx_regmem_write_regmem32_mask( context, LR11XX_REG_GFSK_WORKAROUND_3, 0x01ff03, value );
 }
 
 /* --- EOF ------------------------------------------------------------------ */

@@ -16,6 +16,7 @@ The services are split as follows:
 
 * **mw_gnss_scan**: interface with LoRa Edge chip to perform optimized GNSS scan.
 * **mw_gnss_send**: interface with LoRa Basics Modem to send GNSS scan results, either as simple LoRaWAN uplinks, or through the Store and Forward service.
+* **mw_gnss_almanac_full_update**: interface with LoRa Edge chip to perform a full almanac update from a given image.
 * **mw_gnss_almanac**: interface with LoRa Edge chip to perform autonomous almanac update (without LoRaCloud assistance).
 * **mw_wifi_scan**: interface with LoRa Edge chip to perform Wi-Fi scan.
 * **mw_wifi_send**: interface with LoRa Basics Modem to send Wi-Fi scan results, either as simple LoRaWAN uplinks, or through the Store and Forward service.
@@ -53,33 +54,33 @@ Selecting a particular mode indicates to the service how operations must be sequ
 
 #### 2.2.1 STATIC mode
 
-When this mode is selected, with SMTC_MODEM_GNSS_MODE_STATIC, the GNSS scan service runs 2 GNSS scans, with a delay of 15 seconds between the end of a scan and the start of the next one. This delay between scans allow to increase sky diversity and solving position accuracy.
+When this mode is selected, with `SMTC_MODEM_GNSS_MODE_STATIC`, the GNSS scan service runs 2 GNSS scans, with a delay of 15 seconds between the end of a scan and the start of the next one. This delay between scans allow to increase sky diversity and solving position accuracy.
 
 Once the last scan of the NAV group is completed, it sends all scan results to the GNSS send service.
 
 #### 2.2.2 MOBILE mode
 
-When this mode is selected, with SMTC_MODEM_GNSS_MODE_MOBILE, the GNSS scan service runs 2 GNSS scans, with no delay between the end of a scan and the start of the next one. In this case the sky diversity is induced by the movement of the mobile device.
+When this mode is selected, with `SMTC_MODEM_GNSS_MODE_MOBILE`, the GNSS scan service runs 2 GNSS scans, with no delay between the end of a scan and the start of the next one. In this case the sky diversity is induced by the movement of the mobile device.
 
 Once the last scan of the NAV group is completed, it sends all scan results to the GNSS send service.
 
 ### 2.3. Sending modes
 
 When the GNSS scan service has completed its sequence, it sends the results to the GNSS send service which can be configured with several sending modes:
-* SMTC_MODEM_SEND_MODE_UPLINK: a direct LoRaWAN uplink is sent for each scan results. If there is no LoRaWAN coverage when sending, the results are lost.
-* SMTC_MODEM_SEND_MODE_STORE_AND_FORWARD: the GNSS send service pushes the results to the store & forward service (see LoRa Basics Modem services). This store & forward service stores the data to the MCU flash memory then it will send it over the air with LoRaWAN uplinks when there is LoRaWAN coverage. In order to ensure that there is coverage, it sends regular LoRaWAN confirmed uplinks. If no ACK is received from the Network, it retries later.
-* SMTC_MODEM_SEND_MODE_BYPASS: no uplink is sent. It can be used if the user application wants to send results in its own way.
+* `SMTC_MODEM_SEND_MODE_UPLINK`: a direct LoRaWAN uplink is sent for each scan results. If there is no LoRaWAN coverage when sending, the results are lost.
+* `SMTC_MODEM_SEND_MODE_STORE_AND_FORWARD`: the GNSS send service pushes the results to the store & forward service (see LoRa Basics Modem services). This store & forward service stores the data to the MCU flash memory then it will send it over the air with LoRaWAN uplinks when there is LoRaWAN coverage. In order to ensure that there is coverage, it sends regular LoRaWAN confirmed uplinks. If no ACK is received from the Network, it retries later.
+* `SMTC_MODEM_SEND_MODE_BYPASS`: no uplink is sent. It can be used if the user application wants to send results in its own way.
 
 ### 2.4. Events notification
 
 In order to inform the user application about the GNSS "scan & send" sequence status, the services send several events to indicate what happened and allow the user application to take actions.
 
-* SMTC_MODEM_EVENT_GNSS_SCAN_DONE: This event is always sent, at the end of the scan sequence (before sending results over the air). It is also sent if the scan group has been aborted, or if it is not valid.
-* SMTC_MODEM_EVENT_GNSS_TERMINATED: This event is always sent, at the end of the send sequence (even if nothing has been sent). It indicates the number of uplinks that have actually been sent.
+* `SMTC_MODEM_EVENT_GNSS_SCAN_DONE`: This event is always sent, at the end of the scan sequence (before sending results over the air). It is also sent if the scan group has been aborted, or if it is not valid.
+* `SMTC_MODEM_EVENT_GNSS_TERMINATED`: This event is always sent, at the end of the send sequence (even if nothing has been sent). It indicates the number of uplinks that have actually been sent.
 
 The data associated with an event can be retrieved by the user application by calling the following APIs:
-* smtc_modem_gnss_get_event_data_scan_done()
-* smtc_modem_gnss_get_event_data_terminated()
+* `smtc_modem_gnss_get_event_data_scan_done()`
+* `smtc_modem_gnss_get_event_data_terminated()`
 
 The data that can be retrieved are:
 * Is the NAV group valid ?
@@ -90,7 +91,7 @@ The data that can be retrieved are:
 * Indoor detected ?
 * The number of scans sent over the air
 
-Note: The GNSS scan is completed only once both SMTC_MODEM_EVENT_GNSS_SCAN_DONE and SMTC_MODEM_EVENT_GNSS_TERMINATED events have been sent by the services. It is only from that point that another GNSS scan can be programmed.
+> Note: The GNSS scan is completed only once both SMTC_MODEM_EVENT_GNSS_SCAN_DONE and SMTC_MODEM_EVENT_GNSS_TERMINATED events have been sent by the services. It is only from that point that another GNSS scan can be programmed.
 
 ### 2.5. Internal choices
 
@@ -201,9 +202,11 @@ The implementation of the services is in the following files:
 The almanac demodulation service is an alternative to the LoRaCloud almanac update service which relies on the LR11xx capability to scan and demodulate almanac information emitted by GPS and Beidou space vehicles.
 Contrary to the LoRaCloud almanac update service, this service doesn't require any downlink to update the almanac stored in LR11xx flash memory. Which means that a device doesn't need to be connected to any network to update its internal almanac.
 
-Once started, using the smtc_modem_almanac_demodulation_start() API function, the service is completely autonomous and runs without any need of interaction with the user application.
+Once started, using the `smtc_modem_almanac_demodulation_start()` API function, the service is completely autonomous and runs without any need of interaction with the user application.
 
 Though, the prerequisite for this service is that a GNSS scan has been done previously with time demodulation.
+
+This service can be stopped by using the `smtc_modem_almanac_demodulation_stop()` API function.
 
 The main principle is that, once time is available in LR11xx, the service gets the almanac status from the LR11xx radio.
 This status contains how many SVs need their almanac to be update, and when the next scan for almanac must be done.
@@ -211,11 +214,11 @@ Based on this, the service programs a scheduled Radio Planner task to start the 
 When the scan completes, if demodulation succeeded, the almanac is updated in flash by the LR11xx radio, and the service gets the time for next almanac scan to be done.
 This sequence continues in background until the update is considered complete. Once the almanac is considered complete for all SVs, the service will perform regular check (once every 8 hours) to update any almanac which may have become obsolete.
 
-Note: the almanac is considered complete for a particular constellation when there is less than 2 SVs remaining to be updated. This means that the service never expects the update to be 100% complete.
+> Note: the almanac is considered complete for a particular constellation when there is less than 2 SVs remaining to be updated. This means that the service never expects the update to be 100% complete.
 
 ### 3.2. Events notification
 
-In order to inform the user application about the almanac update status, the service sends a SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE event each time it runs. The user application does not have any action to take, it is just for information.
+In order to inform the user application about the almanac update status, the service sends a `SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE` event each time it runs. The user application does not have any action to take, it is just for information.
 
 The data associated with the event contain the update progress for each constellation and some statistics.
 Those data can be retrieved by the user application by calling the smtc_modem_almanac_demodulation_get_event_data_almanac_update() API.
@@ -237,7 +240,7 @@ By default:
 
 The constellations enabled for almanac update can be overruled to select GPS only or Beidou only if needed.
 
-Note: the constellation(s) enabled with the smtc_modem_almanac_demodulation_set_constellations() API functions only impacts the almanac update, not the GNSS scan service.
+> Note: the constellation(s) enabled with the smtc_modem_almanac_demodulation_set_constellations() API functions only impacts the almanac update, not the GNSS scan service.
 
 ### 3.6. Internals
 
@@ -256,6 +259,7 @@ Once the user application has called the smtc_modem_almanac_demodulation_start()
 
 The nominal sequence when a full almanac update is on-going is that the service runs from a radio planner task to the next one based on the next time given by lr11xx_gnss_read_almanac_status().
 Though there are few specific cases for which the service will program the next task at specific times:
+* The task has been aborted by the radio planner: program a supervisor task in ALMANAC_STATUS_CHECK_PERIOD_RP_ABORTED_S
 * No time is available in LR11xx: program a supervisor task in ALMANAC_STATUS_CHECK_PERIOD_NO_TIME_S seconds.
 * The current time accuracy is too low: program a supervisor task in ALMANAC_STATUS_CHECK_PERIOD_TIME_ACCURACY_S seconds.
 * Bad sky conditions have been detected based on scan results: program a supervisor task in ALMANAC_STATUS_CHECK_PERIOD_BAD_SKY_S seconds.
@@ -304,43 +308,75 @@ A Wi-Fi scan simply returns the list of Access Points MAC address that have been
 
 In order to inform the user application about the Wi-Fi "scan & send" sequence status, the services sends several events to indicate what happened and allow the user application to take actions.
 
-* SMTC_MODEM_EVENT_WIFI_SCAN_DONE: This event is always sent, at the end of the scan sequence (before sending results over the air). It is also sent if the scan has been aborted, or if it is not valid.
-* SMTC_MODEM_EVENT_WIFI_TERMINATED: This event is always sent, at the end of the send sequence (even if nothing has been sent). It indicates the number of uplinks that have been sent.
+* `SMTC_MODEM_EVENT_WIFI_SCAN_DONE`: This event is always sent, at the end of the scan sequence (before sending results over the air). It is also sent if the scan has been aborted, or if it is not valid.
+* `SMTC_MODEM_EVENT_WIFI_TERMINATED`: This event is always sent, at the end of the send sequence (even if nothing has been sent). It indicates the number of uplinks that have been sent.
 
 The data associated with an event can be retrieved by the user application by calling the following APIs:
-* smtc_modem_wifi_get_event_data_scan_done()
-* smtc_modem_wifi_get_event_data_terminated()
+* `smtc_modem_wifi_get_event_data_scan_done()`
+* `smtc_modem_wifi_get_event_data_terminated()`
 
-### 4.2. Internal choices
+### 4.2. Scan modes
+
+The Wi-Fi scan service provides 2 modes of scanning:
+
+#### SMTC_MODEM_WIFI_SCAN_MODE_MAC
+
+This modes should be used by default, to get the MAC addresses of the Access point around for geolocation purpose. It is the mode which consumes the least power.
+
+When this mode is used, the scan results are of type `WIFI_RESULT_TYPE_BASIC`, meaning that the MAC address is available but not the country code and SSID.
+
+#### SMTC_MODEM_WIFI_SCAN_MODE_MAC_COUNTRY_CODE_SSID
+
+This modes can be used to detect the country/region of operation from the demodulated country code and based on SSID heuristics.
+
+When this mode is used, the scan results are of type `WIFI_RESULT_TYPE_EXTENDED`, meaning that the MAC address is still available but also the country code and SSID.
+
+The service itself does not provide region detection, it has to be inferred by the user application based on the scan results.
+
+This scan mode can alos be used for geolocation as the MAC address are also available, but it consumes more power than `SMTC_MODEM_WIFI_SCAN_MODE_MAC` mode.
+
+### 4.3. Internal choices
 
 The following parameters are set by the Wi-Fi scan service, and are not configurable from the API.
 
 * A Minimum of 3 Access Points must be detected to get a valid scan.
-* The scan will stop when a maximum of 8 Access Points have been detected.
 * A maximum of 5 Access Points among those detected are sent over the air (sorted by decreasing power).
 * All channels are enabled to be scanned.
+* The maximum time spent for preamble detection for each single scan is set to 100ms
+
+Depending on the scan mode selected, the following parameters will change:
+
+#### SMTC_MODEM_WIFI_SCAN_MODE_MAC
+
+* The scan will stop when a maximum of 8 Access Points have been detected.
 * A scan will look for Beacons of type B, G and N.
 * The maximum time spent scanning a channel is set to 300ms
-* The maximum time spent for preamble detection for each single scan is set to 90ms
 
-*Note*: The current implementation is very basic, and does not provide the best performances possible in terms of accuracy and power consumption. It will be improved in further version.
+#### SMTC_MODEM_WIFI_SCAN_MODE_MAC_COUNTRY_CODE_SSID
 
-### 4.3. Default options
+* The scan will stop when a maximum of 32 Access Points have been detected.
+* A scan will alternatively demodulate the full beacon for beacon of type B, or just until the SSID for beacon of type B, G, N.
+When demodulating the full beacon, both the country code and the SSID will be demodulated, and a CRC check is done on the SSID to ensure correctness. When demodulating until the SSID, the country code will not be demodulated, and there is no CRC check on the SSID.
+* The maximum time spent scanning a channel is set to 1000ms
+
+### 4.4. Default options
 
 We have made the choice to keep configuration parameters as low as possible for a standard usage of the services.
 
 By default:
 * Each scan results is sent as a dedicated LoRaWAN uplink on **port 197**.
-* The frame format used is **WIFI_MW_PAYLOAD_MAC**.
+* The frame format used is **SMTC_MODEM_WIFI_PAYLOAD_MAC**.
+* The scan mode used is **SMTC_MODEM_WIFI_SCAN_MODE_MAC**.
 
-### 4.4. Advanced options
+### 4.5. Advanced options
 
 Some default parameters can be overruled for specific use cases:
 
+* The scan mode can be set to `SMTC_MODEM_WIFI_SCAN_MODE_MAC` for geolocation. It is the main mode to be used, especially when power consumption is critical. The scan mode can be set to `SMTC_MODEM_WIFI_SCAN_MODE_MAC_COUNTRY_CODE_SSID` temporarily for demodulating country code and/or SSID, for region detection for example. This mode consumes more power.
 * The port on which the LoRaWAN uplink is sent. WARNING: it should be changed accordingly on LoRaCloud side to keep integration functional.
 * The send mode can be set for direct LoRaWAN uplink, store & forward, or bypass.
 
-### 4.5. Internals of the Wi-Fi scan & services
+### 4.6. Internals of the Wi-Fi scan & services
 
 The main role of the services is to ease the usage of the LR11xx radio and avoid conflicts between the radio usage for Wi-Fi scanning and other concurrent use for other tasks in an application (transmitting packets...).
 
@@ -359,35 +395,33 @@ Once the above sequence has completed, the Wi-Fi scan service has completed its 
 * If there are results to be sent, when it is time for the supervisor to launch the task, it calls mw_wifi_send_service_on_launch(), which either requests an uplink to LBM if send mode SMTC_MODEM_SEND_MODE_UPLINK is selected, or pushes results to the store and forward service if SMTC_MODEM_SEND_MODE_STORE_AND_FORWARD is selected.
 * Once the results have been sent, the SMTC_MODEM_EVENT_WIFI_TERMINATED event is sent to the user application.
 
-### 4.6. Wi-Fi Scan results payload format
+### 4.7. Wi-Fi Scan results payload format
 
 The format of the payload is described by the `LoRa Edge Wi-Fi positioning protocol` of LoRaCloud.
 
 There are 2 formats possible, that the user can choose:
 
-* `WIFI_MW_PAYLOAD_MAC`: contains only the MAC addresses of the detected Access Points
-* `WIFI_MW_PAYLOAD_MAC_RSSI`: contains the MAC addresses of the detected Access Points and the strength of the signal at which it has been detected.
-
-The Wi-Fi scan service only uses the WIFI_MW_PAYLOAD_MAC format.
+* `SMTC_MODEM_WIFI_PAYLOAD_MAC`: contains only the MAC addresses of the detected Access Points
+* `SMTC_MODEM_WIFI_PAYLOAD_MAC_RSSI`: contains the MAC addresses of the detected Access Points and the strength of the signal at which it has been detected.
 
 The maximum size of the complete payload has been kept under 51 bytes to match with the maximum payload size allowed by the LoRaWAN Regional Parameters for most regions (there are few exceptions like DR0 of the US915 region which therefore cannot be used).
 
-#### 4.6.1. Wi-Fi results payload format with MAC addresses only
+#### 4.7.1. Wi-Fi results payload format with MAC addresses only
 
 | 0x00 | AP1 MAC address | AP2 MAC address | ... | APn MAC address |
 |------|-----------------|-----------------|-----|-----------------|
 |      | 6 bytes         | 6 bytes         | ... | 6 bytes         |
 
 
-#### 4.6.1. Wi-Fi results payload format with MAC addresses and RSSI
+#### 4.7.1. Wi-Fi results payload format with MAC addresses and RSSI
 
 | 0x01 | AP1 RSSI | AP1 MAC address | AP2 RSSI | AP2 MAC address | ... | APn RSSI | APn MAC address |
 |------|----------|-----------------|----------|-----------------|-----|----------|-----------------|
 |      | 1 byte   | 6 bytes         | 1 byte   | 6 bytes         | ... | 1 byte   | 6 bytes         |
 
-### 4.7. Cancelling a Wi-Fi scan
+### 4.8. Cancelling a Wi-Fi scan
 
-The API provides a function smtc_modem_wifi_scan_cancel() which can be used by the user application to cancel a programmed scan & send operation.
+The API provides a function `smtc_modem_wifi_scan_cancel()` which can be used by the user application to cancel a programmed scan & send operation.
 
 It is important to note that a scan can be cancelled only if the corresponding task has not yet been launched. A scan task which has been launched cannot be aborted and will complete (both scan and send).
 
@@ -395,7 +429,7 @@ A scan task is considered "launched" when the delay to start the scan has elapse
 
 If cancelling was not possible, the user needs to wait for the SCAN_DONE and TERMINATED events.
 
-### 4.8. LoRaWAN datarate considerations
+### 4.9. LoRaWAN datarate considerations
 
 As seen in the section `Wi-Fi scan results payload format`, due to the maximum length of the scan results payload, some LoRaWAN datarates cannot be used to transmit the results.
 
@@ -406,10 +440,36 @@ In this custom profiles, it is generally more efficient to use fast datarates, a
 
 It is to be noted that the same ADR configuration will be used for sending geolocation scan results and application specific payloads.
 
-### 4.9. API & files
+### 4.10. API & files
 
 The Wi-Fi scan & send API functions are available in the lbm_lib/smtc_modem_api/smtc_modem_geolocation_api.h file.
 
 The implementation of the services is in the following files:
 * Wi-Fi scan service: mw_wifi_scan.h/c
 * Wi-Fi send service: mw_wifi_send.h/c
+
+## 5. Full almanac update helper
+
+THis helper provides a function to update the full almanac in the LR11xx internal flash with a given binary image.
+
+The given alamanc binary image has to comply with the format described in the LR11xx User Manual document, in the section
+describing the `GnssAlmanacFullUpdate` command.
+Basically, it is a 20-bytes header, followed by up to 128 blocks of 20 bytes for SVs almanac.
+
+The `smtc_modem_almanac_full_update()` API function, does the following:
+- suspend the modem to gain access to the radio
+- write the almanac image to the radio using the LR11xx driver function `lr11xx_gnss_almanac_update()`
+- resume the modem once no access to radio is required anymore.
+
+This function can be called at any time after LBM initialization, the call is blocking until operation is completed. No
+event is sent.
+
+This function can be used in addition to the almanac demodulation service for faster update when possible.
+It is recommendend to stop the almanac demodulation service before performing the full update, but it is not mandatory.
+
+### 5.1. API & files
+
+The helper function is available in the lbm_lib/smtc_modem_api/smtc_modem_geolocation_api.h file.
+
+The implementation of the helper is in the following files:
+* mw_gnss_almanac_full_update.h/c

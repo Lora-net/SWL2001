@@ -110,10 +110,6 @@ lr11xx_hal_status_t lr11xx_hal_write( const void* context, const uint8_t* comman
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
 
-#if defined( NRF52840_XXAA )
-    hal_spi_in_out( RADIO_SPI_ID, command, command_length, NULL, 0 );
-    hal_spi_in_out( RADIO_SPI_ID, data, data_length, NULL, 0 );
-#else
     for( uint16_t i = 0; i < command_length; i++ )
     {
         hal_spi_in_out( RADIO_SPI_ID, command[i] );
@@ -122,15 +118,10 @@ lr11xx_hal_status_t lr11xx_hal_write( const void* context, const uint8_t* comman
     {
         hal_spi_in_out( RADIO_SPI_ID, data[i] );
     }
-#endif
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
     // Add crc byte at the end of the transaction
-#if defined( NRF52840_XXAA )
-    hal_spi_in_out( RADIO_SPI_ID, cmd_crc, 1 NULL, 0 );
-#else
     hal_spi_in_out( RADIO_SPI_ID, cmd_crc );
-#endif
 #endif
 
     // Put NSS high as the spi transaction is finished
@@ -161,22 +152,14 @@ lr11xx_hal_status_t lr11xx_hal_read( const void* context, const uint8_t* command
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
 
-#if defined( NRF52840_XXAA )
-    hal_spi_in_out( RADIO_SPI_ID, command, command_length, NULL, 0 );
-#else
     for( uint16_t i = 0; i < command_length; i++ )
     {
         hal_spi_in_out( RADIO_SPI_ID, command[i] );
     }
-#endif
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
     // Add crc byte at the end of the transaction
-#if defined( NRF52840_XXAA )
-    hal_spi_in_out( RADIO_SPI_ID, cmd_crc, 1 NULL, 0 );
-#else
     hal_spi_in_out( RADIO_SPI_ID, cmd_crc );
-#endif
 #endif
 
     hal_gpio_set_value( RADIO_NSS, 1 );
@@ -189,38 +172,19 @@ lr11xx_hal_status_t lr11xx_hal_read( const void* context, const uint8_t* command
         // dummy read
 #if defined( USE_LR11XX_CRC_OVER_SPI )
         // save dummy for crc calculation
-#if defined( NRF52840_XXAA )
-        uint8_t dummy;
-        hal_spi_in_out( RADIO_SPI_ID, 0, 0, &dummy, 1 );
-#else
-        const uint8_t dummy  = hal_spi_in_out( RADIO_SPI_ID, 0 );
-#endif
-
-#else
-
-#if defined( NRF52840_XXAA )
-        hal_spi_in_out( RADIO_SPI_ID, 0, 0, NULL, 0 );
+        const uint8_t dummy = hal_spi_in_out( RADIO_SPI_ID, 0 );
 #else
         hal_spi_in_out( RADIO_SPI_ID, 0 );
 #endif
-#endif
 
-#if defined( NRF52840_XXAA )
-        hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
-#else
         for( uint16_t i = 0; i < data_length; i++ )
         {
             data[i] = hal_spi_in_out( RADIO_SPI_ID, 0 );
         }
-#endif
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
         // read crc sent by lr11xx at the end of the transaction
-#if defined( NRF52840_XXAA )
-        hal_spi_in_out( RADIO_SPI_ID, 0, 0, &rx_crc, 1 );
-#else
         const uint8_t rx_crc = hal_spi_in_out( RADIO_SPI_ID, 0 );
-#endif
 #endif
 
         // Put NSS high as the spi transaction is finished
@@ -248,24 +212,15 @@ lr11xx_hal_status_t lr11xx_hal_direct_read( const void* context, uint8_t* data, 
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
 
-#if defined( NRF52840_XXAA )
-    hal_spi_in_out( RADIO_SPI_ID, 0, 0, data, data_length );
-#else
     for( uint16_t i = 0; i < data_length; i++ )
     {
         data[i] = hal_spi_in_out( RADIO_SPI_ID, 0 );
     }
-#endif
 
 #if defined( USE_LR11XX_CRC_OVER_SPI )
     // read crc sent by lr11xx by sending one more NOP
 
-#if defined( NRF52840_XXAA )
-    const uint8_t rx_crc;
-    hal_spi_in_out( RADIO_SPI_ID, 0, 0, &rx_crc, 1 );
-#else
     const uint8_t rx_crc = hal_spi_in_out( RADIO_SPI_ID, 0 );
-#endif
 #endif
 
     hal_gpio_set_value( RADIO_NSS, 1 );
@@ -310,14 +265,10 @@ lr11xx_hal_status_t lr11xx_hal_abort_blocking_cmd( const void* context )
     // Put NSS low to start spi transaction
     hal_gpio_set_value( RADIO_NSS, 0 );
 
-#if defined( NRF52840_XXAA )
-    hal_spi_in_out( RADIO_SPI_ID, command, sizeof( command ), 0, 0 );
-#else
     for( uint16_t i = 0; i < sizeof( command ); i++ )
     {
         hal_spi_in_out( RADIO_SPI_ID, command[i] );
     }
-#endif
 
     // Put NSS high as the spi transaction is finished
     hal_gpio_set_value( RADIO_NSS, 1 );

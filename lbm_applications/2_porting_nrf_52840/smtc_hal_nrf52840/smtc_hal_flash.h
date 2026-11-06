@@ -60,14 +60,14 @@ extern "C" {
 
 #define FLASH_USER_START_ADDR ADDR_FLASH_PAGE_0 /* Start @ of user Flash area */
 #define FLASH_USER_END_ADDR \
-    FLASH_USER_START_ADDR + ( FLASH_PAGE_NUMBER * ADDR_FLASH_PAGE_SIZE ) - 1 /* End @ of user Flash area */
+    ( FLASH_USER_START_ADDR + ( FLASH_PAGE_NUMBER * ADDR_FLASH_PAGE_SIZE ) - 1 ) /* End @ of user Flash area */
 
 #define ADDR_FLASH_PAGE_SIZE ( nrfx_nvmc_flash_page_size_get( ) ) /* Size of Page = 4 Kbytes (0x1000)*/
 
 #define FLASH_BYTE_EMPTY_CONTENT ( ( uint8_t ) 0xFF )
 #define FLASH_PAGE_EMPTY_CONTENT ( ( uint64_t ) 0xFFFFFFFFFFFFFFFF )
 
-#define FLASH_PAGE_ADDR( page ) FLASH_USER_START_ADDR + ( ( page ) *ADDR_FLASH_PAGE_SIZE )
+#define FLASH_PAGE_ADDR( page ) ( FLASH_USER_START_ADDR + ( ( page ) * ADDR_FLASH_PAGE_SIZE ) )
 
 /* Base address of the Flash s */
 #define ADDR_FLASH_PAGE_0 ( ( uint32_t ) 0x00000000 )   /* Base @ of Page 0, 4 Kbytes */

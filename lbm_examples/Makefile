@@ -9,7 +9,7 @@
 # default action: print help
 #-----------------------------------------------------------------------------
 help:
-	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	lr1121	sx1261	sx1262	sx1268 sx1272 sx1276")
+	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	lr1121	sx1261	sx1262	sx1268 sx1272 sx1276 lr2021")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------------------- Clean -------------------------------------")
 	$(call echo_help, " * make clean_<TARGET>             : clean basic_modem app and lib for a given target")
@@ -97,6 +97,11 @@ ifeq ($(TARGET_RADIO),sx1276)
 -include app_makefiles/app_sx127x.mk
 endif
 
+ifeq ($(TARGET_RADIO),lr2021)
+-include app_makefiles/app_lr20xx.mk
+endif
+
+
 #-----------------------------------------------------------------------------
 -include app_makefiles/app_common.mk
 
@@ -144,6 +149,10 @@ clean_sx1276:
 	$(MAKE) clean_modem TARGET_RADIO=sx1276
 	$(MAKE) clean_target TARGET_RADIO=sx1276
 
+clean_lr2021:
+	$(MAKE) clean_modem TARGET_RADIO=lr2021
+	$(MAKE) clean_target TARGET_RADIO=lr2021
+
 clean:
 	$(MAKE) clean_modem
 	$(MAKE) clean_target
@@ -173,7 +182,7 @@ ifneq ($(TARGET_RADIO),lr1110)
 ifneq ($(TARGET_RADIO),lr1120)
 ifneq ($(TARGET_RADIO),lr1121)
 	$(call echo_error, "------------------------------------------------------------")
-	$(call echo_error, "sx126x, sx127x and sx128x radio tagets: only soft crypto can be used")
+	$(call echo_error, "sx126x, sx127x, sx128x and lr20xx radio tagets: only soft crypto can be used")
 	$(call echo_error, "Please use CRYPTO=SOFT option")
 	$(call echo_error, "------------------------------------------------------------")
 	exit 1
@@ -264,3 +273,12 @@ full_sx1276:
 	$(MAKE) clean_modem TARGET_RADIO=sx1276
 	$(MAKE) clean_target TARGET_RADIO=sx1276
 	$(MAKE) app TARGET_RADIO=sx1276 $(MTHREAD_FLAG)
+
+#-- LR2021 -------------------------------------------------------------------
+lr2021:
+	$(MAKE) app TARGET_RADIO=lr2021 $(MTHREAD_FLAG)
+
+full_lr2021:
+	$(MAKE) clean_modem TARGET_RADIO=lr2021
+	$(MAKE) clean_target TARGET_RADIO=lr2021
+	$(MAKE) app TARGET_RADIO=lr2021 $(MTHREAD_FLAG)

@@ -69,6 +69,8 @@
 #include "lr11xx_hal.h"
 #elif defined( SX127X )
 #include "sx127x_hal.h"
+#elif defined( LR20XX )
+#include "lr20xx_hal.h"
 #elif defined( TRANSPARENT_RADIO )
 #else
 #error "Please select radio board.."
@@ -283,6 +285,8 @@ smtc_modem_return_code_t smtc_modem_test_tx_lora( uint8_t* payload, uint8_t payl
     lora_param.mod_params.cr                   = cr;
     lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
 
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
+
     // config radio parameters
     rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
     rp_radio_params.tx.lora  = lora_param;
@@ -343,6 +347,8 @@ smtc_modem_return_code_t smtc_modem_test_tx_fsk( uint8_t* payload, uint8_t paylo
     gfsk_param.mod_params.fdev_in_hz   = 25000;
     gfsk_param.mod_params.bw_dsb_in_hz = 100000;
     gfsk_param.mod_params.pulse_shape  = RAL_GFSK_PULSE_SHAPE_BT_1;
+
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
 
     rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
     rp_radio_params.tx.gfsk  = gfsk_param;
@@ -420,6 +426,8 @@ smtc_modem_return_code_t smtc_modem_test_tx_lrfhss( uint8_t* payload, uint8_t pa
                                                                          &nb_max_hop_sequence ) == RAL_STATUS_OK );
     lr_fhss_param.hop_sequence_id = smtc_modem_hal_get_random_nb_in_range( 0, ( uint32_t ) nb_max_hop_sequence - 1 );
 
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
+
     rp_radio_params.tx.lr_fhss = lr_fhss_param;
 
     SMTC_MODEM_HAL_TRACE_PRINTF( "LR_FHSS Tx - Freq:%u, Power:%d, grid:%u, bw:%u, cr:%u, length:%u\n", frequency_hz,
@@ -449,33 +457,39 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
         return SMTC_MODEM_RC_INVALID;
     }
 
-    ralf_params_lora_t lora_param;
     modem_test_context.tx_frequency = frequency_hz;
+    modem_test_context.sf           = RAL_LORA_SF12;
+
+    ralf_params_lora_t lora_param;
     memset( &lora_param, 0, sizeof( ralf_params_lora_t ) );
 
     lora_param.rf_freq_in_hz     = frequency_hz;
     lora_param.output_pwr_in_dbm = tx_power_dbm;
-    lora_param.mod_params.sf     = RAL_LORA_SF12;
+    lora_param.mod_params.sf     = modem_test_context.sf;
 
-    if( frequency_hz >= 2400000000 )
+    if( frequency_hz >= 1600000000 )  // 1.6GHz
     {
-        lora_param.mod_params.bw = RAL_LORA_BW_800_KHZ;
+        modem_test_context.bw    = RAL_LORA_BW_800_KHZ;
         lora_param.mod_params.cr = RAL_LORA_CR_LI_4_8;
         lora_param.sync_word     = 0x12;
     }
     else
     {
-        lora_param.mod_params.bw = RAL_LORA_BW_125_KHZ;
+        modem_test_context.bw    = RAL_LORA_BW_125_KHZ;
         lora_param.mod_params.cr = RAL_LORA_CR_4_5;
         lora_param.sync_word     = 0x34;
     }
+
+    lora_param.mod_params.bw = modem_test_context.bw;
+
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
 
     rp_radio_params.pkt_type = RAL_PKT_TYPE_LORA;
     rp_radio_params.tx.lora  = lora_param;
 
     rp_task.hook_id               = modem_test_context.hook_id;
     rp_task.state                 = RP_TASK_STATE_ASAP;
-    rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 2;
+    rp_task.start_time_ms         = smtc_modem_hal_get_time_in_ms( ) + 100;
     rp_task.duration_time_ms      = 2000;
     rp_task.type                  = RP_TASK_TYPE_TX_LORA;
     rp_task.launch_task_callbacks = test_mode_cw_callback_for_rp;
@@ -537,11 +551,12 @@ smtc_modem_return_code_t smtc_modem_test_rx_lora( uint32_t frequency_hz, ral_lor
     lora_param.mod_params.ldro = ral_compute_lora_ldro( lora_param.mod_params.sf, lora_param.mod_params.bw );
     lora_param.symb_nb_timeout = symb_nb_timeout;
     lora_param.pkt_params.pld_len_in_bytes = 255;
+
     // config radio parameters
-    rp_radio_params_t rp_radio_params = { 0 };
-    rp_radio_params.rx.timeout_in_ms  = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
-    rp_radio_params.pkt_type          = RAL_PKT_TYPE_LORA;
-    rp_radio_params.rx.lora           = lora_param;
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
+    rp_radio_params.rx.timeout_in_ms = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
+    rp_radio_params.pkt_type         = RAL_PKT_TYPE_LORA;
+    rp_radio_params.rx.lora          = lora_param;
 
     // config radio planner task parameters
     rp_task.hook_id               = modem_test_context.hook_id;
@@ -574,8 +589,8 @@ smtc_modem_return_code_t smtc_modem_test_rx_fsk_continuous( uint32_t frequency_h
     // reset number of received packets
     modem_test_context.total_rx_packets = 0;
 
-    rp_radio_params_t rp_radio_params = { 0 };
-    rp_radio_params.rx.timeout_in_ms  = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
+    memset( &rp_radio_params, 0, sizeof( rp_radio_params_t ) );
+    rp_radio_params.rx.timeout_in_ms = RAL_RX_TIMEOUT_CONTINUOUS_MODE;
 
     // Radio config for FSK
     ralf_params_gfsk_t gfsk_param;
@@ -603,7 +618,7 @@ smtc_modem_return_code_t smtc_modem_test_rx_fsk_continuous( uint32_t frequency_h
     rp_radio_params.pkt_type = RAL_PKT_TYPE_GFSK;
     rp_radio_params.rx.gfsk  = gfsk_param;
 
-    SMTC_MODEM_HAL_TRACE_PRINTF( "GFSK Rx - Freq:%d\n", frequency_hz );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "GFSK Rx - Freq:%u\n", frequency_hz );
 
     // Radio planner task config
     rp_task.hook_id               = modem_test_context.hook_id;
@@ -746,6 +761,9 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_write( uint8_t* command, u
 #elif defined( LR11XX_TRANSCEIVER )
     if( lr11xx_hal_write( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
         LR11XX_HAL_STATUS_OK )
+#elif defined( LR20XX )
+    if( lr20xx_hal_write( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
+        LR20XX_HAL_STATUS_OK )
 #elif defined( SX127X )
     // if( sx127x_hal_write( ( sx127x_t* ) ( modem_test_context.rp->radio->ral.context ), command, data,
     //                       data_length ) != SX127X_HAL_STATUS_OK )
@@ -777,6 +795,9 @@ smtc_modem_return_code_t smtc_modem_test_direct_radio_read( uint8_t* command, ui
 #elif defined( LR11XX_TRANSCEIVER )
     if( lr11xx_hal_read( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
         LR11XX_HAL_STATUS_OK )
+#elif defined( LR20XX )
+    if( lr20xx_hal_read( modem_test_context.rp->radio->ral.context, command, command_length, data, data_length ) !=
+        LR20XX_HAL_STATUS_OK )
 #elif defined( SX127X )
     // if( sx127x_hal_read( ( sx127x_t* ) ( modem_test_context.rp->radio->ral.context ), command, data,
     //                      data_length ) != SX127X_HAL_STATUS_OK )
@@ -982,7 +1003,6 @@ void test_mode_cw_callback_for_rp( void* rp_void )
 {
     radio_planner_t* rp = ( radio_planner_t* ) rp_void;
     uint8_t          id = rp->radio_task_id;
-    SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_init( &( rp->radio->ral ) ) == RAL_STATUS_OK );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ralf_setup_lora( rp->radio, &rp->radio_params[id].tx.lora ) == RAL_STATUS_OK );
     smtc_modem_hal_set_ant_switch( true );
     SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_set_tx_cw( &( rp->radio->ral ) ) == RAL_STATUS_OK );

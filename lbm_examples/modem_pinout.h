@@ -58,59 +58,69 @@ extern "C" {
 /********************************************************************************/
 /*                         Application     dependant                            */
 /********************************************************************************/
-/* clang-format off */
+// clang-format off
 
-//Debug uart specific pinout for debug print
-#define DEBUG_UART_TX           PA_2
-#define DEBUG_UART_RX           PA_3
+// Debug uart specific pinout for debug print
+#define DEBUG_UART_TX PA_2
+#define DEBUG_UART_RX PA_3
 
-//Radio specific pinout and peripherals
-#define RADIO_NRST              PA_0
-#define RADIO_SPI_MOSI          PA_7
-#define RADIO_SPI_MISO          PA_6
-#define RADIO_SPI_SCLK          PA_5
+#define RADIO_SPI_ID 1
+
+// Radio specific pinout and peripherals
+#define RADIO_NRST PA_0
+#define RADIO_SPI_MOSI PA_7
+#define RADIO_SPI_MISO PA_6
+#define RADIO_SPI_SCLK PA_5
+
 #if defined( SX1272 ) || defined( SX1276 )
-#define RADIO_NSS               PB_6
-#define RADIO_DIO_0             PA_10
-#define RADIO_DIO_1             PB_3
-#define RADIO_DIO_2             PB_5
-#define RADIO_ANTENNA_SWITCH    PC_1
+#define RADIO_NSS PB_6
+#define RADIO_DIO_0 PA_10
+#define RADIO_DIO_1 PB_3
+#define RADIO_DIO_2 PB_5
+#define RADIO_ANTENNA_SWITCH PC_1
 #else
-#define RADIO_NSS               PA_8
-#define RADIO_DIOX              PB_4
-#define RADIO_BUSY_PIN          PB_3
+#define RADIO_NSS PA_8
+#define RADIO_BUSY_PIN PB_3
 #endif
 
-#define RADIO_SPI_ID            1
-
-#if defined (SX126X)
-#define SX126X_RADIO_RF_SWITCH_CTRL    PA_9
+#if defined( SX126X )
+#define SX126X_RADIO_RF_SWITCH_CTRL PA_9
 #endif
 
-#if defined (SX128X)
+#if defined( SX128X )
 // For sx128x eval board with 2 antennas
-#define RADIO_ANTENNA_SWITCH    PB_0
+#define RADIO_ANTENNA_SWITCH PB_0
 #endif
 
 #if defined( LR11XX_TRANSCEIVER )
 // LR11XX_TRANSCEIVER - Use for GNSS LNA control
-#define RADIO_LNA_CTRL          PB_0
+#define RADIO_LNA_CTRL PB_0
 /* LED */
-#define SMTC_LED_RX             PC_0
-#define SMTC_LED_TX             PC_1
-#define SMTC_LED_SCAN           PB_5
+#define SMTC_LED_RX PC_0
+#define SMTC_LED_TX PC_1
+#define SMTC_LED_SCAN PB_5
 #endif
 
+#if defined( LR2021 )
+    #if defined( LEGACY_EVK_LR2021 )
+        #define RADIO_DIOX PB_4  // Nucleo board
+    #else
+        #define RADIO_DIOX PA_1  // WIO board
+    #endif
+#else
+    #define RADIO_DIOX PB_4  // Nucleo board
+#endif  // LR2021
 
-#define EXTI_BUTTON             PC_13
+#define EXTI_BUTTON PC_13
 
-//Hw modem specific pinout
-#define HW_MODEM_COMMAND_PIN    PC_6
-#define HW_MODEM_EVENT_PIN      PC_5
-#define HW_MODEM_BUSY_PIN       PC_8
-#define HW_MODEM_TX_LINE        PC_10
-#define HW_MODEM_RX_LINE        PC_11
-/* clang-format on */
+// Hw modem specific pinout
+#define HW_MODEM_COMMAND_PIN PC_6
+#define HW_MODEM_EVENT_PIN PC_5
+#define HW_MODEM_BUSY_PIN PC_8
+#define HW_MODEM_TX_LINE PC_10
+#define HW_MODEM_RX_LINE PC_11
+
+// clang-format on
 
 /*
  * -----------------------------------------------------------------------------

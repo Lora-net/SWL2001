@@ -299,22 +299,30 @@ void wor_ral_init_rx_wor( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, wor_c
         const uint32_t symb_time_us =
             lr1mac_utilities_get_symb_time_us( 1, ( ral_lora_sf_t ) sf, ( ral_lora_bw_t ) bw );
 
-        lora->symb_nb_timeout = 10;
-        lora->sync_word       = smtc_real_get_sync_word( real );
-        lora->rf_freq_in_hz   = freq_hz;
+        if( symb_time_us == 0 )
+        {
+            SMTC_MODEM_HAL_PANIC( "symb_time_us can't be 0\n" );
+        }
+        else
+        {
+            lora->symb_nb_timeout = 10;
+            lora->sync_word       = smtc_real_get_sync_word( real );
+            lora->rf_freq_in_hz   = freq_hz;
 
-        lora->mod_params.cr   = smtc_real_get_coding_rate( real );
-        lora->mod_params.sf   = ( ral_lora_sf_t ) sf;
-        lora->mod_params.bw   = ( ral_lora_bw_t ) bw;
-        lora->mod_params.ldro = ral_compute_lora_ldro( lora->mod_params.sf, lora->mod_params.bw );
+            lora->mod_params.cr   = smtc_real_get_coding_rate( real );
+            lora->mod_params.sf   = ( ral_lora_sf_t ) sf;
+            lora->mod_params.bw   = ( ral_lora_bw_t ) bw;
+            lora->mod_params.ldro = ral_compute_lora_ldro( lora->mod_params.sf, lora->mod_params.bw );
 
-        lora->pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
-        lora->pkt_params.pld_len_in_bytes     = max_payload;
-        lora->pkt_params.crc_is_on            = true;
-        lora->pkt_params.invert_iq_is_on      = true;
-        lora->pkt_params.preamble_len_in_symb = wor_convert_cad_period_in_ms( cad_period ) * 1000 / symb_time_us + 30;
+            lora->pkt_params.header_type      = RAL_LORA_PKT_EXPLICIT;
+            lora->pkt_params.pld_len_in_bytes = max_payload;
+            lora->pkt_params.crc_is_on        = true;
+            lora->pkt_params.invert_iq_is_on  = true;
+            lora->pkt_params.preamble_len_in_symb =
+                wor_convert_cad_period_in_ms( cad_period ) * 1000 / symb_time_us + 30;
 
-        param->pkt_type = RAL_PKT_TYPE_LORA;
+            param->pkt_type = RAL_PKT_TYPE_LORA;
+        }
     }
     else
     {
@@ -322,42 +330,13 @@ void wor_ral_init_rx_wor( smtc_real_t* real, uint8_t dr, uint32_t freq_hz, wor_c
     }
 }
 
-void wor_ral_init_cad( smtc_real_t* real, uint8_t dr, wor_cad_periodicity_t cad_period, bool is_first,
-                       uint32_t wor_toa_ms, ral_lora_cad_params_t* param )
+void wor_ral_init_cad( const ralf_t* radio, smtc_real_t* real, uint8_t dr, wor_cad_periodicity_t cad_period,
+                       bool is_first, uint32_t wor_toa_ms, ral_lora_cad_params_t* param )
 {
     uint8_t            sf;
     lr1mac_bandwidth_t bw;
 
     smtc_real_lora_dr_to_sf_bw( real, dr, &sf, &bw );
-
-#if defined( LR11XX_TRANSCEIVER )
-
-    const uint8_t det_peak_bw500[] = { 65, 70, 77, 85, 78, 80, 79, 82 };
-    const uint8_t det_peak_bw250[] = { 60, 61, 64, 72, 63, 71, 73, 75 };
-    const uint8_t det_peak_bw125[] = { 56, 52, 52, 58, 58, 62, 66, 68 };
-#else
-    // following value from "SX126X CAD performance evaluation V2_1.pdf"
-    const uint8_t det_peak_bw125[] = { 21, 22, 22, 22, 23, 24, 25, 28 };
-    const uint8_t det_peak_bw250[] = { 21, 22, 22, 22, 23, 24, 25, 28 };
-    const uint8_t det_peak_bw500[] = { 21, 22, 22, 23, 23, 24, 26, 30 };
-#endif
-
-    if( ( bw == BW500 ) && ( sf >= 5 ) )
-    {
-        param->cad_det_peak_in_symb = det_peak_bw500[sf - 5];
-    }
-    else if( ( bw == BW250 ) && ( sf >= 5 ) )
-    {
-        param->cad_det_peak_in_symb = det_peak_bw250[sf - 5];
-    }
-    else if( ( bw == BW125 ) && ( sf >= 5 ) )
-    {
-        param->cad_det_peak_in_symb = det_peak_bw125[sf - 5];
-    }
-    else
-    {
-        SMTC_MODEM_HAL_PANIC( "DR%d SF%d BW%d \n", dr, sf, bw );
-    }
 
     param->cad_det_min_in_symb = 10;
     param->cad_timeout_in_ms   = wor_convert_cad_period_in_ms( cad_period ) + wor_toa_ms;
@@ -395,6 +374,10 @@ void wor_ral_init_cad( smtc_real_t* real, uint8_t dr, wor_cad_periodicity_t cad_
             param->cad_symb_nb = ( sf <= RAL_LORA_SF8 ) ? RAL_LORA_CAD_02_SYMB : RAL_LORA_CAD_04_SYMB;
         }
     }
+
+    SMTC_MODEM_HAL_PANIC_ON_FAILURE( ral_get_lora_cad_det_peak( &( radio->ral ), sf, ( ral_lora_bw_t ) bw,
+                                                                param->cad_symb_nb,
+                                                                &( param->cad_det_peak_in_symb ) ) == RAL_STATUS_OK );
 }
 
 void wor_ral_init_rx_msg( smtc_real_t* real, uint8_t max_payload, uint8_t dr, uint32_t freq_hz,
@@ -412,22 +395,29 @@ void wor_ral_init_rx_msg( smtc_real_t* real, uint8_t max_payload, uint8_t dr, ui
         const uint32_t symb_time_us =
             lr1mac_utilities_get_symb_time_us( 1, ( ral_lora_sf_t ) sf, ( ral_lora_bw_t ) bw );
 
-        lora->sync_word       = smtc_real_get_sync_word( real );
-        lora->symb_nb_timeout = 10 + 1000 * smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) / symb_time_us;
-        lora->rf_freq_in_hz   = freq_hz;
+        if( symb_time_us == 0 )
+        {
+            SMTC_MODEM_HAL_PANIC( "symb_time_us can't be 0\n" );
+        }
+        else
+        {
+            lora->sync_word       = smtc_real_get_sync_word( real );
+            lora->symb_nb_timeout = 10 + 1000 * smtc_modem_hal_get_radio_tcxo_startup_delay_ms( ) / symb_time_us;
+            lora->rf_freq_in_hz   = freq_hz;
 
-        lora->pkt_params.pld_len_in_bytes = max_payload;
-        lora->mod_params.cr               = smtc_real_get_coding_rate( real );
-        lora->mod_params.sf               = ( ral_lora_sf_t ) sf;
-        lora->mod_params.bw               = ( ral_lora_bw_t ) bw;
-        lora->mod_params.ldro             = ral_compute_lora_ldro( lora->mod_params.sf, lora->mod_params.bw );
+            lora->pkt_params.pld_len_in_bytes = max_payload;
+            lora->mod_params.cr               = smtc_real_get_coding_rate( real );
+            lora->mod_params.sf               = ( ral_lora_sf_t ) sf;
+            lora->mod_params.bw               = ( ral_lora_bw_t ) bw;
+            lora->mod_params.ldro             = ral_compute_lora_ldro( lora->mod_params.sf, lora->mod_params.bw );
 
-        lora->pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
-        lora->pkt_params.crc_is_on            = true;
-        lora->pkt_params.invert_iq_is_on      = false;
-        lora->pkt_params.preamble_len_in_symb = smtc_real_get_preamble_len( real, lora->mod_params.sf );
+            lora->pkt_params.header_type          = RAL_LORA_PKT_EXPLICIT;
+            lora->pkt_params.crc_is_on            = true;
+            lora->pkt_params.invert_iq_is_on      = false;
+            lora->pkt_params.preamble_len_in_symb = smtc_real_get_preamble_len( real, lora->mod_params.sf );
 
-        param->pkt_type = RAL_PKT_TYPE_LORA;
+            param->pkt_type = RAL_PKT_TYPE_LORA;
+        }
     }
     else if( modulation_type == FSK )
     {

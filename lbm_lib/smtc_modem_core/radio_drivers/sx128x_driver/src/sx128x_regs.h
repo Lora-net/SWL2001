@@ -274,22 +274,22 @@
 #define SX128X_REG_LR_INCOMING_CR_MASK ( 0x07UL << SX128X_REG_LR_INCOMING_CR_POS )
 
 /**
- * @brief LoRa incoming packet coding rate register
+ * @brief LoRa incoming packet CRC register
  */
 #define SX128X_REG_LR_INCOMING_CRC 0x0954
 
 /**
- * @brief Bit shift for LoRa incoming packet coding rate register
+ * @brief Bit shift for LoRa incoming packet CRC register
  */
 #define SX128X_REG_LR_INCOMING_CRC_POS ( 4U )
 
 /**
- * @brief Bit mask for LoRa incoming packet coding rate register
+ * @brief Bit mask for LoRa incoming packet CRC register
  */
 #define SX128X_REG_LR_INCOMING_CRC_MASK ( 0x01 << SX128X_REG_LR_INCOMING_CRC_POS )
 
 /**
- * @brief LoRa incoming packet coding rate register
+ * @brief LoRa IQ configuration register
  */
 #define SX128X_REG_LR_IQ_CONF 0x093B
 

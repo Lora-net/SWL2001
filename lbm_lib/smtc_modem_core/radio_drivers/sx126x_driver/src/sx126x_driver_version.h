@@ -1,7 +1,7 @@
 /*!
  * @file      sx126x_driver_version.h
  *
- * @brief     Placeholder to keep the version of SX126x driver.
+ * @brief     Placeholder to keep the version of SX126X driver.
  *
  * The Clear BSD License
  * Copyright Semtech Corporation 2023. All rights reserved.
@@ -54,9 +54,10 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 
-#define SX126X_DRIVER_VERSION_MAJOR 2
-#define SX126X_DRIVER_VERSION_MINOR 3
-#define SX126X_DRIVER_VERSION_PATCH 2
+/**
+ * @brief Value of driver version string
+ */
+#define SX126X_DRIVER_VERSION "v2.5.0"
 
 /*
  * -----------------------------------------------------------------------------
@@ -68,17 +69,11 @@ extern "C" {
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
  */
 
-/*!
- * @brief Compare version information with current ones
+/**
+ * @brief Get version of driver as string
  *
- * This macro expands to true boolean value if the version information provided in argument is compatible or
- * retro-compatible with the version of this code base
+ * @return String describing driver version
  */
-#define SX126X_DRIVER_VERSION_CHECK( x, y, z ) \
-    ( x == SX126X_DRIVER_VERSION_MAJOR &&      \
-      ( y < SX126X_DRIVER_VERSION_MINOR ||     \
-        ( y == SX126X_DRIVER_VERSION_MINOR && z <= SX126X_DRIVER_VERSION_PATCH ) ) )
-
 const char* sx126x_driver_version_get_version_string( void );
 
 #ifdef __cplusplus

@@ -117,6 +117,7 @@ typedef enum region_ru_864_band_e
     BAND_RU864_0 = 0,
     BAND_RU864_1,
     BAND_RU864_2,
+    BAND_RU864_GLOBAL,  // Must be the last band, used as a garbage if there are gaps between sub-bands
     BAND_RU864_MAX
 } region_ru_864_band_t;
 

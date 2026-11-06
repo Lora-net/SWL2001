@@ -94,7 +94,7 @@ FUOTA_MAXIMUM_SIZE_OF_FRAGMENTS ?= nc
 FUOTA_MAXIMUM_FRAG_REDUNDANCY ?= nc
 # In case FUOTA is allowed, allow the use of Firmware Management Package
 LBM_FUOTA_ENABLE_FMP ?= yes
-# In case FUOTA is allowed, llow the use of Multi-Package Access Package
+# In case FUOTA is allowed, allow the use of Multi-Package Access Package
 LBM_FUOTA_ENABLE_MPA ?= yes
 
 #-----------------------------------------------------------------------------

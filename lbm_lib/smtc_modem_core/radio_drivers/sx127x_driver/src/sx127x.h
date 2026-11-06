@@ -467,7 +467,7 @@ typedef struct sx127x_s
      * -------------------------------------------------------------------------
      * --- USER IRQ HANDLING - DRIVER PUBLIC USE--------------------------------
      */
-    void* irq_handler_context;  //!< Holds the context to be passed when calling irq_handler callaback
+    void* irq_handler_context;  //!< Holds the context to be passed when calling irq_handler callback
     /**
      * @brief User interrupt notification
      *

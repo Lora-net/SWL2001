@@ -102,14 +102,6 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
-typedef enum service_fwd_e
-{
-    SERVICE_FWD_DONE,
-    SERVICE_FWD_FWD_JOIN,
-    SERVICE_FWD_FWD_UL,
-    SERVICE_FWD_EMPTY_UL,
-    SERVICE_FWD_DL,
-} service_fwd_t;
 
 /**
  * @brief LoRaWAN template Object
@@ -177,7 +169,7 @@ void lorawan_relay_rx_services_init( uint8_t* service_id, uint8_t task_id,
     relay_rx_obj.task_id                 = task_id;
     relay_rx_obj.stack_id                = CURRENT_STACK;
     relay_rx_obj.initialized             = true;
-    relay_rx_obj.service_state           = SERVICE_FWD_DONE;
+    relay_rx_obj.service_state           = RELAY_SERVICE_FWD_DONE;
     relay_rx_obj.relay_running_flag_prev = false;
 
     SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_relay_rx_services_init task_id %d, service_id %d, CURRENT_STACK:%d \n",
@@ -206,7 +198,7 @@ void lorawan_relay_rx_services_init( uint8_t* service_id, uint8_t task_id,
 }
 
 void lorawan_relay_rx_fwd_uplink( uint8_t stack_id, const uint8_t* data, uint8_t data_len, uint32_t time_tx,
-                                  bool is_join )
+                                  service_fwd_t fwd_type )
 {
     IS_VALID_STACK_ID( stack_id );
     IS_SERVICE_INITIALIZED( );
@@ -224,8 +216,13 @@ void lorawan_relay_rx_fwd_uplink( uint8_t stack_id, const uint8_t* data, uint8_t
     memcpy( relay_rx_obj.buffer, data, data_len );
     relay_rx_obj.buffer_len    = data_len;
     relay_rx_obj.time_to_tx    = time_tx;
-    relay_rx_obj.service_state = ( is_join == true ) ? SERVICE_FWD_FWD_JOIN : SERVICE_FWD_FWD_UL;
-    relay_stop( true );
+    relay_rx_obj.service_state = fwd_type;
+
+    if( ( fwd_type == RELAY_SERVICE_FWD_FWD_JOIN ) || ( fwd_type == RELAY_SERVICE_FWD_FWD_UL ) ||
+        ( fwd_type == RELAY_SERVICE_NOTIFY_UNKNOWN_ED ) )
+    {
+        relay_stop( true );
+    }
 }
 
 /*
@@ -238,17 +235,21 @@ static void lorawan_relay_rx_service_on_launch( void* context )
     // SMTC_MODEM_HAL_TRACE_PRINTF( "Relay RX service Launch %d\n", smtc_modem_hal_get_time_in_ms( ) );
     IS_SERVICE_INITIALIZED( );
 
-    if( ( relay_rx_obj.service_state == SERVICE_FWD_FWD_JOIN ) || ( relay_rx_obj.service_state == SERVICE_FWD_FWD_UL ) )
+    if( ( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_JOIN ) ||
+        ( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_UL ) )
     {
-        lorawan_api_payload_send( FPORT_RELAY, true, relay_rx_obj.buffer, relay_rx_obj.buffer_len, UNCONF_DATA_UP,
-                                  relay_rx_obj.time_to_tx, RELAY_STACK_ID );
-        // lorawan_api_payload_send_at_time( FPORT_RELAY, true, buffer, buffer_len, UNCONF_DATA_UP, time_to_tx,
-        //                                   RELAY_STACK_ID );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, FPORT_RELAY, true, relay_rx_obj.buffer,
+                                     relay_rx_obj.buffer_len, UNCONF_DATA_UP, relay_rx_obj.time_to_tx, RELAY_STACK_ID );
     }
-    else if( relay_rx_obj.service_state == SERVICE_FWD_EMPTY_UL )
+    else if( relay_rx_obj.service_state == RELAY_SERVICE_FWD_EMPTY_UL )
     {
-        lorawan_api_payload_send( 0, false, relay_rx_obj.buffer, 0, UNCONF_DATA_UP,
-                                  smtc_modem_hal_get_time_in_ms( ) + 300, RELAY_STACK_ID );
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, 0, false, relay_rx_obj.buffer, 0, UNCONF_DATA_UP,
+                                     smtc_modem_hal_get_time_in_ms( ) + 300, RELAY_STACK_ID );
+    }
+    else if( relay_rx_obj.service_state == RELAY_SERVICE_NOTIFY_UNKNOWN_ED )
+    {
+        tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, 0, true, relay_rx_obj.buffer, relay_rx_obj.buffer_len,
+                                     UNCONF_DATA_UP, smtc_modem_hal_get_time_in_ms( ) + 20, RELAY_STACK_ID );
     }
     else
     {
@@ -261,12 +262,14 @@ static void lorawan_relay_rx_service_on_update( void* context )
     IS_SERVICE_INITIALIZED( );
     // SMTC_MODEM_HAL_TRACE_PRINTF( "Relay RX service Update %d\n", smtc_modem_hal_get_time_in_ms( ) );
 
-    if( ( relay_rx_obj.service_state == SERVICE_FWD_FWD_JOIN ) || ( relay_rx_obj.service_state == SERVICE_FWD_FWD_UL ) )
+    if( ( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_JOIN ) ||
+        ( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_UL ) ||
+        ( relay_rx_obj.service_state == RELAY_SERVICE_NOTIFY_UNKNOWN_ED ) )
     {
         // No DL has been received, so no RXR windows, restart Relay CAD
-        // If a DL has been received relay_rx_obj.service_state is SERVICE_FWD_DONE and relay CAD will restarted after
-        // DL on RXR
-        relay_rx_obj.service_state = SERVICE_FWD_DONE;
+        // If a DL has been received relay_rx_obj.service_state is RELAY_SERVICE_FWD_DONE and relay CAD will restarted
+        // after DL on RXR
+        relay_rx_obj.service_state = RELAY_SERVICE_FWD_DONE;
         relay_start( );
     }
 }
@@ -282,14 +285,14 @@ static uint8_t lorawan_relay_rx_service_downlink_handler( lr1_stack_mac_down_dat
     }
 
     // SMTC_MODEM_HAL_TRACE_PRINTF( "Relay RX service DL handler\n" );
-    if( ( ( relay_rx_obj.service_state == SERVICE_FWD_FWD_JOIN ) ||
-          ( relay_rx_obj.service_state == SERVICE_FWD_FWD_UL ) ) &&
+    if( ( ( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_JOIN ) ||
+          ( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_UL ) ) &&
         ( rx_down_data->rx_metadata.rx_fport_present == true ) &&
         ( rx_down_data->rx_metadata.rx_fport == FPORT_RELAY ) )
     {
         relay_fwd_dl( rx_down_data->stack_id, rx_down_data->rx_payload, rx_down_data->rx_payload_size );
 
-        if( relay_rx_obj.service_state == SERVICE_FWD_FWD_JOIN )
+        if( relay_rx_obj.service_state == RELAY_SERVICE_FWD_FWD_JOIN )
         {
             SMTC_MODEM_HAL_TRACE_PRINTF( "Join forwarded -> send empty uplink\n" );
             smodem_task task_relay = {
@@ -304,16 +307,16 @@ static uint8_t lorawan_relay_rx_service_downlink_handler( lr1_stack_mac_down_dat
 
             if( modem_supervisor_add_task( &task_relay ) == TASK_VALID )
             {
-                relay_rx_obj.service_state = SERVICE_FWD_EMPTY_UL;
+                relay_rx_obj.service_state = RELAY_SERVICE_FWD_EMPTY_UL;
             }
             else
             {
-                relay_rx_obj.service_state = SERVICE_FWD_DONE;
+                relay_rx_obj.service_state = RELAY_SERVICE_FWD_DONE;
             }
         }
         else
         {
-            relay_rx_obj.service_state = SERVICE_FWD_DONE;
+            relay_rx_obj.service_state = RELAY_SERVICE_FWD_DONE;
         }
 
         return MODEM_DOWNLINK_CONSUMED;

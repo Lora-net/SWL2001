@@ -58,6 +58,11 @@ extern "C" {
  */
 
 /*!
+ * @brief Length in bytes of a hash value
+ */
+#define LR11XX_BL_HASH_LENGTH 0x10
+
+/*!
  * @brief Length in byte of the LR11XX version blob
  */
 #define LR11XX_BL_VERSION_LENGTH ( 4 )
@@ -81,6 +86,11 @@ extern "C" {
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
+
+/*!
+ * @brief Fixed-length array to store hash value
+ */
+typedef uint8_t lr11xx_bootloader_hash_t[LR11XX_BL_HASH_LENGTH];
 
 /*!
  * @brief Fixed-length array to store a PIN

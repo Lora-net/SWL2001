@@ -74,8 +74,8 @@ static const char* smtc_real_region_list_str[] = {
 #if defined( REGION_CN_470 )
     [SMTC_REAL_REGION_CN_470] = "CN470",
 #endif
-#if defined( REGION_WW2G4 )
-    [SMTC_REAL_REGION_WW2G4] = "WW2G4",
+#if defined( REGION_WW_2G4 )
+    [SMTC_REAL_REGION_WW_2G4] = "WW_2G4",
 #endif
 #if defined( REGION_AS_923 )
     [SMTC_REAL_REGION_AS_923_GRP2] = "AS923_GRP2",

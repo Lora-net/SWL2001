@@ -63,6 +63,9 @@
 #elif defined( LR11XX )
 #include "ralf_lr11xx.h"
 #include "lr11xx_system.h"
+#elif defined( LR20XX )
+#include "ralf_lr20xx.h"
+#include "lr20xx_system.h"
 #endif
 
 /*
@@ -85,6 +88,9 @@
 #define LR11XX_FW_VERSION 0x0201
 #elif defined( LR1121 )
 #define LR11XX_FW_VERSION 0x0103
+#elif defined( LR2021 )
+#define LR20XX_FW_VERSION_MAJOR 0x01
+#define LR20XX_FW_VERSION_MINOR 0x10
 #endif
 
 #define FREQ_NO_RADIO 868300000
@@ -126,6 +132,8 @@ const ralf_t modem_radio = RALF_SX128X_INSTANTIATE( NULL );
 const ralf_t modem_radio = RALF_SX126X_INSTANTIATE( NULL );
 #elif defined( LR11XX )
 const ralf_t modem_radio = RALF_LR11XX_INSTANTIATE( NULL );
+#elif defined( LR20XX )
+const ralf_t modem_radio = RALF_LR20XX_INSTANTIATE( NULL );
 #else
 #error "Please select radio board.."
 #endif
@@ -152,8 +160,9 @@ typedef enum return_code_test_e
 static volatile bool     radio_irq_raised      = false;
 static volatile bool     irq_rx_timeout_raised = false;
 static volatile bool     timer_irq_raised      = false;
-static volatile uint32_t irq_time_ms           = 0;
-static volatile uint32_t irq_time_s            = 0;
+static volatile uint32_t radio_irq_time_ms     = 0;
+static volatile uint32_t radio_irq_time_s      = 0;
+static volatile uint32_t timer_irq_time_ms     = 0;
 
 // LoRa configurations TO NOT receive or transmit
 static ralf_params_lora_t rx_lora_param = { .sync_word                       = SYNC_WORD_NO_RADIO,
@@ -182,7 +191,7 @@ static ralf_params_lora_t tx_lora_param = { .sync_word                       = S
                                             .pkt_params.crc_is_on            = true,
                                             .pkt_params.invert_iq_is_on      = false,
                                             .pkt_params.preamble_len_in_symb = 8 };
-#if( ENABLE_TEST_FLASH != 0 )
+#if ( ENABLE_TEST_FLASH != 0 )
 static const char* name_context_type[] = { "MODEM", "KEY_MODEM",      "LORAWAN_STACK",
                                            "FUOTA", "SECURE_ELEMENT", "STORE_AND_FORWARD" };
 #endif
@@ -211,7 +220,7 @@ static bool porting_test_config_rx_radio( void );
 static bool porting_test_config_tx_radio( void );
 static bool porting_test_sleep_ms( void );
 static bool porting_test_timer_irq_low_power( void );
-#if( ENABLE_TEST_FLASH != 0 )
+#if ( ENABLE_TEST_FLASH != 0 )
 static bool test_context_store_restore( modem_context_type_t context_type );
 static bool porting_test_flash( void );
 #endif
@@ -240,7 +249,7 @@ void main_porting_tests( void )
     // Tests
     SMTC_HAL_TRACE_MSG( "\n\n\nPORTING_TEST example is starting \n\n" );
 
-#if( ENABLE_TEST_FLASH == 0 )
+#if ( ENABLE_TEST_FLASH == 0 )
 
     ret = porting_test_spi( );
     if( ret == false )
@@ -358,6 +367,33 @@ static bool porting_test_spi( void )
         else
         {
             PORTING_TEST_MSG_NOK( " Failed to get LR11XX firmware version \n" );
+            counter_nok++;
+        }
+
+#elif defined( LR20XX )
+        lr20xx_system_version_t version;
+        lr20xx_status_t         status;
+
+        status = lr20xx_system_get_version( NULL, &version );
+
+        if( status == LR20XX_STATUS_OK )
+        {
+            if( version.major != LR20XX_FW_VERSION_MAJOR )
+            {
+                PORTING_TEST_MSG_NOK( " Wrong LR20XX major firmware version: expected 0x%02X / get 0x%02X \n",
+                                      LR20XX_FW_VERSION_MAJOR, version.major );
+                counter_nok++;
+            }
+            if( version.minor != LR20XX_FW_VERSION_MINOR )
+            {
+                PORTING_TEST_MSG_NOK( " Wrong LR20XX minor firmware version: expected 0x%02X / get 0x%02X \n",
+                                      LR20XX_FW_VERSION_MINOR, version.minor );
+                counter_nok++;
+            }
+        }
+        else
+        {
+            PORTING_TEST_MSG_NOK( " Failed to get LR20XX firmware version \n" );
             counter_nok++;
         }
 
@@ -608,7 +644,7 @@ static return_code_test_t test_get_time_in_s( void )
         return RC_PORTING_TEST_RELAUNCH;
     }
 
-    uint32_t time = irq_time_s - start_time_s;
+    uint32_t time = radio_irq_time_s - start_time_s;
     if( time == ( rx_timeout_in_ms / 1000 ) )
     {
         PORTING_TEST_MSG_OK( );
@@ -656,7 +692,7 @@ static return_code_test_t test_get_time_in_ms( void )
 
     // To avoid misalignment between symb timeout and real timeout for all radio, a number of symbols smaller than 63 is
     // to be used.
-    rx_lora_param.symb_nb_timeout = 62;
+    rx_lora_param.symb_nb_timeout = 60;
     rx_lora_param.mod_params.sf   = RAL_LORA_SF12;
     rx_lora_param.mod_params.bw   = RAL_LORA_BW_125_KHZ;
 
@@ -711,7 +747,7 @@ static return_code_test_t test_get_time_in_ms( void )
         return RC_PORTING_TEST_RELAUNCH;
     }
 
-    uint32_t time = irq_time_ms - start_time_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
+    uint32_t time = radio_irq_time_ms - start_time_ms - smtc_modem_hal_get_radio_tcxo_startup_delay_ms( );
     if( abs( time - symb_time_ms ) <= MARGIN_GET_TIME_IN_MS )
     {
         PORTING_TEST_MSG_OK( );
@@ -811,7 +847,7 @@ static bool porting_test_timer_irq( void )
         return false;
     }
 
-    uint32_t time = irq_time_ms - start_time_ms - BOARD_COMPENSATION_IN_MS;
+    uint32_t time = timer_irq_time_ms - start_time_ms - BOARD_COMPENSATION_IN_MS;
 
     if( ( time >= timer_ms ) && ( time <= timer_ms + MARGIN_TIMER_IRQ_IN_MS ) )
     {
@@ -1009,6 +1045,7 @@ static bool porting_test_random( void )
 
     for( uint32_t i = 0; i < nb_draw; i++ )
     {
+        hal_watchdog_reload( );
         rdom1 = smtc_modem_hal_get_random_nb_in_range( range_min, range_max );
         tab_counter_random[rdom1 - 1]++;
     }
@@ -1016,6 +1053,7 @@ static bool porting_test_random( void )
     uint8_t tab_size = sizeof( tab_counter_random ) / sizeof( uint32_t );
     for( uint16_t i = 0; i < tab_size; i++ )
     {
+        hal_watchdog_reload( );
         if( abs( probability_draw - tab_counter_random[i] ) > margin )
         {
             PORTING_TEST_MSG_WARN( "\n => The number %u has been drawned %u times, Expected [%u;%u] times \n",
@@ -1316,8 +1354,8 @@ static bool porting_test_timer_irq_low_power( void )
     }
 
     uint32_t time =
-        irq_time_ms - start_time_ms - BOARD_COMPENSATION_IN_MS;  // TODO Warning to compensate delay introduced by
-                                                                 // smtc_modem_hal_start_timer for STM32L4
+        timer_irq_time_ms - start_time_ms - BOARD_COMPENSATION_IN_MS;  // TODO Warning to compensate delay introduced by
+                                                                       // smtc_modem_hal_start_timer for STM32L4
     if( ( time >= timer_ms ) && ( time <= timer_ms + MARGIN_TIMER_IRQ_IN_MS ) )
     {
         PORTING_TEST_MSG_OK( );
@@ -1337,7 +1375,7 @@ static bool porting_test_timer_irq_low_power( void )
  * -----------------------------------------------------------------------------
  * --- FLASH PORTING TESTS -----------------------------------------------------
  */
-#if( ENABLE_TEST_FLASH != 0 )
+#if ( ENABLE_TEST_FLASH != 0 )
 
 /**
  * @brief Test read/write context in flash
@@ -1449,6 +1487,7 @@ static bool porting_test_flash( void )
     SMTC_HAL_TRACE_MSG( "----------------------------------------\n porting_test_flash : \n" );
     SMTC_HAL_TRACE_MSG_COLOR( " !! TEST TO BE LAUNCH TWICE !! To check writing after MCU reset \n",
                               HAL_DBG_TRACE_COLOR_BLUE );
+
     /* LORAWAN */
     ret = test_context_store_restore( CONTEXT_LORAWAN_STACK );
     if( ret == false )
@@ -1485,7 +1524,7 @@ static void radio_tx_irq_callback( void* obj )
     UNUSED( obj );
     // ral_irq_t radio_irq = 0;
 
-    irq_time_ms = smtc_modem_hal_get_time_in_ms( );
+    radio_irq_time_ms = smtc_modem_hal_get_time_in_ms( );
 
     radio_irq_raised = true;
 
@@ -1508,7 +1547,7 @@ static void radio_rx_irq_callback( void* obj )
     UNUSED( obj );
 
     ral_irq_t radio_irq = 0;
-    irq_time_ms         = smtc_modem_hal_get_time_in_ms( );
+    radio_irq_time_ms   = smtc_modem_hal_get_time_in_ms( );
     radio_irq_raised    = true;
 
     if( ral_get_irq_status( &( modem_radio.ral ), &radio_irq ) != RAL_STATUS_OK )
@@ -1538,7 +1577,7 @@ static void radio_irq_callback_get_time_in_s( void* obj )
 {
     UNUSED( obj );
     ral_irq_t radio_irq = 0;
-    irq_time_s          = smtc_modem_hal_get_time_in_s( );
+    radio_irq_time_s    = smtc_modem_hal_get_time_in_s( );
     radio_irq_raised    = true;
 
     if( ral_get_irq_status( &( modem_radio.ral ), &radio_irq ) != RAL_STATUS_OK )
@@ -1566,8 +1605,8 @@ static void radio_irq_callback_get_time_in_s( void* obj )
 static void timer_irq_callback( void* obj )
 {
     UNUSED( obj );
-    irq_time_ms      = smtc_modem_hal_get_time_in_ms( );
-    timer_irq_raised = true;
+    timer_irq_time_ms = smtc_modem_hal_get_time_in_ms( );
+    timer_irq_raised  = true;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

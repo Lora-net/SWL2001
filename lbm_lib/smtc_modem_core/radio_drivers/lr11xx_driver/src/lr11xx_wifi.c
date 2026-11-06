@@ -475,11 +475,8 @@ lr11xx_status_t lr11xx_wifi_read_country_code_results( const void* context, cons
             local_country_code_result->io_regulation     = rbuffer[local_index + 2];
             local_country_code_result->channel_info_byte = rbuffer[local_index + 3];
 
-            for( uint8_t field_mac_index = 0; field_mac_index < LR11XX_WIFI_MAC_ADDRESS_LENGTH; field_mac_index++ )
-            {
-                local_country_code_result->mac_address[field_mac_index] =
-                    rbuffer[local_index + ( LR11XX_WIFI_MAC_ADDRESS_LENGTH - field_mac_index - 1 ) + 4];
-            }
+            lr11xx_wifi_read_mac_address_from_buffer( rbuffer, local_index + 4,
+                                                      local_country_code_result->mac_address );
         }
     }
     return ( lr11xx_status_t ) hal_status;

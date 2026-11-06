@@ -138,6 +138,12 @@ void smtc_relay_tx_enable( uint8_t relay_stack_id );
 bool smtc_relay_tx_is_enable( uint8_t relay_stack_id );
 
 /**
+ * @brief Set the need of key derivation for relay TX
+ * @param[in]   relay_stack_id  relay stack id
+ */
+void smtc_relay_tx_need_key_derivation( uint8_t relay_stack_id );
+
+/**
  * @brief Return relay tx sync status
  *
  * @param[in]   relay_stack_id  relay stack id
@@ -224,7 +230,7 @@ void smtc_relay_tx_data_receive_on_rxr( uint8_t relay_stack_id );
  *  @brief return the relay duty cycle consumption in ms
  *
  * @param[in]   relay_stack_id  relay stack id
-*/
+ */
 int32_t smtc_relay_tx_free_duty_cycle_ms_get( uint8_t relay_stack_id );
 #ifdef __cplusplus
 }

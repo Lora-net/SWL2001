@@ -34,6 +34,7 @@ BOARD_C_SOURCES += \
 	smtc_hal_l0/smtc_hal_rtc.c\
 	smtc_hal_l0/smtc_hal_trace.c\
 	smtc_hal_l0/smtc_hal_mcu.c\
+	smtc_hal_l0/smtc_hal_libc_stub.c \
 	mcu_drivers/STM32L0xx_HAL_Driver/Src/stm32l0xx_ll_usart.c \
 	mcu_drivers/STM32L0xx_HAL_Driver/Src/stm32l0xx_ll_rcc.c \
 	mcu_drivers/STM32L0xx_HAL_Driver/Src/stm32l0xx_ll_lptim.c \

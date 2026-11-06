@@ -101,7 +101,7 @@
 #ifndef GNSS_SCAN_DEEP_DBG_TRACE
 #define GNSS_SCAN_DEEP_DBG_TRACE MODEM_HAL_FEATURE_OFF
 #endif
-#if( GNSS_SCAN_DEEP_DBG_TRACE )
+#if ( GNSS_SCAN_DEEP_DBG_TRACE )
 #define GNSS_SCAN_TRACE_PRINTF_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ )
 #define GNSS_SCAN_TRACE_ARRAY_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_ARRAY( __VA_ARGS__ )
 #else
@@ -369,6 +369,7 @@ smtc_modem_return_code_t mw_gnss_get_event_data_scan_done( smtc_modem_gnss_event
 
     data->is_valid             = ( navgroup.nb_scans_valid > 0 );
     data->token                = navgroup.token;
+    data->time_available       = navgroup.time_available;
     data->timestamp            = navgroup.timestamp;
     data->nb_scans_valid       = navgroup.nb_scans_valid;
     data->navgroup_duration_ms = navgroup.end_time_ms - navgroup.start_time_ms;
@@ -513,11 +514,13 @@ static void gnss_scan_next( uint32_t delay_s )
 
 static void trace_print_event_data_scan_done( const smtc_modem_gnss_event_data_scan_done_t* data )
 {
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     if( data != NULL )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "SCAN_DONE info:\n" );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- token: 0x%02X\n", data->token );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- is_valid: %d\n", data->is_valid );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "-- time_available: %u\n", data->time_available );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- timestamp: %u\n", data->timestamp );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- number of valid scans: %u\n", data->nb_scans_valid );
         for( uint8_t scan_idx = 0; scan_idx < data->nb_scans_valid; scan_idx++ )
@@ -543,6 +546,7 @@ static void trace_print_event_data_scan_done( const smtc_modem_gnss_event_data_s
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- indoor detected: %d\n", data->indoor_detected );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- NAV group duration: %u ms\n", data->navgroup_duration_ms );
     }
+#endif
 }
 
 #if GNSS_ENABLE_POWER_DEBUG_INFO
@@ -791,11 +795,14 @@ static mw_return_code_t gnss_scan_task_done( bool* navgroup_complete )
     {
         GNSS_SCAN_TRACE_PRINTF_DEBUG( "GPS time: %u (0x%08X)\n", gps_time.gps_time_s, gps_time.gps_time_s );
         navgroup.scans[scan_index].gps_timestamp = gps_time.gps_time_s;
+        navgroup.time_available                  = true;
         navgroup.timestamp =
             gps_time.gps_time_s; /* set NAV group global timestamp with the last scan tentative (even if not valid) */
     }
     else
     {
+        navgroup.time_available = false;
+        navgroup.timestamp      = 0;
         SMTC_MODEM_HAL_TRACE_WARNING( "GPS time: no time available - error code 0x%02X (%s)\n", gps_time.error_code,
                                       smtc_gnss_read_time_error_code_enum2str( gps_time.error_code ) );
     }

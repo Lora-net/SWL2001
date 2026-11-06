@@ -19,7 +19,6 @@ BOARD_LDSCRIPT = mcu_drivers/core/STM32L4xx/stm32l476rgtx_flash.ld
 # Hardware-specific sources
 #-----------------------------------------------------------------------------
 BOARD_C_SOURCES = \
-	mcu_drivers/core/STM32L4xx/system_stm32l4xx.c\
 	mcu_drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rng.c\
 	mcu_drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_lptim.c \
 	mcu_drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rtc.c \
@@ -38,6 +37,7 @@ BOARD_C_SOURCES = \
 	mcu_drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c \
 	mcu_drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c \
 	smtc_modem_hal/smtc_modem_hal.c\
+	mcu_drivers/core/STM32L4xx/system_stm32l4xx.c\
 	smtc_hal_l4/smtc_hal_flash.c\
 	smtc_hal_l4/smtc_hal_gpio.c\
 	smtc_hal_l4/smtc_hal_mcu.c\
@@ -48,6 +48,7 @@ BOARD_C_SOURCES = \
 	smtc_hal_l4/smtc_hal_trace.c\
 	smtc_hal_l4/smtc_hal_uart.c\
 	smtc_hal_l4/smtc_hal_watchdog.c\
+	smtc_hal_l4/smtc_hal_libc_stub.c
 
 BOARD_ASM_SOURCES =  \
 	mcu_drivers/core/STM32L4xx/startup_stm32l476xx.s

@@ -81,7 +81,6 @@ int8_t radio_utilities_get_tx_power_offset( void );
  */
 void radio_utilities_set_tx_power_offset( int8_t tx_pwr_offset_db );
 
-
 #ifdef __cplusplus
 }
 #endif

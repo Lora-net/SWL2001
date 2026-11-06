@@ -120,6 +120,7 @@ struct
     uint8_t ( *downlink_services_callback[NUMBER_OF_SERVICES + NUMBER_OF_LORAWAN_MANAGEMENT_TASKS] )(
         lr1_stack_mac_down_data_t* rx_down_data );
     uint32_t modem_reset_counter;
+    bool     report_all_downlinks_to_user;
 } modem_ctx_light;
 
 #define modem_dwn_pkt modem_ctx_light.modem_dwn_pkt
@@ -131,6 +132,7 @@ struct
 #define fifo_buffer modem_ctx_light.fifo_buffer
 #define downlink_services_callback modem_ctx_light.downlink_services_callback
 #define modem_reset_counter modem_ctx_light.modem_reset_counter
+#define report_all_downlinks_to_user modem_ctx_light.report_all_downlinks_to_user
 
 /*
  * -----------------------------------------------------------------------------
@@ -221,6 +223,7 @@ void modem_context_init_light( void ( *callback )( void ), radio_planner_t* rp )
     modem_load_modem_context( );
     // Increment reset counter
     modem_reset_counter++;
+    report_all_downlinks_to_user = false;
 }
 
 fifo_ctrl_t* modem_context_get_fifo_obj( void )
@@ -449,6 +452,16 @@ uint32_t modem_get_reset_counter( void )
     return modem_reset_counter;
 }
 
+void modem_set_report_all_downlinks_to_user( bool report_all_downlinks )
+{
+    report_all_downlinks_to_user = report_all_downlinks;
+}
+
+bool modem_get_report_all_downlinks_to_user( void )
+{
+    return report_all_downlinks_to_user;
+}
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -491,7 +504,8 @@ void modem_downlink_callback( lr1_stack_mac_down_data_t* rx_down_data )
     }
 
     // none services used the downlink data for itself then push it into the user fifo
-    if( ( downlink_used_by_services == 0 ) && ( rx_down_data->rx_metadata.rx_fport != 0 ) )
+    if( ( report_all_downlinks_to_user == true ) ||
+        ( ( downlink_used_by_services == 0 ) && ( rx_down_data->rx_metadata.rx_fport != 0 ) ) )
     {
         if( fifo_ctrl_set( &fifo_ctrl_obj, rx_down_data->rx_payload, rx_down_data->rx_payload_size, &metadata,
                            sizeof( smtc_modem_dl_metadata_t ) ) != FIFO_STATUS_OK )

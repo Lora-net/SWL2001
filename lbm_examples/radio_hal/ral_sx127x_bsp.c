@@ -90,7 +90,7 @@ void ral_sx127x_bsp_get_tx_cfg( const void* context, const ral_sx127x_bsp_tx_cfg
     output_params->pa_cfg.pa_select           = SX127X_PA_SELECT_RFO;
     output_params->pa_cfg.is_20_dbm_output_on = false;
 #elif defined( SX1276 )
-#if( SX1276_MBED_SHIELD == SX1276MB1LAS )
+#if ( SX1276_MBED_SHIELD == SX1276MB1LAS )
     if( input_params->freq_in_hz > RF_FREQUENCY_MID_BAND_THRESHOLD )
     {
         output_params->pa_cfg.pa_select           = SX127X_PA_SELECT_BOOST;
@@ -101,7 +101,7 @@ void ral_sx127x_bsp_get_tx_cfg( const void* context, const ral_sx127x_bsp_tx_cfg
         output_params->pa_cfg.pa_select           = SX127X_PA_SELECT_RFO;
         output_params->pa_cfg.is_20_dbm_output_on = false;
     }
-#elif( SX1276_MBED_SHIELD == SX1276MB1MAS )
+#elif ( SX1276_MBED_SHIELD == SX1276MB1MAS )
     output_params->pa_cfg.pa_select           = SX127X_PA_SELECT_RFO;
     output_params->pa_cfg.is_20_dbm_output_on = false;
 #else
@@ -178,21 +178,20 @@ void ral_sx127x_bsp_get_ocp_value( const void* context, uint8_t* ocp_trim_value 
     // Do nothing, let the driver choose the default values
 }
 
-ral_status_t ral_sx127x_bsp_get_instantaneous_tx_power_consumption( const void *context,
-    const ral_sx127x_bsp_tx_cfg_output_params_t* tx_cfg_output_params, uint32_t* pwr_consumption_in_ua )
+ral_status_t ral_sx127x_bsp_get_instantaneous_tx_power_consumption(
+    const void* context, const ral_sx127x_bsp_tx_cfg_output_params_t* tx_cfg_output_params,
+    uint32_t* pwr_consumption_in_ua )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_sx127x_bsp_get_instantaneous_gfsk_rx_power_consumption( const void *context,
-                                                                         bool      rx_boosted,
+ral_status_t ral_sx127x_bsp_get_instantaneous_gfsk_rx_power_consumption( const void* context, bool rx_boosted,
                                                                          uint32_t* pwr_consumption_in_ua )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
-ral_status_t ral_sx127x_bsp_get_instantaneous_lora_rx_power_consumption( const void *context,
-                                                                         bool      rx_boosted,
+ral_status_t ral_sx127x_bsp_get_instantaneous_lora_rx_power_consumption( const void* context, bool rx_boosted,
                                                                          uint32_t* pwr_consumption_in_ua )
 {
     return RAL_STATUS_UNSUPPORTED_FEATURE;

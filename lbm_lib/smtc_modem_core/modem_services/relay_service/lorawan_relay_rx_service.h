@@ -62,6 +62,16 @@ extern "C" {
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
 
+typedef enum service_fwd_e
+{
+    RELAY_SERVICE_FWD_DONE,
+    RELAY_SERVICE_FWD_FWD_JOIN,
+    RELAY_SERVICE_FWD_FWD_UL,
+    RELAY_SERVICE_FWD_EMPTY_UL,
+    RELAY_SERVICE_FWD_DL,
+    RELAY_SERVICE_NOTIFY_UNKNOWN_ED,
+} service_fwd_t;
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS PROTOTYPES ---------------------------------------------
@@ -89,10 +99,10 @@ void lorawan_relay_rx_services_init( uint8_t* service_id, uint8_t task_id,
  * @param[in]   data        Data to send
  * @param[in]   data_len    Lenght of data
  * @param[in]   time_tx     Timestamp to send the data
- * @param[in]   is_join     True if the forwarded message is a Join Request
+ * @param[in]   fwd_type    Type of request (join or uplink)
  */
 void lorawan_relay_rx_fwd_uplink( uint8_t stack_id, const uint8_t* data, uint8_t data_len, uint32_t time_tx,
-                                  bool is_join );
+                                  service_fwd_t fwd_type );
 
 #ifdef __cplusplus
 }

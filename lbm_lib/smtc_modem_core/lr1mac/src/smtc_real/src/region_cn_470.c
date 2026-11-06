@@ -68,7 +68,7 @@
 // uint32_t freq_tx_cn470_mono_channel_mhz = 470900000;
 // #endif
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON ) && ( MODEM_HAL_DEEP_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON ) && ( MODEM_HAL_DEEP_DBG_TRACE == MODEM_HAL_FEATURE_ON )
 static const char* smtc_real_channel_plan_cn470_str[] = {
     [CN_470_20MHZ_A] = "CN_470_20MHZ_A",
     [CN_470_20MHZ_B] = "CN_470_20MHZ_B",
@@ -184,9 +184,10 @@ void region_cn_470_config( smtc_real_t* real )
             dr_bitfield_tx_channel[i] = real_const.const_default_tx_dr_bit_field;
 
             SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
-                "join: idx:%u, TxFreq: %d, Rx1freq: %d, MaskDrRx1: 0x%x, freqRx2: %d, DrRx2: 0x%x\n%s", i,
+                "join: idx:%u, TxFreq: %d, Rx1freq: %d, MaskDrRx1: 0x%x, freqRx2: %d, DrRx2: 0x%x\n", i,
                 common_join_channel_cn_470[i][0], common_join_channel_cn_470[i][1], dr_bitfield_tx_channel[i],
-                common_join_channel_cn_470[i][2], real_const.const_rx2_dr_init, ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                common_join_channel_cn_470[i][2], real_const.const_rx2_dr_init );
+            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s", ( ( i % 8 ) == 7 ) ? "---\n" : "" );
 #if defined( HYBRID_CN470_MONO_CHANNEL )
         }
 #endif
@@ -226,10 +227,10 @@ void region_cn_470_config_session( smtc_real_t* real )
             {
                 err = false;
 #endif
-                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "idx:%u, TxFreq: %d, RxFreq: %d, dr: 0x%x,\n%s", i,
-                                                   region_cn_470_get_tx_frequency_channel( real, i ),
-                                                   region_cn_470_get_rx1_frequency_channel( real, i ),
-                                                   dr_bitfield_tx_channel[i], ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG(
+                    "idx:%u, TxFreq: %d, RxFreq: %d, dr: 0x%x,\n", i, region_cn_470_get_tx_frequency_channel( real, i ),
+                    region_cn_470_get_rx1_frequency_channel( real, i ), dr_bitfield_tx_channel[i] );
+                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s", ( ( i % 8 ) == 7 ) ? "---\n" : "" );
                 SMTC_PUT_BIT8( channel_index_enabled, i, CHANNEL_ENABLED );
                 dr_bitfield_tx_channel[i] = real_const.const_default_tx_dr_bit_field;
 #if defined( HYBRID_CN470_MONO_CHANNEL )
@@ -255,9 +256,10 @@ void region_cn_470_config_session( smtc_real_t* real )
             {
                 err = false;
 #endif
-                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "idx:%u, TxFreq: %d, dr: 0x%x,\n%s", i,
+                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "idx:%u, TxFreq: %d, dr: 0x%x,\n", i,
                                                    region_cn_470_get_tx_frequency_channel( real, i ),
-                                                   dr_bitfield_tx_channel[i], ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                                                   dr_bitfield_tx_channel[i] );
+                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s", ( ( i % 8 ) == 7 ) ? "---\n" : "" );
                 SMTC_PUT_BIT8( channel_index_enabled, i, CHANNEL_ENABLED );
                 dr_bitfield_tx_channel[i] = real_const.const_default_tx_dr_bit_field;
 #if defined( HYBRID_CN470_MONO_CHANNEL )
@@ -272,9 +274,10 @@ void region_cn_470_config_session( smtc_real_t* real )
             if( freq_tx_cn470_mono_channel_mhz == region_cn_470_get_tx_frequency_channel( real, i ) )
             {
 #endif
-                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "idx:%u, RxFreq: %d, dr: 0x%x,\n%s", i,
+                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "idx:%u, RxFreq: %d, dr: 0x%x,\n", i,
                                                    region_cn_470_get_rx1_frequency_channel( real, i ),
-                                                   dr_bitfield_tx_channel[i], ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                                                   dr_bitfield_tx_channel[i] );
+                SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s", ( ( i % 8 ) == 7 ) ? "---\n" : "" );
 #if defined( HYBRID_CN470_MONO_CHANNEL )
             }
 #endif
@@ -482,7 +485,7 @@ status_channel_t region_cn_470_build_channel_mask( smtc_real_t* real, uint8_t ch
         break;
     }
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "unwrapped channel tx mask = 0x" );
     for( uint8_t i = 0; i < BANK_MAX_CN470; i++ )
     {
@@ -497,6 +500,18 @@ status_channel_t region_cn_470_build_channel_mask( smtc_real_t* real, uint8_t ch
         status = ERROR_CHANNEL_MASK;
     }
     return ( status );
+}
+
+bool region_cn_470_are_all_default_channels_enabled( smtc_real_t* real )
+{
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
+    {
+        if( SMTC_GET_BIT8( channel_index_enabled, i ) == 0 )
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 void region_cn_470_enable_all_channels_with_valid_freq( smtc_real_t* real )
@@ -670,7 +685,7 @@ uint32_t region_cn_470_get_rx_beacon_frequency_channel( smtc_real_t* real, uint3
     switch( activated_channel_plan )
     {
     case CN_470_20MHZ_A:
-        index = ( activated_by_join_channel * 8 ) + ( uint32_t )( floorf( gps_time_s / 128 ) ) % 8;
+        index = ( activated_by_join_channel * 8 ) + ( uint32_t ) ( floorf( gps_time_s / 128 ) ) % 8;
         freq  = region_cn_470_get_rx1_frequency_channel( real, index );
         break;
     case CN_470_20MHZ_B:
@@ -708,17 +723,17 @@ uint32_t region_cn_470_get_rx_ping_slot_frequency_channel( smtc_real_t* real, ui
     switch( activated_channel_plan )
     {
     case CN_470_20MHZ_A:
-        index = ( activated_by_join_channel * 8 ) + dev_addr + ( uint32_t )( floorf( gps_time_s / 128 ) ) % 8;
+        index = ( activated_by_join_channel * 8 ) + dev_addr + ( uint32_t ) ( floorf( gps_time_s / 128 ) ) % 8;
         freq  = region_cn_470_get_rx1_frequency_channel( real, index );
         break;
     case CN_470_20MHZ_B:
         if( activated_by_join_channel == 8 )
         {
-            index = ( dev_addr + ( uint32_t )( floorf( gps_time_s / 128 ) ) ) % 32;
+            index = ( dev_addr + ( uint32_t ) ( floorf( gps_time_s / 128 ) ) ) % 32;
         }
         else if( activated_by_join_channel == 9 )
         {
-            index = 32 + ( dev_addr + ( uint32_t )( floorf( gps_time_s / 128 ) ) ) % 32;
+            index = 32 + ( dev_addr + ( uint32_t ) ( floorf( gps_time_s / 128 ) ) ) % 32;
         }
         else
         {

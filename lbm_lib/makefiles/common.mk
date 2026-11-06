@@ -82,11 +82,6 @@ LBM_TARGET := $(LBM_TARGET)_notrace
 LBM_BUILD_DIR := $(LBM_BUILD_DIR)/notrace
 endif
 
-ifeq ($(LBM_GEOLOCATION),yes)
-#In case geolocation is selected, force the selection of store and forward feature
-LBM_STORE_AND_FORWARD=yes
-endif
-
 #-----------------------------------------------------------------------------
 # Debug and optimization
 #-----------------------------------------------------------------------------
@@ -126,7 +121,7 @@ WFLAG += -fstack-usage
 AS_DEFS =
 
 # Assembly flags
-ASFLAGS += -fno-builtin $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(LBM_OPT) $(WFLAG)
+ASFLAGS += -fno-builtin $(MCU_FLAGS) $(AS_DEFS) $(AS_INCLUDES) $(LBM_OPT) $(WFLAG)
 
 # Common C definitions
 LBM_C_DEFS += \
@@ -504,6 +499,9 @@ LBM_C_SOURCES = \
 	$(LR1MAC_C_SOURCES)
 
 MODEM_ASM_SOURCES = $(BOARD_ASM_SOURCES)
+
+# Remove duplicates in sources by sorting it
+LBM_C_SOURCES := $(sort $(LBM_C_SOURCES))
 
 vpath %.c $(sort $(dir $(LBM_C_SOURCES)))
 

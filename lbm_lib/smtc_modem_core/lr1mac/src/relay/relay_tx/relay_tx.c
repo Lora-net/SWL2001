@@ -82,7 +82,7 @@ typedef struct relay_tx_s
     uint32_t ref_timestamp_ms;  // Estimated time when the relay performed CAD
 
     uint8_t               ref_channel_idx;  // Channel use
-    uint8_t               ref_default_idx;   // Index (0 or 1) of the default channel
+    uint8_t               ref_default_idx;  // Index (0 or 1) of the default channel
     wor_cad_periodicity_t ref_cad_period;   // Real period used by relay (default is 1s)
 
     // Information about the last WOR frame
@@ -90,7 +90,7 @@ typedef struct relay_tx_s
     uint32_t last_preamble_len_ms;    // preamble length in ms
     uint32_t last_timestamp_ms;       // Time of send
     uint8_t  last_ch_idx;             // Channel used (default or additionnal)
-    uint8_t  last_default_idx;         // Index (0 or 1) of the default channel
+    uint8_t  last_default_idx;        // Index (0 or 1) of the default channel
 
     uint8_t relay_xtal_drift_ppm;  // xtal drift of the relay
     uint8_t relay_cad_to_rx;       // Delay for a relay to switch from CAD to RX
@@ -193,7 +193,7 @@ bool smtc_relay_tx_init( uint8_t relay_stack_id, radio_planner_t* rp, smtc_real_
     infos->relay_cad_to_rx      = DEFAULT_CAD_TO_RX;
     infos->ref_cad_period       = DEFAULT_CAD_PERIOD;
     infos->activation_mode      = DEFAULT_ACTIVATION_MODE;
-    infos->last_default_idx      = 1;
+    infos->last_default_idx     = 1;
 
     memset( &( infos->relay_tx_config ), 0, sizeof( relay_tx_config_t ) );
     infos->relay_tx_config.second_ch_enable                                = false;
@@ -231,7 +231,8 @@ void smtc_relay_tx_enable( uint8_t relay_stack_id )
     if( ( infos->is_enable != true ) && ( infos->activation_mode != RELAY_TX_ACTIVATION_MODE_DISABLED ) )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "Enable relay TX\n" );
-        infos->is_enable = true;
+        infos->is_enable           = true;
+        infos->need_key_derivation = true;
     }
 }
 
@@ -239,6 +240,12 @@ bool smtc_relay_tx_is_enable( uint8_t relay_stack_id )
 {
     relay_tx_t* infos = &( relay_tx_declare[relay_stack_id] );
     return infos->is_enable;
+}
+
+void smtc_relay_tx_need_key_derivation( uint8_t relay_stack_id )
+{
+    relay_tx_t* infos          = &( relay_tx_declare[relay_stack_id] );
+    infos->need_key_derivation = true;
 }
 
 relay_tx_sync_status_t smtc_relay_tx_get_sync_status( uint8_t relay_stack_id )
@@ -297,7 +304,7 @@ bool smtc_relay_tx_update_config( uint8_t relay_stack_id, const relay_tx_config_
 
     if( infos->relay_tx_config.activation == RELAY_TX_ACTIVATION_MODE_ENABLE )
     {
-        infos->is_enable = true;
+        smtc_relay_tx_enable( infos->stack_id );
     }
 
     if( infos->relay_tx_config.second_ch_enable == true )
@@ -359,8 +366,8 @@ bool smtc_relay_tx_prepare_wor( uint8_t relay_stack_id, uint32_t target_time, co
                 // If last channel used was the default -> remove half cad period
                 ref_timestamp -= cad_period_ms >> 1;
             }
-             smtc_duty_cycle_update( );
-            if( smtc_duty_cycle_is_channel_free(  infos->relay_tx_config.second_ch.freq_hz) == false )
+            smtc_duty_cycle_update( );
+            if( smtc_duty_cycle_is_channel_free( infos->relay_tx_config.second_ch.freq_hz ) == false )
             {
                 SMTC_MODEM_HAL_TRACE_PRINTF( "no more duty cycle for second_ch wor channel\n" );
                 return false;
@@ -441,8 +448,15 @@ bool smtc_relay_tx_prepare_wor( uint8_t relay_stack_id, uint32_t target_time, co
 
     const uint32_t symb_time_us = lr1mac_utilities_get_symb_time_us( 1, ( ral_lora_sf_t ) sf, ( ral_lora_bw_t ) bw );
 
-    infos->last_preamble_len_symb = drift_error_ms * 1000 / symb_time_us + 1 + 6 + infos->relay_cad_to_rx;
-    //+1 to round up, +6 minimum symbol for reception + delay to switch CAD->RX -> always >8
+    if( symb_time_us == 0 )
+    {
+        SMTC_MODEM_HAL_PANIC( "symb_time_us can't be 0\n" );
+    }
+    else
+    {
+        infos->last_preamble_len_symb = drift_error_ms * 1000 / symb_time_us + 1 + 6 + infos->relay_cad_to_rx;
+        //+1 to round up, +6 minimum symbol for reception + delay to switch CAD->RX -> always >8
+    }
 
     infos->last_preamble_len_ms = infos->last_preamble_len_symb * symb_time_us / 1000 + 1;
 
@@ -643,7 +657,8 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
 
     switch( rp_status )
     {
-    case RP_STATUS_TX_DONE: {
+    case RP_STATUS_TX_DONE:
+    {
         infos->time_tx_done = timestamp_irq;
         infos->miss_wor_ack_cnt += 1;
         infos->backoff_cnt += 1;
@@ -699,7 +714,8 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
         }
         break;
     }
-    case RP_STATUS_RX_PACKET: {
+    case RP_STATUS_RX_PACKET:
+    {
         wor_ack_infos_t ack;
 
         infos->buffer_len = infos->rp->rx_payload_size[RP_HOOK_ID_RELAY_TX + relay_stack_id];
@@ -728,7 +744,7 @@ static void relay_tx_callback_rp( uint8_t* stack_id )
             relay_tx_update_sync_status( relay_stack_id, RELAY_TX_SYNC_STATUS_SYNC );
             infos->ref_cad_period       = ack.period;
             infos->ref_channel_idx      = infos->last_ch_idx;
-            infos->ref_default_idx       = infos->last_default_idx;
+            infos->ref_default_idx      = infos->last_default_idx;
             infos->relay_xtal_drift_ppm = wor_convert_ppm( ack.relay_ppm );
             infos->relay_cad_to_rx      = wor_convert_cadtorx( ack.cad_to_rx );
 
@@ -828,10 +844,11 @@ static void relay_tx_update_sync_status( uint8_t relay_stack_id, relay_tx_sync_s
 static void relay_tx_print_conf( uint8_t relay_stack_id )
 {
     relay_tx_t* infos = &( relay_tx_declare[relay_stack_id] );
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     const char* name_activation[] = { "DISABLED", "ENABLE", "DYNAMIC", "ED_CONTROLED" };
 #endif
-    SMTC_MODEM_HAL_TRACE_PRINTF( "\n------------------------------\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "------------------------------\n" );
     SMTC_MODEM_HAL_TRACE_PRINTF( "END DEVICE RELAY CONFIGURATION\n" );
     SMTC_MODEM_HAL_TRACE_PRINTF( "Activation :  %s\n", name_activation[infos->relay_tx_config.activation] );
     SMTC_MODEM_HAL_TRACE_PRINTF( "Smart level : %d\n", infos->relay_tx_config.smart_level );

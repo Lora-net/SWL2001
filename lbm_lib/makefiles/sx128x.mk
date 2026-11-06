@@ -15,7 +15,7 @@ SMTC_RALF_C_SOURCES += \
 	smtc_modem_core/smtc_ralf/src/ralf_sx128x.c
 
 LR1MAC_C_SOURCES += \
-	smtc_modem_core/lr1mac/src/smtc_real/src/region_ww2g4.c 
+	smtc_modem_core/lr1mac/src/smtc_real/src/region_ww_2g4.c
 
 SMTC_MODEM_CRYPTO_C_SOURCES += \
 	smtc_modem_core/smtc_modem_crypto/soft_secure_element/aes.c\
@@ -33,4 +33,4 @@ LBM_C_INCLUDES =  \
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
 LBM_C_DEFS += \
-	-DSX128X 
+	-DSX128X

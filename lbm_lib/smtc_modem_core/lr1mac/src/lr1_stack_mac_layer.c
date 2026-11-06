@@ -153,6 +153,7 @@ void lr1_stack_mac_session_init( lr1_stack_mac_t* lr1_mac )
     lr1_mac->no_rx_packet_since_s                = smtc_modem_hal_get_time_in_s( );
     lr1_mac->no_rx_packet_count                  = 0;
     lr1_mac->adr_ack_cnt                         = 0;
+    lr1_mac->no_downlink_limit_bitfield          = 0;  // Flag raised when adr_ack_last > ADR_ACK_DELAY
     lr1_mac->tx_fopts_current_length             = 0;
     lr1_mac->tx_fopts_length                     = 0;
     lr1_mac->tx_fopts_lengthsticky               = 0;
@@ -637,7 +638,8 @@ void lr1_stack_mac_rx_radio_start( lr1_stack_mac_t* lr1_mac, const rx_win_type_t
     {
         lr1_mac->radio_process_state = RADIOSTATE_RX_ON;
 
-        SMTC_MODEM_HAL_TRACE_PRINTF( "\n  Open RX%d for Hook Id = %d", type - RX1 + 1, my_hook_id );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "  Open Rx%d for Hook Id = %d", type - RX1 + 1, my_hook_id );
 
         if( radio_params.pkt_type == RAL_PKT_TYPE_LORA )
         {
@@ -784,7 +786,7 @@ void lr1_stack_mac_rp_callback( lr1_stack_mac_t* lr1_mac )
     default:
         if( lr1_mac->rp_planner_status != RP_STATUS_TASK_ABORTED )
         {
-            SMTC_MODEM_HAL_TRACE_ERROR( "lr1_mac->rp_planner_status %d", lr1_mac->rp_planner_status );
+            SMTC_MODEM_HAL_TRACE_ERROR( "lr1_mac->rp_planner_status %d\n", lr1_mac->rp_planner_status );
             SMTC_MODEM_HAL_PANIC( );
         }
         break;
@@ -931,6 +933,7 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
         {
             lr1_mac->no_rx_packet_count_in_mobile_mode = 0;
             lr1_mac->no_rx_packet_count                = 0;
+            lr1_mac->no_downlink_limit_bitfield        = 0;
             lr1_mac->no_rx_packet_since_s              = smtc_modem_hal_get_time_in_s( );
             rx_packet_type                             = JOIN_ACCEPT_PACKET;
             lr1_mac->rx_down_data.rx_payload_size      = lr1_mac->rx_down_data.rx_payload_size - MICSIZE;
@@ -1112,13 +1115,14 @@ rx_packet_type_t lr1_stack_mac_rx_frame_decode( lr1_stack_mac_t* lr1_mac )
         lr1_mac->rx_major                            = rx_major;
         lr1_mac->rx_down_data.rx_metadata.tx_ack_bit = tx_ack_bit;
         lr1_mac->fcnt_dwn                            = fcnt_dwn_stack_tmp;
-        lr1_mac->adr_ack_cnt                         = 0;  // reset adr counter, receive a valid frame.
+        lr1_mac->adr_ack_cnt                         = 0;  // reset adr counter, received a valid frame.
+        lr1_mac->no_downlink_limit_bitfield          = 0;
         lr1_mac->no_rx_packet_count_in_mobile_mode   = 0;
         lr1_mac->no_rx_packet_count                  = 0;
         lr1_mac->no_rx_packet_since_s                = smtc_modem_hal_get_time_in_s( );
         lr1_mac->tx_fopts_current_length             = 0;  // reset the fopts of the sticky set in payload
         lr1_mac->tx_fopts_lengthsticky = 0;  // reset the fopts of the sticky cmd received on a valid frame
-                                             // if received on RX1 or RX2
+                                             // if received on Rx1 or Rx2
     }
 
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( " rx_packet_type = %d\n", rx_packet_type );
@@ -1132,7 +1136,7 @@ void lr1_stack_mac_update_tx_done( lr1_stack_mac_t* lr1_mac )
         lr1_mac->no_rx_packet_count_in_mobile_mode++;
     }
 
-    if( lr1_mac->no_rx_packet_count < 0xFFFF )
+    if( ( lr1_mac->no_rx_packet_count < 0xFFFF ) && ( lr1_mac->no_rx_windows == 0 ) )
     {
         lr1_mac->no_rx_packet_count++;
     }
@@ -1229,22 +1233,24 @@ void lr1_stack_mac_update( lr1_stack_mac_t* lr1_mac )
                                                  lr1_mac->tx_fopts_current_length ) == OKLORAWAN )
             {
                 smtc_real_decrement_dr( lr1_mac->real, lr1_mac->adr_mode_select, &lr1_mac->tx_data_rate_adr,
-                                        &lr1_mac->tx_power, &lr1_mac->nb_trans );
+                                        &lr1_mac->tx_power, &lr1_mac->nb_trans, &lr1_mac->no_downlink_limit_bitfield );
                 lr1_mac->adr_ack_cnt = lr1_mac->adr_ack_limit;
             }
         }
         else
         {
             smtc_real_decrement_dr( lr1_mac->real, lr1_mac->adr_mode_select, &lr1_mac->tx_data_rate_adr,
-                                    &lr1_mac->tx_power, &lr1_mac->nb_trans );
+                                    &lr1_mac->tx_power, &lr1_mac->nb_trans, &lr1_mac->no_downlink_limit_bitfield );
             lr1_mac->adr_ack_cnt = lr1_mac->adr_ack_limit;
         }
     }
 
-    if( ( lr1_mac->adr_ack_cnt >= lr1_mac->no_rx_packet_reset_threshold ) &&
+    if( ( lr1_mac->no_rx_packet_count >= lr1_mac->no_rx_packet_reset_threshold ) &&
         ( lr1_mac->no_rx_packet_reset_threshold > 0 ) )
     {
-        SMTC_MODEM_HAL_PANIC( "Reach max tx frame without dl, ul cnt:%d\n", lr1_mac->adr_ack_cnt );
+        // Set bit in bitfield to generate event no_rx_packet_reset_threshold
+        lr1_mac->no_downlink_limit_bitfield |= 1 << SMTC_REAL_NO_RX_USER_THRESHOLD;
+//        SMTC_MODEM_HAL_PANIC( "Reach max tx frame without dl, ul cnt:%d\n", lr1_mac->adr_ack_cnt );
     }
 
     // If tx_fopts_length > tx_fopts_lengthsticky, first uplink with Answer(s),
@@ -1773,7 +1779,7 @@ static void frame_header_set( lr1_stack_mac_t* lr1_mac )
 /************************************************************************************************/
 static void link_check_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + LINK_CHECK_ANS_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + LINK_CHECK_ANS_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_size = 0;
     }
@@ -1918,9 +1924,6 @@ static void link_adr_parser( lr1_stack_mac_t* lr1_mac )
         }
 
         // Valid the last TxPower  And Prepare Ans
-        uint8_t tx_power_tmp =
-            ( lr1_mac->nwk_payload[lr1_mac->nwk_payload_index + ( ( nb_link_adr_req - 1 ) * LINK_ADR_REQ_SIZE ) + 1] &
-              0x0F );
         // If power id is 0x0F, ignore the value
         if( tx_power_tmp != 0x0F )
         {
@@ -1981,7 +1984,7 @@ static void link_adr_parser( lr1_stack_mac_t* lr1_mac )
 /**********************************************************************************************************************/
 static void rx_param_setup_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + RXPARRAM_SETUP_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + RXPARRAM_SETUP_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += RXPARRAM_SETUP_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2058,7 +2061,7 @@ static void rx_param_setup_parser( lr1_stack_mac_t* lr1_mac )
 /**********************************************************************************************************************/
 static void duty_cycle_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + DUTY_CYCLE_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + DUTY_CYCLE_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += DUTY_CYCLE_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2085,7 +2088,7 @@ static void duty_cycle_parser( lr1_stack_mac_t* lr1_mac )
 
 static void dev_status_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + DEV_STATUS_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + DEV_STATUS_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += DEV_STATUS_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2114,7 +2117,7 @@ static void dev_status_parser( lr1_stack_mac_t* lr1_mac )
 /**********************************************************************************************************************/
 static void new_channel_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + NEW_CHANNEL_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + NEW_CHANNEL_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += NEW_CHANNEL_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2212,7 +2215,7 @@ static void new_channel_parser( lr1_stack_mac_t* lr1_mac )
 
 static void rx_timing_setup_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + RXTIMING_SETUP_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + RXTIMING_SETUP_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += RXTIMING_SETUP_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2252,7 +2255,7 @@ static void rx_timing_setup_parser( lr1_stack_mac_t* lr1_mac )
 
 static void tx_param_setup_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + TXPARAM_SETUP_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + TXPARAM_SETUP_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += TXPARAM_SETUP_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2308,7 +2311,7 @@ static void tx_param_setup_parser( lr1_stack_mac_t* lr1_mac )
 
 static void dl_channel_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + DL_CHANNEL_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + DL_CHANNEL_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += DL_CHANNEL_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2381,7 +2384,7 @@ status_lorawan_t lr1mac_rx_payload_max_size_check( lr1_stack_mac_t* lr1_mac, uin
     uint8_t size_max = smtc_real_get_max_payload_size( lr1_mac->real, rx_datarate, DOWN_LINK ) + MHDRSIZE + MICSIZE;
     if( size > size_max )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF( "size (%d)> size_max (%d)", size, size_max );
+        SMTC_MODEM_HAL_TRACE_PRINTF( "size (%d)> size_max (%d)\n", size, size_max );
         return ERRORLORAWAN;
     }
 
@@ -2395,7 +2398,7 @@ status_lorawan_t lr1mac_rx_payload_max_size_check( lr1_stack_mac_t* lr1_mac, uin
 static status_lorawan_t device_time_ans_parser( lr1_stack_mac_t* lr1_mac )
 {
     status_lorawan_t ret = OKLORAWAN;
-    if( lr1_mac->nwk_payload_index + DEVICE_TIME_ANS_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + DEVICE_TIME_ANS_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += DEVICE_TIME_ANS_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2437,7 +2440,7 @@ static status_lorawan_t device_time_ans_parser( lr1_stack_mac_t* lr1_mac )
 
 static void beacon_freq_req_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + BEACON_FREQ_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + BEACON_FREQ_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += BEACON_FREQ_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2495,7 +2498,7 @@ static void beacon_freq_req_parser( lr1_stack_mac_t* lr1_mac )
 /*********************************************************************************************************************/
 static void ping_slot_channel_req_parser( lr1_stack_mac_t* lr1_mac )
 {
-    if( lr1_mac->nwk_payload_index + PING_SLOT_CHANNEL_REQ_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + PING_SLOT_CHANNEL_REQ_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += PING_SLOT_CHANNEL_REQ_SIZE;
         lr1_mac->nwk_payload_size = 0;
@@ -2569,7 +2572,7 @@ static void ping_slot_channel_req_parser( lr1_stack_mac_t* lr1_mac )
 static status_lorawan_t ping_slot_info_ans_parser( lr1_stack_mac_t* lr1_mac )
 {
     status_lorawan_t ret = OKLORAWAN;
-    if( lr1_mac->nwk_payload_index + PING_SLOT_INFO_ANS_SIZE > lr1_mac->nwk_payload_size )
+    if( ( lr1_mac->nwk_payload_index + PING_SLOT_INFO_ANS_SIZE ) > lr1_mac->nwk_payload_size )
     {
         lr1_mac->nwk_payload_index += PING_SLOT_INFO_ANS_SIZE;
         lr1_mac->nwk_payload_size = 0;

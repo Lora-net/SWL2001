@@ -97,7 +97,7 @@
 #ifndef GNSS_SEND_DEEP_DBG_TRACE
 #define GNSS_SEND_DEEP_DBG_TRACE MODEM_HAL_FEATURE_OFF
 #endif
-#if( GNSS_SEND_DEEP_DBG_TRACE )
+#if ( GNSS_SEND_DEEP_DBG_TRACE )
 #define GNSS_SEND_TRACE_PRINTF_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ )
 #define GNSS_SEND_TRACE_ARRAY_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_ARRAY( __VA_ARGS__ )
 #else
@@ -304,15 +304,22 @@ static void mw_gnss_send_service_on_launch( void* context_callback )
 
     IS_SERVICE_INITIALIZED( );
 
+    // If not join -> exit
+    if( lorawan_api_isjoined( mw_gnss_send_obj.stack_id ) != JOINED )
+    {
+        SMTC_MODEM_HAL_TRACE_WARNING( "modem not join\n" );
+        return;
+    }
+
     mw_gnss_send_obj.is_busy = true;
 
     prepare_tx_buffer( &tx_buffer, &tx_buffer_size, &port );
 
     if( mw_gnss_send_obj.send_mode == SMTC_MODEM_SEND_MODE_UPLINK )
     {
-        send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA, port, true, tx_buffer, tx_buffer_size, UNCONF_DATA_UP,
-                                                smtc_modem_hal_get_time_in_ms( ) ,
-                                                mw_gnss_send_obj.stack_id );
+        send_status =
+            tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, port, true, tx_buffer, tx_buffer_size,
+                                         UNCONF_DATA_UP, smtc_modem_hal_get_time_in_ms( ), mw_gnss_send_obj.stack_id );
 
         /* Set result in task_context for later check */
         if( send_status == OKLORAWAN )
@@ -324,8 +331,9 @@ static void mw_gnss_send_service_on_launch( void* context_callback )
         else
         {
             task_manager->modem_task[mw_gnss_send_obj.task_id].task_context = false;
-            SMTC_MODEM_HAL_TRACE_ERROR( "GNSS Tx [%d]: tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,) failed.\n",
-                                        mw_gnss_send_obj.nb_scans_sent );
+            SMTC_MODEM_HAL_TRACE_ERROR(
+                "GNSS Tx [%d]: tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,) failed.\n",
+                mw_gnss_send_obj.nb_scans_sent );
         }
     }
     else
@@ -360,7 +368,8 @@ static void mw_gnss_send_service_on_update( void* context_callback )
     IS_SERVICE_INITIALIZED( );
 
     /* Update context if the call to the lorawan stack send succeeded */
-    if( task_manager->modem_task[mw_gnss_send_obj.task_id].task_context == true )
+    if( ( task_manager->modem_task[mw_gnss_send_obj.task_id].task_context == true ) &&
+        ( tx_protocol_manager_tx_is_aborted( ) == false ) )
     {
         mw_gnss_send_obj.nb_scans_sent += 1;
     }
@@ -418,11 +427,13 @@ static void send_event( smtc_modem_event_type_t event )
 
 static void trace_print_event_data_terminated( const smtc_modem_gnss_event_data_terminated_t* data )
 {
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     if( data != NULL )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "TERMINATED info:\n" );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- number of scans sent: %u\n", data->nb_scans_sent );
     }
+#endif
 }
 
 static void prepare_tx_buffer( uint8_t** tx_buffer, uint8_t* tx_buffer_size, uint8_t* port )

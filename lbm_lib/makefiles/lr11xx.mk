@@ -11,6 +11,8 @@ TARGET = lr1120
 endif
 ifeq ($(RADIO),lr1121)
 TARGET = lr1121
+override LBM_GEOLOCATION = no
+override LBM_ALMANAC = no
 endif
 
 # Allow modem options
@@ -25,7 +27,9 @@ RADIO_DRIVER_C_SOURCES += \
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_crypto_engine.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_driver_version.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_radio.c\
+	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_radio_timings.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_regmem.c\
+	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_rttof.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_system.c\
 	smtc_modem_core/radio_drivers/lr11xx_driver/src/lr11xx_lr_fhss.c
 
@@ -70,6 +74,7 @@ SMTC_MODEM_CORE_C_SOURCES += \
 	smtc_modem_core/geolocation_services/mw_gnss_scan.c\
 	smtc_modem_core/geolocation_services/mw_gnss_send.c\
 	smtc_modem_core/geolocation_services/mw_gnss_almanac.c\
+	smtc_modem_core/geolocation_services/mw_gnss_almanac_full_update.c\
 	smtc_modem_core/geolocation_services/gnss_helpers.c\
 	smtc_modem_core/geolocation_services/mw_wifi_scan.c\
 	smtc_modem_core/geolocation_services/mw_wifi_send.c\

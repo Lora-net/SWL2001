@@ -13,6 +13,7 @@ This folder contains implementations of LoRa Basics Modem on some MCU boards and
 
 Semtech chosen radio board:
 
+- lr2021 (EVK board)
 - lr1110 (EVK board)
 - lr1120 (EVK board)
 - lr1121 (EVK board)
@@ -35,8 +36,16 @@ LoRaWAN credentials shall be provided in [example_options.h](main_examples/examp
 
 Build command example for lr1110 radio
 
+With Make
 ```bash
 make lr1110 MODEM_APP=PERIODICAL_UPLINK
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=periodical_uplink -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 #### Hardware Modem
@@ -46,8 +55,16 @@ All functions included in lora basics modem api can be called using commands.
 
 Build command example for lr1110 radio
 
+With Make
 ```bash
 make lr1110 MODEM_APP=HW_MODEM
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=hw_modem -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 #### Porting tool
@@ -56,8 +73,16 @@ This tool provides a automatic suite of tests that will help user ensures that l
 
 Build command example for lr1110 radio
 
+With Make
 ```bash
 make lr1110 MODEM_APP=PORTING_TESTS
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=porting_tests -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 #### LCTT Certification
@@ -68,8 +93,16 @@ LoRaWAN credentials and region shall be provided in [example_options.h](main_exa
 
 Build command example for lr1110 radio
 
+With Make
 ```bash
 make lr1110 MODEM_APP=LCTT_CERTIF
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=lctt_certif -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 ### Relay
@@ -88,16 +121,30 @@ LoRaWAN credentials shall be provided in [example_options.h](main_examples/examp
 
 Build command example for lr1110 radio
 
+With Make
 ```bash
-
 make full_lr1110 MODEM_APP=PERIODICAL_UPLINK ALLOW_RELAY_TX=yes
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=periodical_uplink -DLBM_RELAY_TX=ON -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 Or to be tested with the LCTT
 
+With Make
 ```bash
-
 make full_lr1110 MODEM_APP=LCTT_CERTIF ALLOW_RELAY_TX=yes
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=lctt_certif -DLBM_RELAY_TX=ON -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 #### Relay Rx
@@ -112,16 +159,30 @@ LoRaWAN credentials shall be provided in [example_options.h](main_examples/examp
 
 Build command example for lr1110 radio
 
+With Make
 ```bash
-
 make full_lr1110 MODEM_APP=PERIODICAL_UPLINK ALLOW_RELAY_RX=yes
+```
+
+or with cmake:
+
+```bash
+cmake -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=periodical_uplink -DLBM_RELAY_RX=ON -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build/
 ```
 
 Or to be tested with the LCTT
 
+With Make
 ```bash
-
 make full_lr1110 MODEM_APP=LCTT_CERTIF ALLOW_RELAY_RX=yes
+```
+
+or with cmake:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DBOARD=NUCLEO_L476 -DLBM_RADIO=lr1110 -DAPP=lctt_certif -DLBM_RELAY_RX=ON -DLBM_CMAKE_CONFIG_AUTO=ON
+ninja -C build
 ```
 
 ### MCU Porting
@@ -143,4 +204,4 @@ Any smtc_modem_hal function will be mapped with corresponding mcu porting functi
 
 ## Fuota support
 
-Once the Fuota services are enabled (refer to the main readme for instructions on how to activate Fuota), the periodical example is sufficient to launch a Fuota campaign. However, you will need to enable the flag `ALLOW_FUOTA` to "yes" in the `app_options.mk` file.
+Once the Fuota services are enabled (refer to the main readme for instructions on how to activate Fuota), the periodical example is sufficient to launch a Fuota campaign. However, you will need to enable the flag `USE_FUOTA` to "yes" in the `app_options.mk` file.

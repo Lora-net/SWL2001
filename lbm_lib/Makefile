@@ -10,7 +10,7 @@
 # default action: print help
 #-----------------------------------------------------------------------------
 help:
-	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	lr1121	sx1261	sx1262	sx1268 sx1272 sx1276")
+	$(call echo_help_b, "Available TARGETs:	sx128x	lr1110	lr1120	lr1121	sx1261	sx1262	sx1268 sx1272 sx1276 lr2021")
 	$(call echo_help, "")
 	$(call echo_help_b, "-------------------------------- Clean -------------------------------------")
 	$(call echo_help, " * make clean_<TARGET>                     : clean basic_modem for a given target")
@@ -112,12 +112,16 @@ ifeq ($(RADIO),sx1276)
 -include makefiles/sx127x.mk
 endif
 
+ifeq ($(RADIO),lr2021)
+-include makefiles/lr20xx.mk
+endif
+
 #-----------------------------------------------------------------------------
 -include makefiles/common.mk
 
 .PHONY: clean_all all help
 
-all: basic_modem_sx128x basic_modem_lr1110 basic_modem_lr1120  basic_modem_lr1121 basic_modem_sx1261 basic_modem_sx1262 basic_modem_sx1272 basic_modem_sx1276
+all: basic_modem_sx128x basic_modem_lr1110 basic_modem_lr1120  basic_modem_lr1121 basic_modem_sx1261 basic_modem_sx1262 basic_modem_sx1272 basic_modem_sx1276 basic_modem_lr2021
 
 #-----------------------------------------------------------------------------
 # Clean
@@ -151,6 +155,9 @@ clean_sx1272:
 
 clean_sx1276:
 	$(MAKE) clean_target RADIO=sx1276
+
+clean_lr2021:
+	$(MAKE) clean_target RADIO=lr2021
 
 clean:
 	$(MAKE) clean_target
@@ -188,7 +195,7 @@ ifneq ($(RADIO),lr1110)
 ifneq ($(RADIO),lr1120)
 ifneq ($(RADIO),lr1121)
 	$(call echo_error, "------------------------------------------------------------")
-	$(call echo_error, "sx126x sx127x and sx128x radio tagets: only soft crypto can be used")
+	$(call echo_error, "sx126x sx127x sx128x and lr20xx radio tagets: only soft crypto can be used")
 	$(call echo_error, "Please use CRYPTO=SOFT option")
 	$(call echo_error, "------------------------------------------------------------")
 	exit 1
@@ -225,3 +232,6 @@ basic_modem_sx1272:
 
 basic_modem_sx1276:
 	$(MAKE) basic_modem RADIO=sx1276 $(MTHREAD_FLAG)
+
+basic_modem_lr2021:
+	$(MAKE) basic_modem RADIO=lr2021 $(MTHREAD_FLAG)

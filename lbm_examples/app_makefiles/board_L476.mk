@@ -47,7 +47,8 @@ BOARD_C_SOURCES = \
 	smtc_hal_l4/smtc_hal_lp_timer.c\
 	smtc_hal_l4/smtc_hal_trace.c\
 	smtc_hal_l4/smtc_hal_uart.c\
-	smtc_hal_l4/smtc_hal_watchdog.c
+	smtc_hal_l4/smtc_hal_watchdog.c\
+	smtc_hal_l4/smtc_hal_libc_stub.c
 
 BOARD_ASM_SOURCES =  \
 	mcu_drivers/core/STM32L4xx/startup_stm32l476xx.s

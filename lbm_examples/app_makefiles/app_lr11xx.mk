@@ -1,5 +1,5 @@
 ##############################################################################
-# Definitions for the LR11XX tranceiver
+# Definitions for the LR11XX transceiver
 ##############################################################################
 -include app_makefiles/app_options.mk
 

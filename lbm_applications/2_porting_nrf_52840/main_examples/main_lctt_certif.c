@@ -56,7 +56,7 @@
 #include "modem_pinout.h"
 
 #include <string.h>
-
+#include "smtc_modem_relay_api.h"
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
@@ -347,9 +347,6 @@ static void modem_event_callback( void )
                 // start periodical uplink alarm
                 ASSERT_SMTC_MODEM_RC( smtc_modem_alarm_start_timer( PERIODICAL_UPLINK_DELAY_S ) );
             }
-
-            ASSERT_SMTC_MODEM_RC( smtc_modem_start_alcsync_service( stack_id ) );
-
             break;
 
         case SMTC_MODEM_EVENT_TXDONE:
@@ -442,6 +439,44 @@ static void modem_event_callback( void )
 
         case SMTC_MODEM_EVENT_MUTE:
             SMTC_HAL_TRACE_INFO( "Event received: MUTE\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_DYNAMIC:  //!< Relay TX dynamic mode has enable or disable the WOR protocol
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_DYNAMIC\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_MODE:  //!< Relay TX activation has been updated
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_MODE\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_RELAY_TX_SYNC:  //!< Relay TX synchronisation has changed
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_TX_SYNC\n" );
+            break;
+        case SMTC_MODEM_EVENT_RELAY_RX_RUNNING:
+            SMTC_HAL_TRACE_INFO( "Event received: RELAY_RX_RUNNING\n" );
+#if defined( ADD_CSMA )
+            bool csma_state = false;
+            ASSERT_SMTC_MODEM_RC( smtc_modem_csma_get_state( STACK_ID, &csma_state ) );
+            if( ( current_event.event_data.relay_rx.status == true ) && ( csma_state == true ) )
+            {
+                // Disable CSMA when Relay Rx Is enabled by network
+                ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, false ) );
+            }
+#if defined( ENABLE_CSMA_BY_DEFAULT )
+            if( current_event.event_data.relay_rx.status == false )
+            {
+                ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, true ) );
+            }
+#endif  // ENABLE_CSMA_BY_DEFAULT
+#endif  // ADD_CSMA
+
+            break;
+        case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
+            SMTC_HAL_TRACE_INFO( "Event received: DUTY_CYCLE\n" );
+            break;
+
+        case SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD:
+            SMTC_HAL_TRACE_INFO( "Event received: NO_DOWNLINK_THRESHOLD\n" );
             break;
 
         default:

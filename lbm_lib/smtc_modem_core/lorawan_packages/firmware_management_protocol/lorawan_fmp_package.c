@@ -288,7 +288,7 @@ void lorawan_fmp_package_service_on_launch( void* service_id )
     if( ( ctx->fmp_task_ctx_mask & ANS_CMD_TASK_MASK ) == ANS_CMD_TASK_MASK )
     {
         ctx->fmp_current_task_ctx = ANS_CMD_TASK_MASK;
-        SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch ANS_CMD_TASK n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch ANS_CMD_TASK\n" );
         if( ctx->fmp_tx_payload_ans_size > 0 )
         {
             tx_protocol_manager_request(
@@ -303,7 +303,7 @@ void lorawan_fmp_package_service_on_launch( void* service_id )
     // else if( ( ctx->fmp_task_ctx_mask & REQUEST_TIME_SYNC_TASK_MASK ) == REQUEST_TIME_SYNC_TASK_MASK )
     // {
     //     ctx->fmp_current_task_ctx = REQUEST_TIME_SYNC_TASK_MASK;
-    //     SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch REQUEST_TIME_SYNC_TASK n" );
+    //     SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch REQUEST_TIME_SYNC_TASK\n" );
     //     ctx->request_time_sync             = false;
     //     cid_from_device_t cid_buffer[]     = { DEVICE_TIME_REQ };
     //     uint8_t           cid_request_size = 1;
@@ -313,7 +313,7 @@ void lorawan_fmp_package_service_on_launch( void* service_id )
     else if( ( ctx->fmp_task_ctx_mask & REQUEST_REBOOT_TASK_MASK ) == REQUEST_REBOOT_TASK_MASK )
     {
         ctx->fmp_current_task_ctx = REQUEST_REBOOT_TASK_MASK;
-        SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch REQUEST_REBOOT_TASK_MASK n" );
+        SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_fmp_package launch REQUEST_REBOOT_TASK_MASK\n" );
     }
 }
 

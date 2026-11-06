@@ -85,6 +85,7 @@ BOARD_C_SOURCES = \
   $(HAL_NRF_DIR)/smtc_hal_trace.c \
   $(HAL_NRF_DIR)/smtc_hal_uart.c \
   $(HAL_NRF_DIR)/smtc_hal_watchdog.c \
+  $(HAL_NRF_DIR)/smtc_hal_libc_stub.c \
   smtc_modem_hal/smtc_modem_hal.c \
 
 # Include folders common to all targets

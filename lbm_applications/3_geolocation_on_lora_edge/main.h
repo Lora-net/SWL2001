@@ -68,6 +68,7 @@ extern "C" {
 #define EXAMPLE_GEOLOCATION 0
 #define EXAMPLE_LR11XX_FLASHER 1
 #define EXAMPLE_FULL_ALMANAC_UPDATE 2
+#define EXAMPLE_WIFI_REGION_DETECTION 3
 
 /*
  * -----------------------------------------------------------------------------
@@ -77,6 +78,7 @@ extern "C" {
 void main_geolocation( void );
 void main_lr11xx_flasher( void );
 void main_full_almanac_update( void );
+void main_wifi_region_detection( void );
 
 #ifdef __cplusplus
 }

@@ -241,6 +241,21 @@ void modem_reset_modem_context( void );
  */
 uint32_t modem_get_reset_counter( void );
 
+/**
+ * @brief Set a flag to report all received downlinks to the user with a Downlink event
+ *
+ * @param report_all_downlinks
+ */
+void modem_set_report_all_downlinks_to_user( bool report_all_downlinks );
+
+/**
+ * @brief Get flag status that report all received downlinks to the user with a Downlink event
+ *
+ * @return true
+ * @return false
+ */
+bool modem_get_report_all_downlinks_to_user( void );
+
 #ifdef __cplusplus
 }
 #endif

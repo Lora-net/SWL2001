@@ -97,7 +97,7 @@
 #ifndef WIFI_SEND_DEEP_DBG_TRACE
 #define WIFI_SEND_DEEP_DBG_TRACE MODEM_HAL_FEATURE_OFF
 #endif
-#if( WIFI_SEND_DEEP_DBG_TRACE )
+#if ( WIFI_SEND_DEEP_DBG_TRACE )
 #define WIFI_SEND_TRACE_PRINTF_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_PRINTF( __VA_ARGS__ )
 #define WIFI_SEND_TRACE_ARRAY_DEBUG( ... ) SMTC_MODEM_HAL_TRACE_ARRAY( __VA_ARGS__ )
 #else
@@ -109,7 +109,6 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-
 
 /**
  * @brief Minimal number of detected access point in a scan result to consider the scan valid
@@ -149,7 +148,7 @@ typedef struct mw_wifi_send_s
     uint8_t fport;  //!< LoRaWAN port on which to send NAV packets
     bool    pending_evt_terminated;
     /* NAV related fields */
-    const wifi_scan_all_result_t*      wifi_results;    //!< WiFi results to be sent over the air
+    const wifi_scan_result_t*          wifi_results;    //!< WiFi results to be sent over the air
     uint8_t                            nb_scans_sent;   //!< Number of scans already sent
     smtc_modem_geolocation_send_mode_t send_mode;       //!< Send mode to be used: uplink, store&fwd, bypass
     smtc_modem_wifi_payload_format_t   payload_format;  //!< Selected payload format (MAC or MAC+RSSI)
@@ -168,7 +167,8 @@ static mw_wifi_send_t mw_wifi_send_obj = { 0 };
 /*!
  * @brief The buffer containing results to be sent over the air
  */
-static uint8_t wifi_result_buffer[WIFI_TAG_SIZE + ( ( WIFI_AP_RSSI_SIZE + WIFI_AP_ADDRESS_SIZE ) * WIFI_MAX_RESULTS )];
+static uint8_t
+    wifi_result_buffer[WIFI_TAG_SIZE + ( ( WIFI_AP_RSSI_SIZE + WIFI_AP_ADDRESS_SIZE ) * WIFI_MAX_RESULTS_TO_SEND )];
 
 /*!
  * @brief Current result buffer size
@@ -232,7 +232,7 @@ void mw_wifi_send_services_init( uint8_t* service_id, uint8_t task_id,
     mw_wifi_send_obj.payload_format = SMTC_MODEM_WIFI_PAYLOAD_MAC;
 }
 
-void mw_wifi_send_add_task( const wifi_scan_all_result_t* wifi_results )
+void mw_wifi_send_add_task( const wifi_scan_result_t* wifi_results )
 {
     SMTC_MODEM_HAL_TRACE_PRINTF( "mw_wifi_send_add_task: add task in supervisor\n" );
 
@@ -336,15 +336,22 @@ static void mw_wifi_send_service_on_launch( void* context_callback )
 
     IS_SERVICE_INITIALIZED( );
 
+    // If not join -> exit
+    if( lorawan_api_isjoined( mw_wifi_send_obj.stack_id ) != JOINED )
+    {
+        SMTC_MODEM_HAL_TRACE_WARNING( "modem not join\n" );
+        return;
+    }
+
     mw_wifi_send_obj.is_busy = true;
 
     prepare_tx_buffer( );
 
     if( mw_wifi_send_obj.send_mode == SMTC_MODEM_SEND_MODE_UPLINK )
     {
-        send_status = tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,
-            mw_wifi_send_obj.fport, true, wifi_result_buffer, wifi_result_buffer_size, UNCONF_DATA_UP,
-            smtc_modem_hal_get_time_in_ms( )  , mw_wifi_send_obj.stack_id );
+        send_status = tx_protocol_manager_request( TX_PROTOCOL_TRANSMIT_LORA, mw_wifi_send_obj.fport, true,
+                                                   wifi_result_buffer, wifi_result_buffer_size, UNCONF_DATA_UP,
+                                                   smtc_modem_hal_get_time_in_ms( ), mw_wifi_send_obj.stack_id );
 
         if( send_status == OKLORAWAN )
         {
@@ -355,7 +362,8 @@ static void mw_wifi_send_service_on_launch( void* context_callback )
         else
         {
             task_manager->modem_task[mw_wifi_send_obj.task_id].task_context = false;
-            SMTC_MODEM_HAL_TRACE_ERROR( "Wi-Fi Tx: tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,) failed.\n" );
+            SMTC_MODEM_HAL_TRACE_ERROR(
+                "Wi-Fi Tx: tx_protocol_manager_request (TX_PROTOCOL_TRANSMIT_LORA,) failed.\n" );
         }
     }
     else
@@ -390,7 +398,8 @@ static void mw_wifi_send_service_on_update( void* context_callback )
     IS_SERVICE_INITIALIZED( );
 
     /* Update context if the call to the lorawan stack send succeeded */
-    if( task_manager->modem_task[mw_wifi_send_obj.task_id].task_context == true )
+    if( ( task_manager->modem_task[mw_wifi_send_obj.task_id].task_context == true ) &&
+        ( tx_protocol_manager_tx_is_aborted( ) == false ) )
     {
         mw_wifi_send_obj.nb_scans_sent += 1;
     }
@@ -418,22 +427,28 @@ static void send_event( smtc_modem_event_type_t event )
 
 static void trace_print_event_data_terminated( const smtc_modem_wifi_event_data_terminated_t* data )
 {
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     if( data != NULL )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "TERMINATED info:\n" );
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- number of scans sent: %u\n", data->nb_scans_sent );
     }
+#endif
 }
 
 static void prepare_tx_buffer( void )
 {
+    uint8_t nb_results_to_send = ( mw_wifi_send_obj.wifi_results->nbr_results > WIFI_MAX_RESULTS_TO_SEND )
+                                     ? WIFI_MAX_RESULTS_TO_SEND
+                                     : mw_wifi_send_obj.wifi_results->nbr_results;
+
     /* Add the payload format tag */
     wifi_result_buffer_size                     = 0;
     wifi_result_buffer[wifi_result_buffer_size] = mw_wifi_send_obj.payload_format;
     wifi_result_buffer_size += WIFI_TAG_SIZE;
 
     /* Concatenate all results in send buffer */
-    for( uint8_t i = 0; i < mw_wifi_send_obj.wifi_results->nbr_results; i++ )
+    for( uint8_t i = 0; i < nb_results_to_send; i++ )
     {
         /* Copy Access Point measured RSSI in result buffer (if requested) */
         if( mw_wifi_send_obj.payload_format == SMTC_MODEM_WIFI_PAYLOAD_MAC_RSSI )

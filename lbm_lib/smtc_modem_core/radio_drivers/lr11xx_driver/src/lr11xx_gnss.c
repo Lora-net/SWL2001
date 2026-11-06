@@ -474,8 +474,14 @@ lr11xx_status_t lr11xx_gnss_read_freq_search_space( const void*                 
         ( uint8_t )( LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_OC >> 0 ),
     };
 
-    return ( lr11xx_status_t ) lr11xx_hal_read( radio, cbuffer, LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH,
-                                                ( uint8_t* ) freq_search_space, sizeof( uint8_t ) );
+    uint8_t               freq_search_space_raw = 0;
+    const lr11xx_status_t status                = ( lr11xx_status_t ) lr11xx_hal_read(
+                       radio, cbuffer, LR11XX_GNSS_READ_FREQ_SEARCH_SPACE_CMD_LENGTH, &freq_search_space_raw, 1 );
+    if( status == LR11XX_STATUS_OK )
+    {
+        *freq_search_space = ( lr11xx_gnss_freq_search_space_t ) freq_search_space_raw;
+    }
+    return status;
 }
 
 lr11xx_status_t lr11xx_gnss_read_firmware_version( const void* context, lr11xx_gnss_version_t* version )

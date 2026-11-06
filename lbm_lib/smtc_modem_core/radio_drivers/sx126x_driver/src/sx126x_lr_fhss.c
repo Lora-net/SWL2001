@@ -40,11 +40,14 @@
 #include "lr_fhss_mac.h"
 #include "sx126x_lr_fhss.h"
 #include "sx126x_hal.h"
+#include "sx126x.h"
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
+
+#define UNUSED( x ) ( void ) ( x )
 
 /*
  * -----------------------------------------------------------------------------
@@ -135,6 +138,7 @@ static inline unsigned int sx126x_lr_fhss_get_grid_in_pll_steps( const sx126x_lr
 
 sx126x_status_t sx126x_lr_fhss_init( const void* context, const sx126x_lr_fhss_params_t* params )
 {
+    UNUSED( params );
     const uint8_t pkt_params_buf[] = {
         SX126X_SET_PKT_PARAMS, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     };
@@ -162,6 +166,14 @@ sx126x_status_t sx126x_lr_fhss_init( const void* context, const sx126x_lr_fhss_p
     }
 
     status = sx126x_set_buffer_base_address( context, 0x00, 0x00 );
+    if( status != SX126X_STATUS_OK )
+    {
+        return status;
+    }
+
+    // WORKAROUND - Modulation Quality with 500 kHz LoRa Bandwidth, see DS_SX1261-2_V1.2 datasheet chapter 15.1
+    status = sx126x_tx_modulation_workaround( context, SX126X_PKT_TYPE_LR_FHSS, ( sx126x_lora_bw_t ) 0 );
+    // WORKAROUND END
     return status;
 }
 
@@ -369,6 +381,8 @@ sx126x_status_t sx126x_lr_fhss_handle_hop( const void* context, const sx126x_lr_
 sx126x_status_t sx126x_lr_fhss_handle_tx_done( const void* context, const sx126x_lr_fhss_params_t* params,
                                                sx126x_lr_fhss_state_t* state )
 {
+    UNUSED( params );
+    UNUSED( state );
     const uint8_t ctrl = SX126X_LR_FHSS_DISABLE_HOPPING;
 
     return sx126x_write_register( context, SX126X_LR_FHSS_REG_CTRL, &ctrl, 1 );

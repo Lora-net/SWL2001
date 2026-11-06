@@ -118,7 +118,7 @@ typedef enum smtc_modem_region_e
     SMTC_MODEM_REGION_US_915        = 3,
     SMTC_MODEM_REGION_AU_915        = 4,
     SMTC_MODEM_REGION_CN_470        = 5,
-    SMTC_MODEM_REGION_WW2G4         = 6,
+    SMTC_MODEM_REGION_WW_2G4        = 6,
     SMTC_MODEM_REGION_AS_923_GRP2   = 7,
     SMTC_MODEM_REGION_AS_923_GRP3   = 8,
     SMTC_MODEM_REGION_IN_865        = 9,
@@ -356,6 +356,7 @@ typedef enum smtc_modem_event_type_e
     SMTC_MODEM_EVENT_RELAY_RX_RUNNING,  //!< Relay RX running has changed
     SMTC_MODEM_EVENT_TEST_MODE,
     SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE,
+    SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD,  //!< ADR backoff end, or user-defined no RX number threshold
     SMTC_MODEM_EVENT_MAX,
 } smtc_modem_event_type_t;
 
@@ -431,6 +432,14 @@ typedef enum smtc_modem_event_test_mode_status_e
     SMTC_MODEM_EVENT_TEST_MODE_RX_DONE      = 3,
     SMTC_MODEM_EVENT_TEST_MODE_RX_ABORTED   = 4,
 } smtc_modem_event_test_mode_status_t;
+
+typedef enum smtc_modem_event_no_rx_threshold_status_e
+{
+    SMTC_MODEM_EVENT_NO_RX_THRESHOLD_ADR_BACKOFF_END = ( 1 << 0 ),
+    SMTC_MODEM_EVENT_NO_RX_THRESHOLD_USER_THRESHOLD =
+        ( 1 << 1 ),  //!< Set by user by API call lorawan_api_set_no_rx_packet_threshold()
+} smtc_modem_event_no_rx_threshold_status_t;
+
 /**
  * @brief Structure holding event-related data
  */
@@ -509,6 +518,11 @@ typedef struct smtc_modem_event_s
         {
             uint8_t status;
         } regional_duty_cycle;
+        struct
+        {
+            smtc_modem_event_no_rx_threshold_status_t status;
+        } no_downlink;
+
     } event_data;
 } smtc_modem_event_t;
 
@@ -766,7 +780,6 @@ smtc_modem_return_code_t smtc_modem_get_chip_eui( uint8_t stack_id, uint8_t chip
  */
 smtc_modem_return_code_t smtc_modem_derive_keys( uint8_t stack_id );
 
-#if defined( USE_LR11XX_CE )
 /**
  * @brief Get Fragmented DataBlockIntKey
  *
@@ -797,7 +810,7 @@ smtc_modem_return_code_t smtc_modem_get_data_block_int_key( uint8_t stack_id,
  */
 smtc_modem_return_code_t smtc_modem_derive_and_set_data_block_int_key(
     uint8_t stack_id, const uint8_t gen_appkey[SMTC_MODEM_KEY_LENGTH] );
-#endif  // USE_LR11XX_CE
+
 /*
  * -----------------------------------------------------------------------------
  * ----------- ADVANCED MODEM FUNCTIONS ----------------------------------------
@@ -1152,7 +1165,7 @@ smtc_modem_return_code_t smtc_modem_adr_set_profile(
 smtc_modem_return_code_t smtc_modem_adr_get_profile( uint8_t stack_id, smtc_modem_adr_profile_t* adr_profile );
 
 /**
- * @brief Set the number of transmissions in case of unconfirmed uplink
+ * @brief Set the number of transmissions for confirmed or unconfirmed uplink
  *
  * @param [in]  stack_id  Stack identifier
  * @param [in]  nb_trans  Number of transmissions ( 0 < value < 16 )
@@ -1226,6 +1239,34 @@ smtc_modem_return_code_t smtc_modem_set_adr_ack_limit_delay( uint8_t stack_id, u
  */
 smtc_modem_return_code_t smtc_modem_get_adr_ack_limit_delay( uint8_t stack_id, uint8_t* adr_ack_limit,
                                                              uint8_t* adr_ack_delay );
+
+/**
+ * @brief Set a flag to report all received downlinks to the user with a Downlink Event (ex: FPort 0 downlink, ACK)
+ *
+ * @param [in] stack_id Stack identifier
+ * @param [in] report_all_downlinks Set a flag to report all downlinks to the user with a Downlink Event
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                 Command executed without errors
+ * @retval SMTC_MODEM_RC_BUSY               Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID   Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_set_report_all_downlinks_to_user( uint8_t stack_id, bool report_all_downlinks );
+
+/**
+ * @brief Get status of flag that report all received downlinks to the user with a Downlink Event (ex: FPort 0 downlink,
+ * ACK)
+ *
+ * @param [in] stack_id Stack identifier
+ * @param [in] report_all_downlinks Set a flag to report all downlinks to the user with a Downlink Event
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK                 Command executed without errors
+ * @retval SMTC_MODEM_RC_INVALID            \p report_all_downlinks is NULL
+ * @retval SMTC_MODEM_RC_BUSY               Modem is currently in test mode
+ * @retval SMTC_MODEM_RC_INVALID_STACK_ID   Invalid \p stack_id
+ */
+smtc_modem_return_code_t smtc_modem_get_report_all_downlinks_to_user( uint8_t stack_id, bool* report_all_downlinks );
 
 /*
  * -----------------------------------------------------------------------------
@@ -1353,7 +1394,7 @@ smtc_modem_return_code_t smtc_modem_csma_get_state( uint8_t stack_id, bool* enab
  *
  * @param [in]  stack_id                Stack identifier
  * @param [out] max_ch_change           Number of channel change when noisy before send the packet in ALOHA mode
- *                                          (default:4)
+ *                                          (default:6)
  * @param [out] bo_enabled              Enable the back-off (multiple short listen on the same channel (CAD))
  *                                          (default:false)
  * @param [out] nb_bo_max               Configure the number of short listen to check if the channel is free

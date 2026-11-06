@@ -102,6 +102,15 @@ typedef enum
 } smtc_modem_gnss_almanac_update_status_t;
 
 /**
+ * @brief GNSS almanac demodulation service state
+ */
+typedef enum
+{
+    SMTC_MODEM_GNSS_ALMANAC_DEMOD_SERVICE_STATE_STOPPED,
+    SMTC_MODEM_GNSS_ALMANAC_DEMOD_SERVICE_STATE_RUNNING
+} smtc_modem_gnss_almanac_demod_service_state_t;
+
+/**
  * @brief Send mode used by geolocation services
  */
 typedef enum
@@ -111,6 +120,16 @@ typedef enum
     SMTC_MODEM_SEND_MODE_BYPASS,             //!< Scan results are not sent
     __SMTC_MODEM_SEND_MODE__SIZE             //!< Number of send modes available
 } smtc_modem_geolocation_send_mode_t;
+
+/**
+ * @brief Wi-Fi scan mode
+ */
+typedef enum
+{
+    SMTC_MODEM_WIFI_SCAN_MODE_MAC,                    //!< Scan optimized for MAC address detection (low power)
+    SMTC_MODEM_WIFI_SCAN_MODE_MAC_COUNTRY_CODE_SSID,  //!< Scan for MAC address, SSID and Country Code detection
+    __SMTC_MODEM_WIFI_SCAN_MODE__SIZE                 //!< Number of modes available
+} smtc_modem_wifi_scan_mode_t;
 
 /**
  * @brief Wi-Fi payload format (as defined by LR1110 WiFi positioning protocol of LoRaCloud).
@@ -140,7 +159,7 @@ typedef struct
     uint8_t  nav_size;   //!< NAV message size
     uint8_t  nb_svs;     //!< Number of Space Vehicles detected by this scan
     lr11xx_gnss_detected_satellite_t*
-                                             info_svs;  //!< Pointer to information about the SVs detected. See scan_result_t for array size and format.
+        info_svs;  //!< Pointer to information about the SVs detected. See scan_result_t for array size and format.
     lr11xx_gnss_solver_assistance_position_t aiding_position;  //!< Aiding position computed after the scan
     lr11xx_gnss_scan_mode_launched_t
              scan_mode_launched;  //!< Internal scan mode launched by the LR11xx chip (autonomous, assisted,...)
@@ -152,10 +171,11 @@ typedef struct
  */
 typedef struct
 {
-    bool     is_valid;   //!< Is the scan group valid ? (enough SV detected...)
-    uint8_t  token;      //!< Scan group identifier
-    uint32_t timestamp;  //!< Timestamp of the last scan of the group, even if not valid. (GPS time in seconds modulo
-                         //!< 1024 weeks)
+    bool    is_valid;     //!< Is the scan group valid ? (enough SV detected...)
+    uint8_t token;        //!< Scan group identifier
+    bool time_available;  //!< Indicate if the radio is synchronized with GPS time. (necessary for almanac demodulation)
+    uint32_t timestamp;   //!< Timestamp of the last scan of the group, even if not valid. (GPS time in seconds modulo
+                          //!< 1024 weeks)
     uint8_t                                nb_scans_valid;                 //!< Number of valid scans in that scan group
     smtc_modem_gnss_event_data_scan_desc_t scans[GNSS_NAVGROUP_SIZE_MAX];  //!< Descriptions of all single scan results
     uint32_t                               power_consumption_nah;  //!< Power consumption induced by this scan group
@@ -179,6 +199,7 @@ typedef struct
  */
 typedef struct
 {
+    smtc_modem_gnss_almanac_demod_service_state_t service_state;  //!< State of the almanac demodulation service
     smtc_modem_gnss_almanac_update_status_t status_gps;     //!< Is the almanac update completed for GPS constellation
     smtc_modem_gnss_almanac_update_status_t status_beidou;  //!< Is the almanac update completed for GPS constellation
     uint8_t  update_progress_gps;              //!< Update completion percentage status for GPS constellation
@@ -195,7 +216,7 @@ typedef struct
 /**
  * @brief The data that can be retrieved when a SMTC_MODEM_EVENT_WIFI_SCAN_DONE event occurs
  */
-typedef wifi_scan_all_result_t smtc_modem_wifi_event_data_scan_done_t;
+typedef wifi_scan_result_t smtc_modem_wifi_event_data_scan_done_t;
 
 /**
  * @brief The data that can be retrieved when a SMTC_MODEM_EVENT_WIFI_TERMINATED event occurs.
@@ -324,6 +345,21 @@ void smtc_modem_gnss_scan_aggregate( uint8_t stack_id, bool aggregate );
 smtc_modem_return_code_t smtc_modem_gnss_send_mode( uint8_t stack_id, smtc_modem_geolocation_send_mode_t send_mode );
 
 /**
+ * @brief Suspend the modem and perform a full almanac update of the LR11xx radio
+ *
+ * @param [in] stack_id         Stack identifier
+ * @param [in] almanac          Pointer to the almanac image to be flashed
+ * @param [in] almanac_size     Size of the given almanac image
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK     Command executed without errors
+ * @retval SMTC_MODEM_RC_FAIL   Failed to update the almanac
+ * @retval SMTC_MODEM_RC_INVALID Given almanac image is NULL or size is invalid
+ */
+smtc_modem_return_code_t smtc_modem_almanac_full_update( uint8_t stack_id, const uint8_t* almanac,
+                                                         uint16_t almanac_size );
+
+/**
  * @brief Start the GNSS almanac demodulation service. This allows the internal almanac to be updated without any
  * connection to any cloud service.
  *
@@ -333,6 +369,16 @@ smtc_modem_return_code_t smtc_modem_gnss_send_mode( uint8_t stack_id, smtc_modem
  * @retval SMTC_MODEM_RC_OK         Command executed without errors
  */
 smtc_modem_return_code_t smtc_modem_almanac_demodulation_start( uint8_t stack_id );
+
+/**
+ * @brief Stop the GNSS almanac demodulation service.
+ *
+ * @param [in]  stack_id  Stack identifier
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK         Command executed without errors
+ */
+smtc_modem_return_code_t smtc_modem_almanac_demodulation_stop( uint8_t stack_id );
 
 /**
  * @brief Set the GNSS constellations to be used for almanac demodulation
@@ -415,6 +461,20 @@ smtc_modem_return_code_t smtc_modem_wifi_get_event_data_scan_done( uint8_t      
  */
 smtc_modem_return_code_t smtc_modem_wifi_get_event_data_terminated( uint8_t                                  stack_id,
                                                                     smtc_modem_wifi_event_data_terminated_t* data );
+
+/**
+ * @brief Set the mode to be used for the Wi-Fi scan. Default mode is SMTC_MODEM_WIFI_SCAN_MODE_MAC
+ * which is optimized in power consumption when only MAC addresses are needed.
+ * The mode SMTC_MODEM_WIFI_SCAN_MODE_MAC_COUNTRY_CODE_SSID can be used to detect the region of operation. It consumes
+ * more power than the default mode.
+ *
+ * @param [in] stack_id     Stack identifier
+ * @param [in] scan_mode    Mode to be used for the Wi-Fi scan
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK         Command executed without errors
+ */
+smtc_modem_return_code_t smtc_modem_wifi_set_scan_mode( uint8_t stack_id, smtc_modem_wifi_scan_mode_t scan_mode );
 
 /**
  * @brief Set the LoRaWAN port on which to send the Wi-Fi scan results uplinks

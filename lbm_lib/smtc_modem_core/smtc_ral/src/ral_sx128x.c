@@ -1475,4 +1475,44 @@ ral_status_t ral_sx128x_convert_flrc_pkt_params_from_ral( const ral_flrc_pkt_par
     return RAL_STATUS_OK;
 }
 
+ral_status_t ral_sx128x_rttof_set_parameters( const void* context, const uint8_t nb_symbols )
+{
+    ( void ) context;     // Unused parameter
+    ( void ) nb_symbols;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx128x_rttof_set_address( const void* context, const uint32_t address, const uint8_t check_length )
+{
+    ( void ) context;       // Unused parameter
+    ( void ) address;       // Unused parameter
+    ( void ) check_length;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx128x_rttof_set_request_address( const void* context, const uint32_t request_address )
+{
+    ( void ) context;          // Unused parameter
+    ( void ) request_address;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx128x_rttof_set_rx_tx_delay_indicator( const void* context, const uint32_t delay_indicator )
+{
+    ( void ) context;          // Unused parameter
+    ( void ) delay_indicator;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx128x_rttof_get_raw_result( const void* context, ral_lora_bw_t rttof_bw, int32_t* raw_results,
+                                              int32_t* meter_results, int8_t* rssi_result )
+{
+    ( void ) context;        // Unused parameter
+    ( void ) rttof_bw;       // Unused parameter
+    ( void ) raw_results;    // Unused parameter
+    ( void ) meter_results;  // Unused parameter
+    ( void ) rssi_result;    // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
 /* --- EOF ------------------------------------------------------------------ */

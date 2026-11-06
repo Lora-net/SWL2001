@@ -475,6 +475,10 @@ static void modem_event_callback( void )
             SMTC_HAL_TRACE_INFO( "Event received: DUTY_CYCLE\n" );
             break;
 
+        case SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD:
+            SMTC_HAL_TRACE_INFO( "Event received: NO_DOWNLINK_THRESHOLD\n" );
+            break;
+
         default:
             SMTC_HAL_TRACE_ERROR( "Unknown event %u\n", current_event.event_type );
             break;

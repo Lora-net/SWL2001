@@ -117,6 +117,15 @@ status_lorawan_t region_cn_470_rp_1_0_get_join_next_channel( smtc_real_t* real, 
  * \param [OUT] return
  */
 status_channel_t region_cn_470_rp_1_0_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
+
+/**
+ * \brief Check if all default channels are enabled
+ * \remark
+ * \param [IN]  none
+ * \param [OUT] return
+ */
+bool region_cn_470_rp_1_0_are_all_default_channels_enabled( smtc_real_t* real );
+
 /**
  * \brief
  * \remark

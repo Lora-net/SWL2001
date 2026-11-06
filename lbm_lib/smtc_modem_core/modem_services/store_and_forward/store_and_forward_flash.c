@@ -84,7 +84,7 @@
 #define CURRENT_STACK ( task_id / NUMBER_OF_TASKS )
 #define NUMBER_MAX_OF_STORE_AND_FORWARD_OBJ 1  // modify in case of multiple obj
 
-#if( FIFO_BURST_SENDING == true )
+#if ( FIFO_BURST_SENDING == true )
 #define MODEM_TASK_DELAY_MS ( 100 )
 #else
 #define MODEM_TASK_DELAY_MS ( smtc_modem_hal_get_random_nb_in_range( 200, 3000 ) )
@@ -145,7 +145,7 @@ typedef struct store_and_forward_data_s
     bool     confirmed;
     uint16_t crc;  // !! crc MUST be the last field of the structure !!
 
-#if( ( ( DATA_SIZE_MAX + 5 ) % 8 ) != 0 )
+#if ( ( ( DATA_SIZE_MAX + 5 ) % 8 ) != 0 )
     uint8_t padding[( ( DATA_SIZE_MAX + 5 ) % 8 )];
 #endif
 } store_and_forward_flash_data_t;
@@ -522,7 +522,7 @@ static void store_and_forward_flash_service_on_launch( void* service_id )
                     store_and_forward_flash_obj[idx].sending_first_try_timestamp_s = rtc_ms / 1000;
                 }
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
                 int32_t capacity  = circularfs_capacity( &store_and_forward_flash_obj[idx].fs );
                 int32_t free_slot = circularfs_free_slot_estimate( &store_and_forward_flash_obj[idx].fs );
                 SMTC_MODEM_HAL_TRACE_PRINTF( "Store and fwd get data, free: %d/%d \n", free_slot, capacity );
@@ -548,7 +548,7 @@ static void store_and_forward_flash_service_on_launch( void* service_id )
             store_and_forward_flash_obj[idx].sending_with_ack = true;
         }
 
-#if( FIFO_BURST_SENDING == true )
+#if ( FIFO_BURST_SENDING == true )
         uint32_t tmp = circularfs_count_estimate_from_last_fetch( &store_and_forward_flash_obj[idx].fs );
         if( ( tmp > 0 ) && ( store_and_forward_flash_obj[idx].sending_with_ack == false ) )
         {
@@ -618,7 +618,7 @@ static void store_and_forward_flash_service_on_update( void* service_id )
         return;
     }
 
-#if( FIFO_BURST_SENDING == true )
+#if ( FIFO_BURST_SENDING == true )
     lorawan_api_set_no_rx_windows( store_and_forward_flash_obj[idx].stack_id, false );
 #endif
 
@@ -725,13 +725,17 @@ static void store_and_forward_flash_add_task( store_and_forward_flash_t* ctx, ui
 
 static uint32_t store_and_forward_flash_compute_next_delay_s( store_and_forward_flash_t* ctx )
 {
-    // TODO implement the right algorithm to compute the delay between each retry to send the same packet not acked
+    // Computes the exponential delay between each retry attempt to resend a packet that hasn't been acknowledged
     if( ctx->sending_try_cpt == 0 )
     {
         return 0;
     }
+
+    // Avoid overflowing (uint32_t) when compute the delay_s
+    uint32_t sending_try_cpt_tmp = ( ctx->sending_try_cpt > 26 ) ? 26 : ctx->sending_try_cpt;
+
     // Exponential backoff (2^sending_try_cpt * 60s)
-    uint32_t delay_s = ( 1 << ctx->sending_try_cpt ) * 60;
+    uint32_t delay_s = ( 1 << sending_try_cpt_tmp ) * 60;
     if( delay_s > STORE_AND_FORWARD_DELAY_MAX_S )
     {
         delay_s = STORE_AND_FORWARD_DELAY_MAX_S;

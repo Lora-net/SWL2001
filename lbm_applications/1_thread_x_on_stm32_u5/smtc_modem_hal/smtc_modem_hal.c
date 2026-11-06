@@ -272,7 +272,7 @@ void smtc_modem_hal_crashlog_set_status(bool available)
 {
     crashlog_available_noinit = available;
 }
-volatile static bool temp = 0x1; // solve new behaviour introduce with gcc11 compilo
+static volatile bool temp = 0x1; // solve new behaviour introduce with gcc11 compilo
 bool smtc_modem_hal_crashlog_get_status(void)
 {
     bool temp2 = crashlog_available_noinit & temp;
@@ -320,6 +320,12 @@ void smtc_modem_hal_software_radio_irq(void)
     radio_dio_irq.callback(radio_dio_irq.context);
 }
 
+bool smtc_modem_external_stack_currently_use_radio(void)
+{
+    // return false if the radio is available for the lbm stack
+    return false;
+}
+
 void smtc_modem_hal_start_radio_tcxo(void)
 {
     // put here the code that will start the tcxo if needed
@@ -333,7 +339,7 @@ void smtc_modem_hal_stop_radio_tcxo(void)
 uint32_t smtc_modem_hal_get_radio_tcxo_startup_delay_ms(void)
 {
     // Tcxo is present on LR1110 and LR1120 evk boards
-#if defined(LR11XX)
+#if defined(LR1110) || defined(LR1120)
     return 5;
 #else
     return 0;

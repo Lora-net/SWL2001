@@ -136,7 +136,7 @@ uint8_t hal_flash_erase_page( uint32_t addr, uint8_t nb_page )
     EraseInitStruct.NbPages   = nb_page;
     EraseInitStruct.Banks     = bank_number;
 
-    // SMTC_HAL_TRACE_INFO( "Erase page %u bank %u\r\n", FirstUserPage, bank_number );
+    // SMTC_HAL_TRACE_INFO( "Erase page %u bank %u\n", FirstUserPage, bank_number );
 
     /* Note: If an erase operation in Flash memory also concerns data in the data or instruction cache,
      you have to make sure that these data are rewritten before they are accessed during code
@@ -156,7 +156,7 @@ uint8_t hal_flash_erase_page( uint32_t addr, uint8_t nb_page )
           PageError will contain the faulty  and then to know the code error on this ,
           user can call function 'HAL_FLASH_GetError()'
         */
-        SMTC_HAL_TRACE_ERROR( "FLASH_OPERATION_MAX_RETRY\r\n" );
+        SMTC_HAL_TRACE_ERROR( "FLASH_OPERATION_MAX_RETRY\n" );
         /* Infinite loop */
         while( 1 )
         {
@@ -338,7 +338,7 @@ static uint32_t flash_get_bank( uint32_t Addr )
     }
     else
     {
-        SMTC_HAL_TRACE_ERROR( "Address out of range: 0x%X\r\n", Addr );
+        SMTC_HAL_TRACE_ERROR( "Address out of range: 0x%X\n", Addr );
     }
     return bank;
 }

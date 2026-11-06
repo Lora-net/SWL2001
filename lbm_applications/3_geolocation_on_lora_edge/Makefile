@@ -27,6 +27,7 @@ help:
 	$(call echo_help, " *                                  - EXAMPLE_GEOLOCATION")
 	$(call echo_help, " *                                  - EXAMPLE_FULL_ALMANAC_UPDATE")
 	$(call echo_help, " *                                  - EXAMPLE_LR11XX_FLASHER")
+	$(call echo_help, " *                                  - EXAMPLE_WIFI_REGION_DETECTION")
 	$(call echo_help, " * REGION=xxx                      : choose which region should be compiled (default: all)")
 	$(call echo_help, " *                                  - AS_923")
 	$(call echo_help, " *                                  - AU_915")

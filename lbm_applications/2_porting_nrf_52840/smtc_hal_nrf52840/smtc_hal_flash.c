@@ -108,7 +108,7 @@ uint8_t hal_flash_erase_page( uint32_t addr, uint8_t nb_page )
     if( ( addr + ( nrfx_nvmc_flash_page_size_get( ) * ( nb_page - 1 ) ) ) >
         ( FLASH_PAGE_NUMBER * nrfx_nvmc_flash_page_size_get( ) ) )
     {
-        SMTC_HAL_TRACE_ERROR( "FLASH_OPERATION_BAD PAGE ADDR\r\n" );
+        SMTC_HAL_TRACE_ERROR( "FLASH_OPERATION_BAD PAGE ADDR\n" );
         return FAIL;
     }
 

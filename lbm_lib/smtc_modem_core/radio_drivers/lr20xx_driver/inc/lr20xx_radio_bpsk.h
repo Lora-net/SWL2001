@@ -1,10 +1,10 @@
-/**
- * \file      region_ww2g4.h
+/*!
+ * @file      lr20xx_radio_bpsk.h
  *
- * \brief     region_2_4  abstraction layer definition
+ * @brief     Radio BPSK driver definition for LR20XX
  *
  * The Clear BSD License
- * Copyright Semtech Corporation 2021. All rights reserved.
+ * Copyright Semtech Corporation 2022. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the disclaimer
@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef REGION_WW2G4_H
-#define REGION_WW2G4_H
+#ifndef LR20XX_RADIO_BPSK_H
+#define LR20XX_RADIO_BPSK_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,11 +45,8 @@ extern "C" {
  */
 
 #include <stdint.h>
-#include <stdbool.h>
-
-#include "smtc_real_defs.h"
-#include "lr1mac_defs.h"
-#include "lr1_stack_mac_layer.h"
+#include "lr20xx_status.h"
+#include "lr20xx_radio_bpsk_types.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -72,78 +69,31 @@ extern "C" {
  */
 
 /**
- * @brief Initialize the region with default value and pointers
+ * @brief Set the BPSK modulation parameters
  *
- * @param real
+ * @param[in] context Chip implementation context
+ * @param[in] mod_params The structure of BPSK modulation parameters to set
+ *
+ * @returns Operation status
  */
-void region_ww2g4_init( smtc_real_t* real );
-/**
- * \brief Configure the region
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_ww2g4_config( smtc_real_t* real );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_lorawan_t region_ww2g4_get_next_channel( smtc_real_t* real, uint8_t tx_data_rate, uint32_t* out_tx_frequency,
-                                                uint32_t* out_rx1_frequency, uint8_t* active_channel_nb );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_lorawan_t region_ww2g4_get_join_next_channel( smtc_real_t* real, uint8_t tx_data_rate,
-                                                     uint32_t* out_tx_frequency, uint32_t* out_rx1_frequency,
-                                                     uint8_t* active_channel_nb );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-status_channel_t region_ww2g4_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-void region_ww2g4_enable_all_channels_with_valid_freq( smtc_real_t* real );
-/**
- * \brief
- * \remark
- * \param [IN]  none
- * \param [OUT] return
- */
-uint8_t region_ww2g4_get_channel_enabled( smtc_real_t* real, uint8_t index );
+lr20xx_status_t lr20xx_radio_bpsk_set_mod_params( const void*                           context,
+                                                  const lr20xx_radio_bpsk_mod_params_t* mod_params );
 
 /**
- * @brief Get the corresponding RF modulation from a Datarate
+ * @brief Set the BPSK packet parameters
  *
- * @param datarate
- * @return modulation_type_t
- */
-modulation_type_t region_ww2g4_get_modulation_type_from_datarate( uint8_t datarate );
-
-/**
- * @brief Convert LoRaWAN Datarate to LoRa SF and BW
+ * @param[in] context Chip implementation context
+ * @param[in] pkt_params The structure of BPSK packet parameters to set
  *
- * @param in_dr
- * @param out_sf
- * @param out_bw
+ * @returns Operation status
  */
-void region_ww2g4_lora_dr_to_sf_bw( uint8_t in_dr, uint8_t* out_sf, lr1mac_bandwidth_t* out_bw );
+lr20xx_status_t lr20xx_radio_bpsk_set_pkt_params( const void*                           context,
+                                                  const lr20xx_radio_bpsk_pkt_params_t* pkt_params );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // REGION_WW2G4_H
+#endif  // LR20XX_RADIO_BPSK_H
 
 /* --- EOF ------------------------------------------------------------------ */

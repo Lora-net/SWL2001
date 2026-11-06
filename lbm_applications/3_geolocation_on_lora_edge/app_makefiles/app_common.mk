@@ -76,7 +76,6 @@ ifdef REGION
 BUILD_TARGET := $(BUILD_TARGET)_$(REGION)
 endif
 
-ifeq ($(TARGET_RADIO),lr1110)
 ifeq ($(CRYPTO),LR11XX)
 BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto
 BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto
@@ -89,26 +88,18 @@ ifeq ($(USE_LR11XX_CRC_SPI), yes)
 BUILD_TARGET := $(BUILD_TARGET)_crc_spi
 BUILD_DIR := $(BUILD_DIR)_crc_spi
 endif
-endif # lr1110
-
-ifeq ($(TARGET_RADIO),lr1120)
-ifeq ($(CRYPTO),LR11XX)
-BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto
-BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto
-endif # LR11XX
-ifeq ($(CRYPTO),LR11XX_WITH_CREDENTIALS)
-BUILD_TARGET := $(BUILD_TARGET)_lr11xx_crypto_with_cred
-BUILD_DIR := $(BUILD_DIR)_lr11xx_crypto_with_cred
-endif # LR11XX_WITH_CREDENTIALS
-ifeq ($(USE_LR11XX_CRC_SPI), yes)
-BUILD_TARGET := $(BUILD_TARGET)_crc_spi
-BUILD_DIR := $(BUILD_DIR)_crc_spi
-endif
-endif # lr1120
 
 ifeq ($(MODEM_APP),EXAMPLE_GEOLOCATION)
 LBM_BUILD_OPTIONS += LBM_GEOLOCATION=yes
 ALLOW_STORE_AND_FORWARD=yes
+endif
+
+ifeq ($(MODEM_APP),EXAMPLE_FULL_ALMANAC_UPDATE)
+LBM_BUILD_OPTIONS += LBM_GEOLOCATION=yes
+endif
+
+ifeq ($(MODEM_APP),EXAMPLE_WIFI_REGION_DETECTION)
+LBM_BUILD_OPTIONS += LBM_GEOLOCATION=yes
 endif
 
 # Clean up commas
@@ -137,6 +128,7 @@ MEMLOG = | tee $(MEMLOG_FILE)
 else
 MEMLOG =
 endif
+
 
 #-----------------------------------------------------------------------------
 # Compilation flags
@@ -197,14 +189,30 @@ COMMON_C_DEFS += \
 	-DTEST_BYPASS_JOIN_DUTY_CYCLE
 endif
 
-ifeq ($(ALLOW_FUOTA),yes)
+ifeq ($(USE_FUOTA),yes)
 COMMON_C_DEFS += \
 	-DUSE_FLASH_READ_MODIFY_WRITE\
 	-DUSE_FUOTA
 LBM_BUILD_OPTIONS += LBM_FUOTA=yes LBM_FUOTA_VERSION=$(FUOTA_VERSION)
 endif
 
+ifeq ($(ALLOW_RELAY_TX),yes)
+ALLOW_CSMA=yes
+ALLOW_CSMA_AND_ENABLE_AT_BOOT=yes
+LBM_BUILD_OPTIONS += LBM_RELAY_TX_ENABLE=yes
+COMMON_C_DEFS += -DUSE_RELAY_TX
+BUILD_TARGET := $(BUILD_TARGET)_relay_tx
+endif
+
+ifeq ($(ALLOW_RELAY_RX),yes)
+LBM_BUILD_OPTIONS += LBM_RELAY_RX_ENABLE=yes
+COMMON_C_DEFS += -DUSE_RELAY_RX
+BUILD_TARGET := $(BUILD_TARGET)_relay_rx
+endif
+
 ifeq ($(ALLOW_STORE_AND_FORWARD),yes)
+COMMON_C_DEFS += \
+	-DUSE_STORE_AND_FORWARD
 LBM_BUILD_OPTIONS += LBM_STORE_AND_FORWARD=yes
 endif
 
@@ -216,6 +224,16 @@ endif
 ifeq ($(APP_DEBUG),yes)
 COMMON_C_DEFS += \
 	-DHW_DEBUG_PROBE=1
+endif
+
+ifeq ($(ALLOW_CSMA),yes)
+	LBM_BUILD_OPTIONS += LBM_CSMA=yes
+	COMMON_C_DEFS += -DALLOW_CSMA
+
+	ifeq ($(ALLOW_CSMA_AND_ENABLE_AT_BOOT),yes)
+		LBM_BUILD_OPTIONS += USE_CSMA_BY_DEFAULT=yes
+		COMMON_C_DEFS += -DALLOW_CSMA_AND_ENABLE_AT_BOOT
+	endif
 endif
 
 LFS_C_DEFS += -DLFS_CONFIG=lfs_config.h
@@ -267,6 +285,13 @@ endif
 ifeq ($(MODEM_APP),EXAMPLE_LR11XX_FLASHER)
 APP_C_SOURCES += \
 	main_lr11xx_flasher/main_lr11xx_flasher.c
+endif
+
+ifeq ($(MODEM_APP),EXAMPLE_WIFI_REGION_DETECTION)
+APP_C_SOURCES += \
+	main_wifi_region_detection/main_wifi_region_detection.c
+APP_C_SOURCES += \
+	main_wifi_region_detection/wifi_region_finder.c
 endif
 
 #-----------------------------------------------------------------------------

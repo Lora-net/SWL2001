@@ -78,176 +78,502 @@ extern "C" {
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
 
+#define RAL_STANDBY_CFG( X )   \
+    X( RAL_STANDBY_CFG_RC, 0 ) \
+    X( RAL_STANDBY_CFG_XOSC, 1 )
+
 typedef enum ral_standby_cfg_e
 {
-    RAL_STANDBY_CFG_RC,
-    RAL_STANDBY_CFG_XOSC,
+#define X( identifier, value ) identifier = value,
+    RAL_STANDBY_CFG( X )
+#undef X
 } ral_standby_cfg_t;
+
+static inline const char* ral_standby_cfg_to_str( const ral_standby_cfg_t cfg )
+{
+    switch( cfg )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_STANDBY_CFG( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_STANDBY_CFG";
+}
+
+#define RAL_FALLBACK_MODES( X )     \
+    X( RAL_FALLBACK_STDBY_RC, 0 )   \
+    X( RAL_FALLBACK_STDBY_XOSC, 1 ) \
+    X( RAL_FALLBACK_FS, 2 )
 
 typedef enum ral_fallback_modes_e
 {
-    RAL_FALLBACK_STDBY_RC,
-    RAL_FALLBACK_STDBY_XOSC,
-    RAL_FALLBACK_FS,
+#define X( identifier, value ) identifier = value,
+    RAL_FALLBACK_MODES( X )
+#undef X
 } ral_fallback_modes_t;
+
+static inline const char* ral_fallback_modes_to_str( const ral_fallback_modes_t mode )
+{
+    switch( mode )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_FALLBACK_MODES( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_FALLBACK_MODE";
+}
+
+#define RAL_XOSC_CFG( X )                \
+    X( RAL_XOSC_CFG_XTAL, 0 )            \
+    X( RAL_XOSC_CFG_TCXO_RADIO_CTRL, 1 ) \
+    X( RAL_XOSC_CFG_TCXO_EXT_CTRL, 2 )
 
 typedef enum ral_xosc_cfg_e
 {
-    RAL_XOSC_CFG_XTAL,
-    RAL_XOSC_CFG_TCXO_RADIO_CTRL,
-    RAL_XOSC_CFG_TCXO_EXT_CTRL,
+#define X( identifier, value ) identifier = value,
+    RAL_XOSC_CFG( X )
+#undef X
 } ral_xosc_cfg_t;
+
+static inline const char* ral_xosc_cfg_to_str( const ral_xosc_cfg_t cfg )
+{
+    switch( cfg )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_XOSC_CFG( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_XOSC_CFG";
+}
 
 /**
  * API return status
  */
+#define RAL_STATUS( X )                    \
+    X( RAL_STATUS_OK, 0 )                  \
+    X( RAL_STATUS_UNSUPPORTED_FEATURE, 1 ) \
+    X( RAL_STATUS_UNKNOWN_VALUE, 2 )       \
+    X( RAL_STATUS_ERROR, 3 )
+
 typedef enum ral_status_e
 {
-    RAL_STATUS_OK,
-    RAL_STATUS_UNSUPPORTED_FEATURE,
-    RAL_STATUS_UNKNOWN_VALUE,
-    RAL_STATUS_ERROR,
+#define X( identifier, value ) identifier = value,
+    RAL_STATUS( X )
+#undef X
 } ral_status_t;
+
+static inline const char* ral_status_to_str( const ral_status_t status )
+{
+    switch( status )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_STATUS( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_STATUS";
+}
+
+#define RAL_GFSK_CRC_TYPE( X )       \
+    X( RAL_GFSK_CRC_OFF, 1 )         \
+    X( RAL_GFSK_CRC_1_BYTE, 2 )      \
+    X( RAL_GFSK_CRC_2_BYTES, 3 )     \
+    X( RAL_GFSK_CRC_1_BYTE_INV, 4 )  \
+    X( RAL_GFSK_CRC_2_BYTES_INV, 5 ) \
+    X( RAL_GFSK_CRC_3_BYTES, 6 )
 
 typedef enum ral_gfsk_crc_type_e
 {
-    RAL_GFSK_CRC_OFF,
-    RAL_GFSK_CRC_1_BYTE,
-    RAL_GFSK_CRC_2_BYTES,
-    RAL_GFSK_CRC_1_BYTE_INV,
-    RAL_GFSK_CRC_2_BYTES_INV,
-    RAL_GFSK_CRC_3_BYTES,
+#define X( identifier, value ) identifier = value,
+    RAL_GFSK_CRC_TYPE( X )
+#undef X
 } ral_gfsk_crc_type_t;
+
+static inline const char* ral_gfsk_crc_type_to_str( const ral_gfsk_crc_type_t type )
+{
+    switch( type )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_GFSK_CRC_TYPE( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_GFSK_CRC_TYPE";
+}
+
+#define RAL_GFSK_PULSE_SHAPE( X )      \
+    X( RAL_GFSK_PULSE_SHAPE_OFF, 0 )   \
+    X( RAL_GFSK_PULSE_SHAPE_BT_03, 1 ) \
+    X( RAL_GFSK_PULSE_SHAPE_BT_05, 2 ) \
+    X( RAL_GFSK_PULSE_SHAPE_BT_07, 3 ) \
+    X( RAL_GFSK_PULSE_SHAPE_BT_1, 4 )
 
 typedef enum ral_gfsk_pulse_shape_e
 {
-    RAL_GFSK_PULSE_SHAPE_OFF,
-    RAL_GFSK_PULSE_SHAPE_BT_03,
-    RAL_GFSK_PULSE_SHAPE_BT_05,
-    RAL_GFSK_PULSE_SHAPE_BT_07,
-    RAL_GFSK_PULSE_SHAPE_BT_1,
+#define X( identifier, value ) identifier = value,
+    RAL_GFSK_PULSE_SHAPE( X )
+#undef X
 } ral_gfsk_pulse_shape_t;
+
+static inline const char* ral_gfsk_pulse_shape_to_str( const ral_gfsk_pulse_shape_t shape )
+{
+    switch( shape )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_GFSK_PULSE_SHAPE( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_GFSK_PULSE_SHAPE";
+}
+
+#define RAL_LORA_SF( X )   \
+    X( RAL_LORA_SF5, 5 )   \
+    X( RAL_LORA_SF6, 6 )   \
+    X( RAL_LORA_SF7, 7 )   \
+    X( RAL_LORA_SF8, 8 )   \
+    X( RAL_LORA_SF9, 9 )   \
+    X( RAL_LORA_SF10, 10 ) \
+    X( RAL_LORA_SF11, 11 ) \
+    X( RAL_LORA_SF12, 12 )
 
 typedef enum ral_lora_sf_e
 {
-    RAL_LORA_SF5 = 5,
-    RAL_LORA_SF6,
-    RAL_LORA_SF7,
-    RAL_LORA_SF8,
-    RAL_LORA_SF9,
-    RAL_LORA_SF10,
-    RAL_LORA_SF11,
-    RAL_LORA_SF12,
+#define X( identifier, value ) identifier = value,
+    RAL_LORA_SF( X )
+#undef X
 } ral_lora_sf_t;
+
+static inline const char* ral_lora_sf_to_str( const ral_lora_sf_t sf )
+{
+    switch( sf )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_LORA_SF( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_LORA_SF";
+}
+
+#define RAL_LORA_BW( X )                                           \
+    X( RAL_LORA_BW_007_KHZ, 0 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_010_KHZ, 1 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_015_KHZ, 2 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_020_KHZ, 3 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_031_KHZ, 4 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_041_KHZ, 5 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_062_KHZ, 6 /* All except SX128X and SX1272 */ ) \
+    X( RAL_LORA_BW_125_KHZ, 7 /* All except SX128X */ )            \
+    X( RAL_LORA_BW_200_KHZ, 8 /* LR112X and SX128X only */ )       \
+    X( RAL_LORA_BW_250_KHZ, 9 /* All except SX128X */ )            \
+    X( RAL_LORA_BW_400_KHZ, 10 /* LR112X and SX128X only */ )      \
+    X( RAL_LORA_BW_500_KHZ, 11 /* All except SX128X */ )           \
+    X( RAL_LORA_BW_800_KHZ, 12 /* LR112X and SX128X only */ )      \
+    X( RAL_LORA_BW_1000_KHZ, 13 /* LR20XX only */ )                \
+    X( RAL_LORA_BW_1600_KHZ, 14 /* SX128X only */ )
 
 typedef enum ral_lora_bw_e
 {
-    RAL_LORA_BW_007_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_010_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_015_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_020_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_031_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_041_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_062_KHZ,   // All except SX128X and SX1272
-    RAL_LORA_BW_125_KHZ,   // All except SX128X
-    RAL_LORA_BW_200_KHZ,   // LR112X and SX128X only
-    RAL_LORA_BW_250_KHZ,   // All except SX128X
-    RAL_LORA_BW_400_KHZ,   // LR112X and SX128X only
-    RAL_LORA_BW_500_KHZ,   // All except SX128X
-    RAL_LORA_BW_800_KHZ,   // LR112X and SX128X only
-    RAL_LORA_BW_1600_KHZ,  // SX128X only
+#define X( identifier, value ) identifier = value,
+    RAL_LORA_BW( X )
+#undef X
 } ral_lora_bw_t;
+
+static inline const char* ral_lora_bw_to_str( const ral_lora_bw_t bw )
+{
+    switch( bw )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_LORA_BW( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_LORA_BW";
+}
+
+#define RAL_LORA_CR( X )       \
+    X( RAL_LORA_CR_4_5, 1 )    \
+    X( RAL_LORA_CR_4_6, 2 )    \
+    X( RAL_LORA_CR_4_7, 3 )    \
+    X( RAL_LORA_CR_4_8, 4 )    \
+    X( RAL_LORA_CR_LI_4_5, 5 ) \
+    X( RAL_LORA_CR_LI_4_6, 6 ) \
+    X( RAL_LORA_CR_LI_4_8, 7 )
 
 typedef enum ral_lora_cr_e
 {
-    RAL_LORA_CR_4_5 = 1,
-    RAL_LORA_CR_4_6,
-    RAL_LORA_CR_4_7,
-    RAL_LORA_CR_4_8,
-    RAL_LORA_CR_LI_4_5,
-    RAL_LORA_CR_LI_4_6,
-    RAL_LORA_CR_LI_4_8,
+#define X( identifier, value ) identifier = value,
+    RAL_LORA_CR( X )
+#undef X
 } ral_lora_cr_t;
+
+static inline const char* ral_lora_cr_to_str( const ral_lora_cr_t cr )
+{
+    switch( cr )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_LORA_CR( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_LORA_CR";
+}
+
+#define RAL_FLRC_CR( X )    \
+    X( RAL_FLRC_CR_1_2, 0 ) \
+    X( RAL_FLRC_CR_3_4, 1 ) \
+    X( RAL_FLRC_CR_1_1, 2 )
 
 typedef enum ral_flrc_cr_e
 {
-    RAL_FLRC_CR_1_2 = 0,
-    RAL_FLRC_CR_3_4,
-    RAL_FLRC_CR_1_1,
+#define X( identifier, value ) identifier = value,
+    RAL_FLRC_CR( X )
+#undef X
 } ral_flrc_cr_t;
+
+static inline const char* ral_flrc_cr_to_str( const ral_flrc_cr_t cr )
+{
+    switch( cr )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_FLRC_CR( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_FLRC_CR";
+}
+
+#define RAL_FLRC_CRC_TYPE( X )   \
+    X( RAL_FLRC_CRC_OFF, 0 )     \
+    X( RAL_FLRC_CRC_2_BYTES, 2 ) \
+    X( RAL_FLRC_CRC_3_BYTES, 3 ) \
+    X( RAL_FLRC_CRC_4_BYTES, 4 )
 
 typedef enum ral_flrc_crc_type_e
 {
-    RAL_FLRC_CRC_OFF = 0,
-    RAL_FLRC_CRC_2_BYTES,
-    RAL_FLRC_CRC_3_BYTES,
-    RAL_FLRC_CRC_4_BYTES
+#define X( identifier, value ) identifier = value,
+    RAL_FLRC_CRC_TYPE( X )
+#undef X
 } ral_flrc_crc_type_t;
+
+static inline const char* ral_flrc_crc_type_to_str( const ral_flrc_crc_type_t type )
+{
+    switch( type )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_FLRC_CRC_TYPE( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_FLRC_CRC_TYPE";
+}
+
+#define RAL_FLRC_PULSE_SHAPE( X )      \
+    X( RAL_FLRC_PULSE_SHAPE_OFF, 0 )   \
+    X( RAL_FLRC_PULSE_SHAPE_BT_05, 1 ) \
+    X( RAL_FLRC_PULSE_SHAPE_BT_1, 2 )
 
 typedef enum ral_flrc_pulse_shape_e
 {
-    RAL_FLRC_PULSE_SHAPE_OFF,
-    RAL_FLRC_PULSE_SHAPE_BT_05,
-    RAL_FLRC_PULSE_SHAPE_BT_1,
+#define X( identifier, value ) identifier = value,
+    RAL_FLRC_PULSE_SHAPE( X )
+#undef X
 } ral_flrc_pulse_shape_t;
+
+static inline const char* ral_flrc_pulse_shape_to_str( const ral_flrc_pulse_shape_t shape )
+{
+    switch( shape )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_FLRC_PULSE_SHAPE( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_FLRC_PULSE_SHAPE";
+}
 
 /**
  * @brief GFSK preamble length Rx detection size enumeration definition
  */
+#define RAL_GFSK_PREAMBLE_DETECTOR( X )            \
+    X( RAL_GFSK_PREAMBLE_DETECTOR_OFF, 0 )         \
+    X( RAL_GFSK_PREAMBLE_DETECTOR_MIN_8BITS, 8 )   \
+    X( RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS, 16 ) \
+    X( RAL_GFSK_PREAMBLE_DETECTOR_MIN_24BITS, 24 ) \
+    X( RAL_GFSK_PREAMBLE_DETECTOR_MIN_32BITS, 32 )
+
 typedef enum ral_gfsk_preamble_detector_e
 {
-    RAL_GFSK_PREAMBLE_DETECTOR_OFF,
-    RAL_GFSK_PREAMBLE_DETECTOR_MIN_8BITS,
-    RAL_GFSK_PREAMBLE_DETECTOR_MIN_16BITS,
-    RAL_GFSK_PREAMBLE_DETECTOR_MIN_24BITS,
-    RAL_GFSK_PREAMBLE_DETECTOR_MIN_32BITS,
+#define X( identifier, value ) identifier = value,
+    RAL_GFSK_PREAMBLE_DETECTOR( X )
+#undef X
 } ral_gfsk_preamble_detector_t;
+
+static inline const char* ral_gfsk_preamble_detector_to_str( const ral_gfsk_preamble_detector_t detector )
+{
+    switch( detector )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_GFSK_PREAMBLE_DETECTOR( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_GFSK_PREAMBLE_DETECTOR";
+}
 
 /**
  * @brief LoRa packet length enumeration definition
  */
+#define RAL_LORA_PKT_LEN_MODES( X )                                        \
+    X( RAL_LORA_PKT_EXPLICIT /* LoRa header included in the packet */, 0 ) \
+    X( RAL_LORA_PKT_IMPLICIT /* LoRa header not included in the packet */, 1 )
+
 typedef enum ral_lora_pkt_len_modes_e
 {
-    RAL_LORA_PKT_EXPLICIT,  //!< LoRa header included in the packet
-    RAL_LORA_PKT_IMPLICIT,  //!< LoRa header not included in the packet
+#define X( identifier, value ) identifier = value,
+    RAL_LORA_PKT_LEN_MODES( X )
+#undef X
 } ral_lora_pkt_len_modes_t;
+
+static inline const char* ral_lora_pkt_len_modes_to_str( const ral_lora_pkt_len_modes_t mode )
+{
+    switch( mode )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_LORA_PKT_LEN_MODES( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_LORA_PKT_LEN_MODE";
+}
+
+#define RAL_PKT_TYPE( X )     \
+    X( RAL_PKT_TYPE_GFSK, 0 ) \
+    X( RAL_PKT_TYPE_LORA, 1 ) \
+    X( RAL_PKT_TYPE_FLRC, 2 ) \
+    X( RAL_PKT_TYPE_RTTOF, 3 )
 
 typedef enum ral_pkt_types_e
 {
-    RAL_PKT_TYPE_GFSK,
-    RAL_PKT_TYPE_LORA,
-    RAL_PKT_TYPE_FLRC,
+#define X( identifier, value ) identifier = value,
+    RAL_PKT_TYPE( X )
+#undef X
 } ral_pkt_type_t;
+
+static inline const char* ral_pkt_type_to_str( const ral_pkt_type_t type )
+{
+    switch( type )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_PKT_TYPE( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_PKT_TYPE";
+}
 
 /**
  * @brief GFSK address filtering configuration enumeration definition
  */
+#define RAL_GFSK_ADDRESS_FILTERING( X )             \
+    X( RAL_GFSK_ADDRESS_FILTERING_DISABLE, 0 )      \
+    X( RAL_GFSK_ADDRESS_FILTERING_NODE_ADDRESS, 1 ) \
+    X( RAL_GFSK_ADDRESS_FILTERING_NODE_AND_BROADCAST_ADDRESSES, 2 )
+
 typedef enum ral_gfsk_address_filtering_e
 {
-    RAL_GFSK_ADDRESS_FILTERING_DISABLE,
-    RAL_GFSK_ADDRESS_FILTERING_NODE_ADDRESS,
-    RAL_GFSK_ADDRESS_FILTERING_NODE_AND_BROADCAST_ADDRESSES,
+#define X( identifier, value ) identifier = value,
+    RAL_GFSK_ADDRESS_FILTERING( X )
+#undef X
 } ral_gfsk_address_filtering_t;
+
+static inline const char* ral_gfsk_address_filtering_to_str( const ral_gfsk_address_filtering_t filtering )
+{
+    switch( filtering )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_GFSK_ADDRESS_FILTERING( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_GFSK_ADDRESS_FILTERING";
+}
 
 /*!
  * \brief GFSK data whitening configurations
  */
+#define RAL_GFSK_DC_FREE( X )                                            \
+    X( RAL_GFSK_DC_FREE_OFF /* GFSK data whitening deactivated */, 0 )   \
+    X( RAL_GFSK_DC_FREE_WHITENING /* GFSK data whitening enabled */, 1 ) \
+    X( RAL_GFSK_DC_FREE_WHITENING_SX128X_COMP /* GFSK data whitening enabled - SX128x compatibility */, 2 )
+
 typedef enum ral_gfsk_dc_free_e
 {
-    RAL_GFSK_DC_FREE_OFF,                    //!< GFSK data whitening deactivated
-    RAL_GFSK_DC_FREE_WHITENING,              //!< GFSK data whitening enabled
-    RAL_GFSK_DC_FREE_WHITENING_SX128X_COMP,  //!< GFSK data whitening enabled - SX128x compatibility
+#define X( identifier, value ) identifier = value,
+    RAL_GFSK_DC_FREE( X )
+#undef X
 } ral_gfsk_dc_free_t;
+
+static inline const char* ral_gfsk_dc_free_to_str( const ral_gfsk_dc_free_t dc )
+{
+    switch( dc )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_GFSK_DC_FREE( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_GFSK_DC_FREE";
+}
+
+#define RAL_RX_STATUS_GFSK( X )                 \
+    X( RAL_RX_STATUS_PKT_SENT, ( 1 << 0 ) )     \
+    X( RAL_RX_STATUS_PKT_RECEIVED, ( 1 << 1 ) ) \
+    X( RAL_RX_STATUS_ABORT_ERROR, ( 1 << 2 ) )  \
+    X( RAL_RX_STATUS_LENGTH_ERROR, ( 1 << 3 ) ) \
+    X( RAL_RX_STATUS_CRC_ERROR, ( 1 << 4 ) )    \
+    X( RAL_RX_STATUS_ADDR_ERROR, ( 1 << 5 ) )
 
 enum ral_rx_status_gfsk_e
 {
-    RAL_RX_STATUS_PKT_SENT     = ( 1 << 0 ),
-    RAL_RX_STATUS_PKT_RECEIVED = ( 1 << 1 ),
-    RAL_RX_STATUS_ABORT_ERROR  = ( 1 << 2 ),
-    RAL_RX_STATUS_LENGTH_ERROR = ( 1 << 3 ),
-    RAL_RX_STATUS_CRC_ERROR    = ( 1 << 4 ),
-    RAL_RX_STATUS_ADDR_ERROR   = ( 1 << 5 ),
+#define X( identifier, value ) identifier = value,
+    RAL_RX_STATUS_GFSK( X )
+#undef X
 };
+
+static inline const char* ral_rx_status_gfsk_to_str( const enum ral_rx_status_gfsk_e status )
+{
+    switch( status )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_RX_STATUS_GFSK( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_RX_STATUS_GFSK";
+}
 
 /*!
  * @brief GFSK Header Type configurations
@@ -261,12 +587,30 @@ enum ral_rx_status_gfsk_e
  *
  * This configuration is only available for GFSK packet types.
  */
-typedef enum ral_gfsk_pkt_len_modes_s
+#define RAL_GFSK_PKT_LEN_MODES( X )                                                 \
+    X( RAL_GFSK_PKT_FIX_LEN /* Payload length is not sent/read over the air */, 0 ) \
+    X( RAL_GFSK_PKT_VAR_LEN /* Payload length is sent/read over the air */, 1 )     \
+    X( RAL_GFSK_PKT_VAR_LEN_SX128X_COMP /* Payload length is sent/read over the air - SX128x compatibility */, 2 )
+
+typedef enum ral_gfsk_pkt_len_modes_e
 {
-    RAL_GFSK_PKT_FIX_LEN,              //!< Payload length is not sent/read over the air
-    RAL_GFSK_PKT_VAR_LEN,              //!< Payload length is sent/read over the air
-    RAL_GFSK_PKT_VAR_LEN_SX128X_COMP,  //!< Payload length is sent/read over the air - SX128x compatibility
+#define X( identifier, value ) identifier = value,
+    RAL_GFSK_PKT_LEN_MODES( X )
+#undef X
 } ral_gfsk_pkt_len_modes_t;
+
+static inline const char* ral_gfsk_pkt_len_modes_to_str( const ral_gfsk_pkt_len_modes_t mode )
+{
+    switch( mode )
+    {
+#define X( identifier, _ ) \
+    case identifier:       \
+        return #identifier;
+        RAL_GFSK_PKT_LEN_MODES( X )
+#undef X
+    }
+    return "UNKNOWN_RAL_GFSK_PKT_LEN_MODE";
+}
 
 typedef uint16_t ral_rx_status_gfsk_t;
 
@@ -436,12 +780,21 @@ enum ral_irq_e
     RAL_IRQ_LR_FHSS_HOP          = ( 1 << 10 ),
     RAL_IRQ_WIFI_SCAN_DONE       = ( 1 << 11 ),
     RAL_IRQ_GNSS_SCAN_DONE       = ( 1 << 12 ),
+    RAL_IRQ_RX_FIFO_LEVEL        = ( 1 << 13 ),
+    RAL_IRQ_TX_FIFO_LEVEL        = ( 1 << 14 ),
+
+    RAL_IRQ_RTTOF_REQ_DISCARDED = ( 1 << 16 ),
+    RAL_IRQ_RTTOF_RESP_DONE     = ( 1 << 17 ),
+    RAL_IRQ_RTTOF_EXCH_VALID    = ( 1 << 18 ),
+    RAL_IRQ_RTTOF_TIMEOUT       = ( 1 << 19 ),
     RAL_IRQ_ALL = RAL_IRQ_TX_DONE | RAL_IRQ_RX_DONE | RAL_IRQ_RX_TIMEOUT | RAL_IRQ_RX_PREAMBLE_DETECTED |
                   RAL_IRQ_RX_HDR_OK | RAL_IRQ_RX_HDR_ERROR | RAL_IRQ_RX_CRC_ERROR | RAL_IRQ_CAD_DONE | RAL_IRQ_CAD_OK |
-                  RAL_IRQ_LR_FHSS_HOP | RAL_IRQ_WIFI_SCAN_DONE | RAL_IRQ_GNSS_SCAN_DONE,
+                  RAL_IRQ_LR_FHSS_HOP | RAL_IRQ_WIFI_SCAN_DONE | RAL_IRQ_GNSS_SCAN_DONE | RAL_IRQ_RX_FIFO_LEVEL |
+                  RAL_IRQ_TX_FIFO_LEVEL | RAL_IRQ_RTTOF_REQ_DISCARDED | RAL_IRQ_RTTOF_RESP_DONE |
+                  RAL_IRQ_RTTOF_EXCH_VALID | RAL_IRQ_RTTOF_TIMEOUT,
 };
 
-typedef uint16_t ral_irq_t;
+typedef uint32_t ral_irq_t;
 
 /*
  * -----------------------------------------------------------------------------

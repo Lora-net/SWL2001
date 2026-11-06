@@ -88,6 +88,8 @@ int main( void )
     main_full_almanac_update( );
 #elif MAKEFILE_APP == EXAMPLE_LR11XX_FLASHER
     main_lr11xx_flasher( );
+#elif MAKEFILE_APP == EXAMPLE_WIFI_REGION_DETECTION
+    main_wifi_region_detection( );
 #else
 #error "Unknown application" ## MAKEFILE_APP
 #endif

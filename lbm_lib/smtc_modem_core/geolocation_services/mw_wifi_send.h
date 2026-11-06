@@ -90,7 +90,7 @@ void mw_wifi_send_services_init( uint8_t* service_id, uint8_t task_id,
  *
  * @param [in] wifi_results     A pointer to the results to be sent over the air.
  */
-void mw_wifi_send_add_task( const wifi_scan_all_result_t* wifi_results );
+void mw_wifi_send_add_task( const wifi_scan_result_t* wifi_results );
 
 /**
  * @brief Indicates if a send sequence has started.

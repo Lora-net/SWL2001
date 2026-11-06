@@ -50,6 +50,7 @@
 #include "smtc_real.h"
 #include "smtc_secure_element.h"
 #include "smtc_modem_crypto.h"
+#include "smtc_modem_hal.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -437,14 +438,15 @@ void smtc_ping_slot_start( smtc_ping_slot_t* ping_slot_obj )
         }
         rp_status = rp_task_enqueue( ping_slot_obj->rp, &rp_task, RX_DOWN_DATA.rx_payload, 255, &rp_radio_params );
     } while( rp_status == RP_TASK_STATUS_SCHEDULE_TASK_IN_PAST );
+
     if( rp_status != RP_HOOK_STATUS_OK )
     {
         SMTC_MODEM_HAL_TRACE_ERROR( "ping_slot_obj START ERROR \n" );
     }
     else
     {
-        uint32_t ping_slot_seconds_since_epoch = 0;
-        uint32_t ping_slot_fractional_second   = 0;
+        ping_slot_seconds_since_epoch = 0;
+        ping_slot_fractional_second   = 0;
 
         lr1mac_core_convert_rtc_to_gps_epoch_time( ping_slot_obj->lr1_mac,
                                                    RX_SESSION_PARAM_CURRENT->ping_slot_parameters.ping_offset_time,
@@ -522,8 +524,9 @@ void smtc_ping_slot_mac_rp_callback( smtc_ping_slot_t* ping_slot_obj )
         {
             ping_slot_obj->last_toa = 0;
 
-            // save rssi and snr
             RX_DOWN_DATA.rx_metadata.timestamp_ms = tcurrent_ms;
+
+            // save rssi and snr
             if( ping_slot_obj->rp->radio_params[from_hook_id].pkt_type == RAL_PKT_TYPE_LORA )
             {
                 RX_DOWN_DATA.rx_metadata.rx_snr =
@@ -541,6 +544,8 @@ void smtc_ping_slot_mac_rp_callback( smtc_ping_slot_t* ping_slot_obj )
             {
                 SMTC_MODEM_HAL_PANIC( );
             }
+
+            RX_DOWN_DATA.rx_payload_size = ( uint8_t ) ping_slot_obj->rp->rx_payload_size[from_hook_id];
 
             SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "payload size receive = %u, snr = %u , rssi = %u\n",
                                                RX_DOWN_DATA.rx_payload_size, RX_DOWN_DATA.rx_metadata.rx_snr,
@@ -814,8 +819,7 @@ static void smtc_ping_slot_search_closest_ping_offset_time( smtc_ping_slot_t* pi
                 {
                     ping_slot_obj->rx_session_index = i;
 
-                    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "Ping Slot session %u enabled", i );
-                    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "--> offset %u, init\n",
+                    SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "Ping Slot session %u enabled --> offset %u, init\n", i,
                                                        RX_SESSION_PARAM[i]->ping_slot_parameters.ping_offset_time );
                     break;
                 }
@@ -841,8 +845,7 @@ static void smtc_ping_slot_search_closest_ping_offset_time( smtc_ping_slot_t* pi
         // Search Ping Slot for each enabled session
         if( RX_SESSION_PARAM[i]->enabled == true )
         {
-            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "Ping Slot session %u enabled", i );
-            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "--> offset %u, ",
+            SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "Ping Slot session %u enabled --> offset %u, ", i,
                                                RX_SESSION_PARAM[i]->ping_slot_parameters.ping_offset_time );
 
             // Ignore session if all ping number were used
@@ -965,6 +968,7 @@ static rx_packet_type_t smtc_ping_slot_mac_rx_frame_decode( smtc_ping_slot_t* pi
     uint32_t         mic_in;
     uint8_t          rx_ftype;
     uint8_t          rx_major;
+    bool             tx_ack_bit;
 
     status += lr1mac_rx_payload_min_size_check( RX_DOWN_DATA.rx_payload_size );
     status += lr1mac_rx_payload_max_size_check( ping_slot_obj->lr1_mac, RX_DOWN_DATA.rx_payload_size,
@@ -974,8 +978,7 @@ static rx_packet_type_t smtc_ping_slot_mac_rx_frame_decode( smtc_ping_slot_t* pi
         return NO_MORE_VALID_RX_PACKET;
     }
 
-    status +=
-        lr1mac_rx_mhdr_extract( RX_DOWN_DATA.rx_payload, &rx_ftype, &rx_major, &RX_DOWN_DATA.rx_metadata.tx_ack_bit );
+    status += lr1mac_rx_mhdr_extract( RX_DOWN_DATA.rx_payload, &rx_ftype, &rx_major, &tx_ack_bit );
     if( status != OKLORAWAN )
     {
         return NO_MORE_VALID_RX_PACKET;
@@ -983,9 +986,9 @@ static rx_packet_type_t smtc_ping_slot_mac_rx_frame_decode( smtc_ping_slot_t* pi
 
     if( ping_slot_obj->rx_session_index != RX_SESSION_UNICAST )
     {
-        if( ( RX_DOWN_DATA.rx_metadata.tx_ack_bit == true ) || ( rx_ftype == CONF_DATA_UP ) )
+        if( tx_ack_bit == true )
         {
-            RX_DOWN_DATA.rx_metadata.tx_ack_bit = false;
+            tx_ack_bit = false;
             return NO_MORE_VALID_RX_PACKET;
         }
     }
@@ -1034,9 +1037,7 @@ static rx_packet_type_t smtc_ping_slot_mac_rx_frame_decode( smtc_ping_slot_t* pi
     }
     if( status == OKLORAWAN )
     {
-        RX_SESSION_PARAM_CURRENT->fcnt_dwn = fcnt_dwn_stack_tmp;
-        SMTC_MODEM_HAL_TRACE_WARNING_DEBUG( " fcnt_tmp = %u\n ", RX_SESSION_PARAM_CURRENT->fcnt_dwn );
-        ping_slot_obj->lr1_mac->fcnt_dwn = ping_slot_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn;
+        SMTC_MODEM_HAL_TRACE_WARNING_DEBUG( " fcnt_tmp = %u\n", fcnt_dwn_stack_tmp );
 
         // Set FPending bit in metadata
         RX_DOWN_DATA.rx_metadata.rx_fpending_bit = ( ping_slot_obj->rx_fctrl >> DL_FPENDING_BIT ) & 0x01;
@@ -1082,8 +1083,7 @@ static rx_packet_type_t smtc_ping_slot_mac_rx_frame_decode( smtc_ping_slot_t* pi
                 if( smtc_modem_crypto_payload_decrypt(
                         &RX_DOWN_DATA.rx_payload[FHDROFFSET + 1 + ping_slot_obj->rx_fopts_length],
                         RX_DOWN_DATA.rx_payload_size, RX_SESSION_PARAM_CURRENT->app_skey,
-                        RX_SESSION_PARAM_CURRENT->dev_addr, 1, RX_SESSION_PARAM_CURRENT->fcnt_dwn,
-                        &RX_DOWN_DATA.rx_payload[0],
+                        RX_SESSION_PARAM_CURRENT->dev_addr, 1, fcnt_dwn_stack_tmp, &RX_DOWN_DATA.rx_payload[0],
                         ping_slot_obj->lr1_mac->stack_id ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
                 {
                     SMTC_MODEM_HAL_PANIC( "Crypto error during payload decryption\n" );
@@ -1121,8 +1121,11 @@ static rx_packet_type_t smtc_ping_slot_mac_rx_frame_decode( smtc_ping_slot_t* pi
 
     if( status == OKLORAWAN )
     {
-        ping_slot_obj->rx_ftype = rx_ftype;
-        ping_slot_obj->rx_major = rx_major;
+        ping_slot_obj->rx_ftype             = rx_ftype;
+        ping_slot_obj->rx_major             = rx_major;
+        RX_DOWN_DATA.rx_metadata.tx_ack_bit = tx_ack_bit;
+        RX_SESSION_PARAM_CURRENT->fcnt_dwn  = fcnt_dwn_stack_tmp;
+        ping_slot_obj->lr1_mac->fcnt_dwn    = ping_slot_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn;
     }
 
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( " RxB rx_packet_type = %u \n", rx_packet_type );

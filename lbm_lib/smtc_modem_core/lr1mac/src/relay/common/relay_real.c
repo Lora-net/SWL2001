@@ -358,9 +358,9 @@ static status_lorawan_t region_eu_868_relay_get_default( uint8_t idx, uint8_t* d
 }
 #endif
 
-#if defined( REGION_WW2G4 )
+#if defined( REGION_WW_2G4 )
 /**
- * @brief Return default value for relay channel for WW2G4
+ * @brief Return default value for relay channel for WW_2G4
  *
  * @param[in]   idx         Index of the chanel (0 or 1)
  * @param[out]  datarate    Datarate for the channel index idx
@@ -369,7 +369,7 @@ static status_lorawan_t region_eu_868_relay_get_default( uint8_t idx, uint8_t* d
  * @return OKLORAWAN a valid config exist for this channel
  * @return ERRORLORAWAN no valid config exist for this channel
  */
-static status_lorawan_t region_ww2g4_relay_get_default( uint8_t idx, uint8_t* datarate, uint32_t* freq_wor,
+static status_lorawan_t region_ww_2g4_relay_get_default( uint8_t idx, uint8_t* datarate, uint32_t* freq_wor,
                                                         uint32_t* freq_ack )
 {
     switch( idx )
@@ -454,9 +454,9 @@ status_lorawan_t smtc_relay_get_default_channel_config( const smtc_real_t* real,
     }
 #endif
 
-#if defined( REGION_WW2G4 )
-    case SMTC_REAL_REGION_WW2G4: {
-        return region_ww2g4_relay_get_default( idx, datarate, freq_wor, freq_ack );
+#if defined( REGION_WW_2G4 )
+    case SMTC_REAL_REGION_WW_2G4: {
+        return region_ww_2g4_relay_get_default( idx, datarate, freq_wor, freq_ack );
         break;
     }
 #endif

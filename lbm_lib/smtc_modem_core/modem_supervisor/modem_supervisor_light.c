@@ -68,7 +68,7 @@
  * --- PRIVATE MACROS ----------------------------------------------------------------
  */
 #define STACK_ID_CURRENT_TASK task_manager.modem_task[task_manager.next_task_id].stack_id
-#define CURRENT_TASK_ID task_manager.next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
+#define CURRENT_TASK_ID ( task_manager.next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK ) )
 
 /*!
  * \brief Returns the minimum value between a and b

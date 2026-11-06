@@ -4,7 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v2.5.2] - v2.5.2
+## [v2.7.0] - 2025-04-14
+
+### Added
+
+- CMake support
+- GFSK workarounds for specific modulation configurations:
+  - `lr11xx_workaround_gfsk_1_2_kbps`
+  - `lr11xx_workaround_gfsk_0_6_kbps_sub_ghz`
+  - `lr11xx_workaround_gfsk_0_6_kbps_ghz`
+  - `lr11xx_workaround_gfsk_reset`
+
+### Changed
+
+- `lr11xx_crypto_process_join_accept` returns an error if the data is longer than the maximum of 32 bytes
+- `lr11xx_crypto_process_join_accept` now returns an error if the provided *lorawan_version* is invalid
+
+### Fixed
+
+- Fixed incorrect pointer conversion that may generate incorrect results on `lr11xx_hal_read` calls
+- Compile warnings in `lr11xx_workaround_gfsk_reset` and `lr11xx_workaround_gfsk_1_2_kbps`
+
+## [v2.6.0] - 2025-01-28
+
+### Added
+
+- `lr11xx_bootloader_get_hash` to get the flash code hash value
+
+### Fixed
+
+- Fix Wi-Fi MAC address endianness parsing when reading country code results
+
+## [v2.5.2] - 2024-11-19
 
 ### Fixed
 

@@ -355,7 +355,7 @@ static void modem_event_callback( void )
             relay_config.backoff = 0;  // 4;
             ASSERT_SMTC_MODEM_RC( smtc_modem_relay_tx_enable( stack_id, &relay_config ) );
 #endif
-          
+
             ASSERT_SMTC_MODEM_RC( smtc_modem_join_network( stack_id ) );
             break;
 
@@ -479,7 +479,7 @@ static void modem_event_callback( void )
             break;
         case SMTC_MODEM_EVENT_RELAY_RX_RUNNING:
             SMTC_HAL_TRACE_INFO( "Event received: RELAY_RX_RUNNING\n" );
-#if defined( ADD_CSMA )
+#if defined( ALLOW_CSMA ) && defined( USE_RELAY_RX )
             bool csma_state = false;
             ASSERT_SMTC_MODEM_RC( smtc_modem_csma_get_state( STACK_ID, &csma_state ) );
             if( ( current_event.event_data.relay_rx.status == true ) && ( csma_state == true ) )
@@ -487,25 +487,54 @@ static void modem_event_callback( void )
                 // Disable CSMA when Relay Rx Is enabled by network
                 ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, false ) );
             }
-#if defined( ENABLE_CSMA_BY_DEFAULT )
+#if defined( ALLOW_CSMA_AND_ENABLE_AT_BOOT ) && defined( USE_RELAY_RX )
             if( current_event.event_data.relay_rx.status == false )
             {
                 ASSERT_SMTC_MODEM_RC( smtc_modem_csma_set_state( STACK_ID, true ) );
             }
-#endif  // ENABLE_CSMA_BY_DEFAULT
-#endif  // ADD_CSMA
+#endif  // ALLOW_CSMA_AND_ENABLE_AT_BOOT
+#endif  // ALLOW_CSMA
 
             break;
         case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
             SMTC_HAL_TRACE_INFO( "Event received: DUTY_CYCLE\n" );
             break;
+        case SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD:
+        {
+            SMTC_HAL_TRACE_INFO( "Event received: NO_DOWNLINK_THRESHOLD\n" );
+            if( current_event.event_data.no_downlink.status != 0 )
+            {
+                // Leave and re-join network
+                smtc_modem_alarm_clear_timer( );
+                ASSERT_SMTC_MODEM_RC( smtc_modem_leave_network( stack_id ) );
+                ASSERT_SMTC_MODEM_RC( smtc_modem_join_network( stack_id ) );
+                SMTC_HAL_TRACE_INFO(
+                    "Event received: %s-%s\n",
+                    current_event.event_data.no_downlink.status & SMTC_MODEM_EVENT_NO_RX_THRESHOLD_ADR_BACKOFF_END
+                        ? "ADR backoff end-"
+                        : "",
+                    current_event.event_data.no_downlink.status & SMTC_MODEM_EVENT_NO_RX_THRESHOLD_USER_THRESHOLD
+                        ? "-User threshold reached"
+                        : "" );
+            }
+            else  // Event cleared
+            {
+                SMTC_HAL_TRACE_INFO( "Event type: Cleared\n" );
+            }
+            break;
+        }
         case SMTC_MODEM_EVENT_TEST_MODE:
         {
             uint8_t status_test_mode = current_event.event_data.test_mode_status.status;
-#if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
+#if HAL_DBG_TRACE == HAL_FEATURE_ON
             char* status_name[] = { "SMTC_MODEM_EVENT_TEST_MODE_ENDED", "SMTC_MODEM_EVENT_TEST_MODE_TX_COMPLETED",
-                                    "SMTC_MODEM_EVENT_TEST_MODE_TX_DONE", "SMTC_MODEM_EVENT_TEST_MODE_RX_DONE" };
-            SMTC_HAL_TRACE_INFO( "Event received: TEST_MODE :  %s\n", status_name[status_test_mode] );
+                                    "SMTC_MODEM_EVENT_TEST_MODE_TX_DONE", "SMTC_MODEM_EVENT_TEST_MODE_RX_DONE",
+                                    "SMTC_MODEM_EVENT_TEST_MODE_RX_ABORTED" };
+            // When aborted, do not print the status to avoid log flooding
+            if( status_test_mode < SMTC_MODEM_EVENT_TEST_MODE_RX_ABORTED )
+            {
+                SMTC_HAL_TRACE_INFO( "Event received: TEST_MODE :  %s\n", status_name[status_test_mode] );
+            }
 #endif
             if( status_test_mode == SMTC_MODEM_EVENT_TEST_MODE_RX_DONE )
             {

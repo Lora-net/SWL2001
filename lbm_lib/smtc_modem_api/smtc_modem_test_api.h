@@ -191,15 +191,14 @@ smtc_modem_return_code_t smtc_modem_test_tx_cw( uint32_t frequency_hz, int8_t tx
  * @param [in] header_type     header type (explicit/implicit)
  * @param [in] preamble_size   Size of the preamble
  * @param [in] symb_nb_timeout Number of symbols before timeout (0 means no timeout)
- * 
+ *
  * @return Modem return code as defined in @ref smtc_modem_return_code_t
  */
 
 smtc_modem_return_code_t smtc_modem_test_rx_lora( uint32_t frequency_hz, ral_lora_sf_t sf, ral_lora_bw_t bw,
-                                                             ral_lora_cr_t                    cr,
-                                                             smtc_modem_test_mode_sync_word_t sync_word, bool invert_iq,
-                                                             bool crc_is_on, ral_lora_pkt_len_modes_t header_type,
-                                                             uint32_t preamble_size, uint8_t symb_nb_timeout);
+                                                  ral_lora_cr_t cr, smtc_modem_test_mode_sync_word_t sync_word,
+                                                  bool invert_iq, bool crc_is_on, ral_lora_pkt_len_modes_t header_type,
+                                                  uint32_t preamble_size, uint8_t symb_nb_timeout );
 
 /**
  * @brief Test mode RX FSK continue

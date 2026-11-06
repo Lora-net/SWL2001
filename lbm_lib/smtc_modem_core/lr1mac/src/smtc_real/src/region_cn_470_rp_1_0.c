@@ -166,18 +166,19 @@ void region_cn_470_rp_1_0_config( smtc_real_t* real )
 
         SMTC_PUT_BIT8( channel_index_enabled, i, CHANNEL_ENABLED );
 
-        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "TX - idx:%u, freq: %d, dr: 0x%x,\n%s", i,
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "TX - idx:%u, freq: %d, dr: 0x%x,\n", i,
                                            region_cn_470_rp_1_0_get_tx_frequency_channel( real, i ),
-                                           dr_bitfield_tx_channel[i], ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                                           dr_bitfield_tx_channel[i] );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s", ( ( i % 8 ) == 7 ) ? "---\n" : "" );
     }
 #if MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON
     // Rx 500 kHz channels
     for( uint8_t i = 0; i < real_const.const_number_of_rx_channel; i++ )
     {
-        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "RX - idx:%u, freq: %d, dr_min: %u, dr_max: %u\n%s", i,
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "RX - idx:%u, freq: %d, dr_min: %u, dr_max: %u\n", i,
                                            region_cn_470_rp_1_0_get_rx1_frequency_channel( real, i ),
-                                           MIN_RX_DR_CN_470_RP_1_0, MAX_RX_DR_CN_470_RP_1_0,
-                                           ( ( i % 8 ) == 7 ) ? "---\n" : "" );
+                                           MIN_RX_DR_CN_470_RP_1_0, MAX_RX_DR_CN_470_RP_1_0 );
+        SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "%s", ( ( i % 8 ) == 7 ) ? "---\n" : "" );
     }
 #endif
 }
@@ -361,7 +362,7 @@ status_channel_t region_cn_470_rp_1_0_build_channel_mask( smtc_real_t* real, uin
         break;
     }
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( "unwrapped channel tx mask = 0x" );
     for( uint8_t i = 0; i < BANK_MAX_CN470_RP_1_0; i++ )
     {
@@ -376,6 +377,18 @@ status_channel_t region_cn_470_rp_1_0_build_channel_mask( smtc_real_t* real, uin
         status = ERROR_CHANNEL_MASK;
     }
     return ( status );
+}
+
+bool region_cn_470_rp_1_0_are_all_default_channels_enabled( smtc_real_t* real )
+{
+    for( uint8_t i = 0; i < real_const.const_number_of_tx_channel; i++ )
+    {
+        if( SMTC_GET_BIT8( channel_index_enabled, i ) == 0 )
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 void region_cn_470_rp_1_0_enable_all_channels_with_valid_freq( smtc_real_t* real )
@@ -426,14 +439,14 @@ uint32_t region_cn_470_rp_1_0_get_rx1_frequency_channel( smtc_real_t* real, uint
 
 uint32_t region_cn_470_rp_1_0_get_rx_beacon_frequency_channel( smtc_real_t* real, uint32_t gps_time_s )
 {
-    uint8_t index = ( uint32_t )( floorf( gps_time_s / 128 ) ) % 8;
+    uint8_t index = ( uint32_t ) ( floorf( gps_time_s / 128 ) ) % 8;
     return ( BEACON_FREQ_START_CN_470_RP_1_0 + ( ( index % 8 ) * BEACON_STEP_CN_470_RP_1_0 ) );
 }
 
 uint32_t region_cn_470_rp_1_0_get_rx_ping_slot_frequency_channel( smtc_real_t* real, uint32_t gps_time_s,
                                                                   uint32_t dev_addr )
 {
-    uint8_t index = ( dev_addr + ( uint32_t )( floorf( gps_time_s / 128 ) ) ) % 8;
+    uint8_t index = ( dev_addr + ( uint32_t ) ( floorf( gps_time_s / 128 ) ) ) % 8;
     return ( PING_SLOT_FREQ_START_CN_470_RP_1_0 + ( ( index % 8 ) * PING_SLOT_STEP_CN_470_RP_1_0 ) );
 }
 

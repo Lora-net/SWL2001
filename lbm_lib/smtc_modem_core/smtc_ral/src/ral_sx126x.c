@@ -252,6 +252,20 @@ ral_status_t ral_sx126x_wakeup( const void* context )
 
 ral_status_t ral_sx126x_set_sleep( const void* context, const bool retain_config )
 {
+    ral_status_t status = RAL_STATUS_ERROR;
+
+    if( retain_config == true )
+    {
+        // In case of LR-FHSS transmission, the frequency hopping state is retained, and must be disabled for others
+        // modulations
+        ral_lr_fhss_params_t lr_fhss_params = { 0 };
+        status = ( ral_status_t ) ral_sx126x_lr_fhss_handle_tx_done( context, &lr_fhss_params, NULL );
+        if( status != RAL_STATUS_OK )
+        {
+            return status;
+        }
+    }
+
     const sx126x_sleep_cfgs_t radio_sleep_cfg =
         ( retain_config == true ) ? SX126X_SLEEP_CFG_WARM_START : SX126X_SLEEP_CFG_COLD_START;
 
@@ -987,28 +1001,28 @@ ral_status_t ral_sx126x_get_lora_cad_det_peak( const void* context, ral_lora_sf_
         switch( sf )
         {
         case RAL_LORA_SF5:
-            *cad_det_peak = 19;
-            break;
-        case RAL_LORA_SF6:
-            *cad_det_peak = 20;
-            break;
-        case RAL_LORA_SF7:
-            *cad_det_peak = 21;
-            break;
-        case RAL_LORA_SF8:
             *cad_det_peak = 22;
             break;
-        case RAL_LORA_SF9:
+        case RAL_LORA_SF6:
             *cad_det_peak = 23;
             break;
-        case RAL_LORA_SF10:
-            *cad_det_peak = 23;
+        case RAL_LORA_SF7:
+            *cad_det_peak = 25;
             break;
-        case RAL_LORA_SF11:
+        case RAL_LORA_SF8:
             *cad_det_peak = 26;
             break;
-        case RAL_LORA_SF12:
+        case RAL_LORA_SF9:
             *cad_det_peak = 30;
+            break;
+        case RAL_LORA_SF10:
+            *cad_det_peak = 31;
+            break;
+        case RAL_LORA_SF11:
+            *cad_det_peak = 33;
+            break;
+        case RAL_LORA_SF12:
+            *cad_det_peak = 35;
             break;
         default:
             return RAL_STATUS_UNKNOWN_VALUE;
@@ -1020,16 +1034,16 @@ ral_status_t ral_sx126x_get_lora_cad_det_peak( const void* context, ral_lora_sf_
         switch( sf )
         {
         case RAL_LORA_SF5:
-            *cad_det_peak = 19;
+            *cad_det_peak = 20;
             break;
         case RAL_LORA_SF6:
-            *cad_det_peak = 20;
+            *cad_det_peak = 21;
             break;
         case RAL_LORA_SF7:
             *cad_det_peak = 22;
             break;
         case RAL_LORA_SF8:
-            *cad_det_peak = 22;
+            *cad_det_peak = 24;
             break;
         case RAL_LORA_SF9:
             *cad_det_peak = 24;
@@ -1038,10 +1052,10 @@ ral_status_t ral_sx126x_get_lora_cad_det_peak( const void* context, ral_lora_sf_
             *cad_det_peak = 25;
             break;
         case RAL_LORA_SF11:
-            *cad_det_peak = 26;
+            *cad_det_peak = 27;
             break;
         case RAL_LORA_SF12:
-            *cad_det_peak = 29;
+            *cad_det_peak = 27;
             break;
         default:
             return RAL_STATUS_UNKNOWN_VALUE;
@@ -1561,7 +1575,7 @@ ral_status_t ral_sx126x_convert_lora_cad_params_from_ral( const ral_lora_cad_par
 void ral_sx126x_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
                                                  sx126x_lr_fhss_params_t*    radio_lr_fhss_params )
 {
-    *radio_lr_fhss_params = ( sx126x_lr_fhss_params_t ){
+    *radio_lr_fhss_params = ( sx126x_lr_fhss_params_t ) {
         .lr_fhss_params           = ral_lr_fhss_params->lr_fhss_params,
         .center_freq_in_pll_steps = sx126x_convert_freq_in_hz_to_pll_step( ral_lr_fhss_params->center_frequency_in_hz ),
         .device_offset            = ral_lr_fhss_params->device_offset,
@@ -1613,6 +1627,46 @@ static ral_status_t ral_sx126x_cfg_trim_cap( const void* context )
     }
 
     return RAL_STATUS_OK;
+}
+
+ral_status_t ral_sx126x_rttof_set_parameters( const void* context, const uint8_t nb_symbols )
+{
+    ( void ) context;     // Unused parameter
+    ( void ) nb_symbols;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx126x_rttof_set_address( const void* context, const uint32_t address, const uint8_t check_length )
+{
+    ( void ) context;       // Unused parameter
+    ( void ) address;       // Unused parameter
+    ( void ) check_length;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx126x_rttof_set_request_address( const void* context, const uint32_t request_address )
+{
+    ( void ) context;          // Unused parameter
+    ( void ) request_address;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx126x_rttof_set_rx_tx_delay_indicator( const void* context, const uint32_t delay_indicator )
+{
+    ( void ) context;          // Unused parameter
+    ( void ) delay_indicator;  // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
+}
+
+ral_status_t ral_sx126x_rttof_get_raw_result( const void* context, ral_lora_bw_t rttof_bw, int32_t* raw_results,
+                                              int32_t* meter_results, int8_t* rssi_result )
+{
+    ( void ) context;        // Unused parameter
+    ( void ) rttof_bw;       // Unused parameter
+    ( void ) raw_results;    // Unused parameter
+    ( void ) meter_results;  // Unused parameter
+    ( void ) rssi_result;    // Unused parameter
+    return RAL_STATUS_UNSUPPORTED_FEATURE;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

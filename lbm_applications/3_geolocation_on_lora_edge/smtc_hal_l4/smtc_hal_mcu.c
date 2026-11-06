@@ -52,7 +52,7 @@
 #include "smtc_hal_lp_timer.h"
 #include "smtc_hal_watchdog.h"
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
@@ -73,7 +73,6 @@
 #ifndef HW_DEBUG_PROBE
 #define HW_DEBUG_PROBE 0
 #endif
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -94,7 +93,7 @@ static void lpm_enter_sleep_mode( void );
 static void lpm_exit_sleep_mode( void );
 static void sleep_handler( void );
 
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
 static void lpm_mcu_deinit( void );
 static void lpm_mcu_reinit( void );
 #endif
@@ -136,7 +135,7 @@ void hal_mcu_init( void )
     // Initialize watchdog
     hal_watchdog_init( );
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     // Initialize Uart for debug traces
     uart2_init( );
 #endif
@@ -150,10 +149,6 @@ void hal_mcu_init( void )
 
     // Initialize Low Power Timer
     hal_lp_timer_init( HAL_LP_TIMER_ID_1 );
-
-#if( SX127X )
-    hal_lp_timer_init( HAL_LP_TIMER_ID_2 );
-#endif
 
     // Initialize SPI for radio
     hal_spi_init( RADIO_SPI_ID, RADIO_SPI_MOSI, RADIO_SPI_MISO, RADIO_SPI_SCLK );
@@ -205,9 +200,9 @@ void assert_failed( uint8_t* file, uint32_t line )
 {
     // User can add his own implementation to report the file name and line
     // number,
-    // ex: printf("Wrong parameters value: file %s on line %lu\r\n", file, line)
+    // ex: printf("Wrong parameters value: file %s on line %lu\n", file, line)
 
-    SMTC_HAL_TRACE_PRINTF( "Wrong parameters value: file %s on line %lu\r\n", ( const char* ) file, line );
+    SMTC_HAL_TRACE_PRINTF( "Wrong parameters value: file %s on line %lu\n", ( const char* ) file, line );
     // Infinite loop
     while( 1 )
     {
@@ -294,7 +289,7 @@ static void system_clock_config( void )
     periph_clk_init.PLLSAI1.PLLSAI1R        = RCC_PLLR_DIV2;
     periph_clk_init.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_48M2CLK;
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     periph_clk_init.PeriphClockSelection |= RCC_PERIPHCLK_USART2;
     periph_clk_init.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
 #endif
@@ -317,7 +312,7 @@ static void system_clock_config( void )
 
 static void mcu_gpio_init( void )
 {
-#if( HW_DEBUG_PROBE == 1 )
+#if ( HW_DEBUG_PROBE == 1 )
     // Enable debug in sleep/stop/standby
     HAL_DBGMCU_EnableDBGSleepMode( );
     HAL_DBGMCU_EnableDBGStopMode( );
@@ -362,7 +357,7 @@ static void mcu_gpio_init( void )
  */
 static void lpm_enter_sleep_mode( void )
 {
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
     // Deinit periph & enter Stop Mode
     lpm_mcu_deinit( );
     HAL_PWREx_EnterSTOP2Mode( PWR_STOPENTRY_WFI );
@@ -377,7 +372,7 @@ static void lpm_enter_sleep_mode( void )
  */
 static void lpm_exit_sleep_mode( void )
 {
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
     // Initializes the peripherals
     lpm_mcu_reinit( );
 #endif
@@ -402,7 +397,7 @@ static void sleep_handler( void )
     HAL_ResumeTick( );
 }
 
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
 
 /**
  * @brief De-init periph begore going in sleep mode
@@ -415,7 +410,7 @@ static void lpm_mcu_deinit( void )
 #if defined( HW_MODEM_ENABLED )
     uart4_deinit( );
 #endif
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     uart2_deinit( );
 #endif
 }
@@ -456,7 +451,7 @@ static void lpm_mcu_reinit( void )
     }
 
     // Initialize UART
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     uart2_init( );
 #endif
 #if defined( HW_MODEM_ENABLED )
@@ -476,7 +471,7 @@ void HardFault_Handler( void )
 {
     SMTC_HAL_TRACE_ERROR( "\x1B[0;31m" );  // red color
     SMTC_HAL_TRACE_ERROR( "HARDFAULT_Handler\n" );
-    SMTC_HAL_TRACE_ERROR( "\x1B[0m" );     // default color
+    SMTC_HAL_TRACE_ERROR( "\x1B[0m" );  // default color
     while( 1 )
     {
     }

@@ -82,6 +82,8 @@
 #include "ralf_lr11xx.h"
 #elif defined( SX127X )
 #include "ralf_sx127x.h"
+#elif defined( LR20XX )
+#include "ralf_lr20xx.h"
 #elif defined( TRANSPARENT_RADIO )
 #include "ralf_transparent.h"
 #endif
@@ -98,6 +100,7 @@
 
 #if defined( ADD_LBM_GEOLOCATION )
 #include "smtc_modem_geolocation_api.h"
+#include "mw_gnss_almanac_full_update.h"
 #endif
 
 #if defined( ADD_RELAY_TX )
@@ -194,6 +197,8 @@ ralf_t modem_radio = RALF_SX128X_INSTANTIATE( NULL );
 ralf_t modem_radio = RALF_SX126X_INSTANTIATE( NULL );
 #elif defined( LR11XX )
 ralf_t modem_radio = RALF_LR11XX_INSTANTIATE( NULL );
+#elif defined( LR20XX )
+ralf_t modem_radio = RALF_LR20XX_INSTANTIATE( NULL );
 #elif defined( SX127X )
 #include "sx127x.h"
 static sx127x_t sx127x;
@@ -670,7 +675,7 @@ smtc_modem_return_code_t smtc_modem_adr_set_profile(
     }
     default:
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "Unknown adr profile %d\n ", adr_profile );
+        SMTC_MODEM_HAL_TRACE_ERROR( "Unknown adr profile %d\n", adr_profile );
         return SMTC_MODEM_RC_INVALID;
     }
     break;
@@ -884,6 +889,9 @@ smtc_modem_return_code_t smtc_modem_get_event( smtc_modem_event_t* event, uint8_
             break;
         case SMTC_MODEM_EVENT_REGIONAL_DUTY_CYCLE:
             event->event_data.regional_duty_cycle.status = get_modem_event_status( event->event_type );
+            break;
+        case SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD:
+            event->event_data.no_downlink.status = get_modem_event_status( event->event_type );
             break;
         case SMTC_MODEM_EVENT_DOWNDATA:
         case SMTC_MODEM_EVENT_ALARM:
@@ -1149,7 +1157,7 @@ smtc_modem_return_code_t smtc_modem_alarm_clear_timer( void )
 
     if( modem_get_user_alarm( ) == 0 )
     {
-        SMTC_MODEM_HAL_TRACE_WARNING( "Alarm clear timer impossible: no alarm timer is currently running" )
+        SMTC_MODEM_HAL_TRACE_WARNING( "Alarm clear timer impossible: no alarm timer is currently running\n" )
         return SMTC_MODEM_RC_NOT_INIT;
     }
     else
@@ -1166,7 +1174,7 @@ smtc_modem_return_code_t smtc_modem_alarm_get_remaining_time( uint32_t* remainin
 
     if( modem_get_user_alarm( ) == 0 )
     {
-        SMTC_MODEM_HAL_TRACE_WARNING( "Alarm get remaining impossible: no alarm timer is currently running" )
+        SMTC_MODEM_HAL_TRACE_WARNING( "Alarm get remaining impossible: no alarm timer is currently running\n" )
         return SMTC_MODEM_RC_NOT_INIT;
     }
     else
@@ -1349,6 +1357,21 @@ smtc_modem_return_code_t smtc_modem_get_adr_ack_limit_delay( uint8_t stack_id, u
     RETURN_INVALID_IF_NULL( adr_ack_delay );
 
     lorawan_api_get_adr_ack_limit_delay( adr_ack_limit, adr_ack_delay, stack_id );
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_set_report_all_downlinks_to_user( uint8_t stack_id, bool report_all_downlinks )
+{
+    RETURN_BUSY_IF_TEST_MODE( );
+    modem_set_report_all_downlinks_to_user( report_all_downlinks );
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_get_report_all_downlinks_to_user( uint8_t stack_id, bool* report_all_downlinks )
+{
+    RETURN_BUSY_IF_TEST_MODE( );
+    RETURN_INVALID_IF_NULL( report_all_downlinks );
+    *report_all_downlinks = modem_get_report_all_downlinks_to_user( );
     return SMTC_MODEM_RC_OK;
 }
 
@@ -1760,11 +1783,11 @@ smtc_modem_return_code_t smtc_modem_multicast_set_grp_config( uint8_t stack_id, 
     RETURN_INVALID_IF_NULL( mc_app_skey );
 
     smtc_modem_return_code_t modem_rc;
-    lorawan_multicast_rc_t   rc = lorawan_api_multicast_set_group_address( mc_grp_id, mc_grp_addr, stack_id );
+    lorawan_multicast_rc_t rc = lorawan_api_multicast_set_group_address( ( uint8_t ) mc_grp_id, mc_grp_addr, stack_id );
 
     if( rc == LORAWAN_MC_RC_OK )
     {
-        rc = lorawan_api_multicast_set_group_session_keys( mc_grp_id, mc_nwk_skey, mc_app_skey, stack_id );
+        rc = lorawan_api_multicast_set_group_session_keys( ( uint8_t ) mc_grp_id, mc_nwk_skey, mc_app_skey, stack_id );
     }
 
     switch( rc )
@@ -1797,7 +1820,7 @@ smtc_modem_return_code_t smtc_modem_multicast_get_grp_config( uint8_t stack_id, 
     RETURN_INVALID_IF_NULL( mc_grp_addr );
 
     smtc_modem_return_code_t modem_rc;
-    lorawan_multicast_rc_t   rc = lorawan_api_multicast_get_group_address( mc_grp_id, mc_grp_addr, stack_id );
+    lorawan_multicast_rc_t rc = lorawan_api_multicast_get_group_address( ( uint8_t ) mc_grp_id, mc_grp_addr, stack_id );
 
     switch( rc )
     {
@@ -1824,7 +1847,7 @@ smtc_modem_return_code_t smtc_modem_multicast_class_c_start_session( uint8_t sta
     RETURN_BUSY_IF_TEST_MODE( );
 
     smtc_modem_return_code_t modem_rc;
-    lorawan_multicast_rc_t   rc = lorawan_api_multicast_c_start_session( mc_grp_id, freq, dr, stack_id );
+    lorawan_multicast_rc_t   rc = lorawan_api_multicast_c_start_session( ( uint8_t ) mc_grp_id, freq, dr, stack_id );
 
     switch( rc )
     {
@@ -1865,7 +1888,7 @@ smtc_modem_return_code_t smtc_modem_multicast_class_c_get_session_status( uint8_
 
     smtc_modem_return_code_t modem_rc;
     lorawan_multicast_rc_t   rc =
-        lorawan_api_multicast_c_get_session_status( mc_grp_id, is_session_started, freq, dr, stack_id );
+        lorawan_api_multicast_c_get_session_status( ( uint8_t ) mc_grp_id, is_session_started, freq, dr, stack_id );
 
     switch( rc )
     {
@@ -1891,7 +1914,7 @@ smtc_modem_return_code_t smtc_modem_multicast_class_c_stop_session( uint8_t stac
     RETURN_BUSY_IF_TEST_MODE( );
 
     smtc_modem_return_code_t modem_rc;
-    lorawan_multicast_rc_t   rc = lorawan_api_multicast_c_stop_session( mc_grp_id, stack_id );
+    lorawan_multicast_rc_t   rc = lorawan_api_multicast_c_stop_session( ( uint8_t ) mc_grp_id, stack_id );
 
     switch( rc )
     {
@@ -1943,7 +1966,7 @@ smtc_modem_return_code_t smtc_modem_multicast_class_b_start_session(
 
     smtc_modem_return_code_t modem_rc;
     lorawan_multicast_rc_t   rc =
-        lorawan_api_multicast_b_start_session( mc_grp_id, freq, dr, ping_slot_periodicity, stack_id );
+        lorawan_api_multicast_b_start_session( ( uint8_t ) mc_grp_id, freq, dr, ping_slot_periodicity, stack_id );
 
     switch( rc )
     {
@@ -1984,9 +2007,14 @@ smtc_modem_return_code_t smtc_modem_multicast_class_b_get_session_status(
     RETURN_INVALID_IF_NULL( dr );
     RETURN_INVALID_IF_NULL( ping_slot_periodicity );
 
+    uint8_t ping_slot_periodicity_tmp = 0;
+
     smtc_modem_return_code_t modem_rc;
-    lorawan_multicast_rc_t   rc = lorawan_api_multicast_b_get_session_status(
-        mc_grp_id, is_session_started, is_session_waiting_for_beacon, freq, dr, ping_slot_periodicity, stack_id );
+    lorawan_multicast_rc_t   rc = lorawan_api_multicast_b_get_session_status( ( uint8_t ) mc_grp_id, is_session_started,
+                                                                              is_session_waiting_for_beacon, freq, dr,
+                                                                              &ping_slot_periodicity_tmp, stack_id );
+
+    *ping_slot_periodicity = ( smtc_modem_class_b_ping_slot_periodicity_t ) ping_slot_periodicity_tmp;
 
     switch( rc )
     {
@@ -2012,7 +2040,7 @@ smtc_modem_return_code_t smtc_modem_multicast_class_b_stop_session( uint8_t stac
     RETURN_BUSY_IF_TEST_MODE( );
 
     smtc_modem_return_code_t modem_rc;
-    lorawan_multicast_rc_t   rc = lorawan_api_multicast_b_stop_session( mc_grp_id, stack_id );
+    lorawan_multicast_rc_t   rc = lorawan_api_multicast_b_stop_session( ( uint8_t ) mc_grp_id, stack_id );
 
     switch( rc )
     {
@@ -2168,12 +2196,62 @@ smtc_modem_return_code_t smtc_modem_gnss_send_mode( uint8_t stack_id, smtc_modem
     }
 }
 
+smtc_modem_return_code_t smtc_modem_almanac_full_update( uint8_t stack_id, const uint8_t* almanac,
+                                                         uint16_t almanac_size )
+{
+    UNUSED( stack_id );
+    RETURN_BUSY_IF_TEST_MODE( );
+    RETURN_INVALID_IF_NULL( almanac );
+
+    /* Suspend the modem to get radio access */
+    if( modem_suspend_radio_access( ) == false )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "smtc_modem_almanac_full_update: failed to suspend modem\n" );
+        return SMTC_MODEM_RC_FAIL;
+    }
+    if( modem_resume_radio_access( ) == false )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "smtc_modem_almanac_full_update: failed to resume modem\n" );
+        return SMTC_MODEM_RC_FAIL;
+    }
+    if( modem_suspend_radio_access( ) == false )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "smtc_modem_almanac_full_update: failed to suspend modem\n" );
+        return SMTC_MODEM_RC_FAIL;
+    }
+
+    /* Update the full almanac */
+    smtc_modem_return_code_t err = mw_gnss_almanac_full_update( almanac, almanac_size );
+    if( err != SMTC_MODEM_RC_OK )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "smtc_modem_almanac_full_update: failed to update almanac\n" );
+    }
+
+    /* Resume the modem */
+    if( modem_resume_radio_access( ) == false )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "smtc_modem_almanac_full_update: failed to resume modem\n" );
+        return SMTC_MODEM_RC_FAIL;
+    }
+
+    return SMTC_MODEM_RC_OK;
+}
+
 smtc_modem_return_code_t smtc_modem_almanac_demodulation_start( uint8_t stack_id )
 {
     UNUSED( stack_id );
     RETURN_BUSY_IF_TEST_MODE( );
 
     mw_gnss_almanac_add_task( );
+    return SMTC_MODEM_RC_OK;
+}
+
+smtc_modem_return_code_t smtc_modem_almanac_demodulation_stop( uint8_t stack_id )
+{
+    UNUSED( stack_id );
+    RETURN_BUSY_IF_TEST_MODE( );
+
+    mw_gnss_almanac_remove_task( );
     return SMTC_MODEM_RC_OK;
 }
 
@@ -2237,6 +2315,13 @@ smtc_modem_return_code_t smtc_modem_wifi_get_event_data_terminated( uint8_t     
     UNUSED( stack_id );
 
     return mw_wifi_get_event_data_terminated( data );
+}
+
+smtc_modem_return_code_t smtc_modem_wifi_set_scan_mode( uint8_t stack_id, smtc_modem_wifi_scan_mode_t scan_mode )
+{
+    UNUSED( stack_id );
+
+    return mw_wifi_set_scan_mode( scan_mode );
 }
 
 smtc_modem_return_code_t smtc_modem_wifi_set_port( uint8_t stack_id, uint8_t port )
@@ -2926,4 +3011,8 @@ smtc_modem_return_code_t smtc_modem_relay_tx_disable( uint8_t stack_id )
 
 #endif
 
+bool smtc_modem_radio_is_free( void )
+{
+    return rp_radio_is_free( &modem_radio_planner );
+}
 /* --- EOF ------------------------------------------------------------------ */

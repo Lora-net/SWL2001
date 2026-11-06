@@ -89,6 +89,11 @@ void mw_gnss_almanac_services_init( uint8_t* service_id, uint8_t task_id,
 void mw_gnss_almanac_add_task( void );
 
 /**
+ * @brief Stop the GNSS almanac demodulation service
+ */
+void mw_gnss_almanac_remove_task( void );
+
+/**
  * @brief Get data associated with the SMTC_MODEM_EVENT_GNSS_ALMANAC_DEMOD_UPDATE event.
  *
  * @param [out] data    Pointer to status data of the almanac update

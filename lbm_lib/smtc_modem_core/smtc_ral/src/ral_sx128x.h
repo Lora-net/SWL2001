@@ -93,7 +93,12 @@ extern "C" {
         .get_gfsk_rx_consumption_in_ua  = ral_sx128x_get_gfsk_rx_consumption_in_ua,                                   \
         .get_lora_rx_consumption_in_ua  = ral_sx128x_get_lora_rx_consumption_in_ua,                                   \
         .get_random_numbers = ral_sx128x_get_random_numbers, .handle_rx_done = ral_sx128x_handle_rx_done,             \
-        .handle_tx_done = ral_sx128x_handle_tx_done, .get_lora_cad_det_peak = ral_sx128x_get_lora_cad_det_peak        \
+        .handle_tx_done = ral_sx128x_handle_tx_done, .get_lora_cad_det_peak = ral_sx128x_get_lora_cad_det_peak,       \
+        .rttof_set_parameters            = ral_sx128x_rttof_set_parameters,                                           \
+        .rttof_set_address               = ral_sx128x_rttof_set_address,                                              \
+        .rttof_set_request_address       = ral_sx128x_rttof_set_request_address,                                      \
+        .rttof_set_rx_tx_delay_indicator = ral_sx128x_rttof_set_rx_tx_delay_indicator,                                \
+        .rttof_get_raw_result            = ral_sx128x_rttof_get_raw_result,                                           \
     }
 
 #define RAL_SX128X_INSTANTIATE( ctx )                         \
@@ -456,6 +461,32 @@ ral_status_t ral_sx128x_handle_tx_done( const void* context );
  */
 ral_status_t ral_sx128x_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
                                                ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak );
+
+/**
+ * @see ral_rttof_set_parameters
+ */
+ral_status_t ral_sx128x_rttof_set_parameters( const void* context, const uint8_t nb_symbols );
+
+/**
+ * @see ral_rttof_set_address
+ */
+ral_status_t ral_sx128x_rttof_set_address( const void* context, const uint32_t address, const uint8_t check_length );
+
+/**
+ * @see ral_rttof_set_request_address
+ */
+ral_status_t ral_sx128x_rttof_set_request_address( const void* context, const uint32_t request_address );
+
+/**
+ * @see ral_rttof_set_rx_tx_delay_indicator
+ */
+ral_status_t ral_sx128x_rttof_set_rx_tx_delay_indicator( const void* context, const uint32_t delay_indicator );
+
+/**
+ * @see ral_rttof_get_raw_result
+ */
+ral_status_t ral_sx128x_rttof_get_raw_result( const void* context, ral_lora_bw_t rttof_bw, int32_t* raw_results,
+                                              int32_t* meter_results, int8_t* rssi_result );
 
 #ifdef __cplusplus
 }

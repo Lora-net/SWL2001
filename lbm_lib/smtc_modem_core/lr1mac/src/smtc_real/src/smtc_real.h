@@ -262,7 +262,15 @@ uint8_t smtc_real_decrement_dr_simulation( smtc_real_t* real, uint8_t tx_data_ra
  * \param [OUT] return
  */
 void smtc_real_decrement_dr( smtc_real_t* real, dr_strategy_t adr_mode_select, uint8_t* tx_data_rate_adr,
-                             int8_t* tx_power, uint8_t* nb_trans );
+                             int8_t* tx_power, uint8_t* nb_trans, uint8_t* no_downlink_limit_bitfield );
+
+/**
+ * \brief
+ * \remark
+ * \param [IN]  none
+ * \param [OUT] return
+ */
+bool smtc_real_are_all_default_channels_enabled( smtc_real_t* real );
 
 /**
  * \brief
@@ -744,13 +752,15 @@ int8_t smtc_real_clamp_output_power_eirp_vs_freq_and_dr( smtc_real_t* real, int8
  * @brief
  *
  * @param real
+ * @param datarate
  * @param number_of_freq
  * @param freq_list
  * @param max_size
  * @return uint8_t
  */
-bool smtc_real_get_current_enabled_frequency_list( smtc_real_t* real, uint8_t* number_of_freq, uint32_t* freq_list,
-                                                   const uint8_t max_size );
+bool smtc_real_get_current_enabled_frequency_list_for_a_datarate( smtc_real_t* real, uint8_t datarate,
+                                                                  uint8_t* number_of_freq, uint32_t* freq_list,
+                                                                  const uint8_t max_size );
 
 /**
  * @brief

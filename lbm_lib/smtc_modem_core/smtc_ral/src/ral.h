@@ -994,10 +994,48 @@ static inline ral_status_t ral_handle_tx_done( const ral_t* radio )
     return radio->driver.handle_tx_done( radio->context );
 }
 
+/**
+ * @brief Get the DetPeak value for Channel Activity Detection
+ *
+ * @param [in] radio    Pointer to radio data structure
+ * @param [in] sf
+ * @param [in] bw
+ * @param [in] nb_symbol
+ * @param [out] cad_det_peak
+ *
+ * @return Operation status
+ */
 static inline ral_status_t ral_get_lora_cad_det_peak( const ral_t* radio, ral_lora_sf_t sf, ral_lora_bw_t bw,
                                                       ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak )
 {
     return radio->driver.get_lora_cad_det_peak( radio->context, sf, bw, nb_symbol, cad_det_peak );
+}
+
+static inline ral_status_t ral_rttof_set_address( const ral_t* radio, const uint32_t address,
+                                                  const uint8_t check_length )
+{
+    return radio->driver.rttof_set_address( radio->context, address, check_length );
+}
+
+static inline ral_status_t ral_rttof_set_parameters( const ral_t* radio, const uint8_t nb_symbols )
+{
+    return radio->driver.rttof_set_parameters( radio->context, nb_symbols );
+}
+
+static inline ral_status_t ral_rttof_set_request_address( const ral_t* radio, const uint32_t request_address )
+{
+    return radio->driver.rttof_set_request_address( radio->context, request_address );
+}
+
+static inline ral_status_t ral_rttof_set_rx_tx_delay_indicator( const ral_t* radio, const uint32_t delay_indicator )
+{
+    return radio->driver.rttof_set_rx_tx_delay_indicator( radio->context, delay_indicator );
+}
+
+static inline ral_status_t ral_rttof_get_raw_result( const ral_t* radio, ral_lora_bw_t rttof_bw, int32_t* raw_results,
+                                                     int32_t* results_meter, int8_t* rssi_result )
+{
+    return radio->driver.rttof_get_raw_result( radio->context, rttof_bw, raw_results, results_meter, rssi_result );
 }
 
 #ifdef __cplusplus

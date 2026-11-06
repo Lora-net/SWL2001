@@ -45,7 +45,6 @@ extern "C" {
 #include "smtc_real_defs.h"
 #include "radio_planner.h"
 
-
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
@@ -72,7 +71,7 @@ typedef struct lr1_stack_mac_down_data_s
 } lr1_stack_mac_down_data_t;
 typedef struct lr1_stack_mac_s
 {
-    smtc_real_t*        real;  // Region Abstraction Layer
+    smtc_real_t* real;  // Region Abstraction Layer
     void ( *push_callback )( lr1_stack_mac_down_data_t* );
     void* push_context;
 
@@ -166,6 +165,7 @@ typedef struct lr1_stack_mac_s
     uint8_t       adr_ack_limit_init;
     uint8_t       adr_ack_limit;
     uint8_t       adr_ack_delay;
+    uint8_t       no_downlink_limit_bitfield;  // Tracks ADR back-off limit and user no RX packet threshold
     uint8_t       adr_ack_req;
     bool          adr_enable;
     dr_strategy_t adr_mode_select;
@@ -439,10 +439,6 @@ void lr1_stack_mac_rx_lora_launch_callback_for_rp( void* rp_void );
 void lr1_stack_mac_rx_gfsk_launch_callback_for_rp( void* rp_void );
 void lr1_stack_mac_tx_ack_bit_set( lr1_stack_mac_t* lr1_mac, bool enable );
 bool lr1_stack_mac_tx_ack_bit_get( lr1_stack_mac_t* lr1_mac );
-
-
-
-
 
 #ifdef __cplusplus
 }

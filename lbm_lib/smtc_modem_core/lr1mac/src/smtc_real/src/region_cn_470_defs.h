@@ -64,7 +64,7 @@ extern uint32_t freq_tx_cn470_mono_channel_mhz;
 #define JOIN_ACCEPT_DELAY1_CN_470           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_CN_470           (6)             // define in seconds
 #define RECEIVE_DELAY1_CN_470               (1)             // define in seconds
-#if defined( LR11XX )
+#if defined( LR11XX ) || defined( LR20XX )
 #define TX_POWER_EIRP_CN_470                (19)            // define in dbm
 #else
 // This value must be the MIN of MAX supported by the region and the radio, region is 19dBm EIRP but radio is 14dBm ERP (+2 to EIRP)

@@ -186,7 +186,7 @@ const uint16_t convert_bucket_size_factor[]                   = { 1, 2, 4, 12 };
 
 #if ( MODEM_HAL_DBG_TRACE )
 const char* cad_period_str[]       = { "1 s", "500 ms", "250 ms", "100 ms", "50 ms", "20 ms" };
-const char* ack_offset_khz_str[]   = { "0 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz", "32 kHz" };
+const char* ack_offset_khz_str[]   = { "0 kHz", "200 kHz", "400 kHz", "800 kHz", "1600 kHz", "3200 kHz" };
 const char* action_fwd_str[]       = { "FWD_CLEAR", "FWD_FORWARD", "FWD_FILTER", "FWD_RFU" };
 const char* limit_fwd_str[]        = { "Overall ", "Global  ", "Notify  ", "Join Req" };
 const char* rst_limit_action_str[] = { "Set to 0", "Set to reload rate", "Set to max val", "Dont change" };
@@ -266,7 +266,7 @@ static bool relay_mac_update_config_relay_parser( lr1_stack_mac_t* lr1_mac, rela
         if( second_ch_idx == 0 )
         {
             config.nb_wor_channel = 1;
-            SMTC_MODEM_HAL_TRACE_PRINTF( "No additionnal channel \n" );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "No additional channel \n" );
         }
         else if( second_ch_idx == 1 )
         {
@@ -284,7 +284,7 @@ static bool relay_mac_update_config_relay_parser( lr1_stack_mac_t* lr1_mac, rela
             config.channel_cfg[1].dr = TAKE_N_BITS_FROM( settings_relay, 3, 4 );
             SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel DR: %d \n", config.channel_cfg[1].dr );
 
-            if( smtc_real_is_tx_dr_valid( lr1_mac->real, config.channel_cfg[1].dr ) != OKLORAWAN )
+            if( smtc_real_is_rx_dr_valid( lr1_mac->real, config.channel_cfg[1].dr ) != OKLORAWAN )
             {
                 SMTC_MODEM_HAL_TRACE_PRINTF( "Second channel DR: Invalid value\n" );
                 ack_ret = RELAY_CLEAR_BIT( ack_ret, RELAY_CID_CONFIG_RELAY_ACK_BIT_SECOND_CH_DR );

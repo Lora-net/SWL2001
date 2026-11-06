@@ -400,6 +400,12 @@ void smtc_modem_hal_irq_config_radio_irq( void ( *callback )( void* context ), v
 #endif
 }
 
+bool smtc_modem_external_stack_currently_use_radio( void )
+{
+    // return false if the radio is available for the lbm stack
+    return false;
+}
+
 void smtc_modem_hal_start_radio_tcxo( void )
 {
     // put here the code that will start the tcxo if needed
@@ -413,7 +419,7 @@ void smtc_modem_hal_stop_radio_tcxo( void )
 uint32_t smtc_modem_hal_get_radio_tcxo_startup_delay_ms( void )
 {
     // Tcxo is present on LR1110 and LR1120 evk boards, LR1121 ref board does not have tcxo but only 32MHz xtal
-#if defined( LR11XX ) && !defined( LR1121 )
+#if defined( LR1110 ) || defined( LR1120 )
     return 5;
 #else
     return 0;

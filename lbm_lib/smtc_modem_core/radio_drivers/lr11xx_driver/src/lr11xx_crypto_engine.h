@@ -123,7 +123,7 @@ lr11xx_status_t lr11xx_crypto_derive_key( const void* context, lr11xx_crypto_sta
  * @param [in] lorawan_version LoRaWAN version to know the size of the header
  * @param [in] header The header to compute (length linked to lorawan_version)
  * @param [in] data The data to compute
- * @param [in] length The length in bytes of the data to compute
+ * @param [in] length The length in bytes of the data to compute, must be less than 32 bytes
  * @param [out] data_out Placeholder for the decrypted data
  *
  * @returns Operation status

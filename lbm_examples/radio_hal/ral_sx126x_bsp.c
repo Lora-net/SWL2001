@@ -340,20 +340,11 @@ void ral_sx126x_bsp_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf
                                            ral_lora_cad_symbs_t nb_symbol, uint8_t* in_out_cad_det_peak )
 {
     // Function used to fine tune the cad detection peak, update if needed
-
-    // The DetPeak value set in the sx126x Radio Abstraction Layer is too close to the sensitivity for BW500 and SF>=9
-    if( bw >= RAL_LORA_BW_500_KHZ )
-    {
-        if( sf >= RAL_LORA_SF9 )
-        {
-            *in_out_cad_det_peak += 11;
-        }
-    }
 }
 
-ral_status_t ral_sx126x_bsp_get_instantaneous_tx_power_consumption( const void *context,
-    const ral_sx126x_bsp_tx_cfg_output_params_t* tx_cfg_output_params, sx126x_reg_mod_t radio_reg_mode,
-    uint32_t* pwr_consumption_in_ua )
+ral_status_t ral_sx126x_bsp_get_instantaneous_tx_power_consumption(
+    const void* context, const ral_sx126x_bsp_tx_cfg_output_params_t* tx_cfg_output_params,
+    sx126x_reg_mod_t radio_reg_mode, uint32_t* pwr_consumption_in_ua )
 {
     // SX1261
     if( tx_cfg_output_params->pa_cfg.device_sel == 0x01 )
@@ -417,7 +408,7 @@ ral_status_t ral_sx126x_bsp_get_instantaneous_tx_power_consumption( const void *
     return RAL_STATUS_OK;
 }
 
-ral_status_t ral_sx126x_bsp_get_instantaneous_gfsk_rx_power_consumption( const void *context,
+ral_status_t ral_sx126x_bsp_get_instantaneous_gfsk_rx_power_consumption( const void*      context,
                                                                          sx126x_reg_mod_t radio_reg_mode,
                                                                          bool             rx_boosted,
                                                                          uint32_t*        pwr_consumption_in_ua )
@@ -438,7 +429,7 @@ ral_status_t ral_sx126x_bsp_get_instantaneous_gfsk_rx_power_consumption( const v
     return RAL_STATUS_OK;
 }
 
-ral_status_t ral_sx126x_bsp_get_instantaneous_lora_rx_power_consumption( const void *context,
+ral_status_t ral_sx126x_bsp_get_instantaneous_lora_rx_power_consumption( const void*      context,
                                                                          sx126x_reg_mod_t radio_reg_mode,
                                                                          bool             rx_boosted,
                                                                          uint32_t*        pwr_consumption_in_ua )

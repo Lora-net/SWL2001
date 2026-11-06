@@ -65,7 +65,7 @@ void smtc_lbt_init( smtc_lbt_t* lbt_obj, radio_planner_t* rp, uint8_t lbt_id_rp,
     lbt_obj->rssi_nb_of_meas    = 0;
     lbt_obj->is_at_time         = false;
     lbt_obj->enabled            = false;
-    lbt_obj->listen_duration_ms = LBT_SNIFF_DURATION_MS_DEFAULT;
+    lbt_obj->listen_duration_ms = LBT_SNIFF_DURATION_MS_DEFAULT + LAP_OF_TIME_TO_GET_A_RSSI_VALID;
     lbt_obj->threshold          = LBT_THRESHOLD_DBM_DEFAULT;
     lbt_obj->bw_hz              = LBT_BW_HZ__DEFAULT;
     rp_release_hook( rp, lbt_id_rp );

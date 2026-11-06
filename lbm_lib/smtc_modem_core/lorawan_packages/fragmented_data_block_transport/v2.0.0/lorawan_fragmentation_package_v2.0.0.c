@@ -583,11 +583,14 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                 {
                     status = 0x04;
                 }
-                status += ( frag_session_data[frag_index].frag_decoder_status.MatrixError & 0x01 );
-
-                if( frag_session_data[frag_index].frag_decoder_status.MissingFrag == 0 )
+                else
                 {
-                    status += ( compute_data_block_integrity_ckeck( frag_index, ctx->stack_id ) << 1 );
+                    status += ( frag_session_data[frag_index].frag_decoder_status.MatrixError & 0x01 );
+
+                    if( frag_session_data[frag_index].frag_decoder_status.MissingFrag == 0 )
+                    {
+                        status += ( compute_data_block_integrity_ckeck( frag_index, ctx->stack_id ) << 1 );
+                    }
                 }
 
                 if( ( ans_index + FRAGMENTATION_SESSION_STATUS_ANS_SIZE ) <= max_payload_size )
@@ -637,7 +640,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
             uint8_t status = 0x00;
 
-            SMTC_MODEM_HAL_TRACE_ARRAY( "Session setup = ", fragmentation_package_rx_buffer,
+            SMTC_MODEM_HAL_TRACE_ARRAY( "Session setup = \n", fragmentation_package_rx_buffer,
                                         fragmentation_package_rx_buffer_length );
 
             frag_session_data_tmp.frag_group_data.frag_session.mc_group_bit_mask =
@@ -684,9 +687,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
                     .frag_group_data.session_cnt_prev;
 
             fragmentation_package_rx_buffer_index += FRAGMENTATION_SESSION_SETUP_REQ_SIZE;
-            SMTC_MODEM_HAL_TRACE_PRINTF( " \nfrag_nb = %d , \nfrag_size = %d \n ",
-                                         frag_session_data_tmp.frag_group_data.frag_nb,
-                                         frag_session_data_tmp.frag_group_data.frag_size );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "frag_nb = %d ,\n", frag_session_data_tmp.frag_group_data.frag_nb );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "frag_size = %d\n", frag_session_data_tmp.frag_group_data.frag_size );
             if( frag_session_data_tmp.frag_group_data.control.frag_algo > 0 )
             {
                 status |= 0x01;  // Encoding unsupported
@@ -855,16 +857,17 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
                 if( frag_session_data[frag_index].frag_decoder_process_status == FRAG_SESSION_ONGOING )
                 {
-                    SMTC_MODEM_HAL_TRACE_ARRAY( "FUOTA FRAG = ", fragmentation_package_rx_buffer,
+                    SMTC_MODEM_HAL_TRACE_ARRAY( "FUOTA FRAG =\n", fragmentation_package_rx_buffer,
                                                 fragmentation_package_rx_buffer_length );
                     frag_session_data[frag_index].frag_decoder_process_status = FragDecoderProcess(
                         frag_counter, &fragmentation_package_rx_buffer[fragmentation_package_rx_buffer_index + 3] );
                     frag_session_data[frag_index].frag_decoder_status = FragDecoderGetStatus( );
-                    SMTC_MODEM_HAL_TRACE_PRINTF(
-                        "\nFuota session info : \nCurrent fragment index = %d,\nCurrent fragment counter = %d,\nNumber "
-                        "of missed packets = %d,\n",
-                        frag_index, frag_session_data[frag_index].frag_decoder_status.FragNbRx,
-                        frag_session_data[frag_index].frag_decoder_status.FragNbLost );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Fuota session info:\n" );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Current fragment index = %d\n", frag_index );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Current fragment counter = %d\n",
+                                                 frag_session_data[frag_index].frag_decoder_status.FragNbRx );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Number of missed packets = %d\n",
+                                                 frag_session_data[frag_index].frag_decoder_status.FragNbLost );
                 }
                 if( frag_session_data[frag_index].frag_decoder_process_status >= FRAG_SESSION_FINISHED_SUCCESSFULLY )
                 {
@@ -1029,7 +1032,8 @@ static uint8_t compute_data_block_integrity_ckeck( uint8_t frag_index, uint8_t s
                                            ( uint32_t ) cmac[1] << 8 | ( uint32_t ) cmac[0] );
 
     uint32_t target_mic = frag_session_data[frag_index].frag_group_data.mic;
-    SMTC_MODEM_HAL_TRACE_PRINTF( "computed mic = %x\n and target mic = %x\n", computed_mic, target_mic );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "computed mic = %x\n", computed_mic );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "  target mic = %x\n", target_mic );
     if( computed_mic == target_mic )
     {
         return 0;

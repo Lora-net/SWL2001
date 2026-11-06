@@ -101,17 +101,17 @@ typedef enum tx_protocol_manager_state
  * --- PRIVATE MACROS ----------------------------------------------------------------
  */
 #define STACK_ID_CURRENT_TASK task_manager.modem_task[task_manager.next_task_id].stack_id
-#define VIRTUAL_TASK_ID task_manager.next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK )
-#ifndef MODEM_MIN_RANDOM_DELAY_MS
+#define VIRTUAL_TASK_ID ( task_manager.next_task_id - ( NUMBER_OF_TASKS * STACK_ID_CURRENT_TASK ) )
 
+#ifndef MODEM_MIN_RANDOM_DELAY_MS
 #if defined( ADD_RELAY_TX )
-#define MODEM_MIN_RANDOM_DELAY_MS ( smtc_relay_tx_is_enable( current_tpm_stack_id ) == false ) ? 500 : 3000
+#define MODEM_MIN_RANDOM_DELAY_MS ( ( smtc_relay_tx_is_enable( current_tpm_stack_id ) == false ) ? 500u : 3000u )
 #else
-#define MODEM_MIN_RANDOM_DELAY_MS 500
+#define MODEM_MIN_RANDOM_DELAY_MS 500u
 #endif
 #endif
 #ifndef MODEM_MAX_RANDOM_DELAY_MS
-#define MODEM_MAX_RANDOM_DELAY_MS 6000
+#define MODEM_MAX_RANDOM_DELAY_MS 6000u
 #endif
 
 #if defined( ADD_RELAY_TX )

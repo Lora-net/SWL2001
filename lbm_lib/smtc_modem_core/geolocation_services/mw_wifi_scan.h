@@ -116,6 +116,16 @@ smtc_modem_return_code_t mw_wifi_scan_remove_task( void );
  */
 smtc_modem_return_code_t mw_wifi_get_event_data_scan_done( smtc_modem_wifi_event_data_scan_done_t* data );
 
+/**
+ * @brief Set the mode to be used for the Wi-Fi scan.
+ *
+ * @param [in] scan_mode Mode to be used for the Wi-Fi scan
+ *
+ * @return Modem return code as defined in @ref smtc_modem_return_code_t
+ * @retval SMTC_MODEM_RC_OK         Command executed without errors
+ */
+smtc_modem_return_code_t mw_wifi_set_scan_mode( smtc_modem_wifi_scan_mode_t scan_mode );
+
 #ifdef __cplusplus
 }
 #endif

@@ -49,7 +49,7 @@
  */
 
 /*
- * Radio specifc code enable/disable control
+ * Radio specific code enable/disable control
  *     - For SX1272 & SX1273 define SX1272
  *     - For SX1276, SX1277, SX1278 & SX1279 define SX1276
  *     - If both radios are to be used define SX1272 & SX1276
@@ -103,7 +103,7 @@ typedef struct radio_register_s
 #define SX127X_PLL_STEP_SCALED ( SX127X_XTAL_FREQ >> ( 19 - SX127X_PLL_STEP_SHIFT_AMOUNT ) )
 
 /**
- * @brief GFSK bandwidth converion table
+ * @brief GFSK bandwidth conversion table
  */
 static const gfsk_bw_t gfsk_bw[] = {
     { .bw = 2600, .param = SX127X_GFSK_BW_2600 },     { .bw = 3100, .param = SX127X_GFSK_BW_3100 },

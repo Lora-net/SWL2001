@@ -54,6 +54,7 @@
 #define LR11XX_FLASH_DATA_MAX_LENGTH_UINT8 ( LR11XX_FLASH_DATA_MAX_LENGTH_UINT32 * 4 )
 
 #define LR11XX_BL_CMD_NO_PARAM_LENGTH ( 2 )
+#define LR11XX_BL_GET_HASH_CMD_LENGTH ( LR11XX_BL_CMD_NO_PARAM_LENGTH )
 #define LR11XX_BL_GET_STATUS_CMD_LENGTH ( 2 + 4 )
 #define LR11XX_BL_VERSION_CMD_LENGTH LR11XX_BL_CMD_NO_PARAM_LENGTH
 #define LR11XX_BL_ERASE_FLASH_CMD_LENGTH LR11XX_BL_CMD_NO_PARAM_LENGTH
@@ -77,6 +78,7 @@ enum
     LR11XX_BL_GET_VERSION_OC           = 0x0101,
     LR11XX_BL_ERASE_FLASH_OC           = 0x8000,
     LR11XX_BL_WRITE_FLASH_ENCRYPTED_OC = 0x8003,
+    LR11XX_BL_GET_HASH_OC              = 0x8004,
     LR11XX_BL_REBOOT_OC                = 0x8005,
     LR11XX_BL_GET_PIN_OC               = 0x800B,
     LR11XX_BL_READ_CHIP_EUI_OC         = 0x800C,
@@ -106,6 +108,17 @@ static uint8_t lr11xx_bootloader_get_min_from_operand_and_max_block_size( uint32
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
  */
+
+lr11xx_status_t lr11xx_bootloader_get_hash( const void* context, lr11xx_bootloader_hash_t hash )
+{
+    uint8_t cbuffer[LR11XX_BL_GET_HASH_CMD_LENGTH];
+
+    cbuffer[0] = ( uint8_t ) ( LR11XX_BL_GET_HASH_OC >> 8 );
+    cbuffer[1] = ( uint8_t ) ( LR11XX_BL_GET_HASH_OC >> 0 );
+
+    return ( lr11xx_status_t ) lr11xx_hal_read( context, cbuffer, LR11XX_BL_GET_HASH_CMD_LENGTH, hash,
+                                                LR11XX_BL_HASH_LENGTH );
+}
 
 lr11xx_status_t lr11xx_bootloader_get_status( const void* context, lr11xx_bootloader_stat1_t* stat1,
                                               lr11xx_bootloader_stat2_t*    stat2,

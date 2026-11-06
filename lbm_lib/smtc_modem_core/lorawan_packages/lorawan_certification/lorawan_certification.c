@@ -819,7 +819,7 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
     }
     case LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ:
     {
-#if ( ADD_FUOTA == 2 )
+#if defined( ADD_FUOTA ) && ( ADD_FUOTA == 2 )
         if( rx_buffer_length == LORAWAN_CERTIFICATION_FRAG_SESSION_CNT_REQ_SIZE )
         {
             uint8_t  frag_index  = rx_buffer[1] & 0x03;
@@ -968,7 +968,7 @@ static lorawan_certification_requested_tx_type_t lorawan_certification_parser(
         break;
     }
     default:
-        SMTC_MODEM_HAL_TRACE_ERROR( "%s Illegal state(%u)\n ", __func__, cid );
+        SMTC_MODEM_HAL_TRACE_ERROR( "%s Illegal state(%u)\n", __func__, cid );
         SMTC_MODEM_HAL_TRACE_ARRAY( "rx_buffer", rx_buffer, rx_buffer_length );
         break;
     }

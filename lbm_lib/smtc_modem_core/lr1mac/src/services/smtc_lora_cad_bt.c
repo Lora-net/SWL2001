@@ -69,16 +69,24 @@
  */
 
 /**
- * @brief NBO_MAX Number of BackOff MAX
+ * @brief CSMA_NBO_MAX Number of BackOff MAX
  * @remark The application can utilize different BO_MAX values for prioritization (lower BO_MAX means higher priority
  * and vice versa to send an uplink frame).
  */
-#define NBO_MAX ( 6 )
+#ifndef CSMA_NBO_MAX
+#define CSMA_NBO_MAX ( 6 )
+#endif
 
 /**
- * @brief MAX_CH_CHANGES The number max of channel change
+ * @brief CSMA_MAX_CH_CHANGES The number max of channel change
  */
-#define MAX_CH_CHANGES ( 4 )
+#ifndef CSMA_MAX_CH_CHANGES
+#define CSMA_MAX_CH_CHANGES ( 6 )
+#endif
+
+#ifndef CSMA_MAX_CH_CHANGES_DEFAULT
+#define CSMA_MAX_CH_CHANGES_DEFAULT ( 6 )
+#endif
 
 /**
  * @brief NB_CAD_SYMBOLS_IN_DIFS The number of symbols listen in DIFS
@@ -146,8 +154,8 @@ void smtc_lora_cad_bt_init( smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, ui
     cad_obj->abort_context                   = abort_context;
 
     // cad_obj->bo_enabled             = true;  // TODO remove it, for debug purpose
-    cad_obj->nb_bo_max_conf         = NBO_MAX;
-    cad_obj->max_ch_change_cnt_conf = MAX_CH_CHANGES;
+    cad_obj->nb_bo_max_conf         = CSMA_NBO_MAX;
+    cad_obj->max_ch_change_cnt_conf = CSMA_MAX_CH_CHANGES_DEFAULT;
 
     cad_obj->cad_state_prev = SMTC_LORA_CAD_DIFS;
 
@@ -160,7 +168,7 @@ void smtc_lora_cad_bt_init( smtc_lora_cad_bt_t* cad_obj, radio_planner_t* rp, ui
 smtc_lora_cad_status_t smtc_lora_cad_bt_set_parameters( smtc_lora_cad_bt_t* cad_obj, uint8_t max_ch_change,
                                                         bool bo_enabled, uint8_t nb_bo_max )
 {
-    if( ( max_ch_change > 0 ) && ( max_ch_change <= MAX_CH_CHANGES ) )
+    if( ( max_ch_change > 0 ) && ( max_ch_change <= CSMA_MAX_CH_CHANGES ) )
     {
         cad_obj->max_ch_change_cnt_conf = max_ch_change;
     }
@@ -169,7 +177,7 @@ smtc_lora_cad_status_t smtc_lora_cad_bt_set_parameters( smtc_lora_cad_bt_t* cad_
         return SMTC_LORA_CAD_ERROR;
     }
 
-    if( ( nb_bo_max > 0 ) && ( nb_bo_max <= NBO_MAX ) )
+    if( ( nb_bo_max > 0 ) && ( nb_bo_max <= CSMA_NBO_MAX ) )
     {
         cad_obj->nb_bo_max_conf = nb_bo_max;
     }
@@ -435,8 +443,17 @@ static void smtc_lora_cad_bt_rp_callback( smtc_lora_cad_bt_t* cad_obj )
     }
     else
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( "receive an unknown status (%d) from the radio planner hook %d\n", rp_status,
-                                    my_hook_id );
+#if ( MODEM_HAL_DBG_TRACE )
+        if( rp_status == RP_STATUS_TASK_ABORTED )
+        {
+            SMTC_MODEM_HAL_TRACE_WARNING( "CSMA task aborted by RP\n" );
+        }
+        else
+        {
+            SMTC_MODEM_HAL_TRACE_ERROR( "receive an unknown status (%d) from the radio planner hook %d\n", rp_status,
+                                        my_hook_id );
+        }
+#endif
         cad_obj->abort_callback( cad_obj->abort_context );
         smtc_lora_cad_bt_reset_to_difs_phase( cad_obj );
     }
@@ -500,6 +517,9 @@ static uint32_t smtc_lora_cad_bt_get_symbol_duration_us( ral_lora_bw_t bw, ral_l
         break;
     case RAL_LORA_BW_800_KHZ:
         bw_temp = 800;
+        break;
+    case RAL_LORA_BW_1000_KHZ:
+        bw_temp = 1000;
         break;
     case RAL_LORA_BW_1600_KHZ:
         bw_temp = 1600;

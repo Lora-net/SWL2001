@@ -29,10 +29,11 @@
   - US915
     - `SMTC_MODEM_REGION_US_915`
 
-  **Note**: In addition the proposed implementation also provides a 2.4 GHz global ISM band (WW2G4) region support.
+  **Note**: In addition the proposed implementation also provides a 2.4 GHz global ISM band (WW_2G4) region support.
 
 - **Semtech Radios Support**:
-  - LR1110 with firmware 0x0401.
+  - LR2021 with firmware 0x010D
+  - LR1110 with firmware 0x0401
   - LR1120 with firmware 0x0201
   - LR1121 with firmware 0x0103
   - SX1261, SX1262, SX1268
@@ -60,9 +61,37 @@
 - **Porting Options**:
   - Supports Bare Metal or RTOS-based projects.
 
-## LoRa Basics Modem Options
+## How to build
 
-### Build process
+LoRa Basics Modem is provided with both Makefiles and CMake.
+
+### Build with CMake
+
+See the [CMake documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) for more information.
+
+First you need to create the build directory `build` and specify all the build options. You can
+change them afterwards by calling `cmake` again.
+
+```sh
+cmake -S ./lbm_lib -B build/ -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DLBM_RADIO=lr1121 \
+  -DLBM_FUOTA=ON \
+  -DLBM_CLASS_B=ON \
+  -DLBM_CLASS_C=ON
+```
+
+Then you need to actually build the code:
+```sh
+ninja -C build/
+```
+
+All the build options for the library are prefixed by `LBM_` and are described
+in the `options.cmake` file (except for `LBM_RADIO`). They are passed on the cmake command line in the form
+`-D<option name>=<ON|OFF|option value>`.
+
+### Build with Makefiles
+
+With Make
 
 The build process using the makefile allows flexibility in choosing different compile-time options.
 To explore all available make process options, run:
@@ -73,14 +102,17 @@ make -C help
 
 Build process options can be provided either using the command line or by editing  [options.mk](makefiles/options.mk)
 
+## LoRa Basics Modem Options
+
 ### Radio Targets
 
 Support for the following transceivers can be selected at build time:
 
-- sx128x - SX1280 & SX1281 Transceivers.
+- lr2021 - LR2021 Transceiver.
 - lr1110 - LR1110 Transceiver.
 - lr1120 - LR1120 Transceiver.
 - lr1121 - LR1121 Transceiver.
+- sx128x - SX1280 & SX1281 Transceivers.
 - sx1261 - SX1261 Transceiver.
 - sx1262 - SX1262 Transceiver.
 - sx1268 - SX1268 Transceiver.
@@ -91,10 +123,13 @@ LoRa Basics™ Modem (LBM) should be built for a specific transceiver by using t
 
 ### MCU Flags
 
-MCU flags are passed to the compiler through the MCU_FLAGS build parameter. The flags are set as a single text string.
+For Makefile base builds, you can pass the `MCU_FLAGS` build parameter. The flags are set as a single text string.
 
 For example, to build LoRa Basics Modem for an STM32L4 MCU the following MCU_FLAGS are used:
 `MCU_FLAGS="-mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard"`
+
+For CMake, you need to use toolchain files, such as the ones provided by the `lbm_examples`.
+See [the relevant CMake documentation](https://cmake.org/cmake/help/book/mastering-cmake/chapter/Cross%20Compiling%20With%20CMake.html
 
 ### Regions
 
@@ -110,8 +145,9 @@ Support for one or more of the following regions can be selected at compile time
 - RU_864 - RU864-870MHz ISM Band.
 - US_915 - US902-928MHz ISM Band.
 - WW_2G4 - Emulation of the LoRaWAN Standard for the 2.4GHz global ISM band.
-The supported regions are selected through the REGION build option. If the user does not explicitly select one or more
-regions, all regions are included at compile time.
+The supported regions are selected through the REGION build option. If the user does not explicitly select one or more regions, all regions are included at compile time.
+
+Ex: REGION=EU_868,WW_2G4
 
 ### Cryptographic Engine Selection
 
@@ -124,7 +160,7 @@ The selection of the Cryptographic Engine to use is done through the CRYPTO para
 
 ### LoRa Basics Modem Features Selection
 
-The user can choose which feature to embed in LoRa Basics Modem by updating [options.mk](makefiles/options.mk).
+The user can choose which feature to embed in LoRa Basics Modem by passing options to cmake or updating [options.mk](makefiles/options.mk).
 
 **LoRaWAN Stack related options**:
 
@@ -221,6 +257,9 @@ The user is informed of the procedure's progress via two events:
 
 Cancel an ongoing join procedure or leave an already-joined network by calling `smtc_modem_leave_network()`.
 
+- A specific datarate distribution can be set with `smtc_modem_adr_set_join_distribution()`, this API is not available for fixed channel plan like US915 au AU915.
+
+
 #### Join Sequence
 
 ![Join sequence](smtc_modem_core/lorawan_manager/doc/join_sequence.png)
@@ -261,10 +300,10 @@ Retrieve information about the connection:
 
 ### Carrier Sense Multiple Access (CSMA) for LoRaWAN
 
-The modem supports a CSMA (Carrier Sense Multiple Access) feature designed to prevent collisions in LoRa packet transmissions.
+The modem supports a CSMA (Carrier Sense Multiple Access) feature designed to limit collisions in LoRa packet transmissions.
 LoRa Alliance Technical Recommendations can be read at [TR0013](https://resources.lora-alliance.org/home/tr013-1-0-0-csma)
 
-To enable CSMA during compilation, set the option `LBM_CSMA=yes` in the Makefile.
+To enable CSMA during compilation, set the option `LBM_CSMA=yes` in the Makefile or pass it to cmake.
 By default, CSMA is activated at modem startup if the compilation option `USE_CSMA_BY_DEFAULT=yes` is configured.
 
 Toggle the CSMA feature on or off using the function `smtc_modem_csma_set_state()`.
@@ -278,7 +317,8 @@ LoRa Basic Modem does not support Class B by default. To use this feature, it mu
 
 #### Activating Class B Support
 
-Activate Class B support by setting the flag `LBM_CLASS_B` to yes in the [options.mk](makefiles/options.mk) file. This enables Class B functionality in LoRa Basic Modem.
+Activate Class B support by passing the flag `LBM_CLASS_B` ON to cmake, or setting it to yes in the [options.mk](makefiles/options.mk) file.
+This enables Class B functionality in LoRa Basic Modem.
 
 #### Starting Class B
 
@@ -330,7 +370,7 @@ In Class C mode, when multicast groups are configured, initiate each session wit
 - Frequency
 - Datarate
 
-Class C multicast downlinks are available by fetching downlink data with `smtc_modem_get_downlink_data()` after the event `SMTC_MODEM_EVENT_DOWNDATA` triggered. The window metadata value with `SMTC_MODEM_DL_WINDOW_RXC_MC_GRPx`(x being the multicast group ID).
+Class C multicast downlinks are available by fetching downlink data with `smtc_modem_get_downlink_data()` after the event `SMTC_MODEM_EVENT_DOWNDATA` is triggered. The window metadata value with `SMTC_MODEM_DL_WINDOW_RXC_MC_GRPx`(x being the multicast group ID).
 It is possible to read back the status of the current session by calling `smtc_modem_multicast_class_c_get_session_status()`.
 A multicast session can be stopped by calling `smtc_modem_multicast_class_c_stop_session()`.
 All class C multicast sessions can be stopped by calling `smtc_modem_multicast_class_c_stop_all_sessions()`.
@@ -381,7 +421,7 @@ The LoRaWAN Certification package is essential during the LoRaWAN certification 
 ### Application Layer Clock Synchronization (ALCSync)
 
 Use this application when a Network Server doesn't support the DeviceTimeReq commands.
-Activate ALCSync support by setting the flag `LBM_ALC_SYNC` to yes in the [options.mk](makefiles/options.mk) file
+Activate ALCSync support by setting the flag `LBM_ALC_SYNC` to yes in the [options.mk](makefiles/options.mk) file or passing it to ON to cmake.
 
 When started the application will trig a time synchronization to the application server every `periodicity_s` configured by the ALCSync server package.
 The default value is 36h.
@@ -390,7 +430,7 @@ Each time a valid time sync answer is received by the modem, it will generate an
 Start the service with `smtc_modem_start_alcsync_service()`.
 Stop the service with `smtc_modem_stop_alcsync_service()`.
 Get GPS epoch time, number of seconds elapsed since GPS epoch (00:00:00, Sunday 6th of January 1980) with `smtc_modem_get_alcsync_time()`
-Trigger a single uplink requesting time on Application Layer Clock Synchronization (ALCSync) service with `smtc_modem_trigger_alcsync_request()`, the service must be start first.
+Trigger a single uplink requesting time on Application Layer Clock Synchronization (ALCSync) service with `smtc_modem_trigger_alcsync_request()`, the service must be started first.
 
 ## FUOTA (Firmware Update Over The Air)
 
@@ -414,7 +454,11 @@ The proposed implementation supports both Class B or Class C modes and supports 
 ### FUOTA Activation
 
 FUOTA is not enabled by default in LoRa Basics™ Modem.
-To activate it during project compilation, set the `LBM_FUOTA` flag to `yes` and set the `LBM_FUOTA_VERSION` flag to chosen version number 1 or 2 in [options.mk](makefiles/options.mk).
+To activate it during project compilation,
+
+With Make: set the `LBM_FUOTA` flag to `yes` and set the `LBM_FUOTA_VERSION` flag to chosen version number 1 or 2 in [options.mk](makefiles/options.mk).
+
+With CMake by adding `-DLBM_FUOTA=ON -DLBM_FUOTA_VERSION=2`
 
 Multi-Package Access is not automatically added to compilation even if `LBM_FUOTA` flag is set to `yes`. User shall set `LBM_FUOTA_ENABLE_MPA` to yes to use it.
 
@@ -468,7 +512,7 @@ In normal operation, the user should receive the following events successively:
 - `SMTC_MODEM_EVENT_LORAWAN_FUOTA_DONE`
 - `SMTC_MODEM_EVENT_NO_MORE_MULTICAST_SESSION_CLASS_B`
 
-### Stream service (LoRaCloud)
+### Stream service (LoRaCloud) ${\textsf{\color{red}DEPRECATED}}$
 
 The user can stream data, allowing LoRa Basics™ Modem to handle maximum transmission size limits.
 Before initiating a stream, the user must set several parameters using `smtc_modem_stream_init()`:
@@ -481,7 +525,7 @@ Once configured, the user can add data to the stream buffer using `smtc_modem_st
 
 The event `SMTC_MODEM_EVENT_STREAM_DONE` is triggered when the last byte of the stream buffer is sent. This event is for informational purposes; there is no need to wait for it before adding data to the stream buffer.
 
-### Large File Upload service (LoRaCloud)
+### Large File Upload service (LoRaCloud) ${\textsf{\color{red}DEPRECATED}}$
 
 Empower your application with the Large File Upload service in LoRa Basics Modem, allowing you to transmit files of up to 8180 bytes seamlessly, with the modem managing maximum transmission size limits.
 
@@ -500,7 +544,8 @@ The event `SMTC_MODEM_EVENT_UPLOAD_DONE` is triggered when:
 (status set to `SMTC_MODEM_EVENT_UPLOAD_DONE_SUCCESSFUL`)
 - No acknowledgment is received after the last upload (status set to `SMTC_MODEM_EVENT_UPLOAD_DONE_ABORTED`)
 
-### Device Management service (LoRaCloud)
+
+### Device Management service (LoRaCloud) ${\textsf{\color{red}DEPRECATED}}$
 
 #### Periodic information report
 
@@ -524,7 +569,7 @@ The cloud service may send requests to the modem on the device management port. 
 - **Mute**: ask the modem to mute itself permanently or during a specified number of days (a `SMTC_MODEM_EVENT_MUTE` event is triggered)
 - **SetConf**: Update device management configuration (a `SMTC_MODEM_EVENT_DM_SET_CONF` event is triggered, provided the field that was updated according to `smtc_modem_event_setconf_opcode_t` )
 
-### Almanac Update service (LoRaCloud)
+### Almanac Update service  ${\textsf{\color{red}DEPRECATED}}$
 
 Choose to update the Lora-Edge transceiver almanac using the cloud with the autonomous Almanac Update service.
 Initiate the service with `smtc_modem_almanac_start()` and  stop it anytime with `smtc_modem_almanac_stop()`.
@@ -532,7 +577,7 @@ Initiate the service with `smtc_modem_almanac_start()` and  stop it anytime with
 Until the update is finalized, the service exchanges data with the cloud with no delay.
 Once the almanac is fully updated, the service asks for updates once a day (value can be modified at compile time ALMANAC_PERIOD_S).
 
-### ALCSync service (LoRaCloud)
+### ALCSync service (LoRaCloud) ${\textsf{\color{red}DEPRECATED}}$
 
 Opt for LoRaCloud to perform automatic time synchronization instead of a dedicated Application Server using port 202.
 The LoRaWAN package used for that is LoRaWAN Application Layer Clock Synchronization V1.0.0.
@@ -570,10 +615,8 @@ This option will require an additional 500 bytes of RAM and 5.5 Kbytes of FLASH.
 ### Known limitation for the Relay Tx
 
 - Relay specific cryptographic operations are not supported by Semtech’s hardware Crypto Engine (LR11xx platform), and therefore this implementation is only compatible with embedded software cryptographic operations.
-- SX128x and SX127x are not supported fir Relay Tx operation.
+- SX128x is not supported for Relay Tx operation.
 - The Scan and Send feature (SEND_MODE_UPLINK used in SMTC_MODEM_WIFI_SEND_MODE) of the geolocation services can only be used when the Relay Tx device is joined.
-- In a Store and Forward context (device accruing scans when it is offline) with device being relayed, the first uplink may be missed if the Relay Rx is waiting for its network configuration from the LNS.
-- On this release, a single WOR channel is supported for US915 and AU915 regions.
 - If the Periodical uplink example is built with the RELAY_TX=yes and RELAY_RX=yes flags (that device is relayed device, but can be changed to a Relay Rx by network command), the modem will enable the RELAY_TX feature after a reset. However, if a command from the LNS to activate the RELAY_RX feature (0X40 RELAY CONFIG) is received, the device will unexpectedly open an additional RxR window, without compromising functionality.
 
 ### Relay Rx
@@ -589,10 +632,8 @@ On a hardware note, it is strongly recommended to use a 32 MHz TCXO in a Relay R
 - This implementation is only compatible with embedded software cryptographic operations. (see above “Relay Tx”).
 - SX128x and SX127x are not supported
 - Due to specification limitation, JoinAccept cannot be forwarded to end-device if Rx1 delay is greater than 12s with SF12BW125, Rx1 and RxR windows will overlap
-- If the CAD periodicity is set to 250ms or less, it is no longer possible to increase it without resetting the Relay Rx.
 - The reduction of a device bucket size on the go, will not be effective before the previous allocation has been used.
-- On this release, a single WOR channel is supported for US915 and AU915 regions.
-- If the Periodical uplink example is built with the RELAY_TX=yes and RELAY_RX=yes flags (that device is relayed device, but can be changed to a Relay Rx by network command) , the modem will enable the RELAY_TX feature after a reset. However, if a command from the LNS to activate the RELAY_RX feature (0X40 RELAY CONFIG) is received, the the  device will unexpectedly open an additional RxR window, without compromising functionality.
+- If the Periodical uplink example is built with the RELAY_TX=yes and RELAY_RX=yes flags (that device is relayed device, but can be changed to a Relay Rx by network command), the modem will enable the RELAY_TX feature after a reset. However, if a command from the LNS to activate the RELAY_RX feature (0X40 RELAY CONFIG) is received, the device will unexpectedly open an additional RxR window, without compromising functionality.
 
 ## LoRa Basic Modem known limitations
 

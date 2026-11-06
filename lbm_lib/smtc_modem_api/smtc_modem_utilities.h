@@ -107,6 +107,11 @@ void smtc_modem_set_radio_context( const void* radio_ctx );
  */
 const void* smtc_modem_get_radio_context( void );
 
+/**
+ * @brief Check if the radio is used by the radio planner
+ * @returns true if the radio isn't used by the radio planner, false otherwise
+*/
+bool smtc_modem_radio_is_free(void);
 #ifdef __cplusplus
 }
 #endif

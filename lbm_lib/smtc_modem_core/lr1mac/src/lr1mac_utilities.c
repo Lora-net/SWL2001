@@ -133,9 +133,9 @@ void SMTC_PUT_BIT8( uint8_t* array, uint8_t index, uint8_t bit )
 
 uint8_t SMTC_ARE_CLR_BYTE8( uint8_t* array, uint8_t length )
 {
-    for( uint8_t i = 0; i < length; i++ )
+    while( length-- )
     {
-        if( array[i] != 0 )
+        if( array[length] != 0 )
         {
             return false;
         }
@@ -162,9 +162,9 @@ void SMTC_PUT_BIT16( uint16_t* array, uint8_t index, uint8_t bit )
 
 uint8_t SMTC_ARE_CLR_BYTE16( uint16_t* array, uint8_t length )
 {
-    for( uint8_t i = 0; i < length; i++ )
+    while( length-- )
     {
-        if( array[i] != 0 )
+        if( array[length] != 0 )
         {
             return false;
         }
@@ -192,7 +192,7 @@ status_lorawan_t lr1mac_rx_mhdr_extract( uint8_t* rx_payload, uint8_t* rx_ftype,
         ( *rx_ftype == REJOIN_REQUEST ) || ( *rx_ftype == PROPRIETARY ) || ( *rx_major != LORAWANR1 ) )
     {
         status = ERRORLORAWAN;
-        SMTC_MODEM_HAL_TRACE_WARNING( " BAD RX MHDR\n " );
+        SMTC_MODEM_HAL_TRACE_WARNING( " BAD RX MHDR\n" );
     }
     *tx_ack_bit = ( *rx_ftype == CONF_DATA_DOWN ) ? true : false;
 
@@ -229,7 +229,7 @@ int lr1mac_rx_fhdr_extract( uint8_t* rx_payload, uint8_t rx_payload_size, uint8_
     /**************************/
     if( status == ERRORLORAWAN )
     {
-        SMTC_MODEM_HAL_TRACE_ERROR( " Bad DevAddr 0x%x\n ", dev_addr_tmp );
+        SMTC_MODEM_HAL_TRACE_ERROR( " Bad DevAddr 0x%x\n", dev_addr_tmp );
     }
     return ( status );
 }
@@ -257,10 +257,8 @@ status_lorawan_t lr1mac_fcnt_dwn_accept( uint16_t fcnt_dwn_tmp, uint32_t* fcnt_l
     }
     else
     {
-        SMTC_MODEM_HAL_TRACE_WARNING(
-            " FcntDwn is not acceptable fcntDwnReceive = %u "
-            "fcntLoraStack = %d\n",
-            fcnt_dwn_tmp, ( *fcnt_lorawan ) );
+        SMTC_MODEM_HAL_TRACE_WARNING( " FcntDwn is not acceptable fcntDwnReceive = %u fcntLoraStack = %d\n",
+                                      fcnt_dwn_tmp, ( *fcnt_lorawan ) );
         return ERRORLORAWAN;
     }
     return OKLORAWAN;

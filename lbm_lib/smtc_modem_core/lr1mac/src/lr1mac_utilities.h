@@ -70,17 +70,23 @@ extern "C" {
  * \param [IN] b 2nd value
  * \retval maxValue Maximum value
  */
+#ifndef MAX
 #define MAX( a, b ) ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
+#endif
 
 /**
  * @brief Math Abs macro
  */
+#ifndef ABS
 #define ABS( N ) ( ( N < 0 ) ? ( -N ) : ( N ) )
+#endif
+
 /**
  * @brief Math signed macro
  */
-
+#ifndef SIGN
 #define SIGN( N ) ( ( N < 0 ) ? ( -1 ) : ( 1 ) )
+#endif
 
 uint8_t SMTC_GET_BIT8( const uint8_t* array, uint8_t index );
 void    SMTC_SET_BIT8( uint8_t* array, uint8_t index );

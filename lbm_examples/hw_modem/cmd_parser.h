@@ -193,6 +193,9 @@ typedef enum host_cmd_id_e
     CMD_WIFI_SET_PORT                         = 0x84,
     CMD_WIFI_SEND_MODE                        = 0x85,
     CMD_WIFI_SET_PAYLOAD_FORMAT               = 0x86,
+    CMD_WIFI_SCAN_MODE                        = 0x87,
+    CMD_GNSS_ALM_DEMOD_STOP                   = 0x88,
+    CMD_WIFI_GET_SCAN_DONE_SCAN_DATA_RESULT   = 0x89,
     CMD_LR11XX_RADIO_READ                     = 0x90,
     CMD_LR11XX_RADIO_WRITE                    = 0x91,
 #endif  // ADD_APP_GEOLOCATION && STM32L476xx
@@ -201,10 +204,12 @@ typedef enum host_cmd_id_e
     CMD_SET_RELAY_CONFIG = 0x93,
     CMD_GET_RELAY_CONFIG = 0x94,
 #endif
-    CMD_GET_SUSPEND_RADIO_COMMUNICATIONS   = 0x95,
-    CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF = 0x96,
-    CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF = 0x97,
-    CMD_MODEM_GET_CRASHLOG                 = 0x98,
+    CMD_GET_SUSPEND_RADIO_COMMUNICATIONS       = 0x95,
+    CMD_GET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF     = 0x96,
+    CMD_SET_BYPASS_JOIN_DUTY_CYCLE_BACKOFF     = 0x97,
+    CMD_MODEM_GET_CRASHLOG                     = 0x98,
+    CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER = 0x99,
+    CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER = 0x9A,
     CMD_MAX
 } host_cmd_id_t;
 

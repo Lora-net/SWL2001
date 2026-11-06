@@ -137,6 +137,15 @@ void region_us_915_init_after_join_snapshot_channel_mask( smtc_real_t* real, uin
  * \param [OUT] return
  */
 status_channel_t region_us_915_build_channel_mask( smtc_real_t* real, uint8_t ChMaskCntl, uint16_t ChMask );
+
+/**
+ * \brief Check if all default channels are enabled
+ * \remark
+ * \param [IN]  none
+ * \param [OUT] return
+ */
+bool region_us_915_are_all_default_channels_enabled( smtc_real_t* real );
+
 /**
  * \brief
  * \remark
@@ -144,6 +153,7 @@ status_channel_t region_us_915_build_channel_mask( smtc_real_t* real, uint8_t Ch
  * \param [OUT] return
  */
 void region_us_915_enable_all_channels_with_valid_freq( smtc_real_t* real );
+
 /**
  * \brief
  * \remark

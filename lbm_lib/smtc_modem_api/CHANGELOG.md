@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [v4.9.0] 2025-07-XX
+
+### Added
+
+* Add no downlink event
+  * `SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD`: when ADR back-off reaches its end or when user-defined no RX threshold is reached
+* Add get RSSI/SNR on LoRaWAN downlink ACK
+  * `smtc_modem_set_report_all_downlinks_to_user()`: Set a flag to report all received downlinks to the user with a Downlink Event (ex: FPort 0 downlink, ACK)
+  * `smtc_modem_get_report_all_downlinks_to_user`: Get status of flag that report all received downlinks to the user with a Downlink Event (ex: FPort 0 downlink,
+ * ACK)
+
+* LR11xx/Geolocation:
+  * new `smtc_modem_almanac_full_update()` API function to suspend the modem and perform a full almanac update with given almanac image.
+  * new `smtc_modem_almanac_demodulation_stop()` API function to stop the almanac demodulation service
+  * new `smtc_modem_wifi_set_scan_mode()` API function to configure WiFi scan for country code and SSID demodulation. It can used for region detection.
+  * added a `time_available` field to `smtc_modem_gnss_event_data_scan_done_t` type to indicate if the radio is synced with GPS time. It can be used to determine if almanac demodulation service can be launched for immediate startup.
+  * added a `service_state` field to `smtc_modem_almanac_demodulation_event_data_almanac_update_t` type to indicate if the almanac demodulation service is currently running or stopped.
+  * added new fields to the `smtc_modem_wifi_event_data_scan_done_t` type: `result_type`, `country_code` and `ssid_bytes`.
+
+### Changed
+
+* `smtc_modem_api.h`
+  * In the `smtc_modem_region_t` enum, `SMTC_MODEM_REGION_WW2G4` is now `SMTC_MODEM_REGION_WW_2G4`
+
 ## [v4.8.0] 2024-12-20
 
 ### Added

@@ -998,6 +998,15 @@ bool lorawan_api_get_current_enabled_frequencies_list( uint8_t* number_of_freq, 
                                                        uint8_t stack_id );
 
 /**
+ * @brief Convert a frequency from 24bits buffer to 32bits
+ *
+ * @param [in] stack_id     Stack identifier
+ * @param [in] freq_buffer  24 bits Frequency
+ *
+ */
+uint32_t lorawan_api_decode_freq_from_24bits_buf( uint8_t stack_id, uint8_t freq_buf[3] );
+
+/**
  * @brief Check if a frequency is valid according to current stack parameters
  *
  * @param [in] stack_id Stack identifier

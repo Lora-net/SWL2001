@@ -46,6 +46,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "sx126x_status.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -135,45 +136,10 @@ extern "C" {
 #define SX126X_GFSK_RX_STATUS_ADRS_ERROR_POS ( 5U )
 #define SX126X_GFSK_RX_STATUS_ADRS_ERROR_MASK ( 0x01UL << SX126X_GFSK_RX_STATUS_ADRS_ERROR_POS )
 
-/*!
- * \brief Ramp-up delay for the power amplifier
- *
- * This parameter configures the delay to fine tune the ramp-up time of the power amplifier for BPSK operation.
- */
-enum
-{
-    SX126X_SIGFOX_DBPSK_RAMP_UP_TIME_DEFAULT = 0x0000,  //!< No optimization
-    SX126X_SIGFOX_DBPSK_RAMP_UP_TIME_100_BPS = 0x370F,  //!< Ramp-up optimization for 100bps
-    SX126X_SIGFOX_DBPSK_RAMP_UP_TIME_600_BPS = 0x092F,  //!< Ramp-up optimization for 600bps
-};
-
-/*!
- * \brief Ramp-down delay for the power amplifier
- *
- * This parameter configures the delay to fine tune the ramp-down time of the power amplifier for BPSK operation.
- */
-enum
-{
-    SX126X_SIGFOX_DBPSK_RAMP_DOWN_TIME_DEFAULT = 0x0000,  //!< No optimization
-    SX126X_SIGFOX_DBPSK_RAMP_DOWN_TIME_100_BPS = 0x1D70,  //!< Ramp-down optimization for 100bps
-    SX126X_SIGFOX_DBPSK_RAMP_DOWN_TIME_600_BPS = 0x04E1,  //!< Ramp-down optimization for 600bps
-};
-
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC TYPES ------------------------------------------------------------
  */
-
-/**
- * @brief SX126X APIs return status enumeration definition
- */
-typedef enum sx126x_status_e
-{
-    SX126X_STATUS_OK = 0,
-    SX126X_STATUS_UNSUPPORTED_FEATURE,
-    SX126X_STATUS_UNKNOWN_VALUE,
-    SX126X_STATUS_ERROR,
-} sx126x_status_t;
 
 /**
  * @brief SX126X sleep mode configurations definition
@@ -322,14 +288,6 @@ typedef enum sx126x_gfsk_pulse_shape_e
 } sx126x_gfsk_pulse_shape_t;
 
 /**
- * @brief SX126X BPSK modulation shaping enumeration definition
- */
-typedef enum
-{
-    SX126X_DBPSK_PULSE_SHAPE = 0x16,  //!< Double OSR / RRC / BT 0.7
-} sx126x_bpsk_pulse_shape_t;
-
-/**
  * @brief SX126X GFSK Rx bandwidth enumeration definition
  */
 typedef enum sx126x_gfsk_bw_e
@@ -367,15 +325,6 @@ typedef struct sx126x_mod_params_gfsk_s
     sx126x_gfsk_pulse_shape_t pulse_shape;
     sx126x_gfsk_bw_t          bw_dsb_param;
 } sx126x_mod_params_gfsk_t;
-
-/**
- * @brief Modulation configuration for BPSK packet
- */
-typedef struct sx126x_mod_params_bpsk_s
-{
-    uint32_t                  br_in_bps;    //!< BPSK bitrate [bit/s]
-    sx126x_bpsk_pulse_shape_t pulse_shape;  //!< BPSK pulse shape
-} sx126x_mod_params_bpsk_t;
 
 /**
  * @brief SX126X LoRa spreading factor enumeration definition
@@ -518,18 +467,6 @@ typedef struct sx126x_pkt_params_gfsk_s
     sx126x_gfsk_crc_types_t         crc_type;               //!< CRC type configuration
     sx126x_gfsk_dc_free_t           dc_free;                //!< Whitening configuration
 } sx126x_pkt_params_gfsk_t;
-
-/**
- * @brief SX126X BPSK packet parameters structure definition
- */
-typedef struct sx126x_pkt_params_bpsk_s
-{
-    uint8_t  pld_len_in_bytes;  //!< Payload length [bytes]
-    uint16_t ramp_up_delay;     //!< Delay to fine tune ramp-up time, if non-zero
-    uint16_t ramp_down_delay;   //!< Delay to fine tune ramp-down time, if non-zero
-    uint16_t pld_len_in_bits;   //!< If non-zero, used to ramp down PA before end of a payload with length that is not a
-                                //!< multiple of 8
-} sx126x_pkt_params_bpsk_t;
 
 /**
  * @brief SX126X LoRa CAD number of symbols enumeration definition
@@ -1197,25 +1134,18 @@ sx126x_status_t sx126x_set_tx_params( const void* context, const int8_t pwr_in_d
  * @remark The command @ref sx126x_set_pkt_type must be called prior to this
  * one.
  *
+ * Depending on the modulation to configure, workarounds may applies.
+ * Refer to @ref sx126x_workaround_gfsk_0_6_kbps, @ref sx126x_workaround_gfsk_1_2_kbps and @ref
+ * sx126x_workaround_gfsk_reset.
+ *
  * @param [in] context Chip implementation context
  * @param [in] params The structure of GFSK modulation configuration
  *
  * @returns Operation status
+ *
+ * @see sx126x_workaround_gfsk_0_6_kbps, sx126x_workaround_gfsk_1_2_kbps, sx126x_workaround_gfsk_reset
  */
 sx126x_status_t sx126x_set_gfsk_mod_params( const void* context, const sx126x_mod_params_gfsk_t* params );
-
-/**
- * @brief Set the modulation parameters for BPSK packets
- *
- * @remark The command @ref sx126x_set_pkt_type must be called prior to this
- * one.
- *
- * @param [in] context Chip implementation context
- * @param [in] params The structure of BPSK modulation configuration
- *
- * @returns Operation status
- */
-sx126x_status_t sx126x_set_bpsk_mod_params( const void* context, const sx126x_mod_params_bpsk_t* params );
 
 /**
  * @brief Set the modulation parameters for LoRa packets
@@ -1241,19 +1171,6 @@ sx126x_status_t sx126x_set_lora_mod_params( const void* context, const sx126x_mo
  * @returns Operation status
  */
 sx126x_status_t sx126x_set_gfsk_pkt_params( const void* context, const sx126x_pkt_params_gfsk_t* params );
-
-/**
- * @brief Set the packet parameters for BPSK packets
- *
- * @remark The command @ref sx126x_set_pkt_type must be called prior to this
- * one.
- *
- * @param [in] context Chip implementation context
- * @param [in] params The structure of BPSK packet configuration
- *
- * @returns Operation status
- */
-sx126x_status_t sx126x_set_bpsk_pkt_params( const void* context, const sx126x_pkt_params_bpsk_t* params );
 
 /**
  * @brief Set the packet parameters for LoRa packets
@@ -1738,6 +1655,71 @@ sx126x_status_t sx126x_init_retention_list( const void* context );
  * @returns Operation status
  */
 sx126x_status_t sx126x_get_lora_params_from_header( const void* context, sx126x_lora_cr_t* cr, bool* crc_is_on );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 1.2 kbps
+ *
+ * This workaround is to be applied after calling @ref sx126x_set_gfsk_mod_params and @ref sx126x_set_gfsk_pkt_params if
+ * an only if:
+ *  - sx126x_mod_params_gfsk_s.br_in_bps = 1200 bps; and
+ *  - sx126x_mod_params_gfsk_s.fdev_in_hz = 5000 Hz; and
+ *  - sx126x_mod_params_gfsk_s.bw_dsb_param = @ref SX126X_GFSK_BW_19500
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see sx126x_set_gfsk_mod_params, sx126x_set_gfsk_pkt_params, sx126x_workaround_gfsk_reset
+ */
+sx126x_status_t sx126x_workaround_gfsk_1_2_kbps( const void* context );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 0.6 kbps
+ *
+ * This workaround is to be applied after calling @ref sx126x_set_gfsk_mod_params and @ref sx126x_set_gfsk_pkt_params if
+ * an only if:
+ *  - sx126x_mod_params_gfsk_s.br_in_bps = 600 bps; and
+ *  - sx126x_mod_params_gfsk_s.fdev_in_hz = 800 Hz; and
+ *  - sx126x_mod_params_gfsk_s.bw_dsb_param = @ref SX126X_GFSK_BW_4800
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see sx126x_set_gfsk_mod_params, sx126x_set_gfsk_pkt_params, sx126x_workaround_gfsk_reset
+ */
+sx126x_status_t sx126x_workaround_gfsk_0_6_kbps( const void* context );
+
+/**
+ * @brief Reset workaround applied by @ref sx126x_workaround_gfsk_1_2_kbps or sx126x_workaround_gfsk_0_6_kbps
+ *
+ * This workaround reset must be called before attempting to configure a modulation different from the one specified in
+ * @ref sx126x_workaround_gfsk_0_6_kbps or @ref sx126x_workaround_gfsk_1_2_kbps.
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see sx126x_workaround_gfsk_1_2_kbps, sx126x_workaround_gfsk_0_6_kbps
+ */
+sx126x_status_t sx126x_workaround_gfsk_reset( const void* context );
+
+/**
+ * @brief 15.1.2 Workaround
+ *
+ * This workaround is automatically called by the driver where appropriate.
+ *
+ * @remark Before any packet transmission, bit #2 of SX126X_REG_TX_MODULATION shall be set to:
+ * 0 if the LoRa BW = 500 kHz
+ * 1 for any other LoRa BW and other modulation
+ *
+ * @param [in] context Chip implementation context.
+ * @param [in] pkt_type The modulation type
+ * @param [in] bw In case of LoRa modulation the bandwith must be specified
+ *
+ * @returns Operation status
+ */
+sx126x_status_t sx126x_tx_modulation_workaround( const void* context, sx126x_pkt_type_t pkt_type, sx126x_lora_bw_t bw );
 
 #ifdef __cplusplus
 }

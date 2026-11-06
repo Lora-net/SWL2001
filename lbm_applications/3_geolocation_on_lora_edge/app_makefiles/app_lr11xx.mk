@@ -1,5 +1,5 @@
 ##############################################################################
-# Definitions for the LR11XX tranceiver
+# Definitions for the LR11XX transceiver
 ##############################################################################
 -include app_makefiles/app_options.mk
 
@@ -34,6 +34,11 @@ APP_C_SOURCES += \
 	lr11xx_board/lr1110_board_mb1lxks.c
 endif
 
+ifeq ($(MODEM_APP),EXAMPLE_WIFI_REGION_DETECTION)
+APP_C_SOURCES += \
+	lr11xx_board/lr1110_board_mb1lxks.c
+endif
+
 #-----------------------------------------------------------------------------
 # Includes
 #-----------------------------------------------------------------------------
@@ -59,6 +64,11 @@ COMMON_C_DEFS += \
 endif
 
 ifeq ($(MODEM_APP),EXAMPLE_FULL_ALMANAC_UPDATE)
+COMMON_C_DEFS += \
+	-DENABLE_MODEM_GNSS_FEATURE
+endif
+
+ifeq ($(MODEM_APP),EXAMPLE_WIFI_REGION_DETECTION)
 COMMON_C_DEFS += \
 	-DENABLE_MODEM_GNSS_FEATURE
 endif

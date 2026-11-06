@@ -559,7 +559,7 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
             uint8_t status = 0x00;
 
-            SMTC_MODEM_HAL_TRACE_ARRAY( "Session setup = ", fragmentation_package_rx_buffer,
+            SMTC_MODEM_HAL_TRACE_ARRAY( "Session setup = \n", fragmentation_package_rx_buffer,
                                         fragmentation_package_rx_buffer_length );
 
             frag_session_data_tmp.frag_group_data.frag_session.mc_group_bit_mask =
@@ -587,9 +587,8 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
             frag_session_data_tmp.frag_group_data.descriptor +=
                 ( fragmentation_package_rx_buffer[fragmentation_package_rx_buffer_index + 10] << 24 ) & 0xFF000000;
             fragmentation_package_rx_buffer_index += FRAGMENTATION_SESSION_SETUP_REQ_SIZE;
-            SMTC_MODEM_HAL_TRACE_PRINTF( " \nfrag_nb = %d , \nfrag_size = %d \n ",
-                                         frag_session_data_tmp.frag_group_data.frag_nb,
-                                         frag_session_data_tmp.frag_group_data.frag_size );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "frag_nb = %d ,\n", frag_session_data_tmp.frag_group_data.frag_nb );
+            SMTC_MODEM_HAL_TRACE_PRINTF( "frag_size = %d\n", frag_session_data_tmp.frag_group_data.frag_size );
             if( frag_session_data_tmp.frag_group_data.control.frag_algo > 0 )
             {
                 status |= 0x01;  // Encoding unsupported
@@ -746,16 +745,15 @@ static frag_status_t fragmentation_package_parser( lorawan_fragmentation_package
 
                 if( frag_session_data[frag_index].frag_decoder_process_status == FRAG_SESSION_ONGOING )
                 {
-                    SMTC_MODEM_HAL_TRACE_ARRAY( "FUOTA FRAG = ", fragmentation_package_rx_buffer,
+                    SMTC_MODEM_HAL_TRACE_ARRAY( "FUOTA FRAG = \n", fragmentation_package_rx_buffer,
                                                 fragmentation_package_rx_buffer_length );
                     frag_session_data[frag_index].frag_decoder_process_status = FragDecoderProcess(
                         frag_counter, &fragmentation_package_rx_buffer[fragmentation_package_rx_buffer_index + 3] );
                     frag_session_data[frag_index].frag_decoder_status = FragDecoderGetStatus( );
-                    SMTC_MODEM_HAL_TRACE_PRINTF(
-                        "\nFuota session info : \nCurrent fragment index = %d,\nCurrent fragment counter = %d,\nNumber "
-                        "of missed packets = %d,\n",
-                        frag_index, frag_session_data[frag_index].frag_decoder_status.FragNbRx,
-                        frag_session_data[frag_index].frag_decoder_status.FragNbLost );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Fuota session info:\n" );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Current fragment index = %d\n", frag_index );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Current fragment counter = %d\n", frag_session_data[frag_index].frag_decoder_status.FragNbRx );
+                    SMTC_MODEM_HAL_TRACE_PRINTF( "Number of missed packets = %d\n",frag_session_data[frag_index].frag_decoder_status.FragNbLost );
                 }
                 if( frag_session_data[frag_index].frag_decoder_process_status >= FRAG_SESSION_FINISHED_SUCCESSFULLY )
                 {

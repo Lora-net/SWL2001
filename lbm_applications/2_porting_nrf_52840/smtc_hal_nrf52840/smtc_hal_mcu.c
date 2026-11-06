@@ -36,7 +36,7 @@
  * -----------------------------------------------------------------------------
  * --- DEPENDENCIES ------------------------------------------------------------
  */
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -131,7 +131,7 @@ void hal_mcu_init( void )
     hal_rng_init( );
     hal_spi_init( 0 );
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     uart0_init( );
 #endif
 }
@@ -196,12 +196,12 @@ static void mcu_gpio_init( void )
  */
 static void lpm_enter_sleep_mode( void )
 {
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
     // Deinit periph & enter Stop Mode
     hal_spi_de_init( RADIO_SPI_ID );
     hal_rng_stop( );
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     uart0_deinit( );
 #endif
 
@@ -218,9 +218,9 @@ static void lpm_exit_sleep_mode( void )
 {
     hal_gpio_irq_disable( );
 
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
     // Initialize UART
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if ( HAL_DBG_TRACE == HAL_FEATURE_ON )
     uart0_init( );
 #endif
 
@@ -244,6 +244,6 @@ static void sleep_handler( void )
     lpm_exit_sleep_mode( );
 }
 
-#if( LOW_POWER_MODE == 1 )
+#if ( LOW_POWER_MODE == 1 )
 
 #endif

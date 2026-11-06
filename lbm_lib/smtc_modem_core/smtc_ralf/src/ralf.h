@@ -138,7 +138,10 @@ static inline ral_status_t ralf_setup_lora_cad( const ralf_t* radio, const ralf_
  * @param [in] radio Pointer to ral_t
  * @returns          Pointer to ralf_t
  */
-static inline ralf_t* ralf_from_ral( ral_t* radio ) { return ( ralf_t* ) radio; }
+static inline ralf_t* ralf_from_ral( ral_t* radio )
+{
+    return ( ralf_t* ) radio;
+}
 
 /**
  * @brief Convert ralf_t* to ral_t*
@@ -146,7 +149,10 @@ static inline ralf_t* ralf_from_ral( ral_t* radio ) { return ( ralf_t* ) radio; 
  * @param [in] radio Pointer to ralf_t
  * @returns          Pointer to ral_t
  */
-static inline ral_t* ral_from_ralf( ralf_t* radio ) { return &radio->ral; }
+static inline ral_t* ral_from_ralf( ralf_t* radio )
+{
+    return &radio->ral;
+}
 
 /**
  * @brief Convert const ral_t* to const ralf_t*
@@ -156,7 +162,10 @@ static inline ral_t* ral_from_ralf( ralf_t* radio ) { return &radio->ral; }
  * @param [in] radio Pointer to const ral_t
  * @returns          Pointer to const ralf_t
  */
-static inline const ralf_t* ralf_from_const_ral( const ral_t* radio ) { return ( const ralf_t* ) radio; }
+static inline const ralf_t* ralf_from_const_ral( const ral_t* radio )
+{
+    return ( const ralf_t* ) radio;
+}
 
 /**
  * @brief Convert const ralf_t* to const ral_t*
@@ -164,7 +173,10 @@ static inline const ralf_t* ralf_from_const_ral( const ral_t* radio ) { return (
  * @param [in] radio Pointer to const ralf_t
  * @returns          Pointer to const ral_t
  */
-static inline const ral_t* ral_from_const_ralf( const ralf_t* radio ) { return &radio->ral; }
+static inline const ral_t* ral_from_const_ralf( const ralf_t* radio )
+{
+    return &radio->ral;
+}
 
 #ifdef __cplusplus
 }

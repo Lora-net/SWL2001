@@ -50,6 +50,7 @@
 #include "smtc_real.h"
 
 #include "smtc_modem_crypto.h"
+#include "smtc_modem_hal.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -641,6 +642,7 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
     uint32_t         mic_in;
     uint8_t          rx_ftype;
     uint8_t          rx_major;
+    bool             tx_ack_bit;
 
     status += lr1mac_rx_payload_min_size_check( class_c_obj->lr1_mac->rx_down_data.rx_payload_size );
     status +=
@@ -652,8 +654,8 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         return NO_MORE_VALID_RX_PACKET;
     }
 
-    status += lr1mac_rx_mhdr_extract( class_c_obj->lr1_mac->rx_down_data.rx_payload, &rx_ftype, &rx_major,
-                                      &class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit );
+    status +=
+        lr1mac_rx_mhdr_extract( class_c_obj->lr1_mac->rx_down_data.rx_payload, &rx_ftype, &rx_major, &tx_ack_bit );
     if( status != OKLORAWAN )
     {
         return NO_MORE_VALID_RX_PACKET;
@@ -661,9 +663,9 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
 
     if( class_c_obj->rx_session_index != RX_SESSION_UNICAST )
     {
-        if( ( class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit == true ) || ( rx_ftype == CONF_DATA_UP ) )
+        if( tx_ack_bit == true )
         {
-            class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit = false;
+            tx_ack_bit = false;
             return NO_MORE_VALID_RX_PACKET;
         }
     }
@@ -722,9 +724,6 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
         // class_c_obj->lr1_mac->rx_fpending_bit_current = ( class_c_obj->rx_fctrl >> 4 ) & 0x01;
         // class_c_obj->rx_metadata.rx_fpending_bit      = class_c_obj->lr1_mac->rx_fpending_bit_current;
 
-        RX_SESSION_PARAM_CURRENT->fcnt_dwn = fcnt_dwn_stack_tmp;
-        class_c_obj->lr1_mac->fcnt_dwn     = class_c_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn;
-
         if( class_c_obj->lr1_mac->rx_down_data.rx_metadata.rx_fport_present == true )  // rx payload not empty
         {
             class_c_obj->lr1_mac->rx_down_data.rx_payload_size =
@@ -740,7 +739,7 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
                 if( smtc_modem_crypto_payload_decrypt(
                         &class_c_obj->lr1_mac->rx_down_data.rx_payload[FHDROFFSET + 1 + class_c_obj->rx_fopts_length],
                         class_c_obj->lr1_mac->rx_down_data.rx_payload_size, RX_SESSION_PARAM_CURRENT->app_skey,
-                        RX_SESSION_PARAM_CURRENT->dev_addr, 1, RX_SESSION_PARAM_CURRENT->fcnt_dwn,
+                        RX_SESSION_PARAM_CURRENT->dev_addr, 1, fcnt_dwn_stack_tmp,
                         &class_c_obj->lr1_mac->rx_down_data.rx_payload[0],
                         class_c_obj->lr1_mac->stack_id ) != SMTC_MODEM_CRYPTO_RC_SUCCESS )
                 {
@@ -779,8 +778,11 @@ static rx_packet_type_t lr1mac_class_c_mac_rx_frame_decode( lr1mac_class_c_t* cl
 
     if( status == OKLORAWAN )
     {
-        class_c_obj->rx_ftype = rx_ftype;
-        class_c_obj->rx_major = rx_major;
+        class_c_obj->rx_ftype                                     = rx_ftype;
+        class_c_obj->rx_major                                     = rx_major;
+        class_c_obj->lr1_mac->rx_down_data.rx_metadata.tx_ack_bit = tx_ack_bit;
+        RX_SESSION_PARAM_CURRENT->fcnt_dwn                        = fcnt_dwn_stack_tmp;
+        class_c_obj->lr1_mac->fcnt_dwn = class_c_obj->rx_session_param[RX_SESSION_UNICAST]->fcnt_dwn;
     }
 
     SMTC_MODEM_HAL_TRACE_PRINTF_DEBUG( " RxC rx_packet_type = %d \n", rx_packet_type );

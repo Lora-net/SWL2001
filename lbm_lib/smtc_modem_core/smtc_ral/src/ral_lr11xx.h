@@ -53,52 +53,82 @@ extern "C" {
  * --- PUBLIC MACROS -----------------------------------------------------------
  */
 
-#define RAL_LR11XX_DRV_INSTANTIATE                                                                                    \
-    {                                                                                                                 \
-        .handles_part = ral_lr11xx_handles_part, .reset = ral_lr11xx_reset, .init = ral_lr11xx_init,                  \
-        .wakeup = ral_lr11xx_wakeup, .set_sleep = ral_lr11xx_set_sleep, .set_standby = ral_lr11xx_set_standby,        \
-        .set_fs = ral_lr11xx_set_fs, .set_tx = ral_lr11xx_set_tx, .set_rx = ral_lr11xx_set_rx,                        \
-        .cfg_rx_boosted = ral_lr11xx_cfg_rx_boosted, .set_rx_tx_fallback_mode = ral_lr11xx_set_rx_tx_fallback_mode,   \
-        .stop_timer_on_preamble = ral_lr11xx_stop_timer_on_preamble,                                                  \
-        .set_rx_duty_cycle = ral_lr11xx_set_rx_duty_cycle, .set_lora_cad = ral_lr11xx_set_lora_cad,                   \
-        .set_tx_cw = ral_lr11xx_set_tx_cw, .set_tx_infinite_preamble = ral_lr11xx_set_tx_infinite_preamble,           \
-        .cal_img = ral_lr11xx_cal_img, .set_tx_cfg = ral_lr11xx_set_tx_cfg,                                           \
-        .set_pkt_payload = ral_lr11xx_set_pkt_payload, .get_pkt_payload = ral_lr11xx_get_pkt_payload,                 \
-        .get_irq_status = ral_lr11xx_get_irq_status, .clear_irq_status = ral_lr11xx_clear_irq_status,                 \
-        .get_and_clear_irq_status = ral_lr11xx_get_and_clear_irq_status,                                              \
-        .set_dio_irq_params = ral_lr11xx_set_dio_irq_params, .set_rf_freq = ral_lr11xx_set_rf_freq,                   \
-        .set_pkt_type = ral_lr11xx_set_pkt_type, .get_pkt_type = ral_lr11xx_get_pkt_type,                             \
-        .set_gfsk_mod_params = ral_lr11xx_set_gfsk_mod_params, .set_gfsk_pkt_params = ral_lr11xx_set_gfsk_pkt_params, \
-        .set_lora_mod_params = ral_lr11xx_set_lora_mod_params, .set_lora_pkt_params = ral_lr11xx_set_lora_pkt_params, \
-        .set_lora_cad_params      = ral_lr11xx_set_lora_cad_params,                                                   \
-        .set_lora_symb_nb_timeout = ral_lr11xx_set_lora_symb_nb_timeout,                                              \
-        .set_flrc_mod_params = ral_lr11xx_set_flrc_mod_params, .set_flrc_pkt_params = ral_lr11xx_set_flrc_pkt_params, \
-        .get_gfsk_rx_pkt_status = ral_lr11xx_get_gfsk_rx_pkt_status,                                                  \
-        .get_lora_rx_pkt_status = ral_lr11xx_get_lora_rx_pkt_status,                                                  \
-        .get_flrc_rx_pkt_status = ral_lr11xx_get_flrc_rx_pkt_status, .get_rssi_inst = ral_lr11xx_get_rssi_inst,       \
-        .get_lora_time_on_air_in_ms = ral_lr11xx_get_lora_time_on_air_in_ms,                                          \
-        .get_gfsk_time_on_air_in_ms = ral_lr11xx_get_gfsk_time_on_air_in_ms,                                          \
-        .get_flrc_time_on_air_in_ms = ral_lr11xx_get_flrc_time_on_air_in_ms,                                          \
-        .set_gfsk_sync_word = ral_lr11xx_set_gfsk_sync_word, .set_lora_sync_word = ral_lr11xx_set_lora_sync_word,     \
-        .set_flrc_sync_word = ral_lr11xx_set_flrc_sync_word, .set_gfsk_crc_params = ral_lr11xx_set_gfsk_crc_params,   \
-        .set_flrc_crc_params     = ral_lr11xx_set_flrc_crc_params,                                                    \
-        .set_gfsk_whitening_seed = ral_lr11xx_set_gfsk_whitening_seed, .lr_fhss_init = ral_lr11xx_lr_fhss_init,       \
-        .lr_fhss_build_frame = ral_lr11xx_lr_fhss_build_frame, .lr_fhss_handle_hop = ral_lr11xx_lr_fhss_handle_hop,   \
-        .lr_fhss_handle_tx_done         = ral_lr11xx_lr_fhss_handle_tx_done,                                          \
-        .lr_fhss_get_time_on_air_in_ms  = ral_lr11xx_lr_fhss_get_time_on_air_in_ms,                                   \
-        .lr_fhss_get_hop_sequence_count = ral_lr11xx_lr_fhss_get_hop_sequence_count,                                  \
-        .lr_fhss_get_bit_delay_in_us    = ral_lr11xx_lr_fhss_get_bit_delay_in_us,                                     \
-        .get_lora_rx_pkt_cr_crc         = ral_lr11xx_get_lora_rx_pkt_cr_crc,                                          \
-        .get_tx_consumption_in_ua       = ral_lr11xx_get_tx_consumption_in_ua,                                        \
-        .get_gfsk_rx_consumption_in_ua  = ral_lr11xx_get_gfsk_rx_consumption_in_ua,                                   \
-        .get_lora_rx_consumption_in_ua  = ral_lr11xx_get_lora_rx_consumption_in_ua,                                   \
-        .get_random_numbers = ral_lr11xx_get_random_numbers, .handle_rx_done = ral_lr11xx_handle_rx_done,             \
-        .handle_tx_done = ral_lr11xx_handle_tx_done, .get_lora_cad_det_peak = ral_lr11xx_get_lora_cad_det_peak        \
+#define RAL_LR11XX_DRV_INSTANTIATE                                                     \
+    {                                                                                  \
+        .handles_part                    = ral_lr11xx_handles_part,                    \
+        .reset                           = ral_lr11xx_reset,                           \
+        .init                            = ral_lr11xx_init,                            \
+        .wakeup                          = ral_lr11xx_wakeup,                          \
+        .set_sleep                       = ral_lr11xx_set_sleep,                       \
+        .set_standby                     = ral_lr11xx_set_standby,                     \
+        .set_fs                          = ral_lr11xx_set_fs,                          \
+        .set_tx                          = ral_lr11xx_set_tx,                          \
+        .set_rx                          = ral_lr11xx_set_rx,                          \
+        .cfg_rx_boosted                  = ral_lr11xx_cfg_rx_boosted,                  \
+        .set_rx_tx_fallback_mode         = ral_lr11xx_set_rx_tx_fallback_mode,         \
+        .stop_timer_on_preamble          = ral_lr11xx_stop_timer_on_preamble,          \
+        .set_rx_duty_cycle               = ral_lr11xx_set_rx_duty_cycle,               \
+        .set_lora_cad                    = ral_lr11xx_set_lora_cad,                    \
+        .set_tx_cw                       = ral_lr11xx_set_tx_cw,                       \
+        .set_tx_infinite_preamble        = ral_lr11xx_set_tx_infinite_preamble,        \
+        .cal_img                         = ral_lr11xx_cal_img,                         \
+        .set_tx_cfg                      = ral_lr11xx_set_tx_cfg,                      \
+        .set_pkt_payload                 = ral_lr11xx_set_pkt_payload,                 \
+        .get_pkt_payload                 = ral_lr11xx_get_pkt_payload,                 \
+        .get_irq_status                  = ral_lr11xx_get_irq_status,                  \
+        .clear_irq_status                = ral_lr11xx_clear_irq_status,                \
+        .get_and_clear_irq_status        = ral_lr11xx_get_and_clear_irq_status,        \
+        .set_dio_irq_params              = ral_lr11xx_set_dio_irq_params,              \
+        .set_rf_freq                     = ral_lr11xx_set_rf_freq,                     \
+        .set_pkt_type                    = ral_lr11xx_set_pkt_type,                    \
+        .get_pkt_type                    = ral_lr11xx_get_pkt_type,                    \
+        .set_gfsk_mod_params             = ral_lr11xx_set_gfsk_mod_params,             \
+        .set_gfsk_pkt_params             = ral_lr11xx_set_gfsk_pkt_params,             \
+        .set_lora_mod_params             = ral_lr11xx_set_lora_mod_params,             \
+        .set_lora_pkt_params             = ral_lr11xx_set_lora_pkt_params,             \
+        .set_lora_cad_params             = ral_lr11xx_set_lora_cad_params,             \
+        .set_lora_symb_nb_timeout        = ral_lr11xx_set_lora_symb_nb_timeout,        \
+        .set_flrc_mod_params             = ral_lr11xx_set_flrc_mod_params,             \
+        .set_flrc_pkt_params             = ral_lr11xx_set_flrc_pkt_params,             \
+        .get_gfsk_rx_pkt_status          = ral_lr11xx_get_gfsk_rx_pkt_status,          \
+        .get_lora_rx_pkt_status          = ral_lr11xx_get_lora_rx_pkt_status,          \
+        .get_flrc_rx_pkt_status          = ral_lr11xx_get_flrc_rx_pkt_status,          \
+        .get_rssi_inst                   = ral_lr11xx_get_rssi_inst,                   \
+        .get_lora_time_on_air_in_ms      = ral_lr11xx_get_lora_time_on_air_in_ms,      \
+        .get_gfsk_time_on_air_in_ms      = ral_lr11xx_get_gfsk_time_on_air_in_ms,      \
+        .get_flrc_time_on_air_in_ms      = ral_lr11xx_get_flrc_time_on_air_in_ms,      \
+        .set_gfsk_sync_word              = ral_lr11xx_set_gfsk_sync_word,              \
+        .set_lora_sync_word              = ral_lr11xx_set_lora_sync_word,              \
+        .set_flrc_sync_word              = ral_lr11xx_set_flrc_sync_word,              \
+        .set_gfsk_crc_params             = ral_lr11xx_set_gfsk_crc_params,             \
+        .set_flrc_crc_params             = ral_lr11xx_set_flrc_crc_params,             \
+        .set_gfsk_whitening_seed         = ral_lr11xx_set_gfsk_whitening_seed,         \
+        .lr_fhss_init                    = ral_lr11xx_lr_fhss_init,                    \
+        .lr_fhss_build_frame             = ral_lr11xx_lr_fhss_build_frame,             \
+        .lr_fhss_handle_hop              = ral_lr11xx_lr_fhss_handle_hop,              \
+        .lr_fhss_handle_tx_done          = ral_lr11xx_lr_fhss_handle_tx_done,          \
+        .lr_fhss_get_time_on_air_in_ms   = ral_lr11xx_lr_fhss_get_time_on_air_in_ms,   \
+        .lr_fhss_get_hop_sequence_count  = ral_lr11xx_lr_fhss_get_hop_sequence_count,  \
+        .lr_fhss_get_bit_delay_in_us     = ral_lr11xx_lr_fhss_get_bit_delay_in_us,     \
+        .get_lora_rx_pkt_cr_crc          = ral_lr11xx_get_lora_rx_pkt_cr_crc,          \
+        .get_tx_consumption_in_ua        = ral_lr11xx_get_tx_consumption_in_ua,        \
+        .get_gfsk_rx_consumption_in_ua   = ral_lr11xx_get_gfsk_rx_consumption_in_ua,   \
+        .get_lora_rx_consumption_in_ua   = ral_lr11xx_get_lora_rx_consumption_in_ua,   \
+        .get_random_numbers              = ral_lr11xx_get_random_numbers,              \
+        .handle_rx_done                  = ral_lr11xx_handle_rx_done,                  \
+        .handle_tx_done                  = ral_lr11xx_handle_tx_done,                  \
+        .get_lora_cad_det_peak           = ral_lr11xx_get_lora_cad_det_peak,           \
+        .rttof_set_parameters            = ral_lr11xx_rttof_set_parameters,            \
+        .rttof_set_address               = ral_lr11xx_rttof_set_address,               \
+        .rttof_set_request_address       = ral_lr11xx_rttof_set_request_address,       \
+        .rttof_set_rx_tx_delay_indicator = ral_lr11xx_rttof_set_rx_tx_delay_indicator, \
+        .rttof_get_raw_result            = ral_lr11xx_rttof_get_raw_result,            \
     }
 
-#define RAL_LR11XX_INSTANTIATE( ctx )                         \
-    {                                                         \
-        .context = ctx, .driver = RAL_LR11XX_DRV_INSTANTIATE, \
+#define RAL_LR11XX_INSTANTIATE( ctx )          \
+    {                                          \
+        .context = ctx,                        \
+        .driver  = RAL_LR11XX_DRV_INSTANTIATE, \
     }
 
 /*
@@ -453,6 +483,33 @@ ral_status_t ral_lr11xx_handle_tx_done( const void* context );
  */
 ral_status_t ral_lr11xx_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf, ral_lora_bw_t bw,
                                                ral_lora_cad_symbs_t nb_symbol, uint8_t* cad_det_peak );
+
+/**
+ * @see ral_rttof_set_parameters
+ */
+ral_status_t ral_lr11xx_rttof_set_parameters( const void* context, const uint8_t nb_symbols );
+
+/**
+ * @see ral_rttof_set_address
+ */
+ral_status_t ral_lr11xx_rttof_set_address( const void* context, const uint32_t address, const uint8_t check_length );
+
+/*
+ * @see ral_rttof_set_request_address
+ */
+ral_status_t ral_lr11xx_rttof_set_request_address( const void* context, const uint32_t request_address );
+
+/*
+ * @see ral_rttof_set_rx_tx_delay_indicator
+ */
+ral_status_t ral_lr11xx_rttof_set_rx_tx_delay_indicator( const void* context, const uint32_t delay_indicator );
+
+/*
+ * @see ral_rttof_get_raw_result
+ */
+ral_status_t ral_lr11xx_rttof_get_raw_result( const void* context, ral_lora_bw_t rttof_bw, int32_t* raw_results,
+                                              int32_t* meter_results, int8_t* rssi_result );
+
 #ifdef __cplusplus
 }
 #endif

@@ -98,7 +98,6 @@ extern "C" {
 #endif
 
 #if ( HAL_DBG_TRACE )
-
     #define SMTC_HAL_TRACE_PRINTF( ... )  hal_trace_print_var (  __VA_ARGS__ )
 
     #define SMTC_HAL_TRACE_MSG( msg )                                               \

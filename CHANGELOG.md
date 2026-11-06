@@ -4,9 +4,65 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.9.0] 2025-10-15
+
+This version is based on branch v4.8.0 of the LoRa Basics Modem.
+
+Detailed `Modem API` changelog can be found [here](lbm_lib/smtc_modem_api/CHANGELOG.md)
+
+Detailed `Modem HAL` changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELOG.md)
+
+### Added
+
+* Support for the LR20xx radio
+* Cmake compilation support
+* LR11xx/Geolocation: new example `wifi_region_detection` in lbm_applications/3_geolocation_on_lora_edge.
+
+### Changed
+
+* Relay Rx now optionally supports CSMA and LBT for packet forwarding and normal traffic. When doing so, it may take more than the specified 50ms to access the medium. Clock Synchronization (DeviceTimeRequest) might be impacted if the medium is busy at this time. The official Relay specification does not handle this case.
+* Test mode Continues Wave, call to ral_init() was removed before CW started
+* Radio drivers updates:
+  * LR11xx to version [v2.7.0](lbm_lib/smtc_modem_core/radio_drivers/lr11xx_driver/CHANGELOG.md)
+  * SX126x to version [v2.5.0](lbm_lib/smtc_modem_core/radio_drivers/sx126x_driver/CHANGELOG.md)
+  * SX128x to version [v1.1.0](lbm_lib/smtc_modem_core/radio_drivers/sx128x_driver/CHANGELOG.md)
+  * SX127x to version [v1.1.0](lbm_lib/smtc_modem_core/radio_drivers/sx127x_driver/CHANGELOG.md)
+
+### Fixed
+
+* The CSMA specification defines default MAX_CHANGE to 6 but the value was set to 4
+* CSMA false detection on US915/AU915 with SX126x radio
+* LoRa CSMA energy consumption is now correctly calculated via smtc_modem_get_charge(), ensuring accurate power usage tracking
+* LBT energy consumption is now correctly calculated via smtc_modem_get_charge() for accurate power usage tracking
+* The datarate for the Relay Second channel on Fixed Channel Plan is now configurable
+* Relay Rx: may start on a wrong channel when Second Channel is enabled
+* Relay Tx: force compute WOR MIC after enablement or join accept, the MIC was wrong if the end-device had joined without a relay
+* Relay Rx/Tx: MAC parser must check valid Rx datarate for second channel and not Tx datarate, specially for FCC region.
+* WiFi scan service: fixed reset of previous results in case of abort
+* Bad RSSI and SNR when receiving a GFSK packet
+* Join Datarate distribution is not used after a Join Accept
+* The first uplink of a store and forward stored before a join may have been lost when the device is relayed.
+* FUOTA v2 FragSessionStatusAns, if FragIndex is invalid, MICError and MemoryError bits are 0.
+* Workaround to reach the radio sensitivity in case of LR11xx + bandwidth BW500
+* Power in LinkAdrReq was clipped to 0 dBm (US915, AU915), limit has been removed
+* Class B/C: The tx_ack_bit was set before validation of the downlink frame, now the tx_ack_bit is set only on valid frame
+* The remaining regulatory duty-cycle for EU868 and RU864 is returned based on the currently enabled channels and the active LoRaWAN datarate.
+* Issue [#101](https://github.com/Lora-net/SWL2001/issues/101) MissingFrag bit set after successful FUOTA
+* Issue [#104](https://github.com/Lora-net/SWL2001/issues/104) Compile error with IAR
+* Issue [#108](https://github.com/Lora-net/SWL2001/issues/108) Class B ping-slot, downlink were silently dropped
+* Issue [#109](https://github.com/Lora-net/SWL2001/issues/109) Wrong CONTEXT_LORAWAN_STACK size specified in docs
+* Issue [#110](https://github.com/Lora-net/SWL2001/issues/110) Get functions are broken if enums are larger than a single byte
+* Issue [#123](https://github.com/Lora-net/SWL2001/issues/123) Multicast package needs 2.4GHz support for Frequency
+* Issue [#124](https://github.com/Lora-net/SWL2001/issues/124) Frequency 869.3MHz isn't constraint in LBM
+* Issue [#126](https://github.com/Lora-net/SWL2001/issues/126) Store and forward delay overflow if offline
+
+### Deprecated
+
+* LoRa cloud services are no longer tested but still present in this version
+
 ## [v4.8.0] 2024-12-20
 
-This version is based on feature branch v4.5.0 of the LoRa Basics Modem.
+This version is based on branch v4.5.0 of the LoRa Basics Modem.
 
 Detailed Modem API changelog can be found [here](lbm_lib/smtc_modem_api/CHANGELOG.md)
 Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELOG.md)

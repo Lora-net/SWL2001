@@ -459,7 +459,7 @@ enum sx127x_reg_common_dio_mapping_2_dio_5_e
 /**
  * @brief SX127X MapPreambleDetect - Allows the mapping of either Rssi Or PreambleDetect to the DIO pins
  */
-enum sx127x_reg_common_dio_mapping_2_map_preable_detect_e
+enum sx127x_reg_common_dio_mapping_2_map_preamble_detect_e
 {
     SX127X_REG_COMMON_DIO_MAPPING_2_MAP_MASK            = ~( 1 << 0 ),
     SX127X_REG_COMMON_DIO_MAPPING_2_MAP_RSSI            = ( 0 << 0 ),  // Default

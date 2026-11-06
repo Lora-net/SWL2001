@@ -16,6 +16,8 @@ The driver is defined as follows:
 - lr_fhss_mac.h: Transceiver-independent LR-FHSS declarations
 - sx126x_lr_fhss.h: Transceiver-dependent LR-FHSS declarations
 - lr_fhss_v1_base_types.h: LR-FHSS type interface
+- sx126x_bpsk.c: implementation of BPSK driver functions
+- sx126x_bpsk.h: declaration of BPSK driver functions
 
 ## HAL
 
@@ -25,3 +27,35 @@ The HAL (Hardware Abstraction Layer) is a collection of functions the user shall
 - sx126x_hal_wakeup
 - sx126x_hal_write
 - sx126x_hal_read
+
+## Cmake usage
+
+This driver exposes a cmake configuration allowing to integrate the driver in a cmake ready application.
+
+### Integration
+
+If the driver code resides in a directory of the application using it, it can be integrated by adding the subdirectory to the configuration as follows:
+
+```cmake
+add_subdirectory(sx126x_driver) # where sx126x_driver is the name of the folder containing the driver code
+```
+
+Alternatively, if the driver code is available through a code archive, it can be included directly by
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    sx126x_driver
+    URL "path_to_archive" # Where path_to_archive is to be replaced by the path to the archive driver
+)
+FetchContent_MakeAvailable(sx126x_driver)
+```
+
+### Configuration
+
+By default, LR-FHSS and BPSK are not included in the build of the driver. It can be added by adding the following line in the before including the driver code in the cmake suite:
+
+```cmake
+set(SX126X_ENABLE_BPSK ON CACHE BOOL "") # To enable BPSK
+set(SX126X_ENABLE_LR_FHSS ON CACHE BOOL "") # To enable LR-FHSS
+```

@@ -495,12 +495,17 @@ lr11xx_status_t lr11xx_radio_set_pkt_type( const void* context, const lr11xx_rad
  *
  * The command @ref lr11xx_radio_set_pkt_type must be called prior this one.
  *
+ * Depending on the modulation to configure, workarounds may applies.
+ * Refer to @ref lr11xx_workaround_gfsk_1_2_kbps, @ref lr11xx_workaround_gfsk_0_6_kbps_sub_ghz, @ref
+ * lr11xx_workaround_gfsk_0_6_kbps_ghz, @ref lr11xx_workaround_gfsk_reset.
+ *
  * @param [in] context Chip implementation context
  * @param [in] mod_params The structure of modulation configuration
  *
  * @returns Operation status
  *
- * @see lr11xx_radio_set_pkt_type
+ * @see lr11xx_radio_set_pkt_type, lr11xx_workaround_gfsk_1_2_kbps, lr11xx_workaround_gfsk_0_6_kbps_sub_ghz,
+ * lr11xx_workaround_gfsk_0_6_kbps_ghz, lr11xx_workaround_gfsk_reset
  */
 lr11xx_status_t lr11xx_radio_set_gfsk_mod_params( const void*                           context,
                                                   const lr11xx_radio_mod_params_gfsk_t* mod_params );
@@ -1034,6 +1039,75 @@ uint16_t lr11xx_radio_convert_nb_symb_to_mant_exp( const uint16_t nb_symbol, uin
  * @see lr11xx_radio_set_rx_on_lna_path, lr11xx_radio_set_rx_with_timeout_in_rtc_step_on_lna_path
  */
 lr11xx_status_t lr11xx_radio_set_lna_mode( const void* context, lr11xx_radio_lna_mode_t lna_mode );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 1.2 kbps
+ *
+ * This workaround is to be applied after calling @ref lr11xx_radio_set_gfsk_mod_params and @ref
+ * lr11xx_radio_set_gfsk_pkt_params if an only if:
+ *  - lr11xx_mod_params_gfsk_s.br_in_bps = 1200 bps; and
+ *  - lr11xx_mod_params_gfsk_s.fdev_in_hz = 5000 Hz; and
+ *  - lr11xx_mod_params_gfsk_s.bw_dsb_param = @ref LR11XX_RADIO_GFSK_BW_19500
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_radio_set_gfsk_mod_params, lr11xx_radio_set_gfsk_pkt_params, lr11xx_workaround_gfsk_reset
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_1_2_kbps( const void* context );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 0.6 kbps on sub-ghz path
+ *
+ * This workaround is to be applied after calling @ref lr11xx_radio_set_gfsk_mod_params and @ref
+ * lr11xx_radio_set_gfsk_pkt_params if an only if:
+ *  - lr11xx_mod_params_gfsk_s.br_in_bps = 600 bps; and
+ *  - lr11xx_mod_params_gfsk_s.fdev_in_hz = 800 Hz; and
+ *  - lr11xx_mod_params_gfsk_s.bw_dsb_param = @ref LR11XX_RADIO_GFSK_BW_4800; and
+ *  - for sub-ghz operations
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_radio_set_gfsk_mod_params, lr11xx_radio_set_gfsk_pkt_params, lr11xx_workaround_gfsk_reset
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_sub_ghz( const void* context );
+
+/**
+ * @brief Apply GFSK workaround for GFSK 1.2 kbps on Ghz path
+ *
+ * This workaround is to be applied after calling @ref lr11xx_radio_set_gfsk_mod_params and @ref
+ * lr11xx_radio_set_gfsk_pkt_params if an only if:
+ *  - lr11xx_mod_params_gfsk_s.br_in_bps = 600 bps; and
+ *  - lr11xx_mod_params_gfsk_s.fdev_in_hz = 800 Hz; and
+ *  - lr11xx_mod_params_gfsk_s.bw_dsb_param = @ref LR11XX_RADIO_GFSK_BW_4800; and
+ *  - for above GHz operations
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_radio_set_gfsk_mod_params, lr11xx_radio_set_gfsk_pkt_params, lr11xx_workaround_gfsk_reset
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_0_6_kbps_ghz( const void* context );
+
+/**
+ * @brief Reset workaround applied by @ref lr11xx_workaround_gfsk_1_2_kbps or lr11xx_workaround_gfsk_0_6_kbps_sub_ghz or
+ * @ref lr11xx_workaround_gfsk_0_6_kbps_ghz
+ *
+ * This workaround reset must be called before attempting to configure a modulation different from the one specified in
+ * @ref lr11xx_workaround_gfsk_0_6_kbps_sub_ghz or @ref lr11xx_workaround_gfsk_0_6_kbps_ghz or @ref
+ * lr11xx_workaround_gfsk_1_2_kbps.
+ *
+ * @param [in] context Chip implementation context
+ *
+ * @return Operation status
+ *
+ * @see lr11xx_workaround_gfsk_1_2_kbps, lr11xx_workaround_gfsk_0_6_kbps_sub_ghz, lr11xx_workaround_gfsk_0_6_kbps_ghz
+ */
+lr11xx_status_t lr11xx_workaround_gfsk_reset( const void* context );
 
 #ifdef __cplusplus
 }

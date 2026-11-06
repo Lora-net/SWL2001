@@ -71,6 +71,26 @@
  */
 #define SX126X_PLL_STEP_SCALED ( SX126X_XTAL_FREQ >> ( 25 - SX126X_PLL_STEP_SHIFT_AMOUNT ) )
 
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define SX126X_REG_GFSK_WORKAROUND_1 ( 0x06D1 )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define SX126X_REG_GFSK_WORKAROUND_2 ( 0x089b )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define SX126X_REG_GFSK_WORKAROUND_3 ( 0x08b8 )
+
+/**
+ * @brief Register to apply GFSK workaround
+ */
+#define SX126X_REG_GFSK_WORKAROUND_4 ( 0x06AC )
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
@@ -172,10 +192,8 @@ typedef enum sx126x_commands_size_e
     SX126X_SIZE_GET_PKT_TYPE               = 2,
     SX126X_SIZE_SET_TX_PARAMS              = 3,
     SX126X_SIZE_SET_MODULATION_PARAMS_GFSK = 9,
-    SX126X_SIZE_SET_MODULATION_PARAMS_BPSK = 5,
     SX126X_SIZE_SET_MODULATION_PARAMS_LORA = 5,
     SX126X_SIZE_SET_PKT_PARAMS_GFSK        = 10,
-    SX126X_SIZE_SET_PKT_PARAMS_BPSK        = 2,
     SX126X_SIZE_SET_PKT_PARAMS_LORA        = 7,
     SX126X_SIZE_SET_CAD_PARAMS             = 8,
     SX126X_SIZE_SET_BUFFER_BASE_ADDRESS    = 3,
@@ -220,25 +238,10 @@ gfsk_bw_t gfsk_bw[] = {
  * --- PRIVATE FUNCTIONS DECLARATION -------------------------------------------
  */
 
-/**
- * @brief 15.1.2 Workaround
- *
- * @remark Before any packet transmission, bit #2 of SX126X_REG_TX_MODULATION shall be set to:
- * 0 if the LoRa BW = 500 kHz
- * 1 for any other LoRa BW
- * 1 for any (G)FSK configuration
- *
- * @param [in] context Chip implementation context.
- * @param [in] pkt_type The modulation type (G)FSK/LoRa
- * @param [in] bw In case of LoRa modulation the bandwith must be specified
- *
- * @returns Operation status
- */
-static sx126x_status_t sx126x_tx_modulation_workaround( const void* context, sx126x_pkt_type_t pkt_type,
-                                                        sx126x_lora_bw_t bw );
-
 static inline uint32_t sx126x_get_gfsk_crc_len_in_bytes( sx126x_gfsk_crc_types_t crc_type );
 
+static sx126x_status_t sx126x_read_modify_write_register( const void* context, uint16_t address, uint8_t mask,
+                                                          uint8_t value );
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC FUNCTIONS DEFINITION ---------------------------------------------
@@ -617,7 +620,14 @@ sx126x_status_t sx126x_get_pkt_type( const void* context, sx126x_pkt_type_t* pkt
         SX126X_NOP,
     };
 
-    return ( sx126x_status_t ) sx126x_hal_read( context, buf, SX126X_SIZE_GET_PKT_TYPE, ( uint8_t* ) pkt_type, 1 );
+    uint8_t               pkt_type_raw = 0;
+    const sx126x_status_t status =
+        ( sx126x_status_t ) sx126x_hal_read( context, buf, SX126X_SIZE_GET_PKT_TYPE, &pkt_type_raw, 1 );
+    if( status == SX126X_STATUS_OK )
+    {
+        *pkt_type = ( sx126x_pkt_type_t ) pkt_type_raw;
+    }
+    return status;
 }
 
 sx126x_status_t sx126x_set_tx_params( const void* context, const int8_t pwr_in_dbm, const sx126x_ramp_time_t ramp_time )
@@ -651,18 +661,6 @@ sx126x_status_t sx126x_set_gfsk_mod_params( const void* context, const sx126x_mo
         // WORKAROUND END
     }
     return status;
-}
-
-sx126x_status_t sx126x_set_bpsk_mod_params( const void* context, const sx126x_mod_params_bpsk_t* params )
-{
-    const uint32_t bitrate = ( uint32_t )( 32 * SX126X_XTAL_FREQ / params->br_in_bps );
-
-    const uint8_t buf[SX126X_SIZE_SET_MODULATION_PARAMS_BPSK] = {
-        SX126X_SET_MODULATION_PARAMS, ( uint8_t )( bitrate >> 16 ),       ( uint8_t )( bitrate >> 8 ),
-        ( uint8_t )( bitrate >> 0 ),  ( uint8_t )( params->pulse_shape ),
-    };
-
-    return ( sx126x_status_t ) sx126x_hal_write( context, buf, SX126X_SIZE_SET_MODULATION_PARAMS_BPSK, 0, 0 );
 }
 
 sx126x_status_t sx126x_set_lora_mod_params( const void* context, const sx126x_mod_params_lora_t* params )
@@ -701,29 +699,6 @@ sx126x_status_t sx126x_set_gfsk_pkt_params( const void* context, const sx126x_pk
     };
 
     return ( sx126x_status_t ) sx126x_hal_write( context, buf, SX126X_SIZE_SET_PKT_PARAMS_GFSK, 0, 0 );
-}
-
-sx126x_status_t sx126x_set_bpsk_pkt_params( const void* context, const sx126x_pkt_params_bpsk_t* params )
-{
-    const uint8_t buf[SX126X_SIZE_SET_PKT_PARAMS_BPSK] = {
-        SX126X_SET_PKT_PARAMS,
-        params->pld_len_in_bytes,
-    };
-
-    sx126x_status_t status =
-        ( sx126x_status_t ) sx126x_hal_write( context, buf, SX126X_SIZE_SET_PKT_PARAMS_BPSK, 0, 0 );
-    if( status != SX126X_STATUS_OK )
-    {
-        return status;
-    }
-
-    const uint8_t buf2[] = {
-        ( uint8_t )( params->ramp_up_delay >> 8 ),   ( uint8_t )( params->ramp_up_delay >> 0 ),
-        ( uint8_t )( params->ramp_down_delay >> 8 ), ( uint8_t )( params->ramp_down_delay >> 0 ),
-        ( uint8_t )( params->pld_len_in_bits >> 8 ), ( uint8_t )( params->pld_len_in_bits >> 0 ),
-    };
-
-    return sx126x_write_register( context, 0x00F0, buf2, sizeof( buf2 ) );
 }
 
 sx126x_status_t sx126x_set_lora_pkt_params( const void* context, const sx126x_pkt_params_lora_t* params )
@@ -1410,7 +1385,7 @@ sx126x_status_t sx126x_set_trimming_capacitor_values( const void* context, const
 sx126x_status_t sx126x_add_registers_to_retention_list( const void* context, const uint16_t* register_addr,
                                                         uint8_t register_nb )
 {
-    uint8_t buffer[9] = {0};
+    uint8_t buffer[9] = { 0 };
 
     sx126x_status_t status = sx126x_read_register( context, SX126X_REG_RETENTION_LIST_BASE_ADDRESS, buffer, 9 );
 
@@ -1418,6 +1393,11 @@ sx126x_status_t sx126x_add_registers_to_retention_list( const void* context, con
     {
         const uint8_t initial_nb_of_registers = buffer[0];
         uint8_t*      register_list           = &buffer[1];
+
+        if( initial_nb_of_registers > SX126X_MAX_NB_REG_IN_RETENTION )
+        {
+            return SX126X_STATUS_UNKNOWN_VALUE;
+        }
 
         for( uint8_t index = 0; index < register_nb; index++ )
         {
@@ -1467,7 +1447,7 @@ sx126x_status_t sx126x_init_retention_list( const void* context )
 
 sx126x_status_t sx126x_get_lora_params_from_header( const void* context, sx126x_lora_cr_t* cr, bool* crc_is_on )
 {
-    uint8_t buffer_cr = 0;
+    uint8_t buffer_cr  = 0;
     uint8_t buffer_crc = 0;
 
     sx126x_status_t status = sx126x_read_register( context, SX126X_REG_LR_HEADER_CR, &buffer_cr, 1 );
@@ -1486,13 +1466,64 @@ sx126x_status_t sx126x_get_lora_params_from_header( const void* context, sx126x_
     return status;
 }
 
-/*
- * -----------------------------------------------------------------------------
- * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
- */
+sx126x_status_t sx126x_workaround_gfsk_1_2_kbps( const void* context )
+{
+    return sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_3, 0x10, 0x00 );
+}
 
-static sx126x_status_t sx126x_tx_modulation_workaround( const void* context, sx126x_pkt_type_t pkt_type,
-                                                        sx126x_lora_bw_t bw )
+sx126x_status_t sx126x_workaround_gfsk_0_6_kbps( const void* context )
+{
+    sx126x_status_t status = SX126X_STATUS_ERROR;
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_1, 0x18, 0x18 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_2, 0x1C, 0x04 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_3, 0x10, 0x00 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_4, 0x70, 0x50 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
+
+sx126x_status_t sx126x_workaround_gfsk_reset( const void* context )
+{
+    sx126x_status_t status = SX126X_STATUS_ERROR;
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_1, 0x18, 0x08 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_2, 0x1C, 0x00 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_3, 0x10, 0x10 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    if( ( status = sx126x_read_modify_write_register( context, SX126X_REG_GFSK_WORKAROUND_4, 0x70, 0x00 ) ) !=
+        SX126X_STATUS_OK )
+    {
+        return status;
+    }
+    return status;
+}
+
+sx126x_status_t sx126x_tx_modulation_workaround( const void* context, sx126x_pkt_type_t pkt_type, sx126x_lora_bw_t bw )
 {
     uint8_t reg_value = 0;
 
@@ -1513,13 +1544,18 @@ static sx126x_status_t sx126x_tx_modulation_workaround( const void* context, sx1
         }
         else
         {
-            reg_value |= ( 1 << 2 );  // Bit 2 set to 1 for any (G)FSK configuration
+            reg_value |= ( 1 << 2 );  // Bit 2 set to 1 for any configuration other than LoRa BW 500kHz
         }
 
         status = sx126x_write_register( context, SX126X_REG_TX_MODULATION, &reg_value, 1 );
     }
     return status;
 }
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
+ */
 
 static inline uint32_t sx126x_get_gfsk_crc_len_in_bytes( sx126x_gfsk_crc_types_t crc_type )
 {
@@ -1538,6 +1574,26 @@ static inline uint32_t sx126x_get_gfsk_crc_len_in_bytes( sx126x_gfsk_crc_types_t
     }
 
     return 0;
+}
+
+sx126x_status_t sx126x_read_modify_write_register( const void* context, uint16_t address, uint8_t mask, uint8_t value )
+{
+    sx126x_status_t status         = SX126X_STATUS_ERROR;
+    uint8_t         register_value = 0;
+
+    // Read
+    status = sx126x_read_register( context, address, &register_value, 1 );
+    if( status == SX126X_STATUS_OK )
+    {
+        // Modify
+        register_value &= ( ~mask );
+        register_value += ( value & mask );
+
+        // Write
+        status = sx126x_write_register( context, address, &register_value, 1 );
+    }
+
+    return status;
 }
 
 /* --- EOF ------------------------------------------------------------------ */

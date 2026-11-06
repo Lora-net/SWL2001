@@ -225,6 +225,12 @@ static uint8_t lorawan_relay_tx_service_downlink_handler( lr1_stack_mac_down_dat
     relay_tx_config_t relay_conf = { 0 };
     smtc_relay_tx_get_config( stack_id, &relay_conf );
 
+    // The MIC present in WOR need to be recomputed after a join accept because the DevAddr could have changed
+    if( rx_down_data->rx_metadata.is_a_join_accept == true )
+    {
+        smtc_relay_tx_need_key_derivation( stack_id );
+    }
+
     if( rx_down_data->rx_metadata.rx_window == RECEIVE_ON_RXR )
     {
         smtc_relay_tx_data_receive_on_rxr( stack_id );

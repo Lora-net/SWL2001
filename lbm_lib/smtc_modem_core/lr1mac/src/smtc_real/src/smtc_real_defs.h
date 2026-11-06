@@ -59,8 +59,8 @@ extern "C" {
 #if defined( REGION_AU_915 )
 #include "region_au_915_defs.h"
 #endif
-#if defined( REGION_WW2G4 )
-#include "region_ww2g4_defs.h"
+#if defined( REGION_WW_2G4 )
+#include "region_ww_2g4_defs.h"
 #endif
 #if defined( REGION_CN_470 )
 #include "region_cn_470_defs.h"
@@ -122,8 +122,8 @@ typedef enum smtc_real_region_types_e
 #if defined( REGION_CN_470 )
     SMTC_REAL_REGION_CN_470 = 5,
 #endif
-#if defined( REGION_WW2G4 )
-    SMTC_REAL_REGION_WW2G4 = 6,
+#if defined( REGION_WW_2G4 )
+    SMTC_REAL_REGION_WW_2G4 = 6,
 #endif
 #if defined( REGION_AS_923 )
     SMTC_REAL_REGION_AS_923_GRP2 = 7,
@@ -161,6 +161,15 @@ typedef enum smtc_real_status_e
     SMTC_REAL_STATUS_ERROR,
 } smtc_real_status_t;
 
+/**
+ * API return status
+ */
+enum smtc_real_no_downlink_limit_e
+{
+    SMTC_REAL_ADR_BACKOFF_END = 0,
+    SMTC_REAL_NO_RX_USER_THRESHOLD,
+};
+
 /*
  * -----------------------------------------------------------------------------
  * --- PUBLIC CONSTANTS --------------------------------------------------------
@@ -182,8 +191,8 @@ static const uint8_t smtc_real_region_list[] = {
 #if defined( REGION_CN_470 )
     SMTC_REAL_REGION_CN_470,
 #endif
-#if defined( REGION_WW2G4 )
-    SMTC_REAL_REGION_WW2G4,
+#if defined( REGION_WW_2G4 )
+    SMTC_REAL_REGION_WW_2G4,
 #endif
 #if defined( REGION_AS_923 )
     SMTC_REAL_REGION_AS_923_GRP2,
@@ -317,8 +326,8 @@ typedef struct smtc_real_s
 #if defined( REGION_CN_470 )
         region_cn470_context_t cn470;
 #endif
-#if defined( REGION_WW2G4 )
-        region_ww2g4_context_t ww2g4;
+#if defined( REGION_WW_2G4 )
+        region_ww_2g4_context_t ww_2g4;
 #endif
 #if defined( REGION_IN_865 )
         region_in865_context_t in865;

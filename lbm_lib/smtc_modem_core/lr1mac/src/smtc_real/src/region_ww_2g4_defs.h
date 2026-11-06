@@ -1,7 +1,7 @@
 /**
- * \file      region_ww2g4_defs.h
+ * \file      region_ww_2g4_defs.h
  *
- * \brief     region_ww2g4_defs  abstraction layer definition
+ * \brief     region_ww_2g4_defs  abstraction layer definition
  *
  * The Clear BSD License
  * Copyright Semtech Corporation 2021. All rights reserved.
@@ -32,8 +32,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef REGION_WW2G4_DEFS_H
-#define REGION_WW2G4_DEFS_H
+#ifndef REGION_WW_2G4_DEFS_H
+#define REGION_WW_2G4_DEFS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,40 +55,40 @@ extern "C" {
  */
 
 /* clang-format off */
-#define NUMBER_OF_CHANNEL_WW2G4            (16)
-#define NUMBER_OF_BOOT_TX_CHANNEL_WW2G4    (3)             // define the number of channel at boot
-#define JOIN_ACCEPT_DELAY1_WW2G4           (5)             // define in seconds
-#define JOIN_ACCEPT_DELAY2_WW2G4           (6)             // define in seconds
-#define RECEIVE_DELAY1_WW2G4               (1)             // define in seconds
-#define TX_POWER_EIRP_WW2G4                (10)            // define in dbm
-#define MAX_TX_POWER_IDX_WW2G4             (7)             // index ex LinkADRReq
-#define ADR_ACK_LIMIT_WW2G4                (64)
-#define ADR_ACK_DELAY_WW2G4                (32)
-#define ACK_TIMEOUT_WW2G4                  (2)             // +/- 1 s (random delay between 1 and 3 seconds)
-#define FREQMIN_WW2G4                      (2400000000)    // Hz
-#define FREQMAX_WW2G4                      (2480000000)    // Hz
-#define RX2_FREQ_WW2G4                     (2423000000)    // Hz
-#define FREQUENCY_FACTOR_WW2G4             (200)           // MHz/200 when coded over 24 bits
-#define RX2DR_INIT_WW2G4                   (0)
-#define SYNC_WORD_PRIVATE_WW2G4            (0x12)
-#define SYNC_WORD_PUBLIC_WW2G4             (0x21)
-#define MIN_DR_WW2G4                       (0)
-#define MAX_DR_WW2G4                       (7)
-#define MIN_TX_DR_LIMIT_WW2G4              (0)
-#define NUMBER_OF_TX_DR_WW2G4              (8)
-#define DR_BITFIELD_SUPPORTED_WW2G4        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
+#define NUMBER_OF_CHANNEL_WW_2G4            (16)
+#define NUMBER_OF_BOOT_TX_CHANNEL_WW_2G4    (3)             // define the number of channel at boot
+#define JOIN_ACCEPT_DELAY1_WW_2G4           (5)             // define in seconds
+#define JOIN_ACCEPT_DELAY2_WW_2G4           (6)             // define in seconds
+#define RECEIVE_DELAY1_WW_2G4               (1)             // define in seconds
+#define TX_POWER_EIRP_WW_2G4                (10)            // define in dbm
+#define MAX_TX_POWER_IDX_WW_2G4             (7)             // index ex LinkADRReq
+#define ADR_ACK_LIMIT_WW_2G4                (64)
+#define ADR_ACK_DELAY_WW_2G4                (32)
+#define ACK_TIMEOUT_WW_2G4                  (2)             // +/- 1 s (random delay between 1 and 3 seconds)
+#define FREQMIN_WW_2G4                      (2400000000)    // Hz
+#define FREQMAX_WW_2G4                      (2480000000)    // Hz
+#define RX2_FREQ_WW_2G4                     (2423000000)    // Hz
+#define FREQUENCY_FACTOR_WW_2G4             (200)           // MHz/200 when coded over 24 bits
+#define RX2DR_INIT_WW_2G4                   (0)
+#define SYNC_WORD_PRIVATE_WW_2G4            (0x12)
+#define SYNC_WORD_PUBLIC_WW_2G4             (0x21)
+#define MIN_DR_WW_2G4                       (0)
+#define MAX_DR_WW_2G4                       (7)
+#define MIN_TX_DR_LIMIT_WW_2G4              (0)
+#define NUMBER_OF_TX_DR_WW_2G4              (8)
+#define DR_BITFIELD_SUPPORTED_WW_2G4        (uint16_t)( ( 1 << DR7 ) | ( 1 << DR6 ) | \
                                                        ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
-#define DEFAULT_TX_DR_BIT_FIELD_WW2G4      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
-#define TX_PARAM_SETUP_REQ_SUPPORTED_WW2G4 (true)          // This mac command is required for ww2g4
-#define NEW_CHANNEL_REQ_SUPPORTED_WW2G4    (true)
-#define DTC_SUPPORTED_WW2G4                (false)
-#define LBT_SUPPORTED_WW2G4                (false)
-#define CF_LIST_SUPPORTED_WW2G4            (CF_LIST_FREQ)
+#define DEFAULT_TX_DR_BIT_FIELD_WW_2G4      (uint16_t)( ( 1 << DR5 ) | ( 1 << DR4 ) | ( 1 << DR3 ) | ( 1 << DR2 ) | ( 1 << DR1 ) | ( 1 << DR0 ) )
+#define TX_PARAM_SETUP_REQ_SUPPORTED_WW_2G4 (true)          // This mac command is required for ww_2g4
+#define NEW_CHANNEL_REQ_SUPPORTED_WW_2G4    (true)
+#define DTC_SUPPORTED_WW_2G4                (false)
+#define LBT_SUPPORTED_WW_2G4                (false)
+#define CF_LIST_SUPPORTED_WW_2G4            (CF_LIST_FREQ)
 
 // Class B
-#define BEACON_DR_WW2G4                    (3)
-#define BEACON_FREQ_WW2G4                  (2424000000)     // Hz
-#define PING_SLOT_FREQ_WW2G4               (2424000000)     // Hz
+#define BEACON_DR_WW_2G4                    (3)
+#define BEACON_FREQ_WW_2G4                  (2424000000)     // Hz
+#define PING_SLOT_FREQ_WW_2G4               (2424000000)     // Hz
 
 /* clang-format on */
 
@@ -100,25 +100,25 @@ extern "C" {
 /**
  * Bank contains 8 channels
  */
-typedef enum ww2g4_channels_bank_e
+typedef enum ww_2g4_channels_bank_e
 {
-    BANK_0_WW2G4 = 0,  // 0 to 7 channels
-    BANK_1_WW2G4 = 1,  // 8 to 15 channels
-    BANK_MAX_WW2G4
-} ww2g4_channels_bank_t;
+    BANK_0_WW_2G4 = 0,  // 0 to 7 channels
+    BANK_1_WW_2G4 = 1,  // 8 to 15 channels
+    BANK_MAX_WW_2G4
+} ww_2g4_channels_bank_t;
 
-typedef struct region_ww2g4_context_s
+typedef struct region_ww_2g4_context_s
 {
-    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_WW2G4];
-    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_WW2G4];
-    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_WW2G4];
-    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_WW2G4];
-    uint8_t  dr_distribution[NUMBER_OF_TX_DR_WW2G4];
-    uint8_t  join_dr_distribution[NUMBER_OF_TX_DR_WW2G4];
-    uint8_t  custom_dr_distribution_init[NUMBER_OF_TX_DR_WW2G4];
-    uint8_t  channel_index_enabled[BANK_MAX_WW2G4];  // Contain the index of the activated channel only
-    uint8_t  unwrapped_channel_mask[BANK_MAX_WW2G4];
-} region_ww2g4_context_t;
+    uint32_t tx_frequency_channel[NUMBER_OF_CHANNEL_WW_2G4];
+    uint32_t rx1_frequency_channel[NUMBER_OF_CHANNEL_WW_2G4];
+    uint16_t dr_bitfield_tx_channel[NUMBER_OF_CHANNEL_WW_2G4];
+    uint8_t  dr_distribution_init[NUMBER_OF_TX_DR_WW_2G4];
+    uint8_t  dr_distribution[NUMBER_OF_TX_DR_WW_2G4];
+    uint8_t  join_dr_distribution[NUMBER_OF_TX_DR_WW_2G4];
+    uint8_t  custom_dr_distribution_init[NUMBER_OF_TX_DR_WW_2G4];
+    uint8_t  channel_index_enabled[BANK_MAX_WW_2G4];  // Contain the index of the activated channel only
+    uint8_t  unwrapped_channel_mask[BANK_MAX_WW_2G4];
+} region_ww_2g4_context_t;
 
 /*
  * -----------------------------------------------------------------------------
@@ -129,15 +129,15 @@ typedef struct region_ww2g4_context_s
  * Default frequencies at boot
  */
 #if defined( PERF_TEST_ENABLED )
-static const uint32_t default_freq_ww2g4[] = { 2479000000, 2479000000, 2479000000 };
+static const uint32_t default_freq_ww_2g4[] = { 2479000000, 2479000000, 2479000000 };
 #else
-static const uint32_t default_freq_ww2g4[] = { 2403000000, 2425000000, 2479000000 };
+static const uint32_t default_freq_ww_2g4[] = { 2403000000, 2425000000, 2479000000 };
 #endif
 
 /**
  * Up/Down link data rates offset definition
  */
-static const uint8_t datarate_offsets_ww2g4[8][6] = {
+static const uint8_t datarate_offsets_ww_2g4[8][6] = {
     { 0, 0, 0, 0, 0, 0 },  // DR 0
     { 1, 0, 0, 0, 0, 0 },  // DR 1
     { 2, 1, 0, 0, 0, 0 },  // DR 2
@@ -152,7 +152,7 @@ static const uint8_t datarate_offsets_ww2g4[8][6] = {
  * @brief uplink datarate backoff
  *
  */
-static const uint8_t datarate_backoff_ww2g4[] = {
+static const uint8_t datarate_backoff_ww_2g4[] = {
     0,  // DR0 -> DR0
     0,  // DR1 -> DR0
     1,  // DR2 -> DR1
@@ -163,23 +163,23 @@ static const uint8_t datarate_backoff_ww2g4[] = {
     6   // DR7 -> DR6
 };
 
-static const uint8_t NUMBER_RX1_DR_OFFSET_WW2G4 =
-    sizeof( datarate_offsets_ww2g4[0] ) / sizeof( datarate_offsets_ww2g4[0][0] );
+static const uint8_t NUMBER_RX1_DR_OFFSET_WW_2G4 =
+    sizeof( datarate_offsets_ww_2g4[0] ) / sizeof( datarate_offsets_ww_2g4[0][0] );
 
 /**
  * Data rates table definition
  */
-static const uint8_t datarates_to_sf_ww2g4[] = { 12, 11, 10, 9, 8, 7, 6, 5 };
+static const uint8_t datarates_to_sf_ww_2g4[] = { 12, 11, 10, 9, 8, 7, 6, 5 };
 
 /**
  * Bandwidths table definition in KHz
  */
-static const uint32_t datarates_to_bandwidths_ww2g4[] = { BW800, BW800, BW800, BW800, BW800, BW800, BW800, BW800 };
+static const uint32_t datarates_to_bandwidths_ww_2g4[] = { BW800, BW800, BW800, BW800, BW800, BW800, BW800, BW800 };
 
 /**
  * Payload max size table definition in bytes
  */
-static const uint8_t M_ww2g4[8] = { 59, 123, 228, 228, 228, 228, 228, 228 };
+static const uint8_t M_ww_2g4[8] = { 59, 123, 228, 228, 228, 228, 228, 228 };
 
 /**
  * Mobile long range datarate distribution
@@ -192,7 +192,7 @@ static const uint8_t M_ww2g4[8] = { 59, 123, 228, 228, 228, 228, 228, 228 };
  * DR6:  0%,
  * DR7:  0%
  */
-static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_WW2G4[] = { 2, 2, 3, 3, 0, 0, 0, 0 };
+static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_WW_2G4[] = { 2, 2, 3, 3, 0, 0, 0, 0 };
 
 /**
  * Mobile low power datarate distribution
@@ -205,7 +205,7 @@ static const uint8_t MOBILE_LONGRANGE_DR_DISTRIBUTION_WW2G4[] = { 2, 2, 3, 3, 0,
  * DR6:  0%,
  * DR7:  0%
  */
-static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_WW2G4[] = { 0, 0, 1, 3, 3, 3, 0, 0 };
+static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_WW_2G4[] = { 0, 0, 1, 3, 3, 3, 0, 0 };
 
 /**
  * Join datarate distribution
@@ -218,7 +218,7 @@ static const uint8_t MOBILE_LOWPER_DR_DISTRIBUTION_WW2G4[] = { 0, 0, 1, 3, 3, 3,
  * DR6:  0%,
  * DR7:  0%
  */
-static const uint8_t JOIN_DR_DISTRIBUTION_WW2G4[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
+static const uint8_t JOIN_DR_DISTRIBUTION_WW_2G4[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
 
 /**
  * Default datarate distribution
@@ -231,7 +231,7 @@ static const uint8_t JOIN_DR_DISTRIBUTION_WW2G4[] = { 1, 2, 3, 4, 4, 6, 0, 0 };
  * DR6:   0%,
  * DR7:   0%
  */
-static const uint8_t DEFAULT_DR_DISTRIBUTION_WW2G4[] = { 1, 0, 0, 0, 0, 0, 0, 0 };
+static const uint8_t DEFAULT_DR_DISTRIBUTION_WW_2G4[] = { 1, 0, 0, 0, 0, 0, 0, 0 };
 
 /*
  * -----------------------------------------------------------------------------
@@ -242,6 +242,6 @@ static const uint8_t DEFAULT_DR_DISTRIBUTION_WW2G4[] = { 1, 0, 0, 0, 0, 0, 0, 0 
 }
 #endif
 
-#endif  // REGION_WW2G4_DEFS_H
+#endif  // REGION_WW_2G4_DEFS_H
 
 /* --- EOF ------------------------------------------------------------------ */

@@ -71,10 +71,10 @@
 typedef struct sx126x_lr_fhss_params_s
 {
     lr_fhss_v1_params_t lr_fhss_params;
-    uint32_t            center_freq_in_pll_steps; /**< Center frequency in transceiver units */
-    int8_t              device_offset;  //<! Per device offset to avoid collisions over the air. Possible values:
-                                        //<! - if (lr_fhss_params.grid == LR_FHSS_V1_GRID_25391_HZ): [-26, 25]
-                                        //<! - if (lr_fhss_params.grid == LR_FHSS_V1_GRID_3906_HZ): [-4, 3]
+    uint32_t            center_freq_in_pll_steps;  //!< Center frequency in transceiver units
+    int8_t              device_offset;  //!< Per device offset to avoid collisions over the air. Possible values:
+                                        //!< - if (lr_fhss_params.grid == LR_FHSS_V1_GRID_25391_HZ): [-26, 25]
+                                        //!< - if (lr_fhss_params.grid == LR_FHSS_V1_GRID_3906_HZ): [-4, 3]
 } sx126x_lr_fhss_params_t;
 
 /**
@@ -84,9 +84,9 @@ typedef struct sx126x_lr_fhss_state_s
 {
     lr_fhss_hop_params_t hop_params;
     lr_fhss_digest_t     digest;
-    uint32_t             next_freq_in_pll_steps; /**< Frequency that will be used on next hop */
-    uint16_t             lfsr_state;             /**< LFSR state for hop sequence generation */
-    uint8_t              current_hop;            /**< Index of the current hop */
+    uint32_t             next_freq_in_pll_steps;  //!< Frequency that will be used on next hop
+    uint16_t             lfsr_state;              //!< LFSR state for hop sequence generation
+    uint8_t              current_hop;             //!< Index of the current hop
 } sx126x_lr_fhss_state_t;
 
 /*
@@ -136,7 +136,7 @@ sx126x_status_t sx126x_lr_fhss_process_parameters( const sx126x_lr_fhss_params_t
                                                    uint16_t payload_length, sx126x_lr_fhss_state_t* state );
 
 /**
- * @brief Sent the initial hopping confifguration to the radio
+ * @brief Sent the initial hopping configuration to the radio
  *
  * @param [in]  context   Chip implementation context
  * @param [in]  params    sx126x LR-FHSS parameter structure

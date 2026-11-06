@@ -46,6 +46,7 @@
 #include "lr11xx_lr_fhss.h"
 #include "ral_lr11xx.h"
 #include "ral_lr11xx_bsp.h"
+#include "lr11xx_rttof.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -533,6 +534,11 @@ ral_status_t ral_lr11xx_set_pkt_type( const void* context, const ral_pkt_type_t 
         radio_pkt_type = LR11XX_RADIO_PKT_TYPE_LORA;
         break;
     }
+    case RAL_PKT_TYPE_RTTOF:
+    {
+        radio_pkt_type = LR11XX_RADIO_PKT_TYPE_RTTOF;
+        break;
+    }
     default:
     {
         return RAL_STATUS_UNKNOWN_VALUE;
@@ -924,7 +930,8 @@ ral_status_t ral_lr11xx_get_lora_rx_consumption_in_ua( const void* context, cons
     ral_lr11xx_bsp_get_reg_mode( context, &radio_reg_mode );
 
     // 2. Refer to BSP to get the instantaneous LoRa Rx Power consumption
-    return ral_lr11xx_bsp_get_instantaneous_lora_rx_power_consumption( context, radio_reg_mode, rx_boosted, pwr_consumption_in_ua );
+    return ral_lr11xx_bsp_get_instantaneous_lora_rx_power_consumption( context, radio_reg_mode, rx_boosted,
+                                                                       pwr_consumption_in_ua );
 }
 
 ral_status_t ral_lr11xx_get_random_numbers( const void* context, uint32_t* numbers, unsigned int n )
@@ -984,6 +991,39 @@ ral_status_t ral_lr11xx_get_lora_cad_det_peak( const void* context, ral_lora_sf_
             break;
         case RAL_LORA_SF12:
             *cad_det_peak = 82;
+            break;
+        default:
+            return RAL_STATUS_UNKNOWN_VALUE;
+            break;
+        }
+    }
+    else if( bw >= RAL_LORA_BW_250_KHZ )
+    {
+        switch( sf )
+        {
+        case RAL_LORA_SF5:
+            *cad_det_peak = 60;
+            break;
+        case RAL_LORA_SF6:
+            *cad_det_peak = 61;
+            break;
+        case RAL_LORA_SF7:
+            *cad_det_peak = 64;
+            break;
+        case RAL_LORA_SF8:
+            *cad_det_peak = 72;
+            break;
+        case RAL_LORA_SF9:
+            *cad_det_peak = 63;
+            break;
+        case RAL_LORA_SF10:
+            *cad_det_peak = 71;
+            break;
+        case RAL_LORA_SF11:
+            *cad_det_peak = 73;
+            break;
+        case RAL_LORA_SF12:
+            *cad_det_peak = 75;
             break;
         default:
             return RAL_STATUS_UNKNOWN_VALUE;
@@ -1110,6 +1150,23 @@ ral_irq_t ral_lr11xx_convert_irq_flags_to_ral( lr11xx_system_irq_mask_t lr11xx_i
         ral_irq |= RAL_IRQ_GNSS_SCAN_DONE;
     }
 
+    if( ( lr11xx_irq_status & LR11XX_SYSTEM_IRQ_RTTOF_REQ_DISCARDED ) != 0 )
+    {
+        ral_irq |= RAL_IRQ_RTTOF_REQ_DISCARDED;
+    }
+    if( ( lr11xx_irq_status & LR11XX_SYSTEM_IRQ_RTTOF_RESP_DONE ) != 0 )
+    {
+        ral_irq |= RAL_IRQ_RTTOF_RESP_DONE;
+    }
+    if( ( lr11xx_irq_status & LR11XX_SYSTEM_IRQ_RTTOF_EXCH_VALID ) != 0 )
+    {
+        ral_irq |= RAL_IRQ_RTTOF_EXCH_VALID;
+    }
+    if( ( lr11xx_irq_status & LR11XX_SYSTEM_IRQ_RTTOF_TIMEOUT ) != 0 )
+    {
+        ral_irq |= RAL_IRQ_RTTOF_TIMEOUT;
+    }
+
     return ral_irq;
 }
 
@@ -1165,7 +1222,22 @@ lr11xx_system_irq_mask_t ral_lr11xx_convert_irq_flags_from_ral( ral_irq_t ral_ir
     {
         lr11xx_irq_status |= LR11XX_SYSTEM_IRQ_GNSS_SCAN_DONE;
     }
-
+    if( ( ral_irq & RAL_IRQ_RTTOF_REQ_DISCARDED ) != 0 )
+    {
+        lr11xx_irq_status |= LR11XX_SYSTEM_IRQ_RTTOF_REQ_DISCARDED;
+    }
+    if( ( ral_irq & RAL_IRQ_RTTOF_RESP_DONE ) != 0 )
+    {
+        lr11xx_irq_status |= LR11XX_SYSTEM_IRQ_RTTOF_RESP_DONE;
+    }
+    if( ( ral_irq & RAL_IRQ_RTTOF_EXCH_VALID ) != 0 )
+    {
+        lr11xx_irq_status |= LR11XX_SYSTEM_IRQ_RTTOF_EXCH_VALID;
+    }
+    if( ( ral_irq & RAL_IRQ_RTTOF_TIMEOUT ) != 0 )
+    {
+        lr11xx_irq_status |= LR11XX_SYSTEM_IRQ_RTTOF_TIMEOUT;
+    }
     return lr11xx_irq_status;
 }
 
@@ -1551,10 +1623,71 @@ ral_status_t ral_lr11xx_convert_lora_cad_params_from_ral( const ral_lora_cad_par
 void ral_lr11xx_convert_lr_fhss_params_from_ral( const ral_lr_fhss_params_t* ral_lr_fhss_params,
                                                  lr11xx_lr_fhss_params_t*    radio_lr_fhss_params )
 {
-    *radio_lr_fhss_params = ( lr11xx_lr_fhss_params_t ){
+    *radio_lr_fhss_params = ( lr11xx_lr_fhss_params_t ) {
         .lr_fhss_params = ral_lr_fhss_params->lr_fhss_params,
         .device_offset  = ral_lr_fhss_params->device_offset,
     };
 }
 
+ral_status_t ral_lr11xx_rttof_set_parameters( const void* context, const uint8_t nb_symbols )
+{
+    return ( ral_status_t ) lr11xx_rttof_set_parameters( context, nb_symbols );
+}
+
+/*
+ * @see ral_rttof_set_request_address
+ */
+ral_status_t ral_lr11xx_rttof_set_request_address( const void* context, const uint32_t request_address )
+{
+    return ( ral_status_t ) lr11xx_rttof_set_request_address( context, request_address );
+}
+
+/*
+ * @see ral_rttof_set_rx_tx_delay_indicator
+ */
+ral_status_t ral_lr11xx_rttof_set_rx_tx_delay_indicator( const void* context, const uint32_t delay_indicator )
+{
+    return ( ral_status_t ) lr11xx_rttof_set_rx_tx_delay_indicator( context, delay_indicator );
+}
+
+ral_status_t ral_lr11xx_rttof_get_raw_result( const void* context, ral_lora_bw_t rttof_bw, int32_t* raw_results,
+                                              int32_t* meter_results, int8_t* rssi_result )
+{
+    uint8_t raw_results_tmp[4] = { 0 };
+
+    ral_status_t status =
+        ( ral_status_t ) lr11xx_rttof_get_raw_result( context, LR11XX_RTTOF_RESULT_TYPE_RAW, raw_results_tmp );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    uint8_t                        unused = 0;
+    ral_lora_mod_params_t          temp   = { unused, rttof_bw, unused, unused };
+    lr11xx_radio_mod_params_lora_t radio_mod_params;
+
+    status = ral_lr11xx_convert_lora_mod_params_from_ral( &temp, &radio_mod_params );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    *meter_results = lr11xx_rttof_distance_raw_to_meter( radio_mod_params.bw, raw_results_tmp );
+
+    *raw_results = ( ( int32_t ) raw_results_tmp[3] << 24 ) | ( ( int32_t ) raw_results_tmp[2] << 16 ) |
+                   ( ( int32_t ) raw_results_tmp[1] << 8 ) | ( int32_t ) raw_results_tmp[0];
+
+    uint8_t buf[4];
+    status = ( ral_status_t ) lr11xx_rttof_get_raw_result( context, LR11XX_RTTOF_RESULT_TYPE_RSSI, buf );
+    if( status != RAL_STATUS_OK )
+    {
+        return status;
+    }
+    *rssi_result = lr11xx_rttof_rssi_raw_to_value( buf );
+
+    return ( status );
+}
+
+ral_status_t ral_lr11xx_rttof_set_address( const void* context, const uint32_t address, const uint8_t check_length )
+{
+    return ( ral_status_t ) lr11xx_rttof_set_address( context, address, check_length );
+}
 /* --- EOF ------------------------------------------------------------------ */

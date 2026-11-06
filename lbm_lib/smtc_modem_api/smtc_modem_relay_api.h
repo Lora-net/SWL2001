@@ -61,10 +61,18 @@ extern "C" {
 
 typedef enum smtc_modem_relay_tx_activation_mode_e
 {
-    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DISABLED,
-    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ENABLE,
-    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DYNAMIC,
-    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLLED,
+    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DISABLED,  //!< Disable the relay mode
+
+    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ENABLE,  //!< The end-device SHALL enable the relay mode even if the end-device
+                                                 //!< does not receive a WOR ACK or a downlink on RXR.
+
+    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_DYNAMIC,  //!< The end-device SHALL be able to automatically enable the relay
+                                                  //!< mode if the end-device does not receive a downlink after several
+                                                  //!< uplinks
+
+    SMTC_MODEM_RELAY_TX_ACTIVATION_MODE_ED_CONTROLLED,  //!< The end-device is free to enable, or not, the relay mode on
+                                                        //!< its own. This is the default mode for which the BackOff
+                                                        //!< value is only a recommendation.
 } smtc_modem_relay_tx_activation_mode_t;
 
 typedef enum smtc_modem_relay_tx_sync_status_e

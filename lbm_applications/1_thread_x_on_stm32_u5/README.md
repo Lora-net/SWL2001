@@ -39,6 +39,12 @@ The ARM GCC tool chain must be setup under your development environment
    ```
    make full_sx1261
    ```
+   
+   Or, with cmake:
+   ```
+   cmake -B build/ -DLBM_RADIO=sx1261 -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_CMAKE_CONFIG_AUTO=ON
+   make -C build/ -j
+   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -67,7 +73,7 @@ void thread_app( ULONG thread_input )
 To switch to FUOTA V2 packages, please modify the compilation option under 'app_options.mk' file :
 
 ```
-ALLOW_FUOTA ?= yes
+USE_FUOTA ?= yes
 FUOTA_VERSION ?= 2
 ```
 

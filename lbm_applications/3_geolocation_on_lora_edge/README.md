@@ -1,6 +1,7 @@
 # Reference Implementation 3: Geolocation example application
 
 ## Hardware
+
 ### MCU Board
 - Nucleo L476RG board ( with STM32L476RGT6 MCU)
 
@@ -80,15 +81,50 @@ Those parameters have to be carefully defined depending of the region of operati
 
 ## Build
 
+By default, the demonstration is compiled to use the EUIs and Application key defined in the file `example_options.h` file.
+
+### With CMake
+
+Ensure that there is no existing build directory from a previous build.
+Use "rm -r build" if needed to clean it up.
+
+``` bash
+cmake -B build -G Ninja -DLBM_RADIO=lr1110 -DCMAKE_BUILD_TYPE=MinSizeRel -DLBM_CMAKE_CONFIG_AUTO=ON -DAPP=geolocation
+```
+
+Optionnally add `-DLBM_MODEM_TRACE=no` to the cmake command to disable LBM traces.
+
+``` bash
+ninja -C build
+```
+
+It is possible to flash the target with the following commands:
+
+``` bash
+ninja -C build flash
+```
+
+Note: `stlink-tools` needs to be installed.
+
+For "copy" flashing, the following command can be used:
+
+``` bash
+ninja -C build flash_copy
+```
+
+Note: it expects the target to be mounted to `/media/$(USER)/NODE_L476RG`
+
+### With make
+
 The example can be built through GNU make command by doing the following:
 
 ```shell
 $ make full_lr1110
 ```
 
-By default, the demonstration is compiled to use the EUIs and Application key defined in the file `example_options.h` file.
-
 All the default compilation options used are available in the `app_makefiles/app_options.mk` file.
+
+Optionnally add `LBM_TRACE=no` to the make command to disable LBM traces.
 
 ## Usage
 
@@ -97,17 +133,12 @@ All the default compilation options used are available in the `app_makefiles/app
 The application requires no user intervention after the static configuration
 option have been set.
 
-Information messages are displayed on the serial console, starting with the
-DevEUI, AppEUI/JoinEUI and PIN that you might need in order to register your
-device with the LoRa Cloud Device Join service.
-
 ### LoRaWAN Network Server / Application Server
 
 This application needs an Application Server to run in order to perform the GNSS and Wi-Fi solving.
 
-Two possibilities:
-* Use a custom LoRaWAN application server which just forwards incoming uplink to LoRaCloud.
-* Use the LoRaCloud Locator https://atk.loracloud.com/ which embeds a complete integration of an application server and an associated dashboard.
+The Traxmate Cloud for LoRaWAN provides APIs for almanac update, WiFi and GNSS solving:
+https://traxmate.io/solutions/tracking-integrations/traxmate-cloud-for-lorawan
 
 ## Tools
 
@@ -122,3 +153,10 @@ A tool is provided to flash a full almanac image to the LR11xx chip. Please refe
 A tool is provided to flash the LR11xx chip transceiver firmware. Please refer to the following documentation for more details.
 
 [LR11xx flasher tool documentation](<./main_lr11xx_flasher/README.md>)
+
+### WiFi region detector
+
+An example provided to demonstrate how to use WiFi scanning to infer the current regulatory region around the device.
+Please refer to the following documentation for more details.
+
+[WiFi Region Detection documentation](<./main_wifi_region_detection/README.md>)

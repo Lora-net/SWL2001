@@ -994,11 +994,9 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
                 multicast_group_params[mc_grp_id].params.session_time =
                     rx_buffer[rx_buffer_index + 2] + ( rx_buffer[rx_buffer_index + 3] << 8 ) +
                     ( rx_buffer[rx_buffer_index + 4] << 16 ) + ( rx_buffer[rx_buffer_index + 5] << 24 );
-                multicast_group_params[mc_grp_id].params.time_out  = ( 1 << ( rx_buffer[rx_buffer_index + 6] & 0x0F ) );
-                multicast_group_params[mc_grp_id].params.frequency = rx_buffer[rx_buffer_index + 7] +
-                                                                     ( rx_buffer[rx_buffer_index + 8] << 8 ) +
-                                                                     ( rx_buffer[rx_buffer_index + 9] << 16 );
-                multicast_group_params[mc_grp_id].params.frequency *= 100;
+                multicast_group_params[mc_grp_id].params.time_out = ( 1 << ( rx_buffer[rx_buffer_index + 6] & 0x0F ) );
+                multicast_group_params[mc_grp_id].params.frequency =
+                    lorawan_api_decode_freq_from_24bits_buf( ctx->stack_id, &rx_buffer[rx_buffer_index + 7] );
                 multicast_group_params[mc_grp_id].params.dr = rx_buffer[rx_buffer_index + 10] & 0x0F;
                 SMTC_MODEM_HAL_TRACE_PRINTF(
                     "multicast_group_params %d ;%d ;%d ;%d \n", multicast_group_params[mc_grp_id].params.session_time,
@@ -1086,10 +1084,8 @@ static remote_multicast_setup_status_t remote_multicast_setup_package_parser(
                     ( 1 << ( rx_buffer[rx_buffer_index + 6] & 0x0F ) ) * 128;
                 multicast_group_params[mc_grp_id].params.periodicity =
                     ( ( rx_buffer[rx_buffer_index + 6] & 0x70 ) >> 4 );
-                multicast_group_params[mc_grp_id].params.frequency = rx_buffer[rx_buffer_index + 7] +
-                                                                     ( rx_buffer[rx_buffer_index + 8] << 8 ) +
-                                                                     ( rx_buffer[rx_buffer_index + 9] << 16 );
-                multicast_group_params[mc_grp_id].params.frequency *= 100;
+                multicast_group_params[mc_grp_id].params.frequency =
+                    lorawan_api_decode_freq_from_24bits_buf( ctx->stack_id, &rx_buffer[rx_buffer_index + 7] );
                 multicast_group_params[mc_grp_id].params.dr = rx_buffer[rx_buffer_index + 10] & 0x0F;
                 SMTC_MODEM_HAL_TRACE_PRINTF( "multicast_group_params %d; %d; %d; %d; %d \n",
                                              multicast_group_params[mc_grp_id].params.session_time,

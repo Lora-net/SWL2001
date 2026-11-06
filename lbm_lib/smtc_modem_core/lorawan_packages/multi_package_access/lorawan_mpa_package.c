@@ -413,7 +413,7 @@ void lorawan_mpa_package_service_on_launch( void* service_id )
         {
             tmp_ans[tmp_ans_size++] = ctx->token;  // Token
 
-            SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_mpa_package launch ANS_CMD_TASK n" );
+            SMTC_MODEM_HAL_TRACE_PRINTF( " lorawan_mpa_package launch ANS_CMD_TASK\n" );
             SMTC_MODEM_HAL_TRACE_ARRAY( "MPA ans", tmp_ans, tmp_ans_size );
             if( tx_protocol_manager_request(
                     TX_PROTOCOL_TRANSMIT_LORA, MPA_PORT, true, tmp_ans, tmp_ans_size, UNCONF_DATA_UP,

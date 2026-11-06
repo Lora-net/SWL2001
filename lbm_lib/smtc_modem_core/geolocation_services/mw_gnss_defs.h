@@ -116,8 +116,9 @@ typedef struct navgroup_s
 {
     uint8_t       token;
     scan_result_t scans[GNSS_NAVGROUP_SIZE_MAX];  //!< Scan results. The actual size populated is nb_scans_valid
-    uint32_t
-             timestamp;  //!< GPS time of the last scan tentative in the scan group (number of seconds modulo 1024 weeks)
+    bool time_available;  //!< Indicate if the radio is synchronized with GPS time. (necessary for almanac demodulation)
+    uint32_t timestamp;   //!< GPS time of the last scan tentative in the scan group
+                          //!<   (number of seconds modulo 1024 weeks)
     uint8_t  nb_scans_valid;  //!< Number of successful scans
     uint8_t  nb_scans_total;  //!< Total number of scans performed to build this scan group
     uint32_t start_time_ms;   //!< local start time of the first scan of the navgroup

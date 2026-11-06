@@ -97,7 +97,7 @@ mw_return_code_t smtc_wifi_start_scan( const void* radio_context );
  * @retval MW_RC_OK         Command executed without errors
  * @retval MW_RC_FAILED     Failed to get results from the LR11xx radio
  */
-mw_return_code_t smtc_wifi_get_results( const void* radio_context, wifi_scan_all_result_t* result );
+mw_return_code_t smtc_wifi_get_results( const void* radio_context, wifi_scan_result_t* result );
 
 /*!
  * @brief Tear down function for Wi-Fi scan termination actions

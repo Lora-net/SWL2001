@@ -56,7 +56,7 @@ extern "C" {
  * --- PUBLIC CONSTANTS --------------------------------------------------------
  */
 /* clang-format off */
-#define SMTC_DTC_BANDS_MAX          ( 6 )                      // Number of ETSI band supported by this algo
+#define SMTC_DTC_BANDS_MAX          ( 7 )                      // Number of ETSI band supported by this algo
 #define SMTC_DTC_PERIOD_MS          ( 3600000UL )              // Number of miliseconds in one period (3600000 for period 1h)
 #define SMTC_DTC_SECONDS_BY_UNIT    ( 120 )                    // Sum TOA by step of N seconds, MIN VALUE IS 60s to avoid division by 0
 #define SMTC_DTC_TOA_BUFF_SIZE      ( ( SMTC_DTC_PERIOD_MS / 1000UL ) / SMTC_DTC_SECONDS_BY_UNIT )  // Buffer size to sum all TOA over one period
@@ -91,7 +91,7 @@ typedef enum smtc_dtc_enablement_type_e
 {
     SMTC_DTC_PARTIAL_DISABLED = 0,  // No sending constraint but uplink TOA are take in care
     SMTC_DTC_ENABLED          = 1,  // Sending constraint and uplink TOA are take in care
-    SMTC_DTC_FULL_DISABLED    = 2,  // Sending constraint and uplink TOA are NOT take in care
+    SMTC_DTC_FULL_DISABLED    = 2,  // No Sending constraint and uplink TOA are NOT take in care
 } smtc_dtc_enablement_type_t;
 
 typedef struct smtc_dtc_band_s

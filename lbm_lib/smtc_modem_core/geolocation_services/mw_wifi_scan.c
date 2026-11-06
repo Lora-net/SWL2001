@@ -40,6 +40,7 @@
 #include <stdint.h>   // C99 types
 #include <stdbool.h>  // bool type
 #include <math.h>
+#include <ctype.h>  // isprint
 
 #include "mw_wifi_scan.h"
 #include "wifi_helpers.h"
@@ -128,6 +129,8 @@ typedef struct mw_wifi_task_s
     uint32_t scan_start_time;
     uint32_t scan_end_time;
     bool     pending_evt_scan_done;
+    /* current configuration */
+    smtc_modem_wifi_scan_mode_t current_mw_scan_mode;
 } mw_wifi_task_t;
 
 /*
@@ -143,16 +146,29 @@ static mw_wifi_task_t mw_wifi_task_obj = { 0 };
 /*!
  * @brief Results of the current Wi-Fi scan
  */
-static wifi_scan_all_result_t wifi_results;
+static wifi_scan_result_t wifi_results = { 0 };
 
 /*!
  * @brief WiFi scan settings
  */
-wifi_settings_t wifi_settings = { .channels            = 0x3FFF, /* all channels enabled */
-                                  .types               = LR11XX_WIFI_TYPE_SCAN_B_G_N,
-                                  .max_results         = WIFI_MAX_RESULTS,
-                                  .timeout_per_channel = WIFI_TIMEOUT_PER_CHANNEL_DEFAULT,
-                                  .timeout_per_scan    = WIFI_TIMEOUT_PER_SCAN_DEFAULT };
+static wifi_settings_t wifi_settings[] = { { .scan_mode           = LR11XX_WIFI_SCAN_MODE_BEACON_AND_PKT,
+                                             .channels            = 0x1FFF,
+                                             .types               = LR11XX_WIFI_TYPE_SCAN_B_G_N,
+                                             .max_results         = WIFI_MAX_BASIC_RESULTS,
+                                             .timeout_per_channel = 300,
+                                             .timeout_per_scan    = 100 },
+                                           { .scan_mode           = LR11XX_WIFI_SCAN_MODE_UNTIL_SSID,
+                                             .channels            = 0x1FFF,
+                                             .types               = LR11XX_WIFI_TYPE_SCAN_B_G_N,
+                                             .max_results         = WIFI_MAX_EXTENDED_RESULTS,
+                                             .timeout_per_channel = 1000,
+                                             .timeout_per_scan    = 100 },
+                                           { .scan_mode           = LR11XX_WIFI_SCAN_MODE_FULL_BEACON,
+                                             .channels            = 0x1FFF,
+                                             .types               = LR11XX_WIFI_TYPE_SCAN_B,
+                                             .max_results         = WIFI_MAX_EXTENDED_RESULTS,
+                                             .timeout_per_channel = 1000,
+                                             .timeout_per_scan    = 100 } };
 
 /*
  * -----------------------------------------------------------------------------
@@ -194,7 +210,7 @@ static void trace_print_event_data_scan_done( const smtc_modem_wifi_event_data_s
 /**
  * @brief Helper function to sort scan results by descending power order
  */
-static void smtc_wifi_sort_results( wifi_scan_all_result_t* wifi_results );
+static void smtc_wifi_sort_results_by_rssi( wifi_scan_result_t* wifi_results );
 
 /*
  * -----------------------------------------------------------------------------
@@ -221,6 +237,9 @@ void mw_wifi_scan_services_init( uint8_t* service_id, uint8_t task_id,
     *context_callback            = ( void* ) service_id;
     rp_hook_init( modem_get_rp( ), mw_wifi_task_obj.rp_hook_id, ( void ( * )( void* ) )( wifi_rp_task_done ),
                   modem_get_rp( ) );
+
+    /* Configuration */
+    mw_wifi_task_obj.current_mw_scan_mode = SMTC_MODEM_WIFI_SCAN_MODE_MAC;
 }
 
 smtc_modem_return_code_t mw_wifi_scan_add_task( uint32_t start_delay_s )
@@ -288,6 +307,13 @@ smtc_modem_return_code_t mw_wifi_get_event_data_scan_done( smtc_modem_wifi_event
     return SMTC_MODEM_RC_OK;
 }
 
+smtc_modem_return_code_t mw_wifi_set_scan_mode( smtc_modem_wifi_scan_mode_t scan_mode )
+{
+    mw_wifi_task_obj.current_mw_scan_mode = scan_mode;
+
+    return SMTC_MODEM_RC_OK;
+}
+
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
@@ -338,39 +364,87 @@ static uint8_t mw_wifi_scan_service_downlink_handler( lr1_stack_mac_down_data_t*
     return MODEM_DOWNLINK_UNCONSUMED;
 }
 
-static void trace_print_scan_results( const wifi_scan_all_result_t* results )
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+static void trace_print_scan_results( const wifi_scan_result_t* results )
 {
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+    char        ap_addr[WIFI_AP_ADDRESS_SIZE * 3 + 1];
+    char        country_code[LR11XX_WIFI_STR_COUNTRY_CODE_SIZE + 1];
+    char        ssid[LR11XX_WIFI_RESULT_SSID_LENGTH + 1];
+    const char* ap_origin_str = NULL;
+
     if( results != NULL )
     {
         for( uint8_t i = 0; i < results->nbr_results; i++ )
         {
+            const wifi_scan_single_result_t* res = &results->results[i];
+
+            /* Format MAC address */
             for( uint8_t j = 0; j < WIFI_AP_ADDRESS_SIZE; j++ )
             {
-                SMTC_MODEM_HAL_TRACE_PRINTF( "%02X ", results->results[i].mac_address[j] );
+                sprintf( ap_addr + j * 3, "%02X ", res->mac_address[j] );
             }
-            SMTC_MODEM_HAL_TRACE_PRINTF( " -- Channel: %d", results->results[i].channel );
-            SMTC_MODEM_HAL_TRACE_PRINTF( " -- Type: %d", results->results[i].type );
-            SMTC_MODEM_HAL_TRACE_PRINTF( " -- RSSI: %d", results->results[i].rssi );
-            SMTC_MODEM_HAL_TRACE_PRINTF( " -- Origin: " );
-            switch( results->results[i].origin )
+            ap_addr[WIFI_AP_ADDRESS_SIZE * 3] = '\0';
+
+            /* Beacon Origin */
+            switch( res->origin )
             {
             case LR11XX_WIFI_ORIGIN_BEACON_FIX_AP:
-                SMTC_MODEM_HAL_TRACE_PRINTF( "FIXED\n" );
+                ap_origin_str = "FIXED";
                 break;
             case LR11XX_WIFI_ORIGIN_BEACON_MOBILE_AP:
-                SMTC_MODEM_HAL_TRACE_PRINTF( "MOBILE\n" );
+                ap_origin_str = "MOBILE";
                 break;
             default:
-                SMTC_MODEM_HAL_TRACE_PRINTF( "UNKNOWN\n" );
+                ap_origin_str = "UNKNOWN";
                 break;
             }
+
+            /* Prepare country code and SSID strings */
+            if( res->result_type == WIFI_RESULT_TYPE_EXTENDED )
+            {
+                if( res->country_code[0] != 0 && res->country_code[1] != 0 )
+                {
+                    sprintf( country_code, "%c%c", res->country_code[0], res->country_code[1] );
+                }
+                else
+                {
+                    sprintf( country_code, ".." );
+                }
+                country_code[LR11XX_WIFI_STR_COUNTRY_CODE_SIZE] = '\0';
+                /* Format SSID: as it can contain any value, including non printable character, we need to convert
+                 * it to a valid string */
+                for( uint8_t j = 0; j < LR11XX_WIFI_RESULT_SSID_LENGTH; j++ )
+                {
+                    if( isprint( res->ssid_bytes[j] ) == 0 )
+                    {
+                        sprintf( ssid + j, " " );
+                    }
+                    else
+                    {
+                        sprintf( ssid + j, "%c", res->ssid_bytes[j] );
+                    }
+                }
+                ssid[LR11XX_WIFI_RESULT_SSID_LENGTH] = '\0';
+            }
+
+            /* Print results */
+            SMTC_MODEM_HAL_TRACE_PRINTF( "[ %s]\tChannel:%d\tType:%d\tRSSI:%d\tOrigin:%s", ap_addr, res->channel,
+                                         res->type, res->rssi, ap_origin_str );
+            if( res->result_type == WIFI_RESULT_TYPE_EXTENDED )
+            {
+                SMTC_MODEM_HAL_TRACE_PRINTF( "\tCountry code:%s\tSSID:%s", country_code, ssid );
+            }
+            SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
         }
-        SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
     }
+#endif
 }
+#endif
 
 static void trace_print_event_data_scan_done( const smtc_modem_wifi_event_data_scan_done_t* data )
 {
+#if ( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
     if( data != NULL )
     {
         SMTC_MODEM_HAL_TRACE_PRINTF( "SCAN_DONE info:\n" );
@@ -379,15 +453,52 @@ static void trace_print_event_data_scan_done( const smtc_modem_wifi_event_data_s
         SMTC_MODEM_HAL_TRACE_PRINTF( "-- scan duration: %u ms\n", data->scan_duration_ms );
         trace_print_scan_results( data );
     }
+#endif
+}
+
+static int find_wifi_setting_index( lr11xx_wifi_mode_t target_mode )
+{
+    int n = sizeof( wifi_settings ) / sizeof( wifi_settings[0] );
+    for( int i = 0; i < n; i++ )
+    {
+        if( wifi_settings[i].scan_mode == target_mode )
+        {
+            return i;
+        }
+    }
+    return -1;  // Not found, consider adding error handling.
+}
+
+static inline int select_wifi_setting( smtc_modem_wifi_scan_mode_t current_mw_scan_mode )
+{
+    static bool toggle_scan_mode = false;
+
+    if( mw_wifi_task_obj.current_mw_scan_mode == SMTC_MODEM_WIFI_SCAN_MODE_MAC )
+    {
+        return find_wifi_setting_index( LR11XX_WIFI_SCAN_MODE_BEACON_AND_PKT );
+    }
+    else if( mw_wifi_task_obj.current_mw_scan_mode == SMTC_MODEM_WIFI_SCAN_MODE_MAC_COUNTRY_CODE_SSID )
+    {
+        /* Alternate lr11xx scan mode to get diversity in results */
+        /* LR11XX_WIFI_SCAN_MODE_UNTIL_SSID: SSID only but for beacon types B, G, N (no checksum on SSID) */
+        /* LR11XX_WIFI_SCAN_MODE_FULL_BEACON: Country code and SSID but for beacon type B only */
+        toggle_scan_mode = !toggle_scan_mode;
+        lr11xx_wifi_mode_t scan_mode =
+            toggle_scan_mode ? LR11XX_WIFI_SCAN_MODE_UNTIL_SSID : LR11XX_WIFI_SCAN_MODE_FULL_BEACON;
+        return find_wifi_setting_index( scan_mode );
+    }
+    else
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "Current WiFi scan mode is not supported (%d)\n",
+                                    mw_wifi_task_obj.current_mw_scan_mode );
+        return -1;
+    }
 }
 
 static void wifi_rp_task_launch( void* context )
 {
     mw_wifi_task_obj.scan_start_time = smtc_modem_hal_get_time_in_ms( );
     SMTC_MODEM_HAL_TRACE_INFO( "Wi-Fi task launch at %u\n", mw_wifi_task_obj.scan_start_time );
-
-    /* Reset previous results */
-    memset( &wifi_results, 0, sizeof wifi_results );
 
     if( mw_radio_configure_for_scan( modem_get_radio_ctx( ) ) == false )
     {
@@ -396,8 +507,17 @@ static void wifi_rp_task_launch( void* context )
         return;
     }
 
+    /* Select WiFi scan settings optimized for current scan mode */
+    int wifi_settings_idx = select_wifi_setting( mw_wifi_task_obj.current_mw_scan_mode );
+    if( wifi_settings_idx == -1 )
+    {
+        SMTC_MODEM_HAL_TRACE_ERROR( "Failed to select Wi-Fi scan settings for requested scan mode\n" );
+        rp_task_abort( modem_get_rp( ), RP_HOOK_ID_DIRECT_RP_ACCESS_WIFI );
+        return;
+    }
+
     /* Set Wi-Fi scan settings */
-    smtc_wifi_settings_init( &wifi_settings );
+    smtc_wifi_settings_init( &wifi_settings[wifi_settings_idx] );
 
     /* Start Wi-Fi scan */
     if( smtc_wifi_start_scan( modem_get_radio_ctx( ) ) != MW_RC_OK )
@@ -421,6 +541,9 @@ static void wifi_rp_task_done( void* status )
     /* WIFI scan completed or aborted - first thing to be done */
     smtc_wifi_scan_ended( );
 
+    /* Reset previous results */
+    memset( &wifi_results, 0, sizeof wifi_results );
+
     rp_get_status( ( radio_planner_t* ) status, mw_wifi_task_obj.rp_hook_id, &tcurrent_ms, &rp_status );
     if( rp_status == RP_STATUS_TASK_ABORTED )
     {
@@ -428,10 +551,11 @@ static void wifi_rp_task_done( void* status )
         /* Do not perform any radio access here */
         /**/
 
-        SMTC_MODEM_HAL_TRACE_WARNING( "Wi-Fi: RP_STATUS_TASK_ABORTED\n" );
+        SMTC_MODEM_HAL_TRACE_WARNING( "WiFi scan task aborted by RP\n" );
         send_event( SMTC_MODEM_EVENT_WIFI_SCAN_DONE );
-        send_event( SMTC_MODEM_EVENT_WIFI_TERMINATED );
-        return;
+
+        /* Send results over LoRaWAN */
+        mw_wifi_send_add_task( &wifi_results );
     }
     else if( rp_status == RP_STATUS_WIFI_SCAN_DONE )
     {
@@ -469,23 +593,22 @@ static void wifi_scan_task_done( void )
     smtc_wifi_get_power_consumption( modem_get_radio_ctx( ), &wifi_results.power_consumption_nah );
 
     /* Sort results */
-    smtc_wifi_sort_results( &wifi_results );
+    smtc_wifi_sort_results_by_rssi( &wifi_results );
 }
 
-static void smtc_wifi_sort_results( wifi_scan_all_result_t* wifi_results )
+static void smtc_wifi_sort_results_by_rssi( wifi_scan_result_t* wifi_results )
 {
-    uint8_t                nb_results_sort = 0;
-    wifi_scan_all_result_t wifi_results_tmp;
+    uint8_t            nb_results_sort = 0;
+    wifi_scan_result_t wifi_results_tmp;  // temporary buffer for filtered results
 
     WIFI_SCAN_TRACE_PRINTF_DEBUG( "Filter and Sort Wi-Fi results:\n" );
 
-    /* raw data */
 #if WIFI_SCAN_DEEP_DBG_TRACE == MODEM_HAL_FEATURE_ON
     SMTC_MODEM_HAL_TRACE_PRINTF( "Raw data:\n" );
     trace_print_scan_results( wifi_results );
 #endif
 
-    /* Remove AP */
+    /* Filter: keep only results with origin FIX_AP */
     for( uint8_t index = 0; index < wifi_results->nbr_results; index++ )
     {
         if( wifi_results->results[index].origin == LR11XX_WIFI_ORIGIN_BEACON_FIX_AP )
@@ -495,55 +618,46 @@ static void smtc_wifi_sort_results( wifi_scan_all_result_t* wifi_results )
         }
     }
 
-    /* Update main structure */
+    /* Update main structure with filtered results */
     for( uint8_t index = 0; index < nb_results_sort; index++ )
     {
         wifi_results->results[index] = wifi_results_tmp.results[index];
     }
+    wifi_results->nbr_results = nb_results_sort;
 
-    if( wifi_results->nbr_results != nb_results_sort )
-    {
-        wifi_results->nbr_results = nb_results_sort;
-
-        /* FILTERED data */
 #if WIFI_SCAN_DEEP_DBG_TRACE == MODEM_HAL_FEATURE_ON
-        SMTC_MODEM_HAL_TRACE_PRINTF( "filtered data:\n" );
-        trace_print_scan_results( wifi_results );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "Filtered data:\n" );
+    trace_print_scan_results( wifi_results );
 #endif
-    }
-    else
-    {
-        WIFI_SCAN_TRACE_PRINTF_DEBUG( "Nothing to filter\n" );
-    }
 
-    /* remove extra point if there are */
-    if( wifi_results->nbr_results > WIFI_MAX_RESULTS_TO_SEND )
+    /* Sort results by RSSI */
+    int i, j;
+    for( i = 0; i < wifi_results->nbr_results - 1; i++ )
     {
-        int i, j;
-        for( i = 0; i < wifi_results->nbr_results - 1; i++ )
+        for( j = i + 1; j < wifi_results->nbr_results; j++ )
         {
-            for( j = i + 1; j < wifi_results->nbr_results; j++ )
+            if( wifi_results->results[i].rssi < wifi_results->results[j].rssi )
             {
-                if( wifi_results->results[i].rssi < wifi_results->results[j].rssi )
-                {
-                    wifi_results_tmp.results[0] = wifi_results->results[i];
-                    wifi_results->results[i]    = wifi_results->results[j];
-                    wifi_results->results[j]    = wifi_results_tmp.results[0];
-                }
+                wifi_scan_single_result_t temp = wifi_results->results[i];
+                wifi_results->results[i]       = wifi_results->results[j];
+                wifi_results->results[j]       = temp;
             }
         }
-        wifi_results->nbr_results = WIFI_MAX_RESULTS_TO_SEND;
+    }
 
-        /* SORTED data */
 #if WIFI_SCAN_DEEP_DBG_TRACE == MODEM_HAL_FEATURE_ON
-        SMTC_MODEM_HAL_TRACE_PRINTF( "Sorted data:\n" );
-        trace_print_scan_results( wifi_results );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "Sorted data:\n" );
+    trace_print_scan_results( wifi_results );
 #endif
-    }
-    else
+
+#if 0
+    /* If more results than allowed to be sent, limit the number of results reported */
+    if( ( current_search_mode == WIFI_SCAN_SEARCH_MODE_MAC_ADDR ) &&
+        ( wifi_results->nbr_results > WIFI_MAX_RESULTS_TO_SEND ) )
     {
-        WIFI_SCAN_TRACE_PRINTF_DEBUG( "Nothing to sort\n" );
+        wifi_results->nbr_results = WIFI_MAX_RESULTS_TO_SEND;
     }
+#endif
 }
 
 static void send_event( smtc_modem_event_type_t event )

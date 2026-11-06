@@ -1,0 +1,166 @@
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+
+# This is where all options (except radio and region) are defined.
+
+include(CMakeDependentOption)
+
+option(LBM_MODEM_TRACE "Enable trace logs" ON)
+option(LBM_MODEM_TRACE_DEEP "Enable deep trace logs" OFF)
+
+set(LBM_REGIONS "ALL" CACHE STRING "The world regions to target (colon-separated or ALL)")
+
+set(LBM_CRYPTO "SOFT" CACHE STRING "Which crypto flavour to build")
+set_property(CACHE LBM_CRYPTO PROPERTY STRINGS "SOFT;LR11XX;LR11XX_WITH_CREDENTIALS")
+
+set(LBM_NUMBER_OF_STACKS 1 CACHE STRING "Number of network stacks (on the same transceiver)")
+
+option(LBM_CLASS_B "Build Class B feature")
+option(LBM_CLASS_C "Build Class C feature")
+option(LBM_MULTICAST "Build Multicast stack feature")
+
+option(LBM_CSMA "Build CSMA feature")
+cmake_dependent_option(LBM_CSMA_BY_DEFAULT "Enable CSMA feature at startup" OFF "LBM_CSMA" OFF)
+
+option(LBM_ALC_SYNC "Build ALCSync package")
+set(LBM_ALC_SYNC_VERSION "1" CACHE STRING "Which version of ALCSync package to build")
+set_property(CACHE LBM_ALC_SYNC_VERSION PROPERTY STRINGS "1;2")
+
+option(LBM_FUOTA "Build FUOTA packages")
+set(LBM_FUOTA_VERSION "1" CACHE STRING "Which version of FUOTA packages to build")
+set_property(CACHE LBM_FUOTA_VERSION PROPERTY STRINGS "1;2")
+cmake_dependent_option(LBM_FUOTA_FMP "Build FUOTA Firmware Management Package" ON "LBM_FUOTA" OFF)
+cmake_dependent_option(LBM_FUOTA_MPA "Build FUOTA Multi-Package Access Package" ON "LBM_FUOTA" OFF)
+set(LBM_FUOTA_FRAGMENTS_MAX_NUM "" CACHE STRING "Maximum number of fragments for FUOTA")
+set(LBM_FUOTA_FRAGMENTS_MAX_SIZE "" CACHE STRING "Maximum size of fragments for FUOTA")
+set(LBM_FUOTA_FRAGMENTS_MAX_REDUNDANCY "" CACHE STRING "Maximum redundancy of fragments for FUOTA")
+
+option(LBM_ALMANAC "Build Cloud Almanac Update service")
+option(LBM_STREAM "Build Cloud Stream service")
+option(LBM_LFU "Build Cloud Large File Upload service")
+option(LBM_DEVICE_MANAGEMENT "Build Cloud Device Management service")
+option(LBM_GEOLOCATION "Build Geolocation service")
+option(LBM_STORE_AND_FORWARD "Build Store and Forward service")
+option(LBM_RELAY_RX "Build Relay RX service")
+option(LBM_RELAY_TX "Build Relay TX service")
+option(LBM_BEACON_TX "Build Beacon TX service")
+
+# Internal options
+option(LBM_PERF_TEST "Build LBM with perf test")
+option(LBM_TEST_BYPASS_JOIN_DUTY_CYCLE "Allow bypassing the join duty cycle, only for test")
+
+################################################################################
+# Sanitizing and checking
+
+if(LBM_CRYPTO MATCHES "^LR11XX" AND NOT RADIO_FAMILY STREQUAL "lr11xx")
+    if(LBM_CMAKE_CONFIG_AUTO)
+        message(STATUS "Automagically setting LBM_CRYPTO=SOFT for radio ${LBM_RADIO}")
+        set(LBM_CRYPTO "SOFT")
+        set(LBM_CRYPTO "SOFT" CACHE STRING "Which crypto flavour to build" FORCE)
+    else()
+        message(SEND_ERROR "Crypto ${LBM_CRYPTO} is only available with LR11xx. Please use LBM_CRYPTO=SOFT.")
+    endif()
+endif()
+
+# Sanitize use cases of non-soft crypto
+if(NOT LBM_CRYPTO STREQUAL "SOFT")
+    if(NOT LBM_NUMBER_OF_STACKS STREQUAL 1)
+        if(LBM_CMAKE_CONFIG_AUTO)
+            message(STATUS "Automagically setting LBM_CRYPTO=SOFT for more than one LBM stack.")
+            set(LBM_CRYPTO "SOFT")
+            set(LBM_CRYPTO "SOFT" CACHE STRING "Which crypto flavour to build" FORCE)
+        else()
+            message(SEND_ERROR "Only LBM_CRYPTO=SOFT may be used with more than one stack.")
+        endif()
+    endif()
+    if(LBM_RELAY_RX)
+        if(LBM_CMAKE_CONFIG_AUTO)
+            message(STATUS "Automagically setting LBM_CRYPTO=SOFT for LBM_RELAY_RX.")
+            set(LBM_CRYPTO "SOFT")
+            set(LBM_CRYPTO "SOFT" CACHE STRING "Which crypto flavour to build" FORCE)
+        else()
+            message(SEND_ERROR "Only LBM_CRYPTO=SOFT may be used with LBM_RELAY_RX.")
+        endif()
+    endif()
+    if(LBM_RELAY_TX)
+        if(LBM_CMAKE_CONFIG_AUTO)
+            message(STATUS "Automagically setting LBM_CRYPTO=SOFT for LBM_RELAY_TX.")
+            set(LBM_CRYPTO "SOFT")
+            set(LBM_CRYPTO "SOFT" CACHE STRING "Which crypto flavour to build" FORCE)
+        else()
+            message(SEND_ERROR "Only LBM_CRYPTO=SOFT may be used with LBM_RELAY_TX.")
+        endif()
+    endif()
+    if(LBM_FUOTA AND LBM_FUOTA_VERSION STREQUAL 2)
+        if(LBM_CMAKE_CONFIG_AUTO)
+            message(STATUS "Automagically setting LBM_CRYPTO=SOFT for LBM_FUOTA version 2.")
+            set(LBM_CRYPTO "SOFT")
+            set(LBM_CRYPTO "SOFT" CACHE STRING "Which crypto flavour to build" FORCE)
+        else()
+            message(SEND_ERROR "Only LBM_CRYPTO=SOFT may be used with LBM_FUOTA version 2.")
+        endif()
+    endif()
+endif()
+
+set(CSMA_RADIO_FAMILIES lr11xx lr20xx sx126x)
+if(LBM_CSMA AND NOT RADIO_FAMILY IN_LIST CSMA_RADIO_FAMILIES)
+    if(LBM_CMAKE_CONFIG_AUTO)
+        message(STATUS "CSMA unavailable for ${LBM_RADIO}, disabling.")
+        set(LBM_CSMA OFF)
+        set(LBM_CSMA OFF CACHE BOOL "Build CSMA feature" FORCE)
+    else()
+        message(SEND_ERROR "CSMA is only supported with LR11xx and SX126x.")
+    endif()
+endif()
+
+set(ALMANAC_RADIOS lr1110 lr1120)
+if(LBM_ALMANAC AND NOT LBM_RADIO IN_LIST ALMANAC_RADIOS)
+    if(LBM_CMAKE_CONFIG_AUTO)
+        message(STATUS "Almanac unavailable for ${LBM_RADIO}, disabling.")
+        set(LBM_ALMANAC OFF)
+        set(LBM_ALMANAC OFF CACHE BOOL "Build Cloud Almanac Update service" FORCE)
+    else()
+        message(SEND_ERROR "Almanac update is only available for LR1110 and LR1120.")
+    endif()
+endif()
+
+set(GEOLOCATION_RADIOS lr1110 lr1120)
+if(LBM_GEOLOCATION AND NOT LBM_RADIO IN_LIST GEOLOCATION_RADIOS)
+    if(LBM_CMAKE_CONFIG_AUTO)
+        message(STATUS "Geolocation unavailable for ${LBM_RADIO}, disabling.")
+        set(LBM_GEOLOCATION OFF)
+        set(LBM_GEOLOCATION OFF CACHE BOOL "Build Geolocation service" FORCE)
+    else()
+        message(SEND_ERROR "Geolocation is only available for LR11xx.")
+    endif()
+endif()
+
+################################################################################
+# Feature dependencies
+
+if(LBM_FUOTA AND NOT LBM_CLASS_B)
+    message(STATUS "Enabling Class B for FUOTA")
+    set(LBM_CLASS_B ON)
+    set(LBM_CLASS_B ON CACHE BOOL "Build Class B feature" FORCE)
+endif()
+
+if(LBM_FUOTA AND NOT LBM_CLASS_C)
+    message(STATUS "Enabling Class C for FUOTA")
+    set(LBM_CLASS_C ON)
+    set(LBM_CLASS_C ON CACHE BOOL "Build Class C feature" FORCE)
+endif()
+
+if(LBM_FUOTA AND NOT LBM_MULTICAST)
+    message(STATUS "Enabling Multicast for FUOTA")
+    set(LBM_MULTICAST ON)
+    set(LBM_MULTICAST ON CACHE BOOL "Build FUOTA packages" FORCE)
+endif()
+
+if(LBM_FUOTA AND NOT LBM_ALC_SYNC)
+    message(STATUS "Enabling AlcSync for FUOTA")
+    set(LBM_ALC_SYNC ON)
+    set(LBM_ALC_SYNC ON CACHE BOOL "Build ALCSync package" FORCE)
+endif()
+
+if(LBM_FUOTA)
+    set(LBM_ALC_SYNC_VERSION "${LBM_FUOTA_VERSION}" CACHE STRING "Alc Sync version" FORCE)
+endif()

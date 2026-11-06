@@ -1,7 +1,7 @@
 /*!
  * @file      sx126x_driver_version.c
  *
- * @brief     Placeholder to keep the version of SX126x driver.
+ * @brief     Placeholder to keep the version of SX126X driver.
  *
  * The Clear BSD License
  * Copyright Semtech Corporation 2023. All rights reserved.
@@ -44,12 +44,6 @@
  * --- PRIVATE MACROS-----------------------------------------------------------
  */
 
-#define STR_HELPER( x ) #x
-#define STR( x ) STR_HELPER( x )
-
-#define SX126X_DRIVER_VERSION_FULL \
-    "v" STR( SX126X_DRIVER_VERSION_MAJOR ) "." STR( SX126X_DRIVER_VERSION_MINOR ) "." STR( SX126X_DRIVER_VERSION_PATCH )
-
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
@@ -77,7 +71,7 @@
 
 const char* sx126x_driver_version_get_version_string( void )
 {
-    return ( const char* ) SX126X_DRIVER_VERSION_FULL;
+    return ( const char* ) SX126X_DRIVER_VERSION;
 }
 
 /*

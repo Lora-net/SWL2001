@@ -113,7 +113,6 @@ else
 MEMLOG =
 endif
 
-
 #-----------------------------------------------------------------------------
 # Compilation flags
 #-----------------------------------------------------------------------------
@@ -147,7 +146,7 @@ WFLAG += -fstack-usage
 AS_DEFS =
 
 # Assembly flags
-ASFLAGS += -fno-builtin $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) $(WFLAG)
+ASFLAGS += -fno-builtin $(MCU_FLAGS) $(AS_DEFS) $(AS_INCLUDES) $(OPT) $(WFLAG)
 
 # Common C definitions
 COMMON_C_DEFS +=
@@ -163,6 +162,7 @@ COMMON_C_DEFS += \
 	-DMODEM_EXAMPLE_REGION=${MODEM_APP_REGION}
 endif
 
+##################################### HW_MODEM #####################################
 ifeq ($(MODEM_APP),HW_MODEM)
 
 # git defines
@@ -185,14 +185,16 @@ COMMON_C_DEFS += \
 	-DGIT_COMMIT=\"$(GIT_COMMIT)\" \
 	-DGIT_DATE=\"$(GIT_DATE)\" \
 	-DBUILD_DATE=\"$(BUILD_DATE)\"
-LBM_BUILD_OPTIONS += REGION=ALL LBM_STREAM=yes LBM_LFU=yes LBM_DEVICE_MANAGEMENT=yes LBM_CLASS_B=yes LBM_CLASS_C=yes LBM_MULTICAST=yes LBM_CSMA=yes
-ALLOW_FUOTA=yes
+LBM_BUILD_OPTIONS += REGION=ALL LBM_STREAM=yes LBM_LFU=yes LBM_DEVICE_MANAGEMENT=yes LBM_CLASS_B=yes LBM_CLASS_C=yes LBM_MULTICAST=yes
+USE_FUOTA=yes
+ALLOW_CSMA=yes
 
 ifneq ($(BOARD),NUCLEO_L073)
 ALLOW_STORE_AND_FORWARD=yes
 endif
 
 endif
+##################################### HW_MODEM END #####################################
 
 ifeq ($(APP_TRACE),yes)
 COMMON_C_DEFS += \
@@ -208,7 +210,7 @@ COMMON_C_DEFS += \
 	-DPERF_TEST_ENABLED
 endif
 
-ifeq ($(ALLOW_FUOTA),yes)
+ifeq ($(USE_FUOTA),yes)
 COMMON_C_DEFS += \
 	-DUSE_FLASH_READ_MODIFY_WRITE\
 	-DUSE_FUOTA
@@ -216,13 +218,16 @@ LBM_BUILD_OPTIONS += LBM_FUOTA=yes LBM_FUOTA_VERSION=$(FUOTA_VERSION)
 endif
 
 ifeq ($(ALLOW_RELAY_TX),yes)
-LBM_BUILD_OPTIONS += LBM_RELAY_TX_ENABLE=yes LBM_CSMA=yes USE_CSMA_BY_DEFAULT=yes
+ALLOW_CSMA=yes
+ALLOW_CSMA_AND_ENABLE_AT_BOOT=yes
+LBM_BUILD_OPTIONS += LBM_RELAY_TX_ENABLE=yes
 COMMON_C_DEFS += -DUSE_RELAY_TX
 BUILD_TARGET := $(BUILD_TARGET)_relay_tx
 endif
 
 ifeq ($(ALLOW_RELAY_RX),yes)
 LBM_BUILD_OPTIONS += LBM_RELAY_RX_ENABLE=yes
+COMMON_C_DEFS += -DUSE_RELAY_RX
 BUILD_TARGET := $(BUILD_TARGET)_relay_rx
 endif
 
@@ -240,6 +245,16 @@ endif
 ifeq ($(APP_DEBUG),yes)
 COMMON_C_DEFS += \
 	-DHW_DEBUG_PROBE=1
+endif
+
+ifeq ($(ALLOW_CSMA),yes)
+	LBM_BUILD_OPTIONS += LBM_CSMA=yes
+	COMMON_C_DEFS += -DALLOW_CSMA
+
+	ifeq ($(ALLOW_CSMA_AND_ENABLE_AT_BOOT),yes)
+		LBM_BUILD_OPTIONS += USE_CSMA_BY_DEFAULT=yes
+		COMMON_C_DEFS += -DALLOW_CSMA_AND_ENABLE_AT_BOOT
+	endif
 endif
 
 LFS_C_DEFS += -DLFS_CONFIG=lfs_config.h
@@ -272,7 +287,6 @@ LDFLAGS += -Wl,--gc-sections # Garbage collect unused sections
 #-----------------------------------------------------------------------------
 APP_C_SOURCES += \
 	main.c
-
 
 ifeq ($(MODEM_APP),nc)
 APP_C_SOURCES += \

@@ -933,8 +933,8 @@ void lorawan_api_get_adr_ack_limit_delay( uint8_t* adr_ack_limit, uint8_t* adr_a
 bool lorawan_api_get_current_enabled_frequencies_list( uint8_t* number_of_freq, uint32_t* freq_list, uint8_t max_size,
                                                        uint8_t stack_id )
 {
-    return smtc_real_get_current_enabled_frequency_list( lr1_mac_obj[stack_id].real, number_of_freq, freq_list,
-                                                         max_size );
+    return smtc_real_get_current_enabled_frequency_list_for_a_datarate(
+        lr1_mac_obj[stack_id].real, lr1_mac_obj[stack_id].tx_data_rate, number_of_freq, freq_list, max_size );
 }
 void lorawan_api_tx_ack_bit_set( uint8_t stack_id, bool enable )
 {
@@ -953,6 +953,11 @@ void lorawan_api_set_no_rx_windows( uint8_t stack_id, uint8_t disable_rx_windows
 uint8_t lorawan_api_get_no_rx_windows( uint8_t stack_id )
 {
     return lr1mac_core_get_no_rx_windows( &lr1_mac_obj[stack_id] );
+}
+
+uint32_t lorawan_api_decode_freq_from_24bits_buf( uint8_t stack_id, uint8_t freq_buf[3] )
+{
+    return smtc_real_decode_freq_from_buf( lr1_mac_obj[stack_id].real, freq_buf );
 }
 
 status_lorawan_t lorawan_api_is_frequency_valid( uint8_t stack_id, uint32_t freq )

@@ -25,7 +25,8 @@ ALLOW_CSMA_BUILD = yes
 RADIO_DRIVER_C_SOURCES +=  \
 	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x.c\
 	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x_lr_fhss.c\
-	smtc_modem_core/radio_drivers/sx126x_driver/src/lr_fhss_mac.c
+	smtc_modem_core/radio_drivers/sx126x_driver/src/lr_fhss_mac.c\
+	smtc_modem_core/radio_drivers/sx126x_driver/src/sx126x_driver_version.c
 
 SMTC_RAL_C_SOURCES += \
 	smtc_modem_core/smtc_ral/src/ral_sx126x.c

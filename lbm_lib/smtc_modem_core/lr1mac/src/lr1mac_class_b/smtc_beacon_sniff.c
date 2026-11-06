@@ -729,16 +729,16 @@ static void beacon_debug_print( smtc_lr1_beacon_t* lr1_beacon_obj )
     SMTC_MODEM_HAL_TRACE_PRINTF( "--> PLL INFO ppl_phase =%u, pll_error= %u  pll_frequency = %u \n",
                                  lr1_beacon_obj->dpll_phase, lr1_beacon_obj->dpll_error,
                                  lr1_beacon_obj->dpll_frequency );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "\n********************\n" );
-    SMTC_MODEM_HAL_TRACE_PRINTF(
-        "-->BEACON STATUS \n received = %u\n missed = %u\n received_consecutively = %u\n lost_consecutively "
-        "=%u\n four_last_beacon_rx_statistic = %u\n"
-        " next beacon rx_nb_symb = %u\n",
-        lr1_beacon_obj->beacon_statistics.nb_beacon_received, lr1_beacon_obj->beacon_statistics.nb_beacon_missed,
-        lr1_beacon_obj->beacon_statistics.last_beacon_received_consecutively,
-        lr1_beacon_obj->beacon_statistics.last_beacon_lost_consecutively,
-        lr1_beacon_obj->beacon_statistics.four_last_beacon_rx_statistic, lr1_beacon_obj->beacon_open_rx_nb_symb );
-    SMTC_MODEM_HAL_TRACE_PRINTF( "********************\n " );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "********************\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "-->BEACON STATUS\n" );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " received = %u\n", lr1_beacon_obj->beacon_statistics.nb_beacon_received );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " missed = %u\n", lr1_beacon_obj->beacon_statistics.nb_beacon_missed );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " received_consecutively = %u\n", lr1_beacon_obj->beacon_statistics.last_beacon_received_consecutively );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " lost_consecutively = %u\n", lr1_beacon_obj->beacon_statistics.last_beacon_lost_consecutively );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " four_last_beacon_rx_statistic = %u\n", lr1_beacon_obj->beacon_statistics.four_last_beacon_rx_statistic );
+    SMTC_MODEM_HAL_TRACE_PRINTF( " next beacon rx_nb_symb = %u\n", lr1_beacon_obj->beacon_open_rx_nb_symb );
+    SMTC_MODEM_HAL_TRACE_PRINTF( "********************\n" );
 }
 static void update_beacon_rx_nb_symb( smtc_lr1_beacon_t* lr1_beacon_obj, uint32_t target_time )
 {

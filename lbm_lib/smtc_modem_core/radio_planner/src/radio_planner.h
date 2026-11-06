@@ -91,6 +91,7 @@ typedef struct radio_planner_s
     uint8_t           timer_hook_id;
     bool              radio_irq_flag;
     bool              timer_irq_flag;
+    bool              radio_is_free ;
     uint32_t          disable_failsafe;
     void ( *hook_callbacks[RP_NB_HOOKS] )( void* );
     rp_next_state_status_t next_state_status;
@@ -183,7 +184,12 @@ rp_hook_status_t rp_attach_new_radio( radio_planner_t* rp, const ralf_t* radio, 
  * @param [in] disable true to disable failsafe check, flase otherwize
  */
 void rp_disable_failsafe( radio_planner_t* rp, bool disable );
-
+/**
+ * @brief Get the status of the radio
+ * @param [in] rp pointer to the radioplanner object itself
+ * @return true if the radio isn't used by any task, false otherwise
+ */
+bool rp_radio_is_free( radio_planner_t* rp );
 #ifdef __cplusplus
 }
 #endif

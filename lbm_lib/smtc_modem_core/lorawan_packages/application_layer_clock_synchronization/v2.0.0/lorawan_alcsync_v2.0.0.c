@@ -799,7 +799,7 @@ static alc_sync_ret_t alc_sync_parser( lorawan_alcsync_ctx_t* ctx, uint8_t* alc_
             break;
 
         default:
-            SMTC_MODEM_HAL_TRACE_ERROR( "%s Illegal state\n ", __func__ );
+            SMTC_MODEM_HAL_TRACE_ERROR( "%s Illegal state\n", __func__ );
             alc_sync_rx_buffer_length = 0;
             ret                       = ALC_SYNC_FAIL;
             break;

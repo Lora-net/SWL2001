@@ -21,7 +21,7 @@ TARGET_RADIO ?= nc
 MODEM_APP ?= EXAMPLE_GEOLOCATION
 
 # Allow fuota (take more RAM, due to read_modify_write feature) and force lbm build with fuota
-ALLOW_FUOTA ?= no
+USE_FUOTA ?= no
 FUOTA_VERSION ?= 1
 
 # USE LBM Store and forward (take more RAM on STML4 and STMU5 project, due to read_modify_write feature)
@@ -34,6 +34,15 @@ APP_TRACE ?= yes
 # LR11xx option to use crc
 USE_LR11XX_CRC_SPI ?= no
 
+
+# Allow relay
+ALLOW_RELAY_RX ?= no
+ALLOW_RELAY_TX ?= no
+
+# Allow CSMA
+ALLOW_CSMA ?= yes
+ALLOW_CSMA_AND_ENABLE_AT_BOOT ?= yes
+
 #-----------------------------------------------------------------------------
 # LBM options management
 #-----------------------------------------------------------------------------
@@ -45,8 +54,11 @@ CRYPTO ?= SOFT
 # Note: if more than one stack is used, more ram will be used for nvm context saving due to read_modify_write feature
 LBM_NB_OF_STACK ?= 1
 
-# Add any lbm build options (ex: LBM_BUILD_OPTIONS ?= LBM_CLASS_B=yes REGION=ALL)
-LBM_BUILD_OPTIONS ?= LBM_ALMANAC=yes
+# Add any lbm build options
+# ex: LBM_BUILD_OPTIONS ?= LBM_CLASS_B=yes REGION=ALL
+# ex: LBM_BUILD_OPTIONS ?= REGION=EU_868,WW_2G4
+
+LBM_BUILD_OPTIONS ?= LBM_ALMANAC=no
 
 #-----------------------------------------------------------------------------
 # Optimization
@@ -68,7 +80,6 @@ APP_DEBUG ?= no
 # Debug optimization (will overwrite APP_OPT and LBM_OPT values in case DEBUG is set)
 DEBUG_APP_OPT ?= -O0
 DEBUG_LBM_OPT ?= -O0
-
 
 #-----------------------------------------------------------------------------
 # Makefile Configuration options

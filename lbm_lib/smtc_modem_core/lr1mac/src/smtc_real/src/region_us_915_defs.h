@@ -60,7 +60,7 @@ extern "C" {
 #define JOIN_ACCEPT_DELAY1_US_915           (5)             // define in seconds
 #define JOIN_ACCEPT_DELAY2_US_915           (6)             // define in seconds
 #define RECEIVE_DELAY1_US_915               (1)             // define in seconds
-#if defined( LR11XX ) || defined( SX1262 ) || defined( SX1268 )
+#if defined( LR11XX ) || defined( LR20XX ) || defined( SX1262 ) || defined( SX1268 )
 // This value must be the MIN of MAX supported by the region and the radio, region is 30dBm but radio is 22dBm ERP (+2 to EIRP) 
 #define TX_POWER_EIRP_US_915                (24)            // define in dbm
 #else

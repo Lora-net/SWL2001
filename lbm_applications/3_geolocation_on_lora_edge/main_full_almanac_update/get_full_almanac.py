@@ -48,7 +48,7 @@ def main():
         description="Companion software that generates almanac header file to be compiled for LR1110/LR1120 embedded full almanac update."
     )
     parser.add_argument(
-        "mgs_token", help="MGS LoRa Cloud token to use to fetch the almanac"
+        "traxmate_token", help="Traxmate Cloud for LoRaWAN token to use to fetch the almanac"
     )
     parser.add_argument(
         "-f",
@@ -64,20 +64,20 @@ def main():
     )
     args = parser.parse_args()
 
-    mgs_token = args.mgs_token
+    traxmate_token = args.traxmate_token
     filename = args.output_file
     toa = args.gpstime
 
     # Build request URL
     if not toa:
-        url = "https://mgs.loracloud.com/api/v1/almanac/full"
+        url = "https://lw.traxmate.io/api/v1/almanac/full"
         print("Requesting latest full almanac image available...")
     else:
-        url = "https://mgs.loracloud.com/api/v1/almanac/full?toa=" + toa
+        url = "https://lw.traxmate.io/api/v1/almanac/full?toa=" + toa
         print("Requesting full almanac image for GPS time " + toa + "...")
 
-    # HTTP request to MGS
-    my_header = {"Authorization": mgs_token}
+    # HTTP request to Traxmate Cloud for LoRaWAN
+    my_header = {"Authorization": traxmate_token}
     res = requests.get(url, headers=my_header)
 
     if res.status_code != 200:

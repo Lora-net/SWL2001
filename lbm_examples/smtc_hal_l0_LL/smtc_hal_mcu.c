@@ -56,7 +56,7 @@
 #include "smtc_hal_lp_timer.h"
 #include "smtc_hal_watchdog.h"
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if HAL_DBG_TRACE == HAL_FEATURE_ON
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
@@ -149,7 +149,7 @@ void hal_mcu_init( void )
     // Initialize watchdog
     hal_watchdog_init( );
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if HAL_DBG_TRACE == HAL_FEATURE_ON
     // Initialize Uart for debug traces
     trace_uart_init( );
 #endif
@@ -209,9 +209,9 @@ void assert_failed( uint8_t* file, uint32_t line )
 {
     // User can add his own implementation to report the file name and line
     // number,
-    // ex: printf("Wrong parameters value: file %s on line %lu\r\n", file, line)
+    // ex: printf("Wrong parameters value: file %s on line %lu\n", file, line)
 
-    SMTC_HAL_TRACE_PRINTF( "Wrong parameters value: file %s on line %lu\r\n", ( const char* ) file, line );
+    SMTC_HAL_TRACE_PRINTF( "Wrong parameters value: file %s on line %lu\n", ( const char* ) file, line );
     // Infinite loop
     while( 1 )
     {
@@ -389,7 +389,7 @@ static void lpm_mcu_deinit( void )
 {
     hal_spi_de_init( RADIO_SPI_ID );
 
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+#if HAL_DBG_TRACE == HAL_FEATURE_ON
     trace_uart_deinit( );
 #endif
 }
@@ -403,8 +403,8 @@ static void lpm_mcu_reinit( void )
     // Reconfig needed OSC and PLL
     system_clock_re_config_after_stop( );
 
-    // Initialize UART
-#if( MODEM_HAL_DBG_TRACE == MODEM_HAL_FEATURE_ON )
+// Initialize UART
+#if HAL_DBG_TRACE == HAL_FEATURE_ON
     trace_uart_init( );
 #endif
 
