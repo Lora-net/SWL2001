@@ -1,0 +1,98 @@
+{
+  "name": "SWL2001",
+  "version": "0.1.0",
+  "description": "LoRaWAN Library",
+  "keywords": "LoRa, LoRaWAN, SX126x, SX127x",
+  "authors": [
+    {
+      "name": "LoRa-NET",
+      "url": "https://github.com/Lora-net",
+      "maintainer": true
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lora-net/SWL2001.git"
+  },
+  "homepage": "https://github.com/Lora-net/SWL2001",
+  "export": {
+    "include": [
+      "lbm_lib/*"
+    ]
+  },
+  "build": {
+    "includeDir": "lbm_lib",
+    "srcDir": "lbm_lib",
+    "flags": [
+      "-I lbm_lib/smtc_modem_api",
+      "-I lbm_lib/smtc_modem_core",
+      "-I lbm_lib/smtc_modem_core/logging",
+      "-I lbm_lib/smtc_modem_core/lorawan_api",
+      "-I lbm_lib/smtc_modem_core/lorawan_manager",
+      "-I lbm_lib/smtc_modem_core/lorawan_packages/application_layer_clock_syncronization",
+      "-I lbm_lib/smtc_modem_core/lorawan_packages/firmware_management_protocol",
+      "-I lbm_lib/smtc_modem_core/lorawan_packages/fragmented_data_block_transport",
+      "-I lbm_lib/smtc_modem_core/lorawan_packages/lorawan_certification",
+      "-I lbm_lib/smtc_modem_core/lorawan_packages/multi_package_access",
+      "-I lbm_lib/smtc_modem_core/lorawan_packages/remote_multicast_setup",
+      "-I lbm_lib/smtc_modem_core/lr1mac",
+      "-I lbm_lib/smtc_modem_core/lr1mac/src",
+      "-I lbm_lib/smtc_modem_core/lr1mac/src/relay/common",
+      "-I lbm_lib/smtc_modem_core/lr1mac/src/relay/relay_rx",
+      "-I lbm_lib/smtc_modem_core/lr1mac/src/relay/relay_tx",
+      "-I lbm_lib/smtc_modem_core/lr1mac/src/services",
+      "-I lbm_lib/smtc_modem_core/lr1mac/src/smtc_real/src",
+      "-I lbm_lib/smtc_modem_core/modem_services",
+      "-I lbm_lib/smtc_modem_core/modem_services/relay_service",
+      "-I lbm_lib/smtc_modem_core/modem_supervisor",
+      "-I lbm_lib/smtc_modem_core/modem_utilities",
+      "-I lbm_lib/smtc_modem_core/radio_drivers",
+      "-I lbm_lib/smtc_modem_core/radio_drivers/lr11xx_driver/src",
+      "-I lbm_lib/smtc_modem_core/radio_planner/src",
+      "-I lbm_lib/smtc_modem_core/smtc_modem_crypto",
+      "-I lbm_lib/smtc_modem_core/smtc_modem_crypto/smtc_secure_element",
+      "-I lbm_lib/smtc_modem_core/smtc_ral/src",
+      "-I lbm_lib/smtc_modem_core/smtc_ralf/src",
+      "-I lbm_lib/smtc_modem_hal",
+      "-D REGION_AS_923",
+      "-D REGION_AU_915",
+      "-D REGION_CN_470",
+      "-D REGION_CN_470_RP_1_0",
+      "-D REGION_EU_868",
+      "-D REGION_IN_865",
+      "-D REGION_KR_920",
+      "-D REGION_RU_864",
+      "-D REGION_US_915",
+      "-D REGION_WW2G4",
+      "-D ADD_RELAY_TX",
+      "-D ADD_RELAY_RX"
+
+    ],
+    "srcFilter": [
+      "-<smtc_modem_core/geolocation_services/>",
+      "+<smtc_modem_core/smtc_modem.c>",
+      "+<smtc_modem_core/smtc_modem_test.c>",
+      "+<smtc_modem_core/lorawan_api/lorawan_api.c>",
+      "+<smtc_modem_core/lr1mac/src/>",
+      "+<smtc_modem_core/lr1mac/src/services/>",
+      "+<smtc_modem_core/lr1mac/src/smtc_real/src/>",
+      "+<smtc_modem_core/smtc_modem_crypto/smtc_modem_crypto.c>",
+      "+<smtc_modem_core/modem_utilities/modem_event_utilities.c>",
+      "+<smtc_modem_core/modem_utilities/fifo_ctrl.c>",
+      "+<smtc_modem_core/modem_utilities/modem_core.c>",
+      "+<smtc_modem_core/modem_services/relay_service/>",
+      "+<smtc_modem_core/modem_supervisor/modem_supervisor_light.c>",
+      "+<smtc_modem_core/modem_supervisor/modem_tx_protocol_manager.c>",
+      "+<smtc_modem_core/lorawan_packages/lorawan_certification/lorawan_certification.c>",
+      "+<smtc_modem_core/lorawan_manager/lorawan_join_management.c>",
+      "+<smtc_modem_core/lorawan_manager/lorawan_send_management.c>",
+      "+<smtc_modem_core/lorawan_manager/lorawan_cid_request_management.c>",
+      "+<smtc_modem_core/lorawan_manager/lorawan_dwn_ack_management.c>",
+      "+<smtc_modem_core/radio_planner/src/radio_planner.c>",
+      "+<smtc_modem_core/smtc_modem_crypto/soft_secure_element/>"
+    ]
+  },
+  "frameworks": "*",
+  "platforms": "*",
+  "license": "BSD-3"
+}

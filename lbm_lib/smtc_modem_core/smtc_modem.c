@@ -84,6 +84,8 @@
 #include "ralf_sx127x.h"
 #elif defined( LR20XX )
 #include "ralf_lr20xx.h"
+#elif defined( TRANSPARENT_RADIO )
+#include "ralf_transparent.h"
 #endif
 
 #if defined( ADD_SMTC_STREAM )
@@ -201,6 +203,8 @@ ralf_t modem_radio = RALF_LR20XX_INSTANTIATE( NULL );
 #include "sx127x.h"
 static sx127x_t sx127x;
 ralf_t          modem_radio = RALF_SX127X_INSTANTIATE( &sx127x );
+#elif defined( TRANSPARENT_RADIO )
+ralf_t modem_radio = RALF_TRANSPARENT_INSTANTIATE( NULL );
 #else
 #error "Please select radio board.."
 #endif
