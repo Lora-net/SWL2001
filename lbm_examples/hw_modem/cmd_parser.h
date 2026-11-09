@@ -210,6 +210,10 @@ typedef enum host_cmd_id_e
     CMD_MODEM_GET_CRASHLOG                     = 0x98,
     CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER = 0x99,
     CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER = 0x9A,
+    CMD_GET_NO_RX_PACKET_THRESHOLD             = 0x9B,
+    CMD_SET_NO_RX_PACKET_THRESHOLD             = 0x9C,
+    CMD_GET_CHANNEL_MASK                       = 0x9D,
+    CMD_SET_CHANNEL_MASK                       = 0x9E,
     CMD_MAX
 } host_cmd_id_t;
 

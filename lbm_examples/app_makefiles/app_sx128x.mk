@@ -17,11 +17,13 @@ RADIO_HAL_C_SOURCES += \
 # - sx128x_hal.h
 # - ral_sx128x_bsp.h
 MODEM_C_INCLUDES =  \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/radio_drivers/sx128x_driver/src\
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/smtc_ral/src
+	-I$(SMTC_RADIO_DRIVERS_DIR)/sx128x_driver/src\
+	-I$(SMTC_RADIO_INTERFACE_DIR)/smtc_ral/src
 
 #-----------------------------------------------------------------------------
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
 COMMON_C_DEFS += \
-	-DSX128X 
+	-DSX128X \
+	-DRAL_DRIVER_DIRECT_DISPATCH \
+	-DRAL_DRIVER_DIRECT_DISPATCH_SX128X

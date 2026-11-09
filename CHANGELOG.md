@@ -4,6 +4,73 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v4.9.3] 2026-11-03
+
+This version is based on branch v4.9.0 of the LoRa Basics Modem.
+
+Detailed `Modem API` changelog can be found [here](lbm/lbm_lib/smtc_modem_api/CHANGELOG.md)
+
+Detailed `Modem HAL` changelog can be found [here](lbm/lbm_lib/smtc_modem_hal/CHANGELOG.md)
+
+### Added
+
+* LR20xx RSSI calibration: new **mandatory** BSP function `ral_lr20xx_bsp_get_rssi_calibration_table()`, called at RAL initialization, with reference tables in the example BSP (`ral_lr20xx_bsp.c`): a custom LR20xx BSP must implement it
+* Regional Parameters RP002-1.0.4 and RP002-1.0.5 support (CFList type 1 for dynamic plans, up to 80 channels on EU868, new US915 channel plan, Relay channel 1 SF update, AS923 group 4). `RP_VERSION` selects the version in the application options, default remains RP2-1.0.3
+* LR2012 radio added to the CMake files
+* LR2022 radio added to the CMake files and to the list of WW_2G4-compatible radios
+* LR20xx: PA power configuration tables, updated `ral_lr20xx_bsp.c` for the example BSP
+* SX126x: PA power configuration tables in the example BSP (`sx126x_pa_pwr_cfg.h`)
+* Makefile: `CSMA` compilation flag
+* CMake: `LBM_CMAKE_CONFIG_AUTO` and `RAL_DRIVER_DIRECT_DISPATCH` options
+* Relay Tx: `number_of_miss_wor_ack_to_switch_in_nosync_mode` can now be configured by the user
+
+### Changed
+
+* Repository reorganization: sources moved under `lbm/`
+  * `lbm/lbm_lib`: LoRa Basics Modem core, API and HAL
+  * `lbm/radio_planner`
+  * `lbm/smtc_radio_interface`: RAL, RALF and radio drivers
+  * `lbm/smtc_core_hal_interface`: HAL part not related to LBM (see the Modem HAL changelog)
+* The Radio Planner and ralf can be provided externally to LBM (RAC dependency removed, `USE_SMTC_RAC` selects the use of `modem_radio`)
+* Cleaned and simplified CMake architecture
+* Class B beacon DPLL: `BEACON_PLL_PHASE_GAIN_MUL/DIV` set to 1/2 for a faster convergence and accept a bigger crystal error
+* Multicast Class B/C: the session now starts 2 s before its session time
+* Radio drivers updates:
+  * LR11xx to version [v3.0.0](lbm/smtc_radio_interface/radio_drivers/lr11xx_driver/CHANGELOG.md)
+  * LR20xx to version [v2.1.0](lbm/smtc_radio_interface/radio_drivers/lr20xx_driver/CHANGELOG.md)
+* Duty-cycle frequency list now takes the 80 channels into account
+* RAL: new LoRa LDRO computation for all radios, LR2021 PRAM version checked at radio initialization
+
+### Fixed
+
+* NbTrans > 1: the duty-cycle time off is now updated on retransmission, all retransmissions are sent before the duty-cycle delay is enforced
+* Wrong index boundary check when decrementing the datarate
+* `lr1_stack_mac_cmd_ans_cut` could block the modem because DeviceTimeAns and Class B MAC commands were missing in the array used for length check
+* Class B/C Multicast v1/v2 ping slot hopping when frequency is 0
+* Modem was not able to retain sleep when `lorawan_dwn_ack_management` variable was less than or equal to 96 bytes (context added)
+* Fixed missing check of `SMTC_MULTICAST` definition (Class B or C only)
+* `smtc_modem_get_suspend_radio_communications()` can no longer be called in test mode
+* Porting guide: `CONTEXT_SECURE_ELEMENT` needs 484 bytes
+* ALC SYNC and FUOTA package versions set to 2
+* Issue [#141](https://github.com/Lora-net/SWL2001/issues/141) Missing semicolons when `SMTC_TRACE` is compiled
+* LR20xx: wakeup time must be between 100 us and 1 ms
+* IN865, AU915 and AS923_GRP4 region typos/out-of-bound fixes
+* Radio Planner: IRQ flag cleared when an interrupt occurs without an active task, `ral_clear_irq_status()` called before `ral_set_sleep()`, FLRC packet length error reported
+* MAC commands answer size table: `LINK_CHECK_ANS` replaced by `LINK_CHECK_REQ` (command sent by the end-device)
+
+### Security
+
+Robustness fixes found by static analysis and code audit (out-of-bound access, unvalidated lengths and indexes):
+
+* FOpts extraction read past the valid payload before MIC verification
+* FUOTA: fragment payload size validated against the received RF payload; `FragDecoderProcess()` rejects `fragCounter == 0` (row index underflow); `frag_index` bounds checked before use; `frag_req_cmd_size` table initialisation; unicast DataFragment refused on multicast-only sessions; `fmp_test()` duplicated declaration
+* Remote Multicast Setup: `MC_GROUP_STATUS_REQ` answer buffer bound check
+* Multi Package Access: `MULTI_PACK_BUFFER_REQ` read past the payload
+* Certification: `TX_PERIODICITY_CHANGE_REQ` and `EchoPlayReq` size validation
+* `link_adr_parser()` size check performed before dereference
+* Function pointers are checked (`SMTC_LBM_IS_VALID_FN_PTR`) before being called; `smtc_lbt_get_obj()` panics on out-of-bound instead of returning NULL
+* Coverity findings: uninitialised variables, integer overflow, `MIN/MAX` macros brackets, `CRYPTO_MAXMESSAGE_SIZE` limited to 255 in the LR11xx crypto engine
+
 ## [v4.9.0] 2025-10-15
 
 This version is based on branch v4.8.0 of the LoRa Basics Modem.
@@ -144,7 +211,7 @@ This version fix the 4.3.0 version.
 * LBM Application with nFR52840 target, fix SPI HAL for radio sx126x and sx128x
 * Class B resets when counter "smtc_modem_hal_get_time_in_100us" wraps (occurs after 4.9 days), this time base is no more used
 * Cloud DM DM_INFO_RXTIME payload do not report the correct duration since last received downlink
-  
+
 ## [v4.4.0] 2023-12-21
 
 This version is based on feature branch v4.3.0 of the LoRa Basics Modem.
@@ -205,7 +272,7 @@ Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELO
 
 * Issue [#12](https://github.com/Lora-net/SWL2001/issues/12): Correct ral_xxx_lr_fhss_get_hop_sequence_count prototype to return a ral_status_t and not the count
 * Issue [#13](https://github.com/Lora-net/SWL2001/issues/13): Correct Firmware Management Protocol behavior issue
-* Issue [#14](https://github.com/Lora-net/SWL2001/issues/14): Correct LoRaWAN packages parser missing default case in parser (Remote Multicast Setup V1 and V2, Firmware Management Protocol and Fragmented Data Block Transport V1 and V2 )  
+* Issue [#14](https://github.com/Lora-net/SWL2001/issues/14): Correct LoRaWAN packages parser missing default case in parser (Remote Multicast Setup V1 and V2, Firmware Management Protocol and Fragmented Data Block Transport V1 and V2 )
 * Issue [#19](https://github.com/Lora-net/SWL2001/issues/19): check all LoRaWAN packages answer overflows
 * Issue [#20](https://github.com/Lora-net/SWL2001/issues/20): Index of the answer for McGroupStatusReq command is not fixed anymore
 * Issue [#22](https://github.com/Lora-net/SWL2001/issues/22): In Remote Multicast Setup Package V1 and V2, check `lorawan_api_is_frequency_valid` and `lorawan_api_is_datarate_valid` return status according to `status_lorawan_t` enum and not boolean
@@ -218,7 +285,7 @@ Detailed Modem HAL changelog can be found [here](lbm_lib/smtc_modem_hal/CHANGELO
 
 ### Changed
 
-* [general] Change repository organization to ease readability.  
+* [general] Change repository organization to ease readability.
             Put all LoRa Basics Modem library related code in `lbm_lib` folder.
             Rename `utilities` folder into `lbm_examples` for generic Lora Basics Modem examples
 * [lorawan-package] Change `lorawan_packages` folder organization to use a dedicated folder for each packages instead of fuota_v1 and fuota_V2

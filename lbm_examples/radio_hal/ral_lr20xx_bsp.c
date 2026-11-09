@@ -5,7 +5,7 @@
  *
  *
  * The Clear BSD License
- * Copyright Semtech Corporation 2021. All rights reserved.
+ * Copyright Semtech Corporation 2025. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the disclaimer
@@ -39,11 +39,14 @@
  */
 
 #include <stdint.h>
+#include <stddef.h>
 #include "lr20xx_radio_common.h"
 #include "lr20xx_system_types.h"
-#include "lr20xx_pa_pwr_cfg.h"
+#include "pa_tables_lr20xx_common.h"
+#include "pa_tables_lr20xx_types.h"
 #include "ral_lr20xx_bsp.h"
 #include "radio_utilities.h"
+#include "smtc_hal_mcu.h"
 
 /*
  * -----------------------------------------------------------------------------
@@ -70,15 +73,107 @@
 
 /*
  * -----------------------------------------------------------------------------
- * --- PRIVATE VARIABLES -------------------------------------------------------
+ * --- PRIVATE CONST -----------------------------------------------------------
  */
 
-typedef struct lr20xx_pa_pwr_cfg_s
+/* The following rssi calibration gain tables is formating as follow : gain_value [10 bits signed fixed 8.2] -
+ * nois_figure [unsigned fixed 6.2]*/
+
+const lr20xx_radio_common_rssi_calibration_gain_table_t table_lf_868_915 = {
+    .g1         = { .gain_value = -32, .noise_figure = 219 },
+    .g2         = { .gain_value = -8, .noise_figure = 204 },
+    .g3         = { .gain_value = 16, .noise_figure = 194 },
+    .g4         = { .gain_value = 36, .noise_figure = 175 },
+    .g5         = { .gain_value = 56, .noise_figure = 156 },
+    .g6         = { .gain_value = 73, .noise_figure = 137 },
+    .g7         = { .gain_value = 90, .noise_figure = 122 },
+    .g8         = { .gain_value = 112, .noise_figure = 95 },
+    .g9         = { .gain_value = 130, .noise_figure = 62 },
+    .g10        = { .gain_value = 152, .noise_figure = 41 },
+    .g11        = { .gain_value = 173, .noise_figure = 26 },
+    .g12_boost0 = { .gain_value = 190, .noise_figure = 16 },
+    .g12_boost1 = { .gain_value = 196, .noise_figure = 13 },
+    .g12_boost2 = { .gain_value = 200, .noise_figure = 13 },
+    .g12_boost3 = { .gain_value = 202, .noise_figure = 13 },
+    .g12_boost4 = { .gain_value = 203, .noise_figure = 12 },
+    .g12_boost5 = { .gain_value = 205, .noise_figure = 12 },
+    .g12_boost6 = { .gain_value = 207, .noise_figure = 12 },
+    .g12_boost7 = { .gain_value = 208, .noise_figure = 12 },
+    .g13_boost0 = { .gain_value = 214, .noise_figure = 12 },
+    .g13_boost1 = { .gain_value = 220, .noise_figure = 11 },
+    .g13_boost2 = { .gain_value = 223, .noise_figure = 11 },
+    .g13_boost3 = { .gain_value = 226, .noise_figure = 10 },
+    .g13_boost4 = { .gain_value = 227, .noise_figure = 10 },
+    .g13_boost5 = { .gain_value = 228, .noise_figure = 11 },
+    .g13_boost6 = { .gain_value = 230, .noise_figure = 10 },
+    .g13_boost7 = { .gain_value = 232, .noise_figure = 9 }
+};
+
+/*const lr20xx_radio_common_rssi_calibration_gain_table_t table_lf_490 =
 {
-    int8_t  half_power;
-    uint8_t pa_duty_cycle;
-    uint8_t pa_lf_slices;
-} lr20xx_pa_pwr_cfg_t;
+    .g1 = {.gain_value = -46, .noise_figure = 221},
+    .g2 = {.gain_value = -22, .noise_figure = 205},
+    .g3 = {.gain_value = 2, .noise_figure = 190},
+    .g4 = {.gain_value = 24, .noise_figure = 169},
+    .g5 = {.gain_value = 44, .noise_figure = 147},
+    .g6 = {.gain_value = 63, .noise_figure = 130},
+    .g7 = {.gain_value = 84, .noise_figure = 113},
+    .g8 = {.gain_value = 104, .noise_figure = 87},
+    .g9 = {.gain_value = 138, .noise_figure = 46},
+    .g10 = {.gain_value = 158, .noise_figure = 30},
+    .g11 = {.gain_value = 181, .noise_figure = 18},
+    .g12_boost0 = {.gain_value = 200, .noise_figure = 13},
+    .g12_boost1 = {.gain_value = 196, .noise_figure = 13},
+    .g12_boost2 = {.gain_value = 208, .noise_figure = 13},
+    .g12_boost3 = {.gain_value = 210, .noise_figure = 13},
+    .g12_boost4 = {.gain_value = 211, .noise_figure = 13},
+    .g12_boost5 = {.gain_value = 215, .noise_figure = 12},
+    .g12_boost6 = {.gain_value = 217, .noise_figure = 12},
+    .g12_boost7 = {.gain_value = 218, .noise_figure = 12},
+    .g13_boost0 = {.gain_value = 224, .noise_figure = 12},
+    .g13_boost1 = {.gain_value = 228, .noise_figure = 12},
+    .g13_boost2 = {.gain_value = 231, .noise_figure = 12},
+    .g13_boost3 = {.gain_value = 234, .noise_figure = 12},
+    .g13_boost4 = {.gain_value = 237, .noise_figure = 11},
+    .g13_boost5 = {.gain_value = 238, .noise_figure = 11},
+    .g13_boost6 = {.gain_value = 240, .noise_figure = 10},
+    .g13_boost7 = {.gain_value = 242, .noise_figure = 10}
+};*/
+
+const lr20xx_radio_common_rssi_calibration_gain_table_t table_hf_2G4 = {
+    .g1         = { .gain_value = -58, .noise_figure = 240 },
+    .g2         = { .gain_value = -34, .noise_figure = 221 },
+    .g3         = { .gain_value = -10, .noise_figure = 208 },
+    .g4         = { .gain_value = 7, .noise_figure = 190 },
+    .g5         = { .gain_value = 25, .noise_figure = 171 },
+    .g6         = { .gain_value = 40, .noise_figure = 153 },
+    .g7         = { .gain_value = 53, .noise_figure = 137 },
+    .g8         = { .gain_value = 77, .noise_figure = 113 },
+    .g9         = { .gain_value = 102, .noise_figure = 89 },
+    .g10        = { .gain_value = 126, .noise_figure = 65 },
+    .g11        = { .gain_value = 146, .noise_figure = 47 },
+    .g12_boost0 = { .gain_value = 163, .noise_figure = 34 },
+    .g12_boost1 = { .gain_value = 166, .noise_figure = 32 },
+    .g12_boost2 = { .gain_value = 168, .noise_figure = 31 },
+    .g12_boost3 = { .gain_value = 170, .noise_figure = 30 },
+    .g12_boost4 = { .gain_value = 171, .noise_figure = 30 },
+    .g12_boost5 = { .gain_value = 172, .noise_figure = 29 },
+    .g12_boost6 = { .gain_value = 176, .noise_figure = 26 },
+    .g12_boost7 = { .gain_value = 175, .noise_figure = 27 },
+    .g13_boost0 = { .gain_value = 187, .noise_figure = 29 },
+    .g13_boost1 = { .gain_value = 190, .noise_figure = 29 },
+    .g13_boost2 = { .gain_value = 193, .noise_figure = 27 },
+    .g13_boost3 = { .gain_value = 194, .noise_figure = 26 },
+    .g13_boost4 = { .gain_value = 195, .noise_figure = 26 },
+    .g13_boost5 = { .gain_value = 196, .noise_figure = 25 },
+    .g13_boost6 = { .gain_value = 198, .noise_figure = 24 },
+    .g13_boost7 = { .gain_value = 199, .noise_figure = 24 }
+};
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE VARIABLES -------------------------------------------------------
+ */
 
 /*
  * -----------------------------------------------------------------------------
@@ -93,57 +188,52 @@ typedef struct lr20xx_pa_pwr_cfg_s
  * @param [out] output_params The tx config output params
  */
 
-void lr20xx_get_tx_cfg( lr20xx_radio_common_pa_selection_t pa_type, int8_t expected_output_pwr_in_dbm,
-                        ral_lr20xx_bsp_tx_cfg_output_params_t* output_params );
+void lr20xx_get_tx_cfg( lr20xx_radio_common_pa_selection_t pa_type, uint32_t rf_freq_in_hz,
+                        int8_t expected_output_pwr_in_dbm, ral_lr20xx_bsp_tx_cfg_output_params_t* output_params );
 
 /*
  * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
-const lr20xx_pa_pwr_cfg_t pa_lf_cfg_table[LR20XX_LF_MAX_OUTPUT_POWER - LR20XX_LF_MIN_OUTPUT_POWER + 1] =
-    LR20XX_PA_LF_CFG_TABLE;
-
-const lr20xx_pa_pwr_cfg_t pa_hf_cfg_table[LR20XX_HF_MAX_OUTPUT_POWER - LR20XX_HF_MIN_OUTPUT_POWER + 1] =
-    LR20XX_PA_HF_CFG_TABLE;
 
 /**
  * @brief Power consumption table in Tx Low frequency mode
  * @remark measured at 3.3v and DCDC
  */
 static const uint32_t ral_lr20xx_convert_tx_dbm_to_ua_reg_mode_dcdc_lf_vreg[] = {
-    10400,   // -10 dBm
-    10100,   //  -9 dBm
-    9000,    //  -8 dBm
-    9000,    //  -7 dBm
-    8400,    //  -6 dBm
-    8700,    //  -5 dBm
-    10100,   //  -4 dBm
-    9200,    //  -3 dBm
-    10600,   //  -2 dBm
-    10000,   //  -1 dBm
-    10000,   //   0 dBm
-    12100,   //   1 dBm
-    10900,   //   2 dBm
-    12000,   //   3 dBm
-    13100,   //   4 dBm
-    13300,   //   5 dBm
-    13400,   //   6 dBm
-    14600,   //   7 dBm
-    15300,   //   8 dBm
-    16800,   //   9 dBm
-    18100,   //  10 dBm
-    20200,   //  11 dBm
-    21900,   //  12 dBm
-    25600,   //  13 dBm
-    28300,   //  14 dBm
-    32200,   //  15 dBm
-    37600,   //  16 dBm
-    46000,   //  17 dBm
-    51800,   //  18 dBm
-    61300,   //  19 dBm
-    74100,   //  20 dBm
-    89400,   //  21 dBm
-    108200,  //  22 dBm
+    6970,   // -10 dBm
+    7110,   //  -9 dBm
+    7270,   //  -8 dBm
+    7000,   //  -7 dBm
+    7200,   //  -6 dBm
+    7390,   //  -5 dBm
+    7920,   //  -4 dBm
+    8660,   //  -3 dBm
+    8520,   //  -2 dBm
+    8830,   //  -1 dBm
+    8500,   //   0 dBm
+    8820,   //   1 dBm
+    9300,   //   2 dBm
+    9710,   //   3 dBm
+    10200,  //   4 dBm
+    12180,  //   5 dBm
+    11630,  //   6 dBm
+    12780,  //   7 dBm
+    13580,  //   8 dBm
+    14810,  //   9 dBm
+    16500,  //  10 dBm
+    18290,  //  11 dBm
+    19810,  //  12 dBm
+    22880,  //  13 dBm
+    26490,  //  14 dBm
+    30980,  //  15 dBm
+    36170,  //  16 dBm
+    43010,  //  17 dBm
+    51400,  //  18 dBm
+    60980,  //  19 dBm
+    71710,  //  20 dBm
+    86560,  //  21 dBm
+    100480  //  22 dBm
 };
 
 // TODO
@@ -192,36 +282,36 @@ static const uint32_t ral_lr20xx_convert_tx_dbm_to_ua_reg_mode_ldo_lf_vreg[] = {
  * @remark measured at 3.3v
  */
 static const uint32_t ral_lr20xx_convert_tx_dbm_to_ua_reg_mode_dcdc_hf_vreg[] = {
-    8625,   // -17 dBm
-    8783,   // -16 dBm
-    8874,   // -15 dBm
-    8998,   // -14 dBm
-    9145,   // -13 dBm
-    9289,   // -12 dBm
-    9481,   // -11 dBm
-    9646,   // -10 dBm
-    9840,   //  -9 dBm
-    10073,  //  -8 dBm
-    10280,  //  -7 dBm
-    10597,  //  -6 dBm
-    10511,  //  -5 dBm
-    11200,  //  -4 dBm
-    11391,  //  -3 dBm
-    11630,  //  -2 dBm
-    11360,  //  -1 dBm
-    11635,  //   0 dBm
-    11986,  //   1 dBm
-    12670,  //   2 dBm
-    13292,  //   3 dBm
-    13859,  //   4 dBm
-    13685,  //   5 dBm
-    14629,  //   6 dBm
-    15388,  //   7 dBm
-    15804,  //   8 dBm
-    17270,  //   9 dBm
-    18943,  //  10 dBm
-    21041,  //  11 dBm
-    22524,  //  12 dBm
+    8320,   // -17 dBm
+    8460,   // -16 dBm
+    8600,   // -15 dBm
+    8650,   // -14 dBm
+    8830,   // -13 dBm
+    9010,   // -12 dBm
+    9190,   // -11 dBm
+    9410,   // -10 dBm
+    9460,   //  -9 dBm
+    9520,   //  -8 dBm
+    9950,   //  -7 dBm
+    10160,  //  -6 dBm
+    10450,  //  -5 dBm
+    10290,  //  -4 dBm
+    10750,  //  -3 dBm
+    11520,  //  -2 dBm
+    11550,  //  -1 dBm
+    11400,  //   0 dBm
+    11810,  //   1 dBm
+    12430,  //   2 dBm
+    12950,  //   3 dBm
+    13550,  //   4 dBm
+    14130,  //   5 dBm
+    14850,  //   6 dBm
+    15520,  //   7 dBm
+    15810,  //   8 dBm
+    16670,  //   9 dBm
+    18280,  //  10 dBm
+    20140,  //  11 dBm
+    22270   //  12 dBm
 };
 
 /**
@@ -343,7 +433,8 @@ void ral_lr20xx_bsp_get_tx_cfg( const void* context, const ral_lr20xx_bsp_tx_cfg
     lr20xx_radio_common_pa_selection_t pa_type;
 
     // check frequency band first to choose Low Frequency of High Frequency Power Amplifier
-    if( input_params->freq_in_hz >= 1600000000 )  // 1.6GHz
+    // (smtc-shields is the source of truth for the exact frequency/band mapping)
+    if( input_params->freq_in_hz >= SMTC_SHIELD_LR20XX_LF_HF_FREQ_THRESHOLD )
     {
         pa_type = LR20XX_RADIO_COMMON_PA_SEL_HF;
     }
@@ -353,13 +444,13 @@ void ral_lr20xx_bsp_get_tx_cfg( const void* context, const ral_lr20xx_bsp_tx_cfg
     }
 
     // call the configuration function
-    lr20xx_get_tx_cfg( pa_type, power, output_params );
+    lr20xx_get_tx_cfg( pa_type, input_params->freq_in_hz, power, output_params );
 }
 
 void ral_lr20xx_bsp_get_rx_cfg( const void* context, const uint32_t freq_in_hz, lr20xx_radio_common_rx_path_t* rx_path,
                                 lr20xx_radio_common_rx_path_boost_mode_t* boost_mode )
 {
-    if( freq_in_hz >= 1600000000 )  // 1.6GHz
+    if( freq_in_hz >= 1500000000 )  // 1.5GHz
     {
         *rx_path = LR20XX_RADIO_COMMON_RX_PATH_HF;
     }
@@ -378,9 +469,9 @@ void ral_lr20xx_bsp_get_front_end_calibration_cfg(
     lr20xx_radio_common_rx_path_boost_mode_t boost_mode = LR20XX_RADIO_COMMON_RX_PATH_BOOST_MODE_NONE;
 
     uint32_t freq_in_hz[3] = {
-        470000000,   // Frequency 0 (range from 430MHz to 510MHz)
-        897500000,   // Frequency 1 (range from 867MHz to 928MHz)
-        2441000000,  // Frequency 2 (range from 2.403GHz to 2.479GHz)
+        870000000,   // Frequency 0 (range from 850MHz to 890MHz) +/- 20MHz
+        920000000,   // Frequency 1 (range from 900MHz to 940MHz) +/- 20MHz
+        2441000000,  // Frequency 2 (range from 2.391GHz to 2.491GHz) +/- 50MHz
     };
 
     for( uint8_t i = 0; i < 3; i++ )
@@ -399,17 +490,20 @@ void ral_lr20xx_bsp_get_dio_function( const void* context, lr20xx_system_dio_t d
         break;
     case LR20XX_SYSTEM_DIO_6:
         break;
+#if defined( LEGACY_EVK_LR2021 )
     case LR20XX_SYSTEM_DIO_7:
         break;
-#if defined( LEGACY_EVK_LR2021 )
     case LR20XX_SYSTEM_DIO_8:
         break;
     case LR20XX_SYSTEM_DIO_9:
-        *function = LR20XX_SYSTEM_DIO_FUNC_IRQ;  // LEGACY EVK
+        *function = LR20XX_SYSTEM_DIO_FUNC_IRQ;  // RADIO IRQ
         break;
 #else
+    case LR20XX_SYSTEM_DIO_7:
+        *function = LR20XX_SYSTEM_DIO_FUNC_IRQ;  // FIFO IRQs
+        break;
     case LR20XX_SYSTEM_DIO_8:
-        *function = LR20XX_SYSTEM_DIO_FUNC_IRQ;  // WIO board
+        *function = LR20XX_SYSTEM_DIO_FUNC_IRQ;  // Radio classic IRQs
         break;
     case LR20XX_SYSTEM_DIO_9:
         break;
@@ -424,6 +518,7 @@ void ral_lr20xx_bsp_get_dio_function( const void* context, lr20xx_system_dio_t d
 void ral_lr20xx_bsp_get_dio_sleep_drive( const void* context, lr20xx_system_dio_t dio,
                                          lr20xx_system_dio_drive_t* drive )
 {
+    ( void ) dio;
     *drive = LR20XX_SYSTEM_DIO_DRIVE_NONE;
 }
 
@@ -435,9 +530,13 @@ void ral_lr20xx_bsp_get_dio_irq_mask( const void* context, lr20xx_system_dio_t d
         *irq_mask = 0xFFFFFFFF & ~( LR20XX_SYSTEM_IRQ_FIFO_RX | LR20XX_SYSTEM_IRQ_FIFO_TX );
     }
 #else
-    if( dio == LR20XX_SYSTEM_DIO_8 )
+    if( dio == LR20XX_SYSTEM_DIO_8 )  // Main IRQ - All but FIFO RX/TX
     {
         *irq_mask = 0xFFFFFFFF & ~( LR20XX_SYSTEM_IRQ_FIFO_RX | LR20XX_SYSTEM_IRQ_FIFO_TX );
+    }
+    if( dio == LR20XX_SYSTEM_DIO_7 )  // FIFO IRQ - FIFO RX and TX
+    {
+        *irq_mask = ( LR20XX_SYSTEM_IRQ_FIFO_RX | LR20XX_SYSTEM_IRQ_FIFO_TX );
     }
 #endif
 }
@@ -493,13 +592,17 @@ void ral_lr20xx_bsp_get_lora_cad_det_peak( const void* context, ral_lora_sf_t sf
  * --- PRIVATE FUNCTIONS DEFINITION --------------------------------------------
  */
 
-void lr20xx_get_tx_cfg( lr20xx_radio_common_pa_selection_t pa_type, int8_t expected_output_pwr_in_dbm,
-                        ral_lr20xx_bsp_tx_cfg_output_params_t* output_params )
+void lr20xx_get_tx_cfg( lr20xx_radio_common_pa_selection_t pa_type, uint32_t rf_freq_in_hz,
+                        int8_t expected_output_pwr_in_dbm, ral_lr20xx_bsp_tx_cfg_output_params_t* output_params )
 {
     int8_t power = expected_output_pwr_in_dbm;
 
-    // Ramp time is the same for any config
+    // Ramp time is the same for any config.
     output_params->pa_ramp_time = LR20XX_RADIO_COMMON_RAMP_48_US;
+
+    // PA table and RSSI calibration data come from smtc-shields (source of truth for the
+    // board-characterized values); smtc-shields picks the exact frequency sub-band internally.
+    const smtc_shield_lr20xx_pa_pwr_cfg_t* cfg = NULL;
 
     switch( pa_type )
     {
@@ -514,15 +617,12 @@ void lr20xx_get_tx_cfg( lr20xx_radio_common_pa_selection_t pa_type, int8_t expec
         {
             power = LR20XX_LF_MAX_OUTPUT_POWER;
         }
-        output_params->pa_cfg.pa_sel           = LR20XX_RADIO_COMMON_PA_SEL_LF;
-        output_params->pa_cfg.pa_lf_mode       = LR20XX_RADIO_COMMON_PA_LF_MODE_FSM,
-        output_params->pa_cfg.pa_lf_slices     = pa_lf_cfg_table[power - LR20XX_LF_MIN_OUTPUT_POWER].pa_lf_slices;
-        output_params->pa_cfg.pa_lf_duty_cycle = pa_lf_cfg_table[power - LR20XX_LF_MIN_OUTPUT_POWER].pa_duty_cycle;
-        output_params->pa_cfg.pa_hf_duty_cycle = 16;
 
-        output_params->chip_output_half_pwr_in_dbm_configured =
-            pa_lf_cfg_table[power - LR20XX_LF_MIN_OUTPUT_POWER].half_power;
-        output_params->chip_output_pwr_in_dbm_expected = power;
+        cfg = smtc_shield_lr20xx_common_get_pa_pwr_cfg( rf_freq_in_hz, power * 2 );
+        if( cfg == NULL )
+        {
+            mcu_panic( "Unsupported LF frequency for PA config: %u Hz\n", rf_freq_in_hz );
+        }
         break;
     }
 
@@ -537,18 +637,19 @@ void lr20xx_get_tx_cfg( lr20xx_radio_common_pa_selection_t pa_type, int8_t expec
         {
             power = LR20XX_HF_MAX_OUTPUT_POWER;
         }
-        output_params->pa_cfg.pa_sel           = LR20XX_RADIO_COMMON_PA_SEL_HF;
-        output_params->pa_cfg.pa_lf_mode       = LR20XX_RADIO_COMMON_PA_LF_MODE_FSM;
-        output_params->pa_cfg.pa_lf_slices     = pa_hf_cfg_table[power - LR20XX_HF_MIN_OUTPUT_POWER].pa_lf_slices;
-        output_params->pa_cfg.pa_lf_duty_cycle = 6;
-        output_params->pa_cfg.pa_hf_duty_cycle = pa_hf_cfg_table[power - LR20XX_HF_MIN_OUTPUT_POWER].pa_duty_cycle;
 
-        output_params->chip_output_half_pwr_in_dbm_configured =
-            pa_hf_cfg_table[power - LR20XX_HF_MIN_OUTPUT_POWER].half_power;
-        output_params->chip_output_pwr_in_dbm_expected = power;
+        cfg = smtc_shield_lr20xx_common_get_pa_pwr_cfg( rf_freq_in_hz, power * 2 );
+        if( cfg == NULL )
+        {
+            mcu_panic( "Unsupported HF frequency for PA config: %u Hz\n", rf_freq_in_hz );
+        }
         break;
     }
     }
+
+    output_params->pa_cfg                                 = cfg->pa_config;
+    output_params->chip_output_half_pwr_in_dbm_configured = cfg->power;
+    output_params->chip_output_pwr_in_dbm_expected         = power;
 }
 
 ral_status_t ral_lr20xx_bsp_get_instantaneous_tx_power_consumption( const void* context,
@@ -707,5 +808,27 @@ ral_status_t ral_lr20xx_bsp_get_instantaneous_lora_rx_power_consumption( const v
     }
 
     return RAL_STATUS_OK;
+}
+
+void ral_lr20xx_bsp_get_rssi_calibration_table(
+    const void* context, const lr20xx_radio_common_rssi_calibration_gain_table_t** rssi_calibration_table_lf,
+    const lr20xx_radio_common_rssi_calibration_gain_table_t** rssi_calibration_table_hf )
+{
+    // Make sure pointers is not affected
+    *rssi_calibration_table_lf = NULL;
+    *rssi_calibration_table_hf = NULL;
+
+    /*Getting High Frequency Calibration Table*/
+
+    // Choosing HF 2.4GHz
+    *rssi_calibration_table_hf = &table_hf_2G4;
+
+    /*Getting Low Frequency Calibration Table*/
+
+    // Choosing LF 868 MHz to 915 MHz
+    *rssi_calibration_table_lf = &table_lf_868_915;
+
+    // Choosing LF 490 MHz
+    //*rssi_calibration_table_lf = &table_lf_490;
 }
 /* --- EOF ------------------------------------------------------------------ */

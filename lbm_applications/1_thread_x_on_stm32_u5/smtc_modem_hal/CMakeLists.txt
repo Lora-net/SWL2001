@@ -3,7 +3,6 @@
 add_library(smtc_modem_hal_implem OBJECT smtc_modem_hal.c)
 
 target_link_libraries(smtc_modem_hal_implem PUBLIC
-    LoRaBasicsModemApi
     smtc_hal
     smtc_modem_hal_interface
 )

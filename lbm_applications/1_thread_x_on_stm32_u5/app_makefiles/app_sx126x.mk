@@ -25,8 +25,9 @@ RADIO_HAL_C_SOURCES += \
 # - sx126x_hal.h
 # - ral_sx126x_bsp.h
 MODEM_C_INCLUDES =  \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/radio_drivers/sx126x_driver/src\
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/smtc_ral/src
+	-I$(SMTC_RADIO_DRIVERS_DIR)/sx126x_driver/src\
+	-I$(SMTC_RADIO_DRIVERS_DIR)/sx126x_driver/src/lr_fhss_driver/src\
+	-I$(SMTC_RADIO_INTERFACE_DIR)/smtc_ral/src
 
 #-----------------------------------------------------------------------------
 # Region
@@ -36,7 +37,9 @@ MODEM_C_INCLUDES =  \
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
 COMMON_C_DEFS += \
-	-DSX126X 
+	-DSX126X \
+	-DRAL_DRIVER_DIRECT_DISPATCH \
+	-DRAL_DRIVER_DIRECT_DISPATCH_SX126X
 
 ifeq ($(TARGET_RADIO),sx1262)
 COMMON_C_DEFS += \

@@ -38,6 +38,7 @@
  * --- DEPENDENCIES ------------------------------------------------------------
  */
 
+#include <stddef.h>
 #include <stdint.h>
 #include "lr20xx_radio_common.h"
 #include "lr20xx_system_types.h"
@@ -67,6 +68,105 @@
  * -----------------------------------------------------------------------------
  * --- PRIVATE TYPES -----------------------------------------------------------
  */
+
+/*
+ * -----------------------------------------------------------------------------
+ * --- PRIVATE CONST -----------------------------------------------------------
+ */
+
+/* The following rssi calibration gain tables is formating as follow : gain_value [10 bits signed fixed 8.2] -
+ * nois_figure [unsigned fixed 6.2]*/
+
+const lr20xx_radio_common_rssi_calibration_gain_table_t table_lf_868_915 = {
+    .g1         = { .gain_value = -32, .noise_figure = 219 },
+    .g2         = { .gain_value = -8, .noise_figure = 204 },
+    .g3         = { .gain_value = 16, .noise_figure = 194 },
+    .g4         = { .gain_value = 36, .noise_figure = 175 },
+    .g5         = { .gain_value = 56, .noise_figure = 156 },
+    .g6         = { .gain_value = 73, .noise_figure = 137 },
+    .g7         = { .gain_value = 90, .noise_figure = 122 },
+    .g8         = { .gain_value = 112, .noise_figure = 95 },
+    .g9         = { .gain_value = 130, .noise_figure = 62 },
+    .g10        = { .gain_value = 152, .noise_figure = 41 },
+    .g11        = { .gain_value = 173, .noise_figure = 26 },
+    .g12_boost0 = { .gain_value = 190, .noise_figure = 16 },
+    .g12_boost1 = { .gain_value = 196, .noise_figure = 13 },
+    .g12_boost2 = { .gain_value = 200, .noise_figure = 13 },
+    .g12_boost3 = { .gain_value = 202, .noise_figure = 13 },
+    .g12_boost4 = { .gain_value = 203, .noise_figure = 12 },
+    .g12_boost5 = { .gain_value = 205, .noise_figure = 12 },
+    .g12_boost6 = { .gain_value = 207, .noise_figure = 12 },
+    .g12_boost7 = { .gain_value = 208, .noise_figure = 12 },
+    .g13_boost0 = { .gain_value = 214, .noise_figure = 12 },
+    .g13_boost1 = { .gain_value = 220, .noise_figure = 11 },
+    .g13_boost2 = { .gain_value = 223, .noise_figure = 11 },
+    .g13_boost3 = { .gain_value = 226, .noise_figure = 10 },
+    .g13_boost4 = { .gain_value = 227, .noise_figure = 10 },
+    .g13_boost5 = { .gain_value = 228, .noise_figure = 11 },
+    .g13_boost6 = { .gain_value = 230, .noise_figure = 10 },
+    .g13_boost7 = { .gain_value = 232, .noise_figure = 9 }
+};
+
+/*const lr20xx_radio_common_rssi_calibration_gain_table_t table_lf_490 =
+{
+    .g1 = {.gain_value = -46, .noise_figure = 221},
+    .g2 = {.gain_value = -22, .noise_figure = 205},
+    .g3 = {.gain_value = 2, .noise_figure = 190},
+    .g4 = {.gain_value = 24, .noise_figure = 169},
+    .g5 = {.gain_value = 44, .noise_figure = 147},
+    .g6 = {.gain_value = 63, .noise_figure = 130},
+    .g7 = {.gain_value = 84, .noise_figure = 113},
+    .g8 = {.gain_value = 104, .noise_figure = 87},
+    .g9 = {.gain_value = 138, .noise_figure = 46},
+    .g10 = {.gain_value = 158, .noise_figure = 30},
+    .g11 = {.gain_value = 181, .noise_figure = 18},
+    .g12_boost0 = {.gain_value = 200, .noise_figure = 13},
+    .g12_boost1 = {.gain_value = 196, .noise_figure = 13},
+    .g12_boost2 = {.gain_value = 208, .noise_figure = 13},
+    .g12_boost3 = {.gain_value = 210, .noise_figure = 13},
+    .g12_boost4 = {.gain_value = 211, .noise_figure = 13},
+    .g12_boost5 = {.gain_value = 215, .noise_figure = 12},
+    .g12_boost6 = {.gain_value = 217, .noise_figure = 12},
+    .g12_boost7 = {.gain_value = 218, .noise_figure = 12},
+    .g13_boost0 = {.gain_value = 224, .noise_figure = 12},
+    .g13_boost1 = {.gain_value = 228, .noise_figure = 12},
+    .g13_boost2 = {.gain_value = 231, .noise_figure = 12},
+    .g13_boost3 = {.gain_value = 234, .noise_figure = 12},
+    .g13_boost4 = {.gain_value = 237, .noise_figure = 11},
+    .g13_boost5 = {.gain_value = 238, .noise_figure = 11},
+    .g13_boost6 = {.gain_value = 240, .noise_figure = 10},
+    .g13_boost7 = {.gain_value = 242, .noise_figure = 10}
+};*/
+
+const lr20xx_radio_common_rssi_calibration_gain_table_t table_hf_2G4 = {
+    .g1         = { .gain_value = -58, .noise_figure = 240 },
+    .g2         = { .gain_value = -34, .noise_figure = 221 },
+    .g3         = { .gain_value = -10, .noise_figure = 208 },
+    .g4         = { .gain_value = 7, .noise_figure = 190 },
+    .g5         = { .gain_value = 25, .noise_figure = 171 },
+    .g6         = { .gain_value = 40, .noise_figure = 153 },
+    .g7         = { .gain_value = 53, .noise_figure = 137 },
+    .g8         = { .gain_value = 77, .noise_figure = 113 },
+    .g9         = { .gain_value = 102, .noise_figure = 89 },
+    .g10        = { .gain_value = 126, .noise_figure = 65 },
+    .g11        = { .gain_value = 146, .noise_figure = 47 },
+    .g12_boost0 = { .gain_value = 163, .noise_figure = 34 },
+    .g12_boost1 = { .gain_value = 166, .noise_figure = 32 },
+    .g12_boost2 = { .gain_value = 168, .noise_figure = 31 },
+    .g12_boost3 = { .gain_value = 170, .noise_figure = 30 },
+    .g12_boost4 = { .gain_value = 171, .noise_figure = 30 },
+    .g12_boost5 = { .gain_value = 172, .noise_figure = 29 },
+    .g12_boost6 = { .gain_value = 176, .noise_figure = 26 },
+    .g12_boost7 = { .gain_value = 175, .noise_figure = 27 },
+    .g13_boost0 = { .gain_value = 187, .noise_figure = 29 },
+    .g13_boost1 = { .gain_value = 190, .noise_figure = 29 },
+    .g13_boost2 = { .gain_value = 193, .noise_figure = 27 },
+    .g13_boost3 = { .gain_value = 194, .noise_figure = 26 },
+    .g13_boost4 = { .gain_value = 195, .noise_figure = 26 },
+    .g13_boost5 = { .gain_value = 196, .noise_figure = 25 },
+    .g13_boost6 = { .gain_value = 198, .noise_figure = 24 },
+    .g13_boost7 = { .gain_value = 199, .noise_figure = 24 }
+};
 
 /*
  * -----------------------------------------------------------------------------
@@ -707,5 +807,27 @@ ral_status_t ral_lr20xx_bsp_get_instantaneous_lora_rx_power_consumption( const v
     }
 
     return RAL_STATUS_OK;
+}
+
+void ral_lr20xx_bsp_get_rssi_calibration_table(
+    const void* context, const lr20xx_radio_common_rssi_calibration_gain_table_t** rssi_calibration_table_lf,
+    const lr20xx_radio_common_rssi_calibration_gain_table_t** rssi_calibration_table_hf )
+{
+    // Make sure pointers is not affected
+    *rssi_calibration_table_lf = NULL;
+    *rssi_calibration_table_hf = NULL;
+
+    /*Getting High Frequency Calibration Table*/
+
+    // Choosing HF 2.4GHz
+    *rssi_calibration_table_hf = &table_hf_2G4;
+
+    /*Getting Low Frequency Calibration Table*/
+
+    // Choosing LF 868 MHz to 915 MHz
+    *rssi_calibration_table_lf = &table_lf_868_915;
+
+    // Choosing LF 490 MHz
+    //*rssi_calibration_table_lf = &table_lf_490;
 }
 /* --- EOF ------------------------------------------------------------------ */

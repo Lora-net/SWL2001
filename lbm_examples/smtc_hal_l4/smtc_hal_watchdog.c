@@ -83,6 +83,11 @@ void hal_watchdog_init( void )
     iwdg_handle.Init.Reload    = 0xFFF;
 
     HAL_IWDG_Init( &iwdg_handle );
+
+    // Freeze IWDG when debugging to prevent unwanted resets
+#if ( HW_DEBUG_PROBE == 1 )  // Defined by CMake variable with -DAPP_DEBUG=ON
+    __HAL_DBGMCU_FREEZE_IWDG( );
+#endif
 }
 
 void hal_watchdog_reload( void )

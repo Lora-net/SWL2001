@@ -267,7 +267,8 @@ COMMON_C_INCLUDES +=  \
 	-Iradio_hal\
 	-Ismtc_modem_hal\
 	-I$(LORA_BASICS_MODEM)/smtc_modem_api\
-	-I$(LORA_BASICS_MODEM)/smtc_modem_hal
+	-I$(LORA_BASICS_MODEM)/smtc_modem_hal\
+	-I$(SMTC_CORE_HAL_DIR)
 
 #-----------------------------------------------------------------------------
 # Gather everything

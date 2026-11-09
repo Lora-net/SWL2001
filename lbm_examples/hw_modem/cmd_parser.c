@@ -286,6 +286,10 @@ static const uint8_t host_cmd_tab[CMD_MAX][HOST_CMD_TAB_IDX_COUNT] = {
     [CMD_MODEM_GET_CRASHLOG]                     = { 1, 0, 0 },
     [CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER] = { 1, 0, 0 },
     [CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER] = { 1, 1, 1 },
+    [CMD_GET_NO_RX_PACKET_THRESHOLD]             = { 1, 0, 0 },
+    [CMD_SET_NO_RX_PACKET_THRESHOLD]             = { 1, 2, 2 },
+    [CMD_GET_CHANNEL_MASK]                       = { 1, 0, 0 },
+    [CMD_SET_CHANNEL_MASK]                       = { 1, 3, 18 },
 };
 
 /**
@@ -463,6 +467,10 @@ static const char* host_cmd_str[CMD_MAX] = {
     [CMD_MODEM_GET_CRASHLOG]                     = "CMD_GET_CRASHLOG",
     [CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER] = "CMD_MODEM_GET_REPORT_ALL_DOWNLINKS_TO_USER",
     [CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER] = "CMD_MODEM_SET_REPORT_ALL_DOWNLINKS_TO_USER",
+    [CMD_GET_NO_RX_PACKET_THRESHOLD]             = "CMD_GET_NO_RX_PACKET_THRESHOLD",
+    [CMD_SET_NO_RX_PACKET_THRESHOLD]             = "CMD_SET_NO_RX_PACKET_THRESHOLD",
+    [CMD_GET_CHANNEL_MASK]                       = "CMD_GET_CHANNEL_MASK",
+    [CMD_SET_CHANNEL_MASK]                       = "CMD_SET_CHANNEL_MASK",
 };
 #endif
 
@@ -734,6 +742,10 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             break;
         case SMTC_MODEM_EVENT_NO_DOWNLINK_THRESHOLD:
             cmd_output->buffer[2] = current_event.event_data.no_downlink.status;
+            cmd_output->length    = 3;
+            break;
+        case SMTC_MODEM_EVENT_RESET_REQUEST:
+            cmd_output->buffer[2] = current_event.event_data.reset_request.status;
             cmd_output->length    = 3;
             break;
         default:
@@ -1893,6 +1905,63 @@ cmd_parse_status_t parse_cmd( cmd_input_t* cmd_input, cmd_response_t* cmd_output
             cmd_output->return_code = CMD_RC_INVALID;
         }
 
+        break;
+    }
+    case CMD_GET_NO_RX_PACKET_THRESHOLD:
+    {
+        uint16_t threshold      = 0;
+        cmd_output->return_code = rc_lut[smtc_modem_lorawan_get_no_rx_packet_threshold( STACK_ID, &threshold )];
+        if( cmd_output->return_code == CMD_RC_OK )
+        {
+            cmd_output->buffer[0] = ( uint8_t )( threshold >> 8 );
+            cmd_output->buffer[1] = ( uint8_t ) threshold;
+            cmd_output->length    = 2;
+        }
+        break;
+    }
+    case CMD_SET_NO_RX_PACKET_THRESHOLD:
+    {
+        uint16_t threshold = ( uint16_t )( ( cmd_input->buffer[0] << 8 ) | cmd_input->buffer[1] );
+        cmd_output->return_code = rc_lut[smtc_modem_lorawan_set_no_rx_packet_threshold( STACK_ID, threshold )];
+        break;
+    }
+    case CMD_GET_CHANNEL_MASK:
+    {
+        // 12 bytes is the max size of the channel mask (China region), the response is always zero padded to it
+        const uint8_t max_size  = 12;
+        uint8_t       mask_size = 0;
+
+        memset( cmd_output->buffer, 0, max_size );
+        cmd_output->return_code = rc_lut[smtc_modem_get_channel_mask( STACK_ID, cmd_output->buffer, &mask_size )];
+        if( cmd_output->return_code == CMD_RC_OK )
+        {
+            if( mask_size > max_size )
+            {
+                cmd_output->return_code = CMD_RC_FAIL;
+                break;
+            }
+            cmd_output->length = max_size;
+        }
+        break;
+    }
+    case CMD_SET_CHANNEL_MASK:
+    {
+        // payload: nb_mask x { ch_mask_cntl (1B), ch_mask (2B big endian) }
+        uint8_t  nb_mask = cmd_input->length / 3;
+        uint8_t  ch_mask_cntl[SMTC_MODEM_MAX_NB_CHANNEL_MASK];
+        uint16_t ch_mask[SMTC_MODEM_MAX_NB_CHANNEL_MASK];
+
+        if( ( ( cmd_input->length % 3 ) != 0 ) || ( nb_mask > SMTC_MODEM_MAX_NB_CHANNEL_MASK ) )
+        {
+            cmd_output->return_code = CMD_RC_INVALID;
+            break;
+        }
+        for( uint8_t i = 0; i < nb_mask; i++ )
+        {
+            ch_mask_cntl[i] = cmd_input->buffer[i * 3];
+            ch_mask[i]      = ( uint16_t )( ( cmd_input->buffer[i * 3 + 1] << 8 ) | cmd_input->buffer[i * 3 + 2] );
+        }
+        cmd_output->return_code = rc_lut[smtc_modem_set_channel_mask( STACK_ID, ch_mask_cntl, ch_mask, nb_mask )];
         break;
     }
 #if defined( STM32L476xx )

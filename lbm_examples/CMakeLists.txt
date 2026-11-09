@@ -113,8 +113,17 @@ if(HAL_FLASH_UNAVAILABLE)
     set(LBM_GEOLOCATION OFF CACHE BOOL "" FORCE)
 endif()
 
-# TODO: How to do that properly?
-add_subdirectory(../lbm_lib lbm_lib)
+# Same radio planner margin delay as in app_makefiles/board_L073.mk
+if(BOARD STREQUAL NUCLEO_L073)
+    set(RP_MARGIN_DELAY 10)
+endif()
+
+# Build LBM library
+add_subdirectory(../lbm lbm) 
+message(STATUS "From Examples - LBM_Radio = ${LBM_RADIO}, "
+        "RADIO_FAMILY = ${RADIO_FAMILY}, "
+        "RADIO_UPPER = ${RADIO_UPPER}, "
+        "RADIO_FAMILY_UPPER = ${RADIO_FAMILY_UPPER}")
 
 ################################################################################
 # Example libs and executable
@@ -168,11 +177,11 @@ endif()
 
 # All this is derived from what LBM enabled
 
-string(TOUPPER ${LBM_RADIO} RADIO_UPPER)
+# string(TOUPPER ${LBM_RADIO} RADIO_UPPER)
 target_compile_definitions(smtc_modem_hal_implem PUBLIC ${RADIO_UPPER})
 target_compile_definitions(smtc_hal PUBLIC ${RADIO_UPPER})
 
-string(TOUPPER ${RADIO_FAMILY} RADIO_FAMILY_UPPER)
+# string(TOUPPER ${RADIO_FAMILY} RADIO_FAMILY_UPPER)
 target_compile_definitions(smtc_modem_hal_implem PUBLIC ${RADIO_FAMILY_UPPER})
 target_compile_definitions(smtc_hal PUBLIC ${RADIO_FAMILY_UPPER})
 
@@ -238,7 +247,7 @@ target_sources(lbm_example.elf PRIVATE
 )
 
 target_link_libraries(lbm_example.elf PRIVATE
-    lora_basics_modem_core
+    lora_basics_modem
     radio_hal
     smtc_modem_hal_implem
 )
@@ -261,8 +270,8 @@ target_compile_definitions(lbm_example.elf PUBLIC -DBUILD_DATE=\"${BUILD_DATE}\"
 
 add_custom_command(
     TARGET lbm_example.elf PRE_LINK
-    COMMAND ${CMAKE_SIZE} ${CMAKE_BINARY_DIR}/lbm_lib/smtc_modem_core/liblora_basics_modem_core.a
-    COMMENT "Displays library liblora_basics_modem_core.a size details"
+    COMMAND ${CMAKE_SIZE} ${CMAKE_BINARY_DIR}/lbm/lbm_lib/smtc_modem_core/liblora_basics_modem.a
+    COMMENT "Displays library liblora_basics_modem.a size details"
 )
 
 add_custom_command(

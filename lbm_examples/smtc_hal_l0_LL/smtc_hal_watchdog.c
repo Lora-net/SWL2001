@@ -95,6 +95,10 @@ void hal_watchdog_init( void )
     }
     // Refresh the counter value with IWDG_RLR (IWDG_KR = 0x0000 AAAA)
     LL_IWDG_ReloadCounter( IWDG );
+
+#if ( HW_DEBUG_PROBE == 1 )  // Defined by CMake variable with -DAPP_DEBUG=ON
+    __HAL_DBGMCU_FREEZE_IWDG( );
+#endif
 }
 
 void hal_watchdog_reload( void )

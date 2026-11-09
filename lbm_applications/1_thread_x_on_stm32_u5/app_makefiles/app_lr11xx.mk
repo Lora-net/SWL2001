@@ -31,15 +31,17 @@ COMMON_C_INCLUDES += \
 # - lr11xx_hal.h
 # - ral_lr11xx_bsp.h
 MODEM_C_INCLUDES =  \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/radio_drivers/lr11xx_driver/src \
+	-I$(SMTC_RADIO_DRIVERS_DIR)/lr11xx_driver/src \
 	-I$(LORA_BASICS_MODEM)/smtc_modem_core/geolocation_services \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/smtc_ral/src
+	-I$(SMTC_RADIO_INTERFACE_DIR)/smtc_ral/src
 
 #-----------------------------------------------------------------------------
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
 COMMON_C_DEFS += \
 	-DLR11XX\
+	-DRAL_DRIVER_DIRECT_DISPATCH\
+	-DRAL_DRIVER_DIRECT_DISPATCH_LR11XX\
 	-DLR11XX_TRANSCEIVER\
 	-DLR11XX_DISABLE_WARNINGS
 

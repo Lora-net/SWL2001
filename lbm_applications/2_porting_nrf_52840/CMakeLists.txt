@@ -74,7 +74,7 @@ set(LBM_CSMA_BY_DEFAULT ON CACHE BOOL "")
 
 
 # TODO: How to do that properly?
-add_subdirectory(../../lbm_lib lbm_lib)
+add_subdirectory(../../lbm lbm)
 
 ################################################################################
 
@@ -186,7 +186,7 @@ target_sources(lbm_example.elf PRIVATE
 )
 
 target_link_libraries(lbm_example.elf PRIVATE
-    lora_basics_modem_core
+    lora_basics_modem
     radio_hal
     smtc_modem_hal_implem
 )

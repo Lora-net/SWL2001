@@ -20,7 +20,8 @@ endif
 #-----------------------------------------------------------------------------
 RADIO_HAL_C_SOURCES += \
 	radio_hal/lr20xx_hal.c\
-	radio_hal/ral_lr20xx_bsp.c
+	radio_hal/ral_lr20xx_bsp.c\
+	radio_hal/pa_tables_lr20xx_common.c
 
 #-----------------------------------------------------------------------------
 # Includes
@@ -29,14 +30,16 @@ RADIO_HAL_C_SOURCES += \
 # - lr20xx_hal.h
 # - ral_lr20xx_bsp.h
 MODEM_C_INCLUDES =  \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/radio_drivers/lr20xx_driver/inc \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/smtc_ral/src
+	-I$(SMTC_RADIO_DRIVERS_DIR)/lr20xx_driver/inc \
+	-I$(SMTC_RADIO_INTERFACE_DIR)/smtc_ral/src
 
 #-----------------------------------------------------------------------------
 # Radio specific compilation flags
 #-----------------------------------------------------------------------------
 COMMON_C_DEFS += \
-	-DLR20XX
+	-DLR20XX \
+	-DRAL_DRIVER_DIRECT_DISPATCH \
+	-DRAL_DRIVER_DIRECT_DISPATCH_LR20XX
 
 ifeq ($(TARGET_RADIO),lr2021)
 COMMON_C_DEFS += \

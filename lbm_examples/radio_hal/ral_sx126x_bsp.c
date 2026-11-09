@@ -1,10 +1,10 @@
-/*!
- * \file      ral_sx126x_bsp.c
+/**
+ * @file      ral_sx126x_bsp.c
  *
- * \brief     Implements the HAL functions for SX126X
+ * @brief     Implements the HAL functions for SX126X
  *
  * The Clear BSD License
- * Copyright Semtech Corporation 2021. All rights reserved.
+ * Copyright Semtech Corporation 2025. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the disclaimer
@@ -41,6 +41,7 @@
 #include <stdbool.h>  // bool type
 
 #include "ral_sx126x_bsp.h"
+#include "sx126x_pa_pwr_cfg.h"
 #include "radio_utilities.h"
 /*
  * -----------------------------------------------------------------------------
@@ -71,8 +72,28 @@
 
 /*
  * -----------------------------------------------------------------------------
+ * --- PRIVATE TYPES -----------------------------------------------------------
+ */
+
+typedef struct sx126x_pa_pwr_cfg_s
+{
+    int8_t  power;
+    uint8_t pa_duty_cycle;
+    uint8_t hp_max;
+} sx126x_pa_pwr_cfg_t;
+
+/*
+ * -----------------------------------------------------------------------------
  * --- PRIVATE CONSTANTS -------------------------------------------------------
  */
+
+#if defined( SX1262 ) || defined( SX1268 )
+const sx126x_pa_pwr_cfg_t pa_cfg_table[SX126X_HP_MAX_OUTPUT_POWER - SX126X_HP_MIN_OUTPUT_POWER + 1] =
+    SX1262_PA_CFG_TABLE;
+#else  // SX1261
+const sx126x_pa_pwr_cfg_t pa_cfg_table[SX126X_LP_MAX_OUTPUT_POWER - SX126X_LP_MIN_OUTPUT_POWER + 1] =
+    SX1261_PA_CFG_TABLE;
+#endif
 
 static const uint32_t ral_sx126x_convert_tx_dbm_to_ua_reg_mode_dcdc_lp[] = {
     5200,   // -17 dBm
@@ -238,7 +259,12 @@ static const uint32_t ral_sx126x_convert_tx_dbm_to_ua_reg_mode_ldo_hp[] = {
 
 void ral_sx126x_bsp_get_reg_mode( const void* context, sx126x_reg_mod_t* reg_mode )
 {
+    // All SX1261 Semtech ref design boards use DC/DC, and SX1262 use LDO
+#if defined( SX1262 ) || defined( SX1268 )
+    *reg_mode = SX126X_REG_MODE_LDO;
+#else
     *reg_mode = SX126X_REG_MODE_DCDC;
+#endif
 }
 
 void ral_sx126x_bsp_get_rf_switch_cfg( const void* context, bool* dio2_is_set_as_rf_switch )
@@ -259,66 +285,52 @@ void ral_sx126x_bsp_get_tx_cfg( const void* context, const ral_sx126x_bsp_tx_cfg
     output_params->pa_cfg.pa_lut = 0x01;  // reserved value, same for sx1261 sx1262 and sx1268
 
 #if defined( SX1262 ) || defined( SX1268 )
-
     // Clamp power if needed
-    if( power > 22 )
+    if( power > SX126X_HP_MAX_OUTPUT_POWER )
     {
-        power = 22;
+        power = SX126X_HP_MAX_OUTPUT_POWER;
     }
-    if( power < -9 )
+    if( power < SX126X_HP_MIN_OUTPUT_POWER )
     {
-        power = -9;
+        power = SX126X_HP_MIN_OUTPUT_POWER;
     }
-    output_params->pa_cfg.device_sel                 = 0x00;  // select SX1262/SX1268 device
-    output_params->pa_cfg.hp_max                     = 0x07;  // to achieve 22dBm
-    output_params->pa_cfg.pa_duty_cycle              = 0x04;
-    output_params->chip_output_pwr_in_dbm_configured = ( int8_t ) power;
-    output_params->chip_output_pwr_in_dbm_expected   = ( int8_t ) power;
-#else
-    // Clamp power if needed
-    if( power > 15 )
-    {
-        power = 15;
-    }
-    if( power < -17 )
-    {
-        power = -17;
-    }
+    sx126x_pa_pwr_cfg_t pwr_cfg      = pa_cfg_table[power - SX126X_HP_MIN_OUTPUT_POWER];
+    output_params->pa_cfg.device_sel = 0x00;  // select SX1262/SX1268 device
 
-    // config pa according to power
-    if( power == 15 )
+#else  // SX1261
+    // Clamp power if needed
+    if( power > SX126X_LP_MAX_OUTPUT_POWER )
     {
-        output_params->pa_cfg.device_sel                 = 0x01;  // select SX1261 device
-        output_params->pa_cfg.hp_max                     = 0x00;  // not used on sx1261
-        output_params->pa_cfg.pa_duty_cycle              = 0x06;
-        output_params->chip_output_pwr_in_dbm_configured = 14;
-        output_params->chip_output_pwr_in_dbm_expected   = 15;
+        power = SX126X_LP_MAX_OUTPUT_POWER;
     }
-    else if( power == 14 )
+    if( power < SX126X_LP_MIN_OUTPUT_POWER )
     {
-        output_params->pa_cfg.device_sel                 = 0x01;  // select SX1261 device
-        output_params->pa_cfg.hp_max                     = 0x00;  // not used on sx1261
-        output_params->pa_cfg.pa_duty_cycle              = 0x04;
-        output_params->chip_output_pwr_in_dbm_configured = 14;
-        output_params->chip_output_pwr_in_dbm_expected   = 14;
+        power = SX126X_LP_MIN_OUTPUT_POWER;
     }
-    else
-    {
-        output_params->pa_cfg.device_sel                 = 0x01;  // select SX1261 device
-        output_params->pa_cfg.hp_max                     = 0x00;  // not used on sx1261
-        output_params->pa_cfg.pa_duty_cycle              = 0x04;
-        output_params->chip_output_pwr_in_dbm_configured = ( int8_t ) power;
-        output_params->chip_output_pwr_in_dbm_expected   = ( int8_t ) power;
-    }
+    sx126x_pa_pwr_cfg_t pwr_cfg      = pa_cfg_table[power - SX126X_LP_MIN_OUTPUT_POWER];
+    output_params->pa_cfg.device_sel = 0x01;  // select SX1261 device
 
 #endif
+
+    output_params->pa_cfg.hp_max                     = pwr_cfg.hp_max;
+    output_params->pa_cfg.pa_duty_cycle              = pwr_cfg.pa_duty_cycle;
+    output_params->chip_output_pwr_in_dbm_configured = pwr_cfg.power;
+    output_params->chip_output_pwr_in_dbm_expected   = ( int8_t ) power;
 }
 
 void ral_sx126x_bsp_get_xosc_cfg( const void* context, ral_xosc_cfg_t* xosc_cfg,
                                   sx126x_tcxo_ctrl_voltages_t* supply_voltage, uint32_t* startup_time_in_tick )
 {
-    // No tcxo on Basic Modem sx1261,sx1262 or sx1268 reference boards
+    // Can be RAL_XOSC_CFG_XTAL, RAL_XOSC_CFG_TCXO_RADIO_CTRL or RAL_XOSC_CFG_TCXO_EXT_CTRL
+    // Update depending on your board implementation
+    // Semtech reference boards : SX1261MB1CAS / SX1262MB1CBS|DAS|PAS have TCXO connected to radio DIO3
+    // Others Semtech reference boards (SX1261MB1BAS|MB2BAS / SX1262MB1CAS|MB2CAS) have XTAL
+
     *xosc_cfg = RAL_XOSC_CFG_XTAL;
+
+    // *xosc_cfg             = RAL_XOSC_CFG_TCXO_RADIO_CTRL;
+    // *supply_voltage       = SX126X_TCXO_CTRL_1_8V;
+    // *startup_time_in_tick = sx126x_convert_timeout_in_ms_to_rtc_step( 8 );
 }
 
 void ral_sx126x_bsp_get_trim_cap( const void* context, uint8_t* trimming_cap_xta, uint8_t* trimming_cap_xtb )

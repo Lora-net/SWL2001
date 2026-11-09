@@ -108,8 +108,8 @@ lr20xx_hal_status_t lr20xx_hal_wakeup( const void* radio )
 {
     // Busy is HIGH in sleep mode, wake-up the device with a small glitch on NSS
     hal_gpio_set_value( RADIO_NSS, 0 );
-    // wait for 1ms
-    hal_mcu_wait_us( 1000 );
+    // wait for 100us
+    hal_mcu_wait_us( 100 );
     hal_gpio_set_value( RADIO_NSS, 1 );
     radio_mode = RADIO_AWAKE;
     return LR20XX_HAL_STATUS_OK;
@@ -252,8 +252,8 @@ static void lr20xx_hal_check_device_ready( void )
     {
         // Busy is HIGH in sleep mode, wake-up the device with a small glitch on NSS
         hal_gpio_set_value( RADIO_NSS, 0 );
-        // wait for 1ms
-        hal_mcu_wait_us( 1000 );
+        // wait for 100us
+        hal_mcu_wait_us( 100 );
         hal_gpio_set_value( RADIO_NSS, 1 );
         lr20xx_hal_wait_on_busy( );
         radio_mode = RADIO_AWAKE;

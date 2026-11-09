@@ -3,7 +3,12 @@
 #-----------------------------------------------------------------------------
 
 # Lora Basics Modem path
-LORA_BASICS_MODEM := ../../lbm_lib/.
+LORA_BASICS_MODEM := ../../lbm/lbm_lib/.
+
+# Components that live next to lbm_lib in the lbm/ folder
+SMTC_RADIO_INTERFACE_DIR := $(LORA_BASICS_MODEM)/../smtc_radio_interface
+SMTC_RADIO_DRIVERS_DIR   := $(SMTC_RADIO_INTERFACE_DIR)/radio_drivers
+SMTC_CORE_HAL_DIR        := $(LORA_BASICS_MODEM)/../smtc_core_hal_interface
 
 # Prefix for all build directories
 APPBUILD_ROOT = build

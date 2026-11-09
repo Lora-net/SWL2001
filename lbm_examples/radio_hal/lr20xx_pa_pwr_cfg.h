@@ -1,4 +1,4 @@
-/*!
+/**
  * @file      lr20xx_pa_pwr_cfg.h
  *
  * @brief     lr20xx power amplifier configuration.
@@ -57,32 +57,32 @@ extern "C" {
     {                                            \
         {                                        \
             /* Expected output power = -10dBm */ \
-            .half_power    = -18,                \
+            .half_power    = -8,                 \
             .pa_duty_cycle = 3,                  \
-            .pa_lf_slices  = 6,                  \
+            .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = -9dBm */  \
-            .half_power    = -13,                \
-            .pa_duty_cycle = 2,                  \
-            .pa_lf_slices  = 5,                  \
+            .half_power    = -6,                 \
+            .pa_duty_cycle = 3,                  \
+            .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = -8dBm */  \
-            .half_power    = -13,                \
-            .pa_duty_cycle = 6,                  \
-            .pa_lf_slices  = 1,                  \
+            .half_power    = 0,                  \
+            .pa_duty_cycle = 1,                  \
+            .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = -7dBm */  \
-            .half_power    = -6,                 \
-            .pa_duty_cycle = 6,                  \
+            .half_power    = 2,                  \
+            .pa_duty_cycle = 1,                  \
             .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = -6dBm */  \
-            .half_power    = 4,                  \
-            .pa_duty_cycle = 1,                  \
+            .half_power    = 2,                  \
+            .pa_duty_cycle = 2,                  \
             .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
@@ -93,27 +93,27 @@ extern "C" {
         },                                       \
         {                                        \
             /* Expected output power = -4dBm */  \
-            .half_power    = 2,                  \
-            .pa_duty_cycle = 1,                  \
-            .pa_lf_slices  = 3,                  \
+            .half_power    = 8,                  \
+            .pa_duty_cycle = 0,                  \
+            .pa_lf_slices  = 1,                  \
         },                                       \
         {                                        \
             /* Expected output power = -3dBm */  \
-            .half_power    = 14,                 \
-            .pa_duty_cycle = 0,                  \
-            .pa_lf_slices  = 0,                  \
+            .half_power    = 6,                  \
+            .pa_duty_cycle = 1,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = -2dBm */  \
-            .half_power    = 9,                  \
-            .pa_duty_cycle = 0,                  \
-            .pa_lf_slices  = 3,                  \
+            .half_power    = 6,                  \
+            .pa_duty_cycle = 5,                  \
+            .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = -1dBm */  \
-            .half_power    = 11,                 \
-            .pa_duty_cycle = 3,                  \
-            .pa_lf_slices  = 0,                  \
+            .half_power    = 12,                 \
+            .pa_duty_cycle = 1,                  \
+            .pa_lf_slices  = 1,                  \
         },                                       \
         {                                        \
             /* Expected output power = 0dBm */   \
@@ -123,8 +123,8 @@ extern "C" {
         },                                       \
         {                                        \
             /* Expected output power = 1dBm */   \
-            .half_power    = 11,                 \
-            .pa_duty_cycle = 7,                  \
+            .half_power    = 18,                 \
+            .pa_duty_cycle = 1,                  \
             .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
@@ -135,117 +135,117 @@ extern "C" {
         },                                       \
         {                                        \
             /* Expected output power = 3dBm */   \
-            .half_power    = 16,                 \
-            .pa_duty_cycle = 5,                  \
+            .half_power    = 20,                 \
+            .pa_duty_cycle = 2,                  \
             .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = 4dBm */   \
-            .half_power    = 17,                 \
-            .pa_duty_cycle = 7,                  \
+            .half_power    = 22,                 \
+            .pa_duty_cycle = 2,                  \
             .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = 5dBm */   \
-            .half_power    = 21,                 \
-            .pa_duty_cycle = 1,                  \
-            .pa_lf_slices  = 2,                  \
+            .half_power    = 16,                 \
+            .pa_duty_cycle = 5,                  \
+            .pa_lf_slices  = 1,                  \
         },                                       \
         {                                        \
             /* Expected output power = 6dBm */   \
-            .half_power    = 25,                 \
-            .pa_duty_cycle = 3,                  \
-            .pa_lf_slices  = 0,                  \
-        },                                       \
-        {                                        \
-            /* Expected output power = 7dBm */   \
-            .half_power    = 32,                 \
+            .half_power    = 28,                 \
             .pa_duty_cycle = 0,                  \
             .pa_lf_slices  = 1,                  \
         },                                       \
         {                                        \
+            /* Expected output power = 7dBm */   \
+            .half_power    = 28,                 \
+            .pa_duty_cycle = 0,                  \
+            .pa_lf_slices  = 2,                  \
+        },                                       \
+        {                                        \
             /* Expected output power = 8dBm */   \
-            .half_power    = 32,                 \
-            .pa_duty_cycle = 2,                  \
+            .half_power    = 28,                 \
+            .pa_duty_cycle = 4,                  \
             .pa_lf_slices  = 0,                  \
         },                                       \
         {                                        \
             /* Expected output power = 9dBm */   \
-            .half_power    = 27,                 \
-            .pa_duty_cycle = 3,                  \
-            .pa_lf_slices  = 1,                  \
+            .half_power    = 30,                 \
+            .pa_duty_cycle = 1,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 10dBm */  \
             .half_power    = 32,                 \
-            .pa_duty_cycle = 2,                  \
-            .pa_lf_slices  = 1,                  \
+            .pa_duty_cycle = 1,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 11dBm */  \
             .half_power    = 28,                 \
-            .pa_duty_cycle = 5,                  \
-            .pa_lf_slices  = 1,                  \
+            .pa_duty_cycle = 4,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 12dBm */  \
             .half_power    = 30,                 \
-            .pa_duty_cycle = 5,                  \
-            .pa_lf_slices  = 1,                  \
+            .pa_duty_cycle = 4,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 13dBm */  \
-            .half_power    = 34,                 \
+            .half_power    = 32,                 \
             .pa_duty_cycle = 4,                  \
-            .pa_lf_slices  = 1,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 14dBm */  \
-            .half_power    = 31,                 \
-            .pa_duty_cycle = 5,                  \
-            .pa_lf_slices  = 4,                  \
+            .half_power    = 34,                 \
+            .pa_duty_cycle = 4,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 15dBm */  \
-            .half_power    = 34,                 \
+            .half_power    = 36,                 \
             .pa_duty_cycle = 4,                  \
-            .pa_lf_slices  = 4,                  \
+            .pa_lf_slices  = 2,                  \
         },                                       \
         {                                        \
             /* Expected output power = 16dBm */  \
             .half_power    = 34,                 \
-            .pa_duty_cycle = 5,                  \
-            .pa_lf_slices  = 6,                  \
+            .pa_duty_cycle = 7,                  \
+            .pa_lf_slices  = 3,                  \
         },                                       \
         {                                        \
             /* Expected output power = 17dBm */  \
-            .half_power    = 39,                 \
-            .pa_duty_cycle = 3,                  \
-            .pa_lf_slices  = 5,                  \
+            .half_power    = 38,                 \
+            .pa_duty_cycle = 4,                  \
+            .pa_lf_slices  = 4,                  \
         },                                       \
         {                                        \
             /* Expected output power = 18dBm */  \
-            .half_power    = 37,                 \
-            .pa_duty_cycle = 6,                  \
-            .pa_lf_slices  = 6,                  \
+            .half_power    = 38,                 \
+            .pa_duty_cycle = 5,                  \
+            .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 19dBm */  \
             .half_power    = 40,                 \
             .pa_duty_cycle = 5,                  \
-            .pa_lf_slices  = 5,                  \
+            .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 20dBm */  \
-            .half_power    = 41,                 \
-            .pa_duty_cycle = 7,                  \
-            .pa_lf_slices  = 4,                  \
+            .half_power    = 42,                 \
+            .pa_duty_cycle = 5,                  \
+            .pa_lf_slices  = 6,                  \
         },                                       \
         {                                        \
             /* Expected output power = 21dBm */  \
-            .half_power    = 43,                 \
-            .pa_duty_cycle = 7,                  \
-            .pa_lf_slices  = 4,                  \
+            .half_power    = 44,                 \
+            .pa_duty_cycle = 5,                  \
+            .pa_lf_slices  = 6,                  \
         },                                       \
         {                                        \
             /* Expected output power = 22dBm */  \
@@ -260,44 +260,44 @@ extern "C" {
     {                                            \
         {                                        \
             /* Expected output power = -17dBm */ \
-            .half_power    = -39,                \
-            .pa_duty_cycle = 29,                 \
+            .half_power    = -38,                \
+            .pa_duty_cycle = 30,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -16dBm */ \
-            .half_power    = -39,                \
-            .pa_duty_cycle = 16,                 \
+            .half_power    = -36,                \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -15dBm */ \
-            .half_power    = -35,                \
-            .pa_duty_cycle = 19,                 \
+            .half_power    = -34,                \
+            .pa_duty_cycle = 24,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -14dBm */ \
-            .half_power    = -32,                \
-            .pa_duty_cycle = 19,                 \
+            .half_power    = -30,                \
+            .pa_duty_cycle = 28,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -13dBm */ \
-            .half_power    = -29,                \
-            .pa_duty_cycle = 19,                 \
+            .half_power    = -28,                \
+            .pa_duty_cycle = 25,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -12dBm */ \
-            .half_power    = -27,                \
-            .pa_duty_cycle = 16,                 \
+            .half_power    = -26,                \
+            .pa_duty_cycle = 22,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -11dBm */ \
             .half_power    = -24,                \
-            .pa_duty_cycle = 17,                 \
+            .pa_duty_cycle = 20,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
@@ -308,110 +308,110 @@ extern "C" {
         },                                       \
         {                                        \
             /* Expected output power = -9dBm */  \
-            .half_power    = -19,                \
-            .pa_duty_cycle = 18,                 \
+            .half_power    = -18,                \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -8dBm */  \
-            .half_power    = -17,                \
-            .pa_duty_cycle = 16,                 \
+            .half_power    = -14,                \
+            .pa_duty_cycle = 30,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -7dBm */  \
             .half_power    = -14,                \
-            .pa_duty_cycle = 21,                 \
+            .pa_duty_cycle = 24,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = -6dBm */  \
             .half_power    = -12,                \
-            .pa_duty_cycle = 18,                 \
-            .pa_lf_slices  = 7,                  \
-        },                                       \
-        {                                        \
-            /* Expected output power = -5dBm */  \
-            .half_power    = -7,                 \
-            .pa_duty_cycle = 30,                 \
-            .pa_lf_slices  = 7,                  \
-        },                                       \
-        {                                        \
-            /* Expected output power = -4dBm */  \
-            .half_power    = -8,                 \
-            .pa_duty_cycle = 16,                 \
-            .pa_lf_slices  = 7,                  \
-        },                                       \
-        {                                        \
-            /* Expected output power = -3dBm */  \
-            .half_power    = -5,                 \
             .pa_duty_cycle = 24,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
-            /* Expected output power = -2dBm */  \
-            .half_power    = -2,                 \
-            .pa_duty_cycle = 27,                 \
+            /* Expected output power = -5dBm */  \
+            .half_power    = -10,                \
+            .pa_duty_cycle = 22,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
-            /* Expected output power = -1dBm */  \
-            .half_power    = 1,                  \
+            /* Expected output power = -4dBm */  \
+            .half_power    = -4,                 \
+            .pa_duty_cycle = 31,                 \
+            .pa_lf_slices  = 7,                  \
+        },                                       \
+        {                                        \
+            /* Expected output power = -3dBm */  \
+            .half_power    = -4,                 \
             .pa_duty_cycle = 29,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
+            /* Expected output power = -2dBm */  \
+            .half_power    = -4,                 \
+            .pa_duty_cycle = 18,                 \
+            .pa_lf_slices  = 7,                  \
+        },                                       \
+        {                                        \
+            /* Expected output power = -1dBm */  \
+            .half_power    = 0,                  \
+            .pa_duty_cycle = 28,                 \
+            .pa_lf_slices  = 7,                  \
+        },                                       \
+        {                                        \
             /* Expected output power = 0dBm */   \
-            .half_power    = 4,                  \
-            .pa_duty_cycle = 30,                 \
+            .half_power    = 2,                  \
+            .pa_duty_cycle = 28,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 1dBm */   \
-            .half_power    = 6,                  \
-            .pa_duty_cycle = 30,                 \
+            .half_power    = 4,                  \
+            .pa_duty_cycle = 28,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 2dBm */   \
-            .half_power    = 7,                  \
-            .pa_duty_cycle = 28,                 \
+            .half_power    = 6,                  \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 3dBm */   \
             .half_power    = 8,                  \
-            .pa_duty_cycle = 25,                 \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 4dBm */   \
             .half_power    = 10,                 \
-            .pa_duty_cycle = 25,                 \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 5dBm */   \
-            .half_power    = 15,                 \
-            .pa_duty_cycle = 31,                 \
+            .half_power    = 12,                 \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 6dBm */   \
-            .half_power    = 16,                 \
-            .pa_duty_cycle = 30,                 \
+            .half_power    = 14,                 \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 7dBm */   \
-            .half_power    = 18,                 \
-            .pa_duty_cycle = 30,                 \
+            .half_power    = 16,                 \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
             /* Expected output power = 8dBm */   \
-            .half_power    = 21,                 \
-            .pa_duty_cycle = 31,                 \
+            .half_power    = 20,                 \
+            .pa_duty_cycle = 30,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
@@ -429,7 +429,7 @@ extern "C" {
         {                                        \
             /* Expected output power = 11dBm */  \
             .half_power    = 24,                 \
-            .pa_duty_cycle = 26,                 \
+            .pa_duty_cycle = 27,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
         {                                        \
@@ -438,7 +438,6 @@ extern "C" {
             .pa_duty_cycle = 16,                 \
             .pa_lf_slices  = 7,                  \
         },                                       \
-                                                 \
     }
 
 /*

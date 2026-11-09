@@ -523,6 +523,12 @@ static void modem_event_callback( void )
             }
             break;
         }
+        case SMTC_MODEM_EVENT_RESET_REQUEST:
+        {
+            SMTC_HAL_TRACE_INFO( "Event received: RESET_REQUEST\n" );
+            smtc_modem_hal_reset_mcu( );
+            break;
+        }
         case SMTC_MODEM_EVENT_TEST_MODE:
         {
             uint8_t status_test_mode = current_event.event_data.test_mode_status.status;

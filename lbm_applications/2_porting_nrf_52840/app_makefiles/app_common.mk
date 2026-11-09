@@ -209,6 +209,11 @@ ifeq ($(ALLOW_CSMA),yes)
 	LBM_BUILD_OPTIONS += LBM_CSMA=yes
 	COMMON_C_DEFS += -DALLOW_CSMA
 
+	# The lib only builds CSMA for lr11xx, lr20xx and sx126x radios (ALLOW_CSMA_BUILD): ADD_CSMA must match what the lib compiles
+	ifneq ($(filter $(TARGET_RADIO),lr1110 lr1120 lr1121 lr2021 sx1261 sx1262 sx1268),)
+		COMMON_C_DEFS += -DADD_CSMA
+	endif
+
 	ifeq ($(ALLOW_CSMA_AND_ENABLE_AT_BOOT),yes)
 		LBM_BUILD_OPTIONS += USE_CSMA_BY_DEFAULT=yes
 		COMMON_C_DEFS += -DALLOW_CSMA_AND_ENABLE_AT_BOOT
@@ -272,7 +277,7 @@ COMMON_C_INCLUDES += \
 # For this specific example, a radio access is needed to mimic modem behavior, exceptionnaly include internal folder of lbm
 ifeq ($(MODEM_APP),PORTING_TESTS)
 MODEM_C_INCLUDES += \
-	-I$(LORA_BASICS_MODEM)/smtc_modem_core/smtc_ralf/src
+	-I$(SMTC_RADIO_INTERFACE_DIR)/smtc_ralf/src
 endif
 
 #-----------------------------------------------------------------------------
@@ -287,7 +292,8 @@ COMMON_C_INCLUDES +=  \
 	-Iradio_hal\
 	-Ismtc_modem_hal\
 	-I$(LORA_BASICS_MODEM)/smtc_modem_api\
-	-I$(LORA_BASICS_MODEM)/smtc_modem_hal
+	-I$(LORA_BASICS_MODEM)/smtc_modem_hal\
+	-I$(SMTC_CORE_HAL_DIR)
 
 #-----------------------------------------------------------------------------
 # Gather everything
